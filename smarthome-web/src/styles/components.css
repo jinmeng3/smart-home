@@ -1,0 +1,70 @@
+.motion-card {
+  background-color: var(--color-panel-background);
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-card);
+}
+
+.motion-card:hover {
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.motion-button:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.header-search .el-input__wrapper {
+  background: var(--color-panel-background);
+  box-shadow: 0 0 0 1px var(--color-border-default) inset;
+  transition:
+    box-shadow 180ms var(--motion-ease),
+    background-color 180ms var(--motion-ease);
+}
+
+.header-search .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-border-strong) inset;
+}
+
+.header-search .el-input__wrapper.is-focus {
+  box-shadow:
+    0 0 0 1px var(--color-border-focus) inset,
+    0 0 0 3px var(--color-focus-ring);
+}
+
+.device-status-label {
+  border: 1px solid transparent;
+}
+
+.device-status-label.status-online,
+.device-status-label.status-success {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+  border-color: var(--color-success-border);
+}
+
+.device-status-label.status-offline {
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-subtle);
+  border-color: var(--color-border-default);
+}
+
+.device-status-label.status-running {
+  color: var(--color-info);
+  background: var(--color-info-soft);
+  border-color: var(--color-info-border);
+}
+
+.device-status-label.status-warning {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-border);
+}
+
+.device-status-label.status-error {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+}

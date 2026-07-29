@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-import type { EChartsType } from 'echarts/core'
 import { useHomeStore } from '../../stores/home'
+import { useChart } from '../../composables/useChart'
 import AnimatedNumber from '../animation/AnimatedNumber.vue'
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const store = useHomeStore()
 const chartRef = ref<HTMLDivElement | null>(null)
-let chart: EChartsType | null = null
+const { initChart } = useChart(chartRef)
 
 const chartOptions = {
   animationDuration: 900,
@@ -27,31 +27,14 @@ const chartOptions = {
       type: 'line' as const,
       smooth: true,
       symbol: 'none',
-      lineStyle: { width: 3, color: '#2563eb' },
-      areaStyle: { color: 'rgba(37, 99, 235, 0.08)' },
+      lineStyle: { width: 3, color: getComputedStyle(document.documentElement).getPropertyValue('--color-primary-600').trim() },
+      areaStyle: { color: 'rgba(37, 99, 235, 0.12)' },
     },
   ],
 }
 
-const renderChart = () => {
-  if (!chartRef.value) {
-    return
-  }
-
-  chart = echarts.init(chartRef.value)
-  chart.setOption(chartOptions)
-}
-
-const resizeChart = () => chart?.resize()
-
 onMounted(() => {
-  renderChart()
-  window.addEventListener('resize', resizeChart)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', resizeChart)
-  chart?.dispose()
+  initChart(chartOptions)
 })
 </script>
 
@@ -66,7 +49,7 @@ onBeforeUnmount(() => {
       <AnimatedNumber :value="store.energyToday" :decimals="2" />
       <small class="text-sm"> kWh</small>
     </strong>
-    <p class="mt-1 text-xs text-slate-500 trend-enter">较昨日 <b class="text-emerald-600">↘ -8.7%</b></p>
+    <p class="mt-1 text-xs text-slate-500 trend-enter">较昨日 <b class="text-[var(--color-success)]">↘ -8.7%</b></p>
     <div ref="chartRef" class="h-24 w-full"></div>
     <span class="text-xs text-slate-500">本月用电</span>
     <strong class="block text-sm">

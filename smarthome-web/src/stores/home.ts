@@ -1,6 +1,7 @@
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, shallowRef, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { automations as mockAutomations, devices as mockDevices, messages as mockMessages, recentConversations } from '../mock/home'
+import { useBatchedDeviceUpdates, type DeviceUpdate } from '../composables/useBatchedDeviceUpdates'
 import type { Automation } from '../types/automation'
 import type { ChatMessage } from '../types/chat'
 import type { Device } from '../types/device'
@@ -19,9 +20,15 @@ const createExecutionSteps = (): AgentExecutionStep[] => [
 export const useHomeStore = defineStore('home', () => {
   const activeMenu = ref('智能对话')
   const sidebarCollapsed = ref(false)
-  const selectedDevice = ref<Device | null>(null)
+  const selectedDeviceId = ref<string | null>(null)
   const deviceDrawerOpen = ref(false)
-  const devices = ref<Device[]>(mockDevices)
+  const deviceIds = shallowRef<string[]>(mockDevices.map((device) => device.id))
+  const devicesById = shallowRef<Record<string, Device>>(
+    mockDevices.reduce<Record<string, Device>>((record, device) => {
+      record[device.id] = device
+      return record
+    }, {}),
+  )
   const automations = ref<Automation[]>(mockAutomations)
   const messages = ref<ChatMessage[]>(mockMessages)
   const agentStatus = ref<AgentStatus>('idle')
@@ -29,6 +36,9 @@ export const useHomeStore = defineStore('home', () => {
   const energyToday = ref(18.62)
   const securityAlertHandled = ref(false)
   let replyTimerIds: number[] = []
+
+  const devices = computed(() => deviceIds.value.map((id) => devicesById.value[id]).filter((device): device is Device => Boolean(device)))
+  const selectedDevice = computed(() => (selectedDeviceId.value ? devicesById.value[selectedDeviceId.value] ?? null : null))
 
   const deviceSummary = computed(() => {
     const online = devices.value.filter((device) => device.online).length
@@ -62,7 +72,7 @@ export const useHomeStore = defineStore('home', () => {
   }
 
   const selectDevice = (device: Device) => {
-    selectedDevice.value = device
+    selectedDeviceId.value = device.id
     deviceDrawerOpen.value = true
   }
 
@@ -77,6 +87,30 @@ export const useHomeStore = defineStore('home', () => {
       automation.enabled = !automation.enabled
     }
   }
+
+  const commitDeviceUpdates = (updates: DeviceUpdate[]) => {
+    const nextDevicesById = { ...devicesById.value }
+
+    updates.forEach((update) => {
+      const currentDevice = nextDevicesById[update.id]
+
+      if (!currentDevice) {
+        return
+      }
+
+      nextDevicesById[update.id] = {
+        ...currentDevice,
+        status: update.status ?? currentDevice.status,
+        value: update.value === undefined ? currentDevice.value : String(update.value),
+        updatedAt: update.updatedAt ?? currentDevice.updatedAt,
+        online: update.online ?? currentDevice.online,
+      }
+    })
+
+    devicesById.value = nextDevicesById
+  }
+
+  const { queueDeviceUpdate, queueDeviceUpdates } = useBatchedDeviceUpdates(commitDeviceUpdates, (id) => devicesById.value[id])
 
   const finishAiReply = () => {
     executionSteps.value = executionSteps.value.map((step) => ({ ...step, status: 'completed' }))
@@ -149,6 +183,8 @@ export const useHomeStore = defineStore('home', () => {
     securityAlertHandled.value = true
   }
 
+  onScopeDispose(clearReplyTimers)
+
   return {
     activeMenu,
     alertCount,
@@ -156,7 +192,9 @@ export const useHomeStore = defineStore('home', () => {
     automations,
     closeDeviceDrawer,
     deviceDrawerOpen,
+    deviceIds,
     devices,
+    devicesById,
     deviceSummary,
     enabledAutomationCount,
     energyToday,
@@ -167,6 +205,8 @@ export const useHomeStore = defineStore('home', () => {
     recentConversations,
     securityAlertHandled,
     selectedDevice,
+    queueDeviceUpdate,
+    queueDeviceUpdates,
     selectDevice,
     sendMessage,
     setActiveMenu,

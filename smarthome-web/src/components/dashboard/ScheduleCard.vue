@@ -20,7 +20,7 @@ const expandedId = ref<string | null>('arrive-home')
       <button class="motion-button text-lg text-slate-400" type="button">›</button>
     </div>
 
-    <div class="line-draw relative mb-3 grid gap-2 before:absolute before:left-[60px] before:top-2 before:h-[calc(100%-18px)] before:w-px before:bg-blue-100">
+    <div class="line-draw relative mb-3 grid gap-2 before:absolute before:left-[60px] before:top-2 before:h-[calc(100%-18px)] before:w-px before:bg-[var(--color-border-strong)]">
       <article
         v-for="(automation, index) in store.automations"
         :key="automation.id"
@@ -29,12 +29,19 @@ const expandedId = ref<string | null>('arrive-home')
         @mouseenter="expandedId = automation.id"
       >
         <time class="text-sm font-bold text-slate-700">{{ automation.time }}</time>
-        <div class="relative pl-4 before:absolute before:left-0 before:top-1.5 before:h-2 before:w-2 before:rounded-full before:bg-blue-600">
+        <div
+          class="relative pl-4 before:absolute before:left-0 before:top-1.5 before:h-2 before:w-2 before:rounded-full"
+          :class="{
+            'before:bg-[var(--color-warning)]': automation.id === 'wake-up',
+            'before:bg-[var(--color-primary-600)]': automation.id === 'arrive-home',
+            'before:bg-[var(--color-ai)]': automation.id === 'sleep',
+          }"
+        >
           <span v-if="automation.id === 'arrive-home'" class="absolute left-[-3px] top-[-1px] h-4 w-4 rounded-full bg-blue-400/20 status-pulse"></span>
           <strong class="block text-sm">{{ automation.name }}</strong>
           <p class="mt-1 text-xs leading-5 text-slate-500">{{ automation.description }}</p>
           <Transition name="expand">
-            <p v-if="expandedId === automation.id" class="mt-2 overflow-hidden rounded-lg bg-blue-50 px-2 py-1.5 text-xs text-blue-700">
+            <p v-if="expandedId === automation.id" class="mt-2 overflow-hidden rounded-lg bg-[var(--color-surface-subtle)] px-2 py-1.5 text-xs text-[var(--color-text-secondary)]">
               {{ automation.actions.join(' · ') }}
             </p>
           </Transition>

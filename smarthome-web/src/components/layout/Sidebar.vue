@@ -12,7 +12,7 @@ const activeIndex = computed(() => Math.max(menuItems.indexOf(store.activeMenu),
 
 <template>
   <aside
-    class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-blue-100/70 bg-white/70 py-5 shadow-soft backdrop-blur transition-[padding] duration-500 ease-out"
+    class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border-default)] border-r-[var(--color-border-default)] bg-[var(--color-sidebar-background)] py-5 shadow-soft backdrop-blur transition-[padding] duration-500 ease-out"
     :class="store.sidebarCollapsed ? 'px-2' : 'px-4'"
     style="animation-delay: 0ms"
   >
@@ -55,7 +55,7 @@ const activeIndex = computed(() => Math.max(menuItems.indexOf(store.activeMenu),
       <nav class="relative grid gap-1">
         <span
           v-if="!store.sidebarCollapsed"
-          class="absolute left-0 h-7 w-1 rounded-full bg-blue-600 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          class="absolute left-0 h-7 w-1 rounded-full bg-[var(--color-primary-600)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
           :style="{ transform: `translateY(${activeIndex * 48 + 8}px)` }"
         ></span>
 
@@ -64,7 +64,7 @@ const activeIndex = computed(() => Math.max(menuItems.indexOf(store.activeMenu),
           :key="item"
           class="motion-button group flex h-11 items-center rounded-lg text-sm font-semibold text-slate-600 transition duration-200 hover:bg-blue-50 hover:text-blue-700 active:scale-[0.98]"
           :class="[
-            store.activeMenu === item ? 'bg-blue-50 text-blue-700 shadow-sm' : '',
+            store.activeMenu === item ? 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] shadow-sm' : '',
             store.sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3 pl-5 text-left',
           ]"
           type="button"
@@ -88,7 +88,7 @@ const activeIndex = computed(() => Math.max(menuItems.indexOf(store.activeMenu),
             class="motion-button mb-2 grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg px-2 py-2 text-left transition hover:bg-slate-100"
             type="button"
           >
-            <span class="grid h-7 w-7 place-items-center rounded-lg bg-blue-50 text-xs text-blue-700">{{ conversation.icon.slice(0, 1) }}</span>
+            <span class="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-surface-subtle)] text-xs text-[var(--color-text-tertiary)]">{{ conversation.icon.slice(0, 1) }}</span>
             <span class="truncate text-sm font-medium text-slate-700">{{ conversation.title }}</span>
             <span class="text-xs text-slate-400">{{ conversation.time }}</span>
           </button>

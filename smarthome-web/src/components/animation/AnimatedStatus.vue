@@ -1,22 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { statusColorMap } from '../../constants/status-colors'
 import type { DeviceStatus } from '../../types/animation'
+import type { SemanticStatus } from '../../types/theme'
 
-defineProps<{
+const props = defineProps<{
   status: DeviceStatus
   label: string
 }>()
+
+const semanticStatus = computed<SemanticStatus>(() => props.status)
+const statusColors = computed(() => statusColorMap[semanticStatus.value])
 </script>
 
 <template>
   <span class="inline-flex items-center gap-1.5">
     <span
       class="h-2 w-2 rounded-full transition-colors"
-      :class="{
-        'bg-emerald-500': status === 'online',
-        'bg-rose-500': status === 'offline',
-        'bg-blue-500 status-dot-running': status === 'running',
-        'bg-amber-500': status === 'warning',
-      }"
+      :class="[statusColors.dotClass, { 'status-dot-running': status === 'running' }]"
     ></span>
     <Transition name="status-crossfade" mode="out-in">
       <span :key="label">{{ label }}</span>

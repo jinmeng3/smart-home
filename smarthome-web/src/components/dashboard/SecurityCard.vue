@@ -16,11 +16,11 @@ const knowledgeItems = ['如何创建回家模式', '空调节能设置指南', 
 
     <button
       class="alert-once mb-4 flex w-full gap-2 rounded-lg border p-3 text-left transition"
-      :class="store.securityAlertHandled ? 'border-emerald-100 bg-emerald-50' : 'border-rose-100 bg-rose-50'"
+      :class="store.securityAlertHandled ? 'border-[var(--color-success-border)] bg-[var(--color-success-soft)]' : 'border-[var(--color-warning-border)] bg-[var(--color-warning-soft)]'"
       type="button"
       @click="expanded = !expanded"
     >
-      <span :class="store.securityAlertHandled ? 'text-emerald-600' : 'warning-shake text-rose-500'">{{ store.securityAlertHandled ? '✓' : '▲' }}</span>
+      <span :class="store.securityAlertHandled ? 'text-[var(--color-success)]' : 'warning-shake text-[var(--color-warning)]'">{{ store.securityAlertHandled ? '✓' : '▲' }}</span>
       <div class="min-w-0">
         <strong class="block text-sm text-slate-800">{{ store.securityAlertHandled ? '告警已处理' : '门窗传感器异常' }}</strong>
         <p class="mt-1 text-xs text-slate-500">厨房窗户 · 10:15</p>
@@ -28,7 +28,7 @@ const knowledgeItems = ['如何创建回家模式', '空调节能设置指南', 
           <div v-if="expanded" class="mt-2 overflow-hidden text-xs leading-5 text-slate-600">
             <p>位置：厨房东侧窗户</p>
             <p>建议：检查窗户闭合状态，并确认传感器电量。</p>
-            <button class="motion-button mt-2 rounded-lg bg-white px-2 py-1 text-emerald-600" type="button" @click.stop="store.markAlertHandled">已处理</button>
+            <button class="motion-button mt-2 rounded-lg border border-[var(--color-success-border)] bg-[var(--color-panel-background)] px-2 py-1 text-[var(--color-success)]" type="button" @click.stop="store.markAlertHandled">已处理</button>
           </div>
         </Transition>
       </div>

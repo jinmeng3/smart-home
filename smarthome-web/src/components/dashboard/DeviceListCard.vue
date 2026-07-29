@@ -1,36 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useHomeStore } from '../../stores/home'
-import type { DeviceStatus } from '../../types/animation'
+import { statusColorMap } from '../../constants/status-colors'
 import type { Device } from '../../types/device'
+import type { SemanticStatus } from '../../types/theme'
+import { getDeviceRuntimeStatus } from '../../utils/device'
 import AnimatedList from '../animation/AnimatedList.vue'
 import AnimatedStatus from '../animation/AnimatedStatus.vue'
 
 const store = useHomeStore()
 const lastFocusedElement = ref<HTMLElement | null>(null)
 
-const deviceStatus = (device: Device): DeviceStatus => {
-  if (!device.online) {
-    return 'offline'
-  }
-
-  if (device.type === 'air_conditioner') {
-    return 'running'
-  }
-
-  return 'online'
-}
-
 const statusClass = (device: Device) => {
-  if (!device.online) {
-    return 'bg-rose-50 text-rose-500'
-  }
+  const status = getDeviceRuntimeStatus(device) as SemanticStatus
+  const colors = statusColorMap[status]
 
-  if (device.type === 'lock') {
-    return 'bg-emerald-50 text-emerald-600'
-  }
-
-  return 'bg-blue-50 text-blue-600'
+  return ['device-status-label', `status-${status}`, colors.textClass, colors.backgroundClass, colors.borderClass]
 }
 
 const detailText = computed(() => {
@@ -77,27 +62,28 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="mb-2 flex justify-between text-sm text-slate-500">
-      <span>在线 <strong class="text-emerald-600">{{ store.deviceSummary.online }} 台</strong></span>
-      <span>离线 <strong class="text-rose-500">{{ store.deviceSummary.offline }} 台</strong></span>
+      <span>在线 <strong class="text-[var(--color-success)]">{{ store.deviceSummary.online }} 台</strong></span>
+      <span>离线 <strong class="text-[var(--color-text-tertiary)]">{{ store.deviceSummary.offline }} 台</strong></span>
     </div>
 
     <AnimatedList tag="div" name="recent-list" class="grid gap-2">
       <button
         v-for="device in store.devices"
         :key="device.id"
-        class="motion-button device-row grid h-10 min-w-0 grid-cols-[26px_minmax(0,1fr)_minmax(66px,88px)] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 text-left transition hover:border-blue-200 hover:bg-blue-50/40"
+        v-memo="[device.id, device.status, device.value, device.online, store.selectedDevice?.id === device.id]"
+        class="motion-button device-row grid h-10 min-w-0 grid-cols-[26px_minmax(0,1fr)_minmax(66px,88px)] items-center gap-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-panel-background)] px-2 text-left transition hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-subtle)]"
         type="button"
         @click="openDevice(device, $event)"
       >
         <span class="grid h-6 w-6 place-items-center rounded-lg bg-slate-100 text-xs">{{ device.type.slice(0, 1).toUpperCase() }}</span>
         <strong class="truncate text-sm text-slate-700">{{ device.name }}</strong>
         <em class="truncate rounded-md px-2 py-1 text-center text-xs not-italic font-bold" :class="statusClass(device)">
-          <AnimatedStatus :status="deviceStatus(device)" :label="device.value ?? device.status" />
+          <AnimatedStatus :status="getDeviceRuntimeStatus(device)" :label="device.value ?? device.status" />
         </em>
       </button>
     </AnimatedList>
 
-    <p class="mt-2 truncate rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">{{ detailText }}</p>
+    <p class="mt-2 truncate rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-panel-secondary)] px-3 py-2 text-xs text-slate-500">{{ detailText }}</p>
     <a class="motion-button mt-2 block text-center text-xs font-bold text-blue-600" href="#">查看全部设备</a>
 
     <Transition name="drawer">
@@ -125,10 +111,10 @@ onBeforeUnmount(() => {
 
 @keyframes device-highlight {
   0% {
-    background: #eff6ff;
+    background: var(--color-surface-hover);
   }
   100% {
-    background: #ffffff;
+    background: var(--color-panel-background);
   }
 }
 </style>
