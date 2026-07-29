@@ -8,5 +8,10 @@ export const router = createRouter({
       name: 'home-assistant',
       component: () => import('../views/HomeAssistant.vue'),
     },
+    {
+      path: '/settings',
+      name: 'settings-center',
+      component: () => import('../views/SettingsCenter.vue'),
+    },
   ],
 })
