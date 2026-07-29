@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import type { HomeAssistantSettings } from '../../types/settings'
 import SettingsSectionCard from './SettingsSectionCard.vue'
 
@@ -12,6 +13,11 @@ const emit = defineEmits<{
 }>()
 
 const showToken = ref(false)
+
+const syncDevices = () => {
+  emit('sync')
+  ElMessage.success('设备同步完成')
+}
 </script>
 
 <template>
@@ -28,6 +34,6 @@ const showToken = ref(false)
       <span>WebSocket 状态</span>
       <span class="device-status-label status-online rounded-lg px-3 py-1 text-sm font-semibold">● 已连接</span>
     </div>
-    <button class="secondary-button mx-auto mt-3" type="button" @click="emit('sync')">同步设备</button>
+    <button class="secondary-button mx-auto mt-3" type="button" @click="syncDevices">同步设备</button>
   </SettingsSectionCard>
 </template>

@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import type { AccountSettings } from '../../types/settings'
 import SettingsSectionCard from './SettingsSectionCard.vue'
 
 defineProps<{
   account: AccountSettings
 }>()
+
+const showPending = (name: string) => {
+  ElMessage.info(`${name}功能已进入待办流程`)
+}
 </script>
 
 <template>
@@ -17,8 +22,8 @@ defineProps<{
       </div>
     </div>
     <div class="grid gap-3">
-      <button class="settings-row" type="button"><span>家庭成员管理</span><span>›</span></button>
-      <button class="settings-row" type="button"><span>角色权限</span><span>›</span></button>
+      <button class="settings-row" type="button" @click="showPending('家庭成员管理')"><span>家庭成员管理</span><span>›</span></button>
+      <button class="settings-row" type="button" @click="showPending('角色权限')"><span>角色权限</span><span>›</span></button>
     </div>
   </SettingsSectionCard>
 </template>

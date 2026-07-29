@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import AccountSettingsCard from '../components/settings/AccountSettingsCard.vue'
 import AiAssistantSettingsCard from '../components/settings/AiAssistantSettingsCard.vue'
 import AppearanceSettingsCard from '../components/settings/AppearanceSettingsCard.vue'
@@ -12,7 +13,7 @@ import SettingsSuggestionPanel from '../components/settings/SettingsSuggestionPa
 import SettingsSummaryPanel from '../components/settings/SettingsSummaryPanel.vue'
 import SettingsTabs from '../components/settings/SettingsTabs.vue'
 import { useSettingsStore } from '../stores/settings'
-import type { SettingsSectionId } from '../types/settings'
+import type { SettingsSectionId, SettingsState } from '../types/settings'
 
 const settingsStore = useSettingsStore()
 const activeSection = ref<SettingsSectionId>('account')
@@ -22,6 +23,23 @@ const settings = computed(() => settingsStore.settings)
 const selectSection = (section: SettingsSectionId) => {
   activeSection.value = section
   document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const exportSettings = () => {
+  const blob = new Blob([JSON.stringify(settings.value, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = `smart-home-settings-${Date.now()}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+  settingsStore.updateBackupTime()
+  ElMessage.success('配置已导出')
+}
+
+const importSettings = (nextSettings: SettingsState) => {
+  settingsStore.importSettings(nextSettings)
 }
 </script>
 
@@ -43,7 +61,7 @@ const selectSection = (section: SettingsSectionId) => {
           <HomeAssistantSettingsCard :home-assistant="settings.homeAssistant" @sync="settingsStore.syncDevices" />
           <NotificationSettingsCard :notifications="settings.notifications" />
           <SecuritySettingsCard :security="settings.security" />
-          <BackupSettingsCard :backup="settings.backup" />
+          <BackupSettingsCard :backup="settings.backup" @export="exportSettings" @import="importSettings" />
         </div>
       </div>
 

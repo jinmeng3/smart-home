@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed, onMounted, onUnmounted, watch, watchEffect } from 'vue'
 import Sidebar from './components/layout/Sidebar.vue'
 import { useHomeStore } from './stores/home'
 import { useSettingsStore } from './stores/settings'
 
 const store = useHomeStore()
 const settingsStore = useSettingsStore()
+let systemThemeQuery: MediaQueryList | null = null
 
 const activeTheme = computed(() => {
   const themeMode = settingsStore.settings.appearance.themeMode
@@ -19,6 +20,27 @@ const activeTheme = computed(() => {
 
 watchEffect(() => {
   document.documentElement.dataset.theme = activeTheme.value
+  document.documentElement.dataset.fontSize = settingsStore.settings.appearance.fontSize
+  document.documentElement.dataset.motion = settingsStore.settings.appearance.animationsEnabled ? 'on' : 'off'
+  store.sidebarCollapsed = settingsStore.settings.appearance.sidebarCollapsed
+})
+
+watch(
+  () => store.sidebarCollapsed,
+  (sidebarCollapsed) => {
+    settingsStore.settings.appearance.sidebarCollapsed = sidebarCollapsed
+  },
+)
+
+onMounted(() => {
+  systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  systemThemeQuery.addEventListener('change', () => {
+    document.documentElement.dataset.theme = activeTheme.value
+  })
+})
+
+onUnmounted(() => {
+  systemThemeQuery = null
 })
 </script>
 
