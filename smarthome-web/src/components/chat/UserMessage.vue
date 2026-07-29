@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <article class="mb-5 ml-auto grid max-w-[620px] grid-cols-[minmax(0,1fr)_42px] gap-3">
+  <article class="user-message-enter mb-5 ml-auto grid max-w-[620px] grid-cols-[minmax(0,1fr)_42px] gap-3">
     <div class="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 px-5 py-3 text-sm font-semibold leading-6 text-white">
       {{ message.content }}
     </div>

@@ -3,7 +3,7 @@ import { Bell, Search } from '@element-plus/icons-vue'
 </script>
 
 <template>
-  <header class="flex h-[88px] shrink-0 items-center justify-between border-b border-blue-100/70 px-6 py-4">
+  <header class="page-enter-stagger flex h-[88px] shrink-0 items-center justify-between border-b border-blue-100/70 px-6 py-4" style="animation-delay: 80ms">
     <div>
       <h1 class="text-xl font-extrabold tracking-normal text-slate-900">上午好，张晓明 👋</h1>
       <p class="mt-1 text-sm font-medium text-slate-500">今天是 2025年5月20日 星期二</p>
