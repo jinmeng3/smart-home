@@ -1,8 +1,25 @@
 <script setup lang="ts">
+import { computed, watchEffect } from 'vue'
 import Sidebar from './components/layout/Sidebar.vue'
 import { useHomeStore } from './stores/home'
+import { useSettingsStore } from './stores/settings'
 
 const store = useHomeStore()
+const settingsStore = useSettingsStore()
+
+const activeTheme = computed(() => {
+  const themeMode = settingsStore.settings.appearance.themeMode
+
+  if (themeMode !== 'system') {
+    return themeMode
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+})
+
+watchEffect(() => {
+  document.documentElement.dataset.theme = activeTheme.value
+})
 </script>
 
 <template>
