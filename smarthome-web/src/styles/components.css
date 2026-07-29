@@ -10,10 +10,13 @@
 }
 
 .motion-button:focus-visible,
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+input:focus-visible {
+  outline: none;
 }
 
 .header-search .el-input__wrapper {
