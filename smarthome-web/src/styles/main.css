@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #172442;
+  background: #eef5ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 1180px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.header-search {
+  width: 280px;
+}
+
+.header-search .el-input__wrapper {
+  height: 40px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #dbeafe inset;
+}
+
+.el-button.is-circle {
+  width: 40px;
+  height: 40px;
+}
+
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html,
+body,
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}
+
+.sidebar-scroll {
+  scrollbar-width: none;
+}
