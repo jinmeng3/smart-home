@@ -2,10 +2,15 @@ import type { SettingsState } from '../types/settings'
 
 export const defaultSettings: SettingsState = {
   account: {
-    username: '张晓明',
-    email: 'zhang.xm@company.com',
-    familyName: '星河公寓',
-    role: '管理员',
+    username: '',
+    email: '',
+    avatarUrl: null,
+    familyName: '',
+    householdId: undefined,
+    householdAddress: null,
+    householdTimezone: 'Asia/Shanghai',
+    role: '',
+    members: [],
   },
   appearance: {
     themeMode: 'light',
@@ -40,8 +45,8 @@ export const defaultSettings: SettingsState = {
     lastBackupTime: '今天 09:40',
   },
   summary: {
-    currentHome: '星河公寓',
-    accountStatus: '管理员',
+    currentHome: '',
+    accountStatus: '',
     homeAssistantStatus: 'online',
     lastSync: '5 分钟前',
   },

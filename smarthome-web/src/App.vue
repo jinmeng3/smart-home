@@ -37,6 +37,8 @@ onMounted(() => {
   systemThemeQuery.addEventListener('change', () => {
     document.documentElement.dataset.theme = activeTheme.value
   })
+
+  void settingsStore.loadAccountHome()
 })
 
 onUnmounted(() => {

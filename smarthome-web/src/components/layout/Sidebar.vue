@@ -2,9 +2,11 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHomeStore } from '../../stores/home'
+import { useSettingsStore } from '../../stores/settings'
 import AnimatedList from '../animation/AnimatedList.vue'
 
 const store = useHomeStore()
+const settingsStore = useSettingsStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -22,6 +24,8 @@ const menuItems = [
 
 const activeLabel = computed(() => (route.path === '/settings' ? '设置' : store.activeMenu))
 const activeIndex = computed(() => Math.max(menuItems.findIndex((item) => item.label === activeLabel.value), 0))
+const account = computed(() => settingsStore.settings.account)
+const accountInitial = computed(() => account.value.username.trim().slice(0, 1).toUpperCase())
 
 const selectMenu = async (item: (typeof menuItems)[number]) => {
   store.setActiveMenu(item.label)
@@ -105,10 +109,13 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
       class="absolute bottom-5 flex items-center overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-500 ease-out"
       :class="store.sidebarCollapsed ? 'left-1/2 h-11 w-11 -translate-x-1/2 justify-center gap-0 rounded-full p-0' : 'left-4 right-4 h-[74px] translate-x-0 justify-start gap-3 rounded-xl p-3'"
     >
-      <div class="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-100 to-slate-700"></div>
+      <img v-if="account.avatarUrl" class="h-10 w-10 shrink-0 rounded-full object-cover" :src="account.avatarUrl" alt="" />
+      <div v-else class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-100 to-slate-700 text-sm font-extrabold text-white">
+        {{ accountInitial }}
+      </div>
       <div class="min-w-0 overflow-hidden transition-all duration-300 ease-out" :class="store.sidebarCollapsed ? 'w-0 translate-x-3 opacity-0' : 'w-[132px] translate-x-0 opacity-100'">
-        <strong class="block text-sm">张晓明</strong>
-        <span class="block truncate text-xs text-slate-500">zhang.xm@company.com</span>
+        <strong class="block truncate text-sm">{{ account.username }}</strong>
+        <span class="block truncate text-xs text-slate-500">{{ account.email }}</span>
       </div>
       <span class="ml-auto text-slate-400 transition-all duration-300 ease-out" :class="store.sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'">⌄</span>
     </section>

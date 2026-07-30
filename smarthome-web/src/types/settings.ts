@@ -3,10 +3,16 @@ export type FontSize = 'small' | 'medium' | 'large'
 export type WebSocketStatus = 'connected' | 'disconnected'
 
 export interface AccountSettings {
+  id?: number
   username: string
   email: string
+  avatarUrl?: string | null
   familyName: string
+  householdId?: number
+  householdAddress?: string | null
+  householdTimezone?: string
   role: string
+  members?: HouseholdMember[]
 }
 
 export interface AppearanceSettings {
@@ -73,4 +79,16 @@ export interface SettingsState {
   backup: BackupSettings
   summary: SettingsSummary
   suggestions: SettingsSuggestionItem[]
+}
+
+export type HouseholdRole = 'admin' | 'member'
+
+export interface HouseholdMember {
+  membershipId: number
+  userId: number
+  name: string
+  email: string
+  avatarUrl: string | null
+  role: HouseholdRole
+  joinedAt: string
 }
