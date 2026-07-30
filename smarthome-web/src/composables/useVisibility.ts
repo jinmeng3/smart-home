@@ -1,19 +1,19 @@
-import { onScopeDispose, ref } from 'vue'
+import { onScopeDispose, ref } from "vue";
 
 export const useVisibility = () => {
-  const isVisible = ref(document.visibilityState === 'visible')
+  const isVisible = ref(document.visibilityState === "visible");
 
   const updateVisibility = () => {
-    isVisible.value = document.visibilityState === 'visible'
-  }
+    isVisible.value = document.visibilityState === "visible";
+  };
 
-  document.addEventListener('visibilitychange', updateVisibility)
+  document.addEventListener("visibilitychange", updateVisibility);
 
   onScopeDispose(() => {
-    document.removeEventListener('visibilitychange', updateVisibility)
-  })
+    document.removeEventListener("visibilitychange", updateVisibility);
+  });
 
   return {
     isVisible,
-  }
-}
+  };
+};

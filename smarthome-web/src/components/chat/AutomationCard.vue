@@ -10,7 +10,9 @@ const store = useHomeStore();
 </script>
 
 <template>
-    <article class="motion-card rounded-lg border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-3 hover:bg-[var(--color-panel-secondary)]">
+    <article
+        class="motion-card rounded-lg border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-3 hover:bg-[var(--color-panel-secondary)]"
+    >
         <div class="flex items-start justify-between gap-3">
             <div>
                 <strong class="block text-sm text-slate-800">{{

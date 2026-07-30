@@ -1,14 +1,14 @@
-import type { DeviceStatus } from '../types/animation'
-import type { Device } from '../types/device'
+import type { DeviceStatus } from "../types/animation";
+import type { Device } from "../types/device";
 
 export const getDeviceRuntimeStatus = (device: Device): DeviceStatus => {
   if (!device.online) {
-    return 'offline'
+    return "offline";
   }
 
-  if (device.type === 'air_conditioner') {
-    return 'running'
+  if (device.type === "air_conditioner") {
+    return "running";
   }
 
-  return 'online'
-}
+  return "online";
+};

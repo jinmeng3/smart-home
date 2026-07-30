@@ -1,84 +1,84 @@
-import { ApiError } from './client'
-
-const defaultUserId = '1'
-const currentUserStorageKeys = ['smart-home-current-user-id', 'currentUserId', 'userId']
+import { createApiHeaders, parseResponse } from "./client";
 
 export interface ChatCompletionMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
-const getCurrentUserId = () => {
-  for (const key of currentUserStorageKeys) {
-    const userId = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key)
-
-    if (userId) {
-      return userId
-    }
-  }
-
-  return defaultUserId
+interface StreamPayload {
+  error?: unknown;
+  choices?: Array<{
+    delta?: {
+      content?: string;
+    };
+  }>;
 }
 
 const parseContentDelta = (line: string) => {
-  if (!line.startsWith('data: ')) {
-    return ''
+  if (!line.startsWith("data: ")) {
+    return "";
   }
 
-  const data = line.slice(6).trim()
+  const data = line.slice(6).trim();
 
-  if (!data || data === '[DONE]') {
-    return ''
+  if (!data || data === "[DONE]") {
+    return "";
   }
 
-  const payload = JSON.parse(data)
+  const payload = JSON.parse(data) as StreamPayload;
 
   if (payload.error) {
-    throw new Error(String(payload.error))
+    throw new Error(String(payload.error));
   }
 
-  return payload.choices?.[0]?.delta?.content ?? ''
-}
+  return payload.choices?.[0]?.delta?.content ?? "";
+};
 
 export const streamChatCompletion = async (
   messages: ChatCompletionMessage[],
   onDelta: (content: string) => void,
+  signal: AbortSignal,
 ) => {
-  const response = await fetch('/api/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-User-Id': getCurrentUserId(),
-    },
+  const response = await fetch("/api/chat/completions", {
+    method: "POST",
+    headers: createApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ messages, stream: true }),
-  })
+    signal,
+  });
 
   if (!response.ok || !response.body) {
-    const data = await response.json().catch(() => ({ detail: '请求失败' }))
-    throw new ApiError(data.detail ?? '请求失败', response.status)
+    await parseResponse<never>(response);
+    return;
   }
 
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read()
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
 
-    if (done) {
-      break
-    }
+      if (done) {
+        break;
+      }
 
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const delta = parseContentDelta(line.trim())
+      for (const line of lines) {
+        const delta = parseContentDelta(line.trim());
 
-      if (delta) {
-        onDelta(delta)
+        if (delta) {
+          onDelta(delta);
+        }
       }
     }
+  } finally {
+    if (signal.aborted) {
+      await reader.cancel().catch(() => undefined);
+    }
+    reader.releaseLock();
   }
-}
+};

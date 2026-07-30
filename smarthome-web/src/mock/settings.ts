@@ -29,8 +29,9 @@ export const defaultSettings: SettingsState = {
   },
   homeAssistant: {
     serviceUrl: 'https://home.example.com:8123',
-    accessToken: 'orion-home-assistant-access-token',
-    websocketStatus: 'connected',
+    accessToken: '',
+    tokenConfigured: false,
+    websocketStatus: 'disconnected',
   },
   notifications: {
     deviceOffline: true,

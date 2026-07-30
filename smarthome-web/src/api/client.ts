@@ -14,7 +14,7 @@ export class ApiError extends Error {
   }
 }
 
-const getCurrentUserId = () => {
+export const getCurrentUserId = () => {
   for (const key of currentUserStorageKeys) {
     const userId =
       window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
@@ -27,7 +27,7 @@ const getCurrentUserId = () => {
   return defaultUserId;
 };
 
-const parseResponse = async <T>(response: Response): Promise<T> => {
+export const parseResponse = async <T>(response: Response): Promise<T> => {
   if (response.ok) {
     if (response.status === 204) {
       return undefined as T;
@@ -40,15 +40,21 @@ const parseResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(data.detail ?? "请求失败", response.status);
 };
 
-export const apiRequest = async <T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> => {
-  const headers = new Headers(init.headers);
+export const createApiHeaders = (init?: HeadersInit) => {
+  const headers = new Headers(init);
 
   if (!headers.has("X-User-Id")) {
     headers.set("X-User-Id", getCurrentUserId());
   }
+
+  return headers;
+};
+
+export const apiRequest = async <T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> => {
+  const headers = createApiHeaders(init.headers);
 
   if (!(init.body instanceof FormData) && init.body !== undefined) {
     headers.set("Content-Type", "application/json");

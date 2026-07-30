@@ -15,7 +15,8 @@ const chatScrollRef = ref<HTMLElement | null>(null)
 
 const messageCount = computed(() => store.messages.length)
 const visibleMessages = computed(() => store.messages.slice(-50))
-const sendDisabled = computed(() => !inputValue.value.trim() || store.agentStatus === 'thinking' || store.agentStatus === 'executing')
+const generating = computed(() => store.agentStatus === 'thinking' || store.agentStatus === 'executing')
+const sendDisabled = computed(() => !generating.value && !inputValue.value.trim())
 const statusToneClass = computed(() =>
   store.hasWarning
     ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] text-[var(--color-text-primary)]'
@@ -25,6 +26,11 @@ const statusToneClass = computed(() =>
 const { scrollToBottom, updateStickiness } = useAutoScroll(chatScrollRef, messageCount)
 
 const send = () => {
+  if (generating.value) {
+    store.stopGenerating()
+    return
+  }
+
   store.sendMessage(inputValue.value)
   inputValue.value = ''
   void scrollToBottom(true)
@@ -86,6 +92,7 @@ const fillPrompt = (prompt: string) => {
         class="motion-button absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-[var(--color-primary-600)] text-xl text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--color-primary-700)] active:bg-[var(--color-primary-800)] disabled:bg-[var(--color-text-disabled)]"
         type="submit"
         :disabled="sendDisabled"
+        :title="generating ? '停止生成' : '发送'"
       >
         <span class="transition-transform group-hover:-translate-y-0.5">{{ store.agentStatus === 'success' ? '✓' : '↑' }}</span>
       </button>

@@ -1,17 +1,17 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router";
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/',
-      name: 'home-assistant',
-      component: () => import('../views/HomeAssistant.vue'),
+      path: "/",
+      name: "home-assistant",
+      component: () => import("../views/HomeAssistant.vue"),
     },
     {
-      path: '/settings',
-      name: 'settings-center',
-      component: () => import('../views/SettingsCenter.vue'),
+      path: "/settings",
+      name: "settings-center",
+      component: () => import("../views/SettingsCenter.vue"),
     },
   ],
-})
+});

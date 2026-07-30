@@ -23,10 +23,6 @@ export default defineConfig({
             return 'ui-vendor'
           }
 
-          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) {
-            return 'chart-vendor'
-          }
-
           return undefined
         },
       },
