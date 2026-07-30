@@ -23,18 +23,47 @@ const syncDevices = () => {
 
 <template>
   <SettingsSectionCard id="homeAssistant" icon="⌘" title="平台接入">
-    <label class="settings-field"><span>服务地址</span><input v-model="homeAssistant.serviceUrl" class="settings-input" /></label>
-    <label class="settings-field">
-      <span>Access Token</span>
-      <div class="relative min-w-[320px]">
+    <label class="settings-field integration-field"><span class="integration-label">服务地址</span><input v-model="homeAssistant.serviceUrl" class="settings-input integration-control" /></label>
+    <label class="settings-field integration-field">
+      <span class="integration-label">Access Token</span>
+      <div class="integration-control relative">
         <input v-model="homeAssistant.accessToken" class="settings-input w-full pr-10" :type="showToken ? 'text' : 'password'" />
         <button class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" type="button" @click="showToken = !showToken">●</button>
       </div>
     </label>
-    <div class="settings-field">
-      <span>WebSocket 状态</span>
+    <div class="settings-field integration-field">
+      <span class="integration-label">WebSocket 状态</span>
       <span class="device-status-label rounded-lg px-3 py-1 text-sm font-semibold" :class="statusClass">{{ statusText }}</span>
     </div>
     <button class="secondary-button mx-auto mt-3" :disabled="!connected" type="button" @click="syncDevices">同步设备</button>
   </SettingsSectionCard>
 </template>
+
+<style scoped>
+.integration-field {
+  gap: 16px;
+}
+
+.integration-label {
+  flex: 0 0 112px;
+  white-space: nowrap;
+}
+
+.integration-control {
+  width: auto;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .integration-field {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .integration-label {
+    flex-basis: auto;
+  }
+}
+</style>

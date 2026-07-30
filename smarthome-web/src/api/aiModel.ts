@@ -4,6 +4,8 @@ export interface AIModelRead {
   name: string;
   provider: string;
   api_endpoint: string;
+  temperature: number;
+  max_tokens: number;
   is_active: boolean;
   description: string | null;
   created_at: string;
@@ -15,6 +17,8 @@ export interface AIModelUpdate {
   provider?: string;
   api_endpoint?: string;
   api_key?: string;
+  temperature?: number;
+  max_tokens?: number;
   is_active?: boolean;
   description?: string | null;
 }

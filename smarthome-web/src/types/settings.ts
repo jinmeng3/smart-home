@@ -22,10 +22,15 @@ export interface AppearanceSettings {
   sidebarCollapsed: boolean
 }
 
-export interface AiAssistantSettings {
-  model: string
-  language: string
+export interface ModelAdvancedSettings {
+  language: 'zh-CN' | 'en-US' | 'auto'
   detailLevel: number
+  temperature: number
+  maxTokens: number
+}
+
+export interface AiAssistantSettings extends ModelAdvancedSettings {
+  model: string
   autoExecuteLowRisk: boolean
   confirmHighRisk: boolean
 }

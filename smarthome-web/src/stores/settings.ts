@@ -16,11 +16,25 @@ import {
 import { createAIModel, getAIModel, updateAIModel } from '../api/aiModel'
 import { ApiError } from '../api/client'
 import { defaultSettings } from '../mock/settings'
-import type { HouseholdRole, SettingsState } from '../types/settings'
+import type { HouseholdRole, ModelAdvancedSettings, SettingsState } from '../types/settings'
 
 const storageKey = 'smart-home-settings'
 
 const cloneSettings = (): SettingsState => structuredClone(defaultSettings)
+
+const normalizeModelLanguage = (
+  language: unknown,
+): ModelAdvancedSettings['language'] => {
+  if (language === 'en-US' || language === 'English') {
+    return 'en-US'
+  }
+
+  if (language === 'auto') {
+    return 'auto'
+  }
+
+  return 'zh-CN'
+}
 
 const mergeNonAccountSettings = (nextSettings: Partial<SettingsState>): SettingsState => {
   const baseSettings = cloneSettings()
@@ -29,6 +43,15 @@ const mergeNonAccountSettings = (nextSettings: Partial<SettingsState>): Settings
     ...baseSettings,
     ...nextSettings,
     account: baseSettings.account,
+    aiAssistant: {
+      ...baseSettings.aiAssistant,
+      ...nextSettings.aiAssistant,
+      language: normalizeModelLanguage(nextSettings.aiAssistant?.language),
+    },
+    homeAssistant: {
+      ...baseSettings.homeAssistant,
+      ...nextSettings.homeAssistant,
+    },
     summary: {
       ...baseSettings.summary,
       ...nextSettings.summary,
@@ -124,6 +147,9 @@ export const useSettingsStore = defineStore('settings', () => {
       settings.value.aiAssistant = {
         ...settings.value.aiAssistant,
         model: model.name,
+        language: normalizeModelLanguage(model.description),
+        temperature: model.temperature,
+        maxTokens: model.max_tokens,
         autoExecuteLowRisk: model.is_active,
         confirmHighRisk: model.is_active,
       }
@@ -167,6 +193,8 @@ export const useSettingsStore = defineStore('settings', () => {
       provider: settings.value.aiAssistant.model.split(' ')[0] ?? settings.value.aiAssistant.model,
       api_endpoint: settings.value.homeAssistant.serviceUrl,
       api_key: settings.value.homeAssistant.accessToken,
+      temperature: settings.value.aiAssistant.temperature,
+      max_tokens: settings.value.aiAssistant.maxTokens,
       is_active: Boolean(settings.value.homeAssistant.serviceUrl && settings.value.homeAssistant.accessToken),
       description: settings.value.aiAssistant.language,
     }
@@ -183,7 +211,9 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     settings.value.aiAssistant.model = response.name
-    settings.value.aiAssistant.language = response.description ?? settings.value.aiAssistant.language
+    settings.value.aiAssistant.language = normalizeModelLanguage(response.description)
+    settings.value.aiAssistant.temperature = response.temperature
+    settings.value.aiAssistant.maxTokens = response.max_tokens
     settings.value.aiAssistant.autoExecuteLowRisk = response.is_active
     settings.value.aiAssistant.confirmHighRisk = response.is_active
     settings.value.homeAssistant.serviceUrl = response.api_endpoint

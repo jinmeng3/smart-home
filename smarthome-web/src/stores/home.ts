@@ -1,20 +1,21 @@
-import { computed, onScopeDispose, shallowRef, ref } from 'vue'
+import { computed, onScopeDispose, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
+import { streamChatCompletion } from '../api/chat'
 import { automations as mockAutomations, devices as mockDevices, messages as mockMessages, recentConversations } from '../mock/home'
 import { useBatchedDeviceUpdates, type DeviceUpdate } from '../composables/useBatchedDeviceUpdates'
+import type { AgentExecutionStep, AgentStatus } from '../types/animation'
 import type { Automation } from '../types/automation'
 import type { ChatMessage } from '../types/chat'
 import type { Device } from '../types/device'
-import type { AgentExecutionStep, AgentStatus } from '../types/animation'
 
 const createMessageId = () => `message-${Date.now()}-${Math.random().toString(16).slice(2)}`
 const currentTime = () => new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
 
 const createExecutionSteps = (): AgentExecutionStep[] => [
   { id: 'understand', label: '正在理解指令', status: 'pending' },
-  { id: 'query', label: '正在查询设备', status: 'pending' },
-  { id: 'execute', label: '正在执行控制', status: 'pending' },
-  { id: 'verify', label: '正在验证设备状态', status: 'pending' },
+  { id: 'query', label: '正在请求模型', status: 'pending' },
+  { id: 'execute', label: '正在生成回复', status: 'pending' },
+  { id: 'verify', label: '正在整理结果', status: 'pending' },
 ]
 
 export const useHomeStore = defineStore('home', () => {
@@ -115,12 +116,6 @@ export const useHomeStore = defineStore('home', () => {
   const finishAiReply = () => {
     executionSteps.value = executionSteps.value.map((step) => ({ ...step, status: 'completed' }))
     agentStatus.value = 'success'
-    messages.value.push({
-      id: createMessageId(),
-      role: 'assistant',
-      content: '已收到，我会结合当前设备状态、自动化计划和能耗数据给出控制建议。',
-      timestamp: currentTime(),
-    })
 
     replyTimerIds.push(
       window.setTimeout(() => {
@@ -130,36 +125,50 @@ export const useHomeStore = defineStore('home', () => {
     )
   }
 
-  const runAgentFlow = () => {
+  const runAgentFlow = async () => {
     clearReplyTimers()
     resetExecutionSteps()
     agentStatus.value = 'thinking'
+    executionSteps.value = executionSteps.value.map((step, index) => ({
+      ...step,
+      status: index === 0 ? 'executing' : 'pending',
+    }))
 
-    replyTimerIds.push(
-      window.setTimeout(() => {
-        agentStatus.value = 'executing'
-      }, 650),
-    )
+    const assistantMessage: ChatMessage = {
+      id: createMessageId(),
+      role: 'assistant',
+      content: '',
+      timestamp: currentTime(),
+    }
 
-    executionSteps.value.forEach((step, index) => {
-      replyTimerIds.push(
-        window.setTimeout(() => {
-          executionSteps.value = executionSteps.value.map((item, itemIndex) => {
-            if (itemIndex < index) {
-              return { ...item, status: 'completed' }
-            }
+    messages.value.push(assistantMessage)
 
-            if (item.id === step.id) {
-              return { ...item, status: 'executing' }
-            }
-
-            return item
-          })
-        }, 900 + index * 360),
+    try {
+      await streamChatCompletion(
+        messages.value
+          .filter((message) => message.content.trim())
+          .slice(-12)
+          .map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+        (delta) => {
+          assistantMessage.content += delta
+          agentStatus.value = 'executing'
+          executionSteps.value = executionSteps.value.map((step) => ({ ...step, status: 'completed' }))
+        },
       )
-    })
 
-    replyTimerIds.push(window.setTimeout(finishAiReply, 2500))
+      if (!assistantMessage.content.trim()) {
+        assistantMessage.content = '模型没有返回内容。'
+      }
+
+      finishAiReply()
+    } catch (error) {
+      assistantMessage.content = error instanceof Error ? error.message : '请求大模型失败'
+      agentStatus.value = 'idle'
+      resetExecutionSteps()
+    }
   }
 
   const sendMessage = (content: string) => {
@@ -176,7 +185,7 @@ export const useHomeStore = defineStore('home', () => {
       timestamp: currentTime(),
     })
 
-    runAgentFlow()
+    void runAgentFlow()
   }
 
   const markAlertHandled = () => {

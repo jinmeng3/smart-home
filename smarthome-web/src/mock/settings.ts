@@ -20,7 +20,9 @@ export const defaultSettings: SettingsState = {
   },
   aiAssistant: {
     model: 'Orion GPT-4o',
-    language: '简体中文',
+    temperature: 0.7,
+    maxTokens: 4096,
+    language: 'zh-CN',
     detailLevel: 70,
     autoExecuteLowRisk: true,
     confirmHighRisk: true,

@@ -51,7 +51,8 @@ def create_ai_model(
         provider=payload.provider,
         api_endpoint=payload.api_endpoint,
         api_key=payload.api_key,
-        parameters={},
+        temperature=payload.temperature,
+        max_tokens=payload.max_tokens,
         is_active=payload.is_active,
         description=payload.description,
     )
@@ -84,6 +85,12 @@ def update_ai_model(
 
     if payload.api_key is not None:
         db_model.api_key = payload.api_key
+
+    if payload.temperature is not None:
+        db_model.temperature = payload.temperature
+
+    if payload.max_tokens is not None:
+        db_model.max_tokens = payload.max_tokens
 
     if payload.is_active is not None:
         db_model.is_active = payload.is_active
