@@ -29,12 +29,17 @@ def delete_avatar_file(settings: Settings, avatar_url: str | None) -> None:
 
 async def save_avatar_file(settings: Settings, upload: UploadFile) -> str:
     if upload.content_type not in settings.allowed_avatar_types:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="不支持该头像格式")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="不支持该头像格式",
+        )
 
     content = await upload.read()
 
     if len(content) > settings.max_avatar_size:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="头像文件过大")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="头像文件过大"
+        )
 
     settings.avatar_dir.mkdir(parents=True, exist_ok=True)
     extension = extension_by_type[upload.content_type]

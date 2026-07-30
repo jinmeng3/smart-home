@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+﻿import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import {
@@ -13,6 +13,8 @@ import {
   updateMemberRole as apiUpdateMemberRole,
   uploadAvatar as apiUploadAvatar,
 } from '../api/account'
+import { createAIModel, getAIModel, updateAIModel } from '../api/aiModel'
+import { ApiError } from '../api/client'
 import { defaultSettings } from '../mock/settings'
 import type { HouseholdRole, SettingsState } from '../types/settings'
 
@@ -115,6 +117,31 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  const loadAIModel = async () => {
+    try {
+      const model = await getAIModel()
+
+      settings.value.aiAssistant = {
+        ...settings.value.aiAssistant,
+        model: model.name,
+        autoExecuteLowRisk: model.is_active,
+        confirmHighRisk: model.is_active,
+      }
+      settings.value.homeAssistant = {
+        ...settings.value.homeAssistant,
+        serviceUrl: model.api_endpoint,
+        websocketStatus: model.is_active ? 'connected' : 'disconnected',
+      }
+      settings.value.summary.homeAssistantStatus = model.is_active ? 'online' : 'offline'
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return
+      }
+
+      ElMessage.error(error instanceof Error ? error.message : 'AI 閸斺晜澧滈柊宥囩枂閸旂姾娴囨径杈Е')
+    }
+  }
+
   const saveAccountHome = async () => {
     const householdId = settings.value.account.householdId
 
@@ -132,6 +159,36 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     await loadAccountHome()
+  }
+
+  const saveAIModel = async () => {
+    const payload = {
+      name: settings.value.aiAssistant.model,
+      provider: settings.value.aiAssistant.model.split(' ')[0] ?? settings.value.aiAssistant.model,
+      api_endpoint: settings.value.homeAssistant.serviceUrl,
+      api_key: settings.value.homeAssistant.accessToken,
+      is_active: Boolean(settings.value.homeAssistant.serviceUrl && settings.value.homeAssistant.accessToken),
+      description: settings.value.aiAssistant.language,
+    }
+    let response
+
+    try {
+      response = await updateAIModel(payload)
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error
+      }
+
+      response = await createAIModel(payload)
+    }
+
+    settings.value.aiAssistant.model = response.name
+    settings.value.aiAssistant.language = response.description ?? settings.value.aiAssistant.language
+    settings.value.aiAssistant.autoExecuteLowRisk = response.is_active
+    settings.value.aiAssistant.confirmHighRisk = response.is_active
+    settings.value.homeAssistant.serviceUrl = response.api_endpoint
+    settings.value.homeAssistant.websocketStatus = response.is_active ? 'connected' : 'disconnected'
+    settings.value.summary.homeAssistantStatus = response.is_active ? 'online' : 'offline'
   }
 
   const uploadAccountAvatar = async (file: File) => {
@@ -186,7 +243,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   const syncDevices = () => {
-    settings.value.summary.lastSync = '刚刚'
+    settings.value.summary.lastSync = '鍒氬垰'
   }
 
   const updateBackupTime = () => {
@@ -209,10 +266,12 @@ export const useSettingsStore = defineStore('settings', () => {
     deleteAccountAvatar,
     deleteHouseholdMember,
     importSettings,
+    loadAIModel,
     loadAccountHome,
     loading,
     resetSettings,
     saveAccountHome,
+    saveAIModel,
     saveSettings,
     saveStatus,
     savedAt,

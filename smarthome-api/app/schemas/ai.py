@@ -6,16 +6,28 @@ from pydantic import BaseModel, ConfigDict
 class AIModelRead(BaseModel):
     name: str
     provider: str
+    api_endpoint: str
     is_active: bool
-    description: str
+    description: str | None
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AIModelCreate(BaseModel):
+    name: str
+    provider: str
+    api_endpoint: str
+    api_key: str | None = None
+    is_active: bool = True
+    description: str | None = None
 
 
 class AIModelUpdate(BaseModel):
     name: str | None = None
     provider: str | None = None
+    api_endpoint: str | None = None
+    api_key: str | None = None
     is_active: bool | None = None
     description: str | None = None

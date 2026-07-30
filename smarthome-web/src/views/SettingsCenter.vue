@@ -24,6 +24,7 @@ const savingAccount = ref(false)
 const addingMember = ref(false)
 const loadingMemberId = ref<number | null>(null)
 const initialAccountSnapshot = ref('')
+const initialIntegrationSnapshot = ref('')
 
 const settings = computed(() => settingsStore.settings)
 const accountForm = reactive<AccountForm>({
@@ -38,6 +39,14 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const accountSnapshot = computed(() => JSON.stringify(accountForm))
 const accountDirty = computed(() => accountSnapshot.value !== initialAccountSnapshot.value)
+const integrationSnapshot = computed(() =>
+  JSON.stringify({
+    aiAssistant: settings.value.aiAssistant,
+    homeAssistant: settings.value.homeAssistant,
+  }),
+)
+const integrationDirty = computed(() => integrationSnapshot.value !== initialIntegrationSnapshot.value)
+const settingsDirty = computed(() => accountDirty.value || integrationDirty.value)
 const householdMembers = computed(() => settings.value.account.members ?? [])
 const members = computed<FamilyMember[]>(() =>
   householdMembers.value.map((member) => ({
@@ -71,13 +80,17 @@ const syncAccountForm = () => {
   initialAccountSnapshot.value = accountSnapshot.value
 }
 
+const syncIntegrationSnapshot = () => {
+  initialIntegrationSnapshot.value = integrationSnapshot.value
+}
+
 const selectSection = (section: SettingsSectionId) => {
   activeSection.value = section
   document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-  if (!accountDirty.value) {
+  if (!settingsDirty.value) {
     return
   }
 
@@ -87,6 +100,7 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 
 onMounted(() => {
   void settingsStore.loadAccountHome()
+  void settingsStore.loadAIModel().then(syncIntegrationSnapshot)
   window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
@@ -105,7 +119,7 @@ watch(
 )
 
 onBeforeRouteLeave(() => {
-  if (!accountDirty.value) {
+  if (!settingsDirty.value) {
     return true
   }
 
@@ -156,6 +170,23 @@ const saveAccountFamily = async () => {
 
 const saveAllSettings = async () => {
   await saveAccountFamily()
+
+  try {
+    await settingsStore.saveAIModel()
+    settingsStore.saveSettings()
+    syncIntegrationSnapshot()
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'AI 鍔╂墜閰嶇疆淇濆瓨澶辫触')
+  }
+}
+
+const syncDevices = async () => {
+  try {
+    await settingsStore.syncDevices()
+    ElMessage.success('设备同步完成')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'WebSocket 状态刷新失败')
+  }
 }
 
 const uploadAvatar = async (file: File) => {
@@ -296,7 +327,7 @@ const removeMember = async (membershipId: number) => {
           />
           <AppearanceSettingsCard :appearance="settings.appearance" />
           <AiAssistantSettingsCard :ai="settings.aiAssistant" />
-          <HomeAssistantSettingsCard :home-assistant="settings.homeAssistant" @sync="settingsStore.syncDevices" />
+          <HomeAssistantSettingsCard :home-assistant="settings.homeAssistant" @sync="syncDevices" />
           <NotificationSettingsCard :notifications="settings.notifications" />
           <SecuritySettingsCard :security="settings.security" />
           <BackupSettingsCard :backup="settings.backup" @export="exportSettings" @import="importSettings" />
@@ -304,7 +335,7 @@ const removeMember = async (membershipId: number) => {
       </div>
 
       <footer class="mt-4 flex shrink-0 items-center gap-4 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-3">
-        <button class="primary-button" :disabled="savingAccount || !accountDirty" type="button" @click="saveAllSettings">
+        <button class="primary-button" :disabled="savingAccount || !settingsDirty" type="button" @click="saveAllSettings">
           {{ savingAccount ? '保存中' : '保存更改' }}
         </button>
         <button class="secondary-button min-w-[140px]" type="button" @click="settingsStore.resetSettings">恢复默认</button>
