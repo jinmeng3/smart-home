@@ -10,6 +10,7 @@ from app.schemas.ai import (
     AIModelRead,
     AIModelUpdate,
 )
+from app.schemas.common import ApiResponse
 
 router = APIRouter(prefix="/ai_model", tags=["ai_model"])
 
@@ -23,20 +24,24 @@ def get_current_ai_model(db: Session, current_user: User) -> AIModel:
     return model
 
 
-@router.get("/model", response_model=AIModelRead)
+@router.get("/model", response_model=ApiResponse[AIModelRead])
 def read_ai_model(
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
-) -> AIModel:
-    return get_current_ai_model(db, current_user)
+) -> ApiResponse[AIModelRead]:
+    return ApiResponse(data=get_current_ai_model(db, current_user))
 
 
-@router.post("/model", response_model=AIModelRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/model",
+    response_model=ApiResponse[AIModelRead],
+    status_code=status.HTTP_201_CREATED,
+)
 def create_ai_model(
     payload: AIModelCreate,
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
-) -> AIModel:
+) -> ApiResponse[AIModelRead]:
     existing_model = db.scalar(
         select(AIModel).where(AIModel.user_id == current_user.id)
     )
@@ -59,15 +64,15 @@ def create_ai_model(
     db.add(db_model)
     db.commit()
     db.refresh(db_model)
-    return db_model
+    return ApiResponse(data=db_model, message="created")
 
 
-@router.patch("/model", response_model=AIModelRead)
+@router.patch("/model", response_model=ApiResponse[AIModelRead])
 def update_ai_model(
     payload: AIModelUpdate,
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
-) -> AIModel:
+) -> ApiResponse[AIModelRead]:
     db_model = db.scalar(select(AIModel).where(AIModel.user_id == current_user.id))
     if not db_model:
         raise HTTPException(
@@ -78,13 +83,13 @@ def update_ai_model(
         db_model.name = payload.name.strip()
 
     if payload.provider is not None:
-        db_model.provider = payload.provider
+        db_model.provider = payload.provider.strip()
 
     if payload.api_endpoint is not None:
-        db_model.api_endpoint = payload.api_endpoint
+        db_model.api_endpoint = payload.api_endpoint.strip()
 
     if payload.api_key is not None:
-        db_model.api_key = payload.api_key
+        db_model.api_key = payload.api_key.strip()
 
     if payload.temperature is not None:
         db_model.temperature = payload.temperature
@@ -100,7 +105,7 @@ def update_ai_model(
 
     db.commit()
     db.refresh(db_model)
-    return db_model
+    return ApiResponse(data=db_model)
 
 
 @router.delete("/model", status_code=status.HTTP_204_NO_CONTENT)

@@ -38,7 +38,7 @@ async def save_avatar_file(settings: Settings, upload: UploadFile) -> str:
 
     if len(content) > settings.max_avatar_size:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="头像文件过大"
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="头像文件过大"
         )
 
     settings.avatar_dir.mkdir(parents=True, exist_ok=True)

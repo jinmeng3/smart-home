@@ -9,9 +9,12 @@ class ChatCompletionMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
+    model: str | None = None
     messages: list[ChatCompletionMessage]
     session_id: int | None = None
     stream: bool = False
+
+    model_config = ConfigDict(extra="allow")
 
 
 class ChatMessageRead(BaseModel):

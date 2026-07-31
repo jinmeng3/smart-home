@@ -1,0 +1,34 @@
+[
+  {
+    "label": "Run FastAPI",
+    "command": "python",
+    "args": [
+      "-m",
+      "uvicorn",
+      "app.main:app",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8000",
+      "--reload",
+      "--reload-dir",
+      ".",
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT/smarthome-api",
+    "env": {
+      "PYTHONPATH": "$ZED_WORKTREE_ROOT/smarthome-api",
+    },
+  },
+  {
+    "label": "Run FastAPI CMD",
+    "command": "cmd",
+    "args": [
+      "/c",
+      "uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --reload-dir .",
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT/smarthome-api",
+    "env": {
+      "PYTHONPATH": "$ZED_WORKTREE_ROOT/smarthome-api",
+    },
+  },
+]

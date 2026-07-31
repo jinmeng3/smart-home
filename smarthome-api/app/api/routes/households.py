@@ -13,6 +13,7 @@ from app.api.deps import (
 from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.user import User
+from app.schemas.common import ApiResponse
 from app.schemas.household import (
     HouseholdCreate,
     HouseholdListItem,
@@ -29,7 +30,7 @@ def validate_timezone(timezone: str) -> None:
         ZoneInfo(timezone)
     except ZoneInfoNotFoundError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="时区无效"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="时区无效"
         ) from exc
 
 
@@ -38,14 +39,11 @@ def serialize_role(role: HouseholdRole | str) -> str:
     return value.lower()
 
 
-@router.get("", response_model=list[HouseholdListItem])
+@router.get("", response_model=ApiResponse[list[HouseholdListItem]])
 def list_households(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
-) -> list[HouseholdListItem]:
-    """
-    列出当前用户加入的家庭，包含用户角色和成员数量。
-    """
+) -> ApiResponse[list[HouseholdListItem]]:
     current_memberships = db.scalars(
         select(HouseholdMembership).where(
             HouseholdMembership.user_id == current_user.id
@@ -65,7 +63,7 @@ def list_households(
         )
         rows.append((household, membership.role, member_count))
 
-    return [
+    items = [
         HouseholdListItem.model_validate(
             {
                 **HouseholdRead.model_validate(household).model_dump(),
@@ -75,17 +73,17 @@ def list_households(
         )
         for household, role, member_count in rows
     ]
+    return ApiResponse(data=items)
 
 
-@router.post("", response_model=HouseholdRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=ApiResponse[HouseholdRead], status_code=status.HTTP_201_CREATED
+)
 def create_household(
     payload: HouseholdCreate,
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
-) -> Household:
-    """
-    创建家庭，并将当前用户设为该家庭管理员。
-    """
+) -> ApiResponse[HouseholdRead]:
     validate_timezone(payload.timezone)
     household = Household(
         name=payload.name.strip(),
@@ -94,51 +92,40 @@ def create_household(
         created_by=current_user.id,
     )
 
-    try:
-        db.add(household)
-        db.flush()
-        db.add(
-            HouseholdMembership(
-                household_id=household.id,
-                user_id=current_user.id,
-                role=HouseholdRole.ADMIN,
-            )
+    db.add(household)
+    db.flush()
+    db.add(
+        HouseholdMembership(
+            household_id=household.id,
+            user_id=current_user.id,
+            role=HouseholdRole.ADMIN,
         )
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+    )
+    db.commit()
 
     db.refresh(household)
-    return household
+    return ApiResponse(data=household, message="created")
 
 
-@router.get("/{household_id}", response_model=HouseholdRead)
+@router.get("/{household_id}", response_model=ApiResponse[HouseholdRead])
 def read_household(
     membership: HouseholdMembership = HOUSEHOLD_MEMBER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
-) -> Household:
-    """
-    获取当前用户已加入家庭的详细信息。
-    """
+) -> ApiResponse[HouseholdRead]:
     household = db.get(Household, membership.household_id)
 
-    # 显式处理 None，满足类型检查器。
     if household is None:
         raise HTTPException(status_code=404, detail="家庭不存在")
 
-    return household
+    return ApiResponse(data=household)
 
 
-@router.patch("/{household_id}", response_model=HouseholdRead)
+@router.patch("/{household_id}", response_model=ApiResponse[HouseholdRead])
 def update_household(
     payload: HouseholdUpdate,
     membership: HouseholdMembership = HOUSEHOLD_ADMIN_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
-) -> Household:
-    """
-    更新家庭名称、地址或时区，仅家庭管理员可操作。
-    """
+) -> ApiResponse[HouseholdRead]:
     household = db.get(Household, membership.household_id)
 
     if household is None:
@@ -156,4 +143,4 @@ def update_household(
 
     db.commit()
     db.refresh(household)
-    return household
+    return ApiResponse(data=household)

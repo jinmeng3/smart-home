@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.exceptions import register_exception_handlers
 from app.api.router import api_router
+from app.api.routes import chat
 from app.core.config import get_settings
 from app.db.init_db import create_tables, seed_demo_data
 from app.db.session import SessionLocal
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title=settings.app_name)
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,4 +40,5 @@ app.add_middleware(
 
 
 app.include_router(api_router)
+app.include_router(chat.codex_router)
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")

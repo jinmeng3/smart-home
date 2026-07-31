@@ -11,6 +11,7 @@ from app.api.deps import (
 )
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.user import User
+from app.schemas.common import ApiResponse
 from app.schemas.member import (
     MemberCreate,
     MemberListResponse,
@@ -60,12 +61,12 @@ def ensure_not_last_admin(db: Session, membership: HouseholdMembership) -> None:
         )
 
 
-@router.get("", response_model=MemberListResponse)
+@router.get("", response_model=ApiResponse[MemberListResponse])
 def list_members(
     household_id: int,
     db: Session = DB_DEPENDENCY,
     _membership: HouseholdMembership = HOUSEHOLD_MEMBER_DEPENDENCY,
-) -> MemberListResponse:
+) -> ApiResponse[MemberListResponse]:
     """
     列出指定家庭的所有成员。
     """
@@ -75,16 +76,16 @@ def list_members(
         .order_by(HouseholdMembership.joined_at),
     ).all()
     items = [member_to_schema(membership) for membership in memberships]
-    return MemberListResponse(items=items, total=len(items))
+    return ApiResponse(data=MemberListResponse(items=items, total=len(items)))
 
 
-@router.post("", response_model=MemberRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ApiResponse[MemberRead], status_code=status.HTTP_201_CREATED)
 def add_member(
     household_id: int,
     payload: MemberCreate,
     db: Session = DB_DEPENDENCY,
     _admin: HouseholdMembership = HOUSEHOLD_ADMIN_DEPENDENCY,
-) -> MemberRead:
+) -> ApiResponse[MemberRead]:
     """
     按邮箱将已有用户添加为家庭成员，仅家庭管理员可操作。
     """
@@ -111,10 +112,10 @@ def add_member(
     db.add(membership)
     db.commit()
     db.refresh(membership)
-    return member_to_schema(membership)
+    return ApiResponse(data=member_to_schema(membership), message="created")
 
 
-@router.patch("/{membership_id}", response_model=MemberRead)
+@router.patch("/{membership_id}", response_model=ApiResponse[MemberRead])
 def update_member_role(
     household_id: int,
     membership_id: int,
@@ -122,7 +123,7 @@ def update_member_role(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
     _admin: HouseholdMembership = HOUSEHOLD_ADMIN_DEPENDENCY,
-) -> MemberRead:
+) -> ApiResponse[MemberRead]:
     """
     修改家庭成员角色，并确保家庭至少保留一名管理员。
     """
@@ -139,7 +140,7 @@ def update_member_role(
     membership.role = payload.role
     db.commit()
     db.refresh(membership)
-    return member_to_schema(membership)
+    return ApiResponse(data=member_to_schema(membership))
 
 
 @router.delete("/{membership_id}", status_code=status.HTTP_204_NO_CONTENT)
