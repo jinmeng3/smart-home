@@ -1,9 +1,11 @@
 import { apiRequest } from "./client";
 
 export interface AIModelRead {
+  id: number;
   name: string;
   provider: string;
   api_endpoint: string;
+  parameters: Record<string, unknown>;
   temperature: number;
   max_tokens: number;
   is_active: boolean;
@@ -17,6 +19,7 @@ export interface AIModelUpdate {
   provider?: string;
   api_endpoint?: string;
   api_key?: string;
+  parameters?: Record<string, unknown>;
   temperature?: number;
   max_tokens?: number;
   is_active?: boolean;
@@ -24,6 +27,14 @@ export interface AIModelUpdate {
 }
 
 export const getAIModel = () => apiRequest<AIModelRead>("/api/ai_model/model");
+
+export const listAIModels = () =>
+  apiRequest<AIModelRead[]>("/api/ai_model/models");
+
+export const activateAIModel = (modelId: number) =>
+  apiRequest<AIModelRead>(`/api/ai_model/models/${modelId}/activate`, {
+    method: "POST",
+  });
 
 export const createAIModel = (
   payload: Required<Pick<AIModelUpdate, "name" | "provider" | "api_endpoint">> &

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watchEffect } from "vue";
 import Sidebar from "./components/layout/Sidebar.vue";
+import LoginDialog from "./components/account/LoginDialog.vue";
+import ModalTransition from "./components/common/ModalTransition.vue";
+import { useAuthStore } from "./stores/auth";
 import { useHomeStore } from "./stores/home";
 import { useSettingsStore } from "./stores/settings";
 
 const store = useHomeStore();
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
 let systemThemeQuery: MediaQueryList | null = null;
 const updateSystemTheme = () => {
     document.documentElement.dataset.theme = activeTheme.value;
@@ -37,7 +41,9 @@ onMounted(() => {
     systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
     systemThemeQuery.addEventListener("change", updateSystemTheme);
 
-    void settingsStore.loadAccountHome().catch(() => undefined);
+    if (authStore.isAuthenticated) {
+        void settingsStore.loadAccountHome().catch(() => undefined);
+    }
 });
 
 onUnmounted(() => {
@@ -60,10 +66,11 @@ onUnmounted(() => {
         >
             <Sidebar />
             <RouterView v-slot="{ Component }">
-                <Transition name="route-fade" mode="out-in">
+                <ModalTransition name="slide-up" mode="out-in">
                     <component :is="Component" />
-                </Transition>
+                </ModalTransition>
             </RouterView>
+            <LoginDialog />
         </div>
     </main>
 </template>

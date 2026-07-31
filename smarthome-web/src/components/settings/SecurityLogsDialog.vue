@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ElButton, ElDialog } from "element-plus";
+import { ElButton } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import { useSettingsStore } from "../../stores/settings";
-import "element-plus/theme-chalk/el-dialog.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -22,7 +21,7 @@ const closeDialog = () => {
 </script>
 
 <template>
-    <ElDialog
+    <BaseModal
         :model-value="props.modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
@@ -83,7 +82,7 @@ const closeDialog = () => {
                 </div>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

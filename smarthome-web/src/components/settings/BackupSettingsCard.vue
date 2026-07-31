@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { ElButton, ElDialog, ElMessage } from "element-plus";
+import { ElButton, ElMessage } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import { useSettingsStore } from "../../stores/settings";
 import type { BackupSettings, SettingsState } from "../../types/settings";
 import BaseSwitch from "../BaseSwitch.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
-import "element-plus/theme-chalk/el-dialog.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 defineProps<{
     backup: BackupSettings;
@@ -101,7 +100,7 @@ const readBackupFile = (event: Event) => {
             </div>
         </div>
 
-        <ElDialog
+        <BaseModal
             v-model="historyVisible"
             :close-on-click-modal="true"
             :close-on-press-escape="true"
@@ -196,7 +195,7 @@ const readBackupFile = (event: Event) => {
                     </div>
                 </footer>
             </template>
-        </ElDialog>
+        </BaseModal>
 
     </SettingsSectionCard>
 </template>

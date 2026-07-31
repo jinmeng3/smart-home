@@ -7,6 +7,7 @@ import type { SemanticStatus } from "../../types/theme";
 import { getDeviceRuntimeStatus } from "../../utils/device";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
+import BaseModal from "../common/BaseModal.vue";
 
 const store = useHomeStore();
 const lastFocusedElement = ref<HTMLElement | null>(null);
@@ -132,46 +133,26 @@ onBeforeUnmount(() => {
             >查看全部设备</a
         >
 
-        <Transition name="drawer">
-            <div
-                v-if="store.deviceDrawerOpen"
-                class="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px]"
-                @click.self="closeDrawer"
-            >
-                <aside
-                    class="absolute right-3 top-3 h-[calc(100%-24px)] w-80 rounded-2xl bg-white p-5 shadow-2xl"
-                >
-                    <button
-                        class="motion-button absolute right-4 top-4 text-slate-400"
-                        type="button"
-                        @click="closeDrawer"
-                    >
-                        ×
-                    </button>
-                    <h3 class="text-lg font-extrabold">设备详情</h3>
-                    <div
-                        v-if="store.selectedDevice"
-                        class="mt-5 grid gap-3 text-sm"
-                    >
-                        <strong class="text-base">{{
-                            store.selectedDevice.name
-                        }}</strong>
-                        <p class="text-slate-500">
-                            房间：{{ store.selectedDevice.room }}
-                        </p>
-                        <p class="text-slate-500">
-                            状态：{{ store.selectedDevice.status }}
-                        </p>
-                        <p class="text-slate-500">
-                            数值：{{ store.selectedDevice.value ?? "无" }}
-                        </p>
-                        <p class="text-slate-500">
-                            更新时间：{{ store.selectedDevice.updatedAt }}
-                        </p>
-                    </div>
-                </aside>
-            </div>
-        </Transition>
+        <BaseModal
+            :model-value="store.deviceDrawerOpen"
+            description="查看设备状态与最近更新时间"
+            icon="▣"
+            title="设备详情"
+            width="560px"
+            @update:model-value="$event ? undefined : closeDrawer()"
+        >
+            <section v-if="store.selectedDevice" class="device-detail-card">
+                <div class="device-detail-heading">
+                    <strong>{{ store.selectedDevice.name }}</strong>
+                    <span class="orion-status-badge is-online">{{ store.selectedDevice.status }}</span>
+                </div>
+                <dl>
+                    <div><dt>房间</dt><dd>{{ store.selectedDevice.room }}</dd></div>
+                    <div><dt>当前数值</dt><dd>{{ store.selectedDevice.value ?? "无" }}</dd></div>
+                    <div><dt>更新时间</dt><dd>{{ store.selectedDevice.updatedAt }}</dd></div>
+                </dl>
+            </section>
+        </BaseModal>
     </section>
 </template>
 
@@ -179,6 +160,27 @@ onBeforeUnmount(() => {
 .device-row {
     animation: device-highlight 600ms var(--motion-ease) both;
 }
+
+.device-detail-card {
+    padding: 18px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.device-detail-heading,
+.device-detail-card dl > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.device-detail-heading strong { font-size: 16px; }
+.device-detail-card dl { display: grid; gap: 12px; margin: 18px 0 0; }
+.device-detail-card dl > div { padding-top: 12px; border-top: 1px solid var(--color-border-subtle); }
+.device-detail-card dt { color: var(--color-text-tertiary); font-size: 14px; }
+.device-detail-card dd { margin: 0; color: var(--color-text-primary); font-size: 14px; font-weight: 600; }
 
 @keyframes device-highlight {
     0% {

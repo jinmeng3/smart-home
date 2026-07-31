@@ -12,7 +12,14 @@ import {
   updateMemberRole as apiUpdateMemberRole,
   uploadAvatar as apiUploadAvatar,
 } from "../api/account";
-import { createAIModel, getAIModel, updateAIModel } from "../api/aiModel";
+import {
+  createAIModel,
+  activateAIModel,
+  getAIModel,
+  listAIModels,
+  updateAIModel,
+  type AIModelRead,
+} from "../api/aiModel";
 import { ApiError } from "../api/client";
 import { defaultSettings } from "../mock/settings";
 import type {
@@ -184,6 +191,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const savedAt = ref<string | null>(null);
   const saveStatus = ref<"idle" | "saved">("idle");
   const loading = ref(false);
+  const aiModels = ref<AIModelRead[]>([]);
   const accountHomeLoaded = ref(false);
   let accountHomePromise: Promise<void> | null = null;
   let saveStatusTimer = 0;
@@ -282,7 +290,11 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const loadAIModel = async () => {
     try {
-      const model = await getAIModel();
+      aiModels.value = await listAIModels();
+      const model =
+        aiModels.value.find((item) => item.is_active) ??
+        aiModels.value[0] ??
+        (await getAIModel());
 
       settings.value.aiAssistant = {
         ...settings.value.aiAssistant,
@@ -390,6 +402,31 @@ export const useSettingsStore = defineStore("settings", () => {
     settings.value.summary.homeAssistantStatus = response.is_active
       ? "online"
       : "offline";
+  };
+
+  const selectAIModel = async (name: string) => {
+    const selected = aiModels.value.find((model) => model.name === name);
+    if (!selected) return;
+
+    const activeModel = await activateAIModel(selected.id);
+    aiModels.value = aiModels.value.map((model) => ({
+      ...model,
+      is_active: model.id === activeModel.id,
+    }));
+    settings.value.aiAssistant = {
+      ...settings.value.aiAssistant,
+      model: activeModel.name,
+      language: normalizeModelLanguage(activeModel.description),
+      temperature: activeModel.temperature,
+      maxTokens: activeModel.max_tokens,
+    };
+    settings.value.homeAssistant = {
+      ...settings.value.homeAssistant,
+      serviceUrl: activeModel.api_endpoint,
+      accessToken: "",
+      tokenConfigured: activeModel.is_active,
+      websocketStatus: activeModel.is_active ? "connected" : "disconnected",
+    };
   };
 
   const uploadAccountAvatar = async (file: File) => {
@@ -559,6 +596,7 @@ export const useSettingsStore = defineStore("settings", () => {
   onScopeDispose(() => window.clearTimeout(saveStatusTimer));
 
   return {
+    aiModels,
     accountHomeLoaded,
     addHouseholdMember,
     deleteAccountAvatar,
@@ -571,6 +609,7 @@ export const useSettingsStore = defineStore("settings", () => {
     resetSettings,
     saveAccountHome,
     saveAIModel,
+    selectAIModel,
     saveSettings,
     saveStatus,
     savedAt,

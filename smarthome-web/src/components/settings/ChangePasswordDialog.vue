@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { ElButton, ElDialog, ElMessage, ElMessageBox } from "element-plus";
+import { ElButton, ElMessage, ElMessageBox } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import { useSettingsStore } from "../../stores/settings";
-import "element-plus/theme-chalk/el-dialog.css";
 import "element-plus/theme-chalk/el-message-box.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 interface PasswordForm {
     newPassword: string;
@@ -154,7 +153,7 @@ const savePassword = async () => {
 </script>
 
 <template>
-    <ElDialog
+    <BaseModal
         :model-value="modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
@@ -261,7 +260,7 @@ const savePassword = async () => {
                 </div>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

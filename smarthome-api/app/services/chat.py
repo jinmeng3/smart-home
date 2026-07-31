@@ -154,6 +154,22 @@ def build_chat_request(model: AIModel, payload: ChatCompletionRequest) -> Reques
     )
 
 
+def build_non_stream_request(request: Request) -> Request:
+    data = request.data
+    if not isinstance(data, bytes):
+        data = b"{}"
+
+    payload = json.loads(data.decode("utf-8"))
+    payload["stream"] = False
+
+    return Request(
+        request.full_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=dict(request.header_items()),
+        method="POST",
+    )
+
+
 def read_upstream_error(error: HTTPError) -> str:
     """读取并解析上游错误信息。"""
     raw_body = error.read().decode("utf-8", errors="ignore")
@@ -166,6 +182,33 @@ def read_upstream_error(error: HTTPError) -> str:
     if isinstance(detail, dict):
         return detail.get("message") or json.dumps(detail, ensure_ascii=False)
     return str(detail)
+
+
+def format_stream_error(error: str) -> bytes:
+    return f"data: {json.dumps({'error': error}, ensure_ascii=False)}\n\n".encode()
+
+
+def format_stream_content(content: str) -> bytes:
+    payload = {"choices": [{"delta": {"content": content}}]}
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode()
+
+
+def format_stream_done() -> bytes:
+    return b"data: [DONE]\n\n"
+
+
+def extract_delta_content(payload: dict) -> str:
+    choice = payload.get("choices", [{}])[0]
+    delta = choice.get("delta") or {}
+    message = choice.get("message") or {}
+
+    return (
+        delta.get("content")
+        or message.get("content")
+        or payload.get("content")
+        or payload.get("text")
+        or ""
+    )
 
 
 def parse_stream_delta(chunk: bytes) -> str:
@@ -184,7 +227,7 @@ def parse_stream_delta(chunk: bytes) -> str:
         except json.JSONDecodeError:
             continue
 
-        content += payload.get("choices", [{}])[0].get("delta", {}).get("content") or ""
+        content += extract_delta_content(payload)
     return content
 
 
@@ -203,10 +246,23 @@ def stream_chat_response(
 
                 assistant_chunks.append(parse_stream_delta(chunk))
                 yield chunk
+            yield format_stream_done()
     except HTTPError as exc:
-        yield f"data: {json.dumps({'error': read_upstream_error(exc)}, ensure_ascii=False)}\n\n".encode()
+        yield format_stream_error(read_upstream_error(exc))
     except URLError as exc:
-        yield f"data: {json.dumps({'error': str(exc.reason)}, ensure_ascii=False)}\n\n".encode()
+        if "UNEXPECTED_EOF_WHILE_READING" in str(exc.reason):
+            try:
+                response_data = create_chat_completion(
+                    build_non_stream_request(request)
+                )
+                content = extract_assistant_content(response_data)
+                assistant_chunks.append(content)
+                yield format_stream_content(content)
+                yield format_stream_done()
+            except HTTPException as fallback_exc:
+                yield format_stream_error(str(fallback_exc.detail))
+        else:
+            yield format_stream_error(str(exc.reason))
     finally:
         if db is not None and session_id is not None:
             save_assistant_message(db, session_id, "".join(assistant_chunks))

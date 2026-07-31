@@ -2,7 +2,6 @@
 import { computed, reactive, ref } from "vue";
 import {
     ElButton,
-    ElDialog,
     ElInputNumber,
     ElMessage,
     ElMessageBox,
@@ -15,11 +14,10 @@ import type {
 import { useSettingsStore } from "../../stores/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import BaseSwitch from "../BaseSwitch.vue";
-import "element-plus/theme-chalk/el-dialog.css";
+import BaseModal from "../common/BaseModal.vue";
 import "element-plus/theme-chalk/el-input-number.css";
 import "element-plus/theme-chalk/el-message.css";
 import "element-plus/theme-chalk/el-message-box.css";
-import "element-plus/theme-chalk/el-overlay.css";
 import "element-plus/theme-chalk/el-slider.css";
 
 const props = defineProps<{
@@ -156,9 +154,21 @@ const applySettings = async () => {
     <SettingsSectionCard id="ai" icon="✦" title="智能助手">
         <label class="settings-field">
             <span>模型选择</span>
-            <select v-model="ai.model" class="settings-input">
-                <option>Orion GPT-4o</option>
-                <option>Orion GPT-4 Turbo</option>
+            <select
+                v-model="ai.model"
+                class="settings-input"
+                @change="settingsStore.selectAIModel(ai.model)"
+            >
+                <option
+                    v-for="model in settingsStore.aiModels"
+                    :key="model.id"
+                    :value="model.name"
+                >
+                    {{ model.name }} · {{ model.provider }}
+                </option>
+                <option v-if="!settingsStore.aiModels.length" :value="ai.model">
+                    {{ ai.model || "暂无可用模型" }}
+                </option>
             </select>
         </label>
         <div class="settings-field">
@@ -177,7 +187,7 @@ const applySettings = async () => {
         </div>
     </SettingsSectionCard>
 
-    <ElDialog
+    <BaseModal
         v-model="dialogVisible"
         :before-close="handleBeforeClose"
         :close-on-click-modal="true"
@@ -317,7 +327,7 @@ const applySettings = async () => {
                 </div>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

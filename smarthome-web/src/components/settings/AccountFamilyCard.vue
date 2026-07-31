@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ElButton, ElDialog, ElMessageBox } from "element-plus";
+import { ElButton, ElMessageBox } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import type { AccountForm } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
-import "element-plus/theme-chalk/el-dialog.css";
 import "element-plus/theme-chalk/el-message-box.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 const props = defineProps<{
     form: AccountForm;
@@ -140,7 +139,7 @@ const deleteAvatar = async () => {
         </button>
     </SettingsSectionCard>
 
-    <ElDialog
+    <BaseModal
         v-model="dialogVisible"
         :close-on-click-modal="!loading"
         :close-on-press-escape="!loading"
@@ -293,7 +292,7 @@ const deleteAvatar = async () => {
                 </div>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

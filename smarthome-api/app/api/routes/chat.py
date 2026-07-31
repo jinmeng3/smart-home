@@ -35,6 +35,21 @@ def list_chat_sessions(
     return ApiResponse(data=list_user_chat_sessions(db, current_user))
 
 
+@router.post(
+    "/sessions",
+    response_model=ApiResponse[ChatSessionRead],
+    status_code=201,
+)
+def create_session(
+    current_user: User = CURRENT_USER_DEPENDENCY,
+    db: Session = DB_DEPENDENCY,
+) -> ApiResponse[ChatSessionRead]:
+    session = get_chat_session(db, current_user, None, [])
+    db.commit()
+    db.refresh(session)
+    return ApiResponse(data=session, message="created")
+
+
 @router.get(
     "/sessions/{session_id}/messages", response_model=ApiResponse[list[ChatMessageRead]]
 )

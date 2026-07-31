@@ -1,6 +1,11 @@
 import { computed, onScopeDispose, ref, shallowRef } from "vue";
 import { defineStore } from "pinia";
-import { streamChatCompletion } from "../api/chat";
+import {
+  createChatSession,
+  listChatMessages,
+  listChatSessions,
+  streamChatCompletion,
+} from "../api/chat";
 import { useSettingsStore } from "./settings";
 import {
   useBatchedDeviceUpdates,
@@ -10,11 +15,10 @@ import {
   automations as mockAutomations,
   devices as mockDevices,
   messages as mockMessages,
-  recentConversations,
 } from "../mock/home";
 import type { AgentExecutionStep, AgentStatus } from "../types/animation";
 import type { Automation } from "../types/automation";
-import type { ChatMessage } from "../types/chat";
+import type { ChatMessage, RecentConversation } from "../types/chat";
 import type { Device } from "../types/device";
 
 const createMessageId = () =>
@@ -26,6 +30,12 @@ const currentTime = () =>
     minute: "2-digit",
     hour12: false,
   }).format(new Date());
+const createWelcomeMessage = (): ChatMessage => ({
+  id: createMessageId(),
+  role: "assistant",
+  content: "你好，我是 Orion Home。有什么可以帮你的？",
+  timestamp: currentTime(),
+});
 
 const createExecutionSteps = (): AgentExecutionStep[] => [
   { id: "understand", label: "正在理解指令", status: "pending" },
@@ -51,6 +61,8 @@ export const useHomeStore = defineStore("home", () => {
   );
   const automations = ref<Automation[]>(mockAutomations);
   const messages = ref<ChatMessage[]>(mockMessages);
+  const recentConversations = ref<RecentConversation[]>([]);
+  const activeSessionId = ref<string | null>(null);
   const agentStatus = ref<AgentStatus>("idle");
   const executionSteps = ref<AgentExecutionStep[]>(createExecutionSteps());
   const energyToday = ref(18.62);
@@ -190,12 +202,48 @@ export const useHomeStore = defineStore("home", () => {
     );
   };
 
+  const refreshRecentConversations = async () => {
+    try {
+      recentConversations.value = await listChatSessions();
+    } catch {
+      recentConversations.value = [];
+    }
+  };
+
+  const startNewConversation = async () => {
+    stopGenerating();
+    messages.value = [createWelcomeMessage()];
+    activeSessionId.value = null;
+
+    try {
+      const conversation = await createChatSession();
+      activeSessionId.value = conversation.id;
+      recentConversations.value = [
+        conversation,
+        ...recentConversations.value.filter((item) => item.id !== conversation.id),
+      ];
+    } catch {
+      void refreshRecentConversations();
+    }
+  };
+
+  const loadConversation = async (sessionId: string) => {
+    stopGenerating();
+    activeSessionId.value = sessionId;
+
+    try {
+      messages.value = await listChatMessages(sessionId);
+    } catch {
+      messages.value = [];
+    }
+  };
+
   const runAgentFlow = async () => {
     stopGenerating();
-    agentStatus.value = "thinking";
+    agentStatus.value = "executing";
     executionSteps.value = createExecutionSteps().map((step, index) => ({
       ...step,
-      status: index === 0 ? "executing" : "pending",
+      status: index === 0 ? "completed" : index === 1 ? "executing" : "pending",
     }));
 
     const assistantMessage: ChatMessage = {
@@ -240,14 +288,15 @@ export const useHomeStore = defineStore("home", () => {
           .filter((message) => message.content.trim())
           .slice(-12)
           .map((message) => ({ role: message.role, content: message.content })),
+        activeSessionId.value,
         (delta) => {
           queueContent(delta);
           if (!streamStarted) {
             streamStarted = true;
             agentStatus.value = "executing";
-            executionSteps.value = executionSteps.value.map((step) => ({
+            executionSteps.value = executionSteps.value.map((step, index) => ({
               ...step,
-              status: "completed",
+              status: index < 2 ? "completed" : index === 2 ? "executing" : "pending",
             }));
           }
         },
@@ -268,6 +317,7 @@ export const useHomeStore = defineStore("home", () => {
       }
 
       finishAiReply();
+      void refreshRecentConversations();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
@@ -286,6 +336,8 @@ export const useHomeStore = defineStore("home", () => {
       }
     }
   };
+
+  void refreshRecentConversations();
 
   const sendMessage = (content: string) => {
     const trimmedContent = content.trim();
@@ -313,6 +365,7 @@ export const useHomeStore = defineStore("home", () => {
 
   return {
     activeMenu,
+    activeSessionId,
     alertCount,
     agentStatus,
     automations,
@@ -326,6 +379,7 @@ export const useHomeStore = defineStore("home", () => {
     energyToday,
     executionSteps,
     hasWarning,
+    loadConversation,
     markAlertHandled,
     messages,
     queueDeviceUpdate,
@@ -336,6 +390,7 @@ export const useHomeStore = defineStore("home", () => {
     selectDevice,
     sendMessage,
     setActiveMenu,
+    startNewConversation,
     sidebarCollapsed,
     stopGenerating,
     toggleAutomation,

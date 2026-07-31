@@ -22,10 +22,12 @@ import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPa
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
 import SettingsTabs from "../components/settings/SettingsTabs.vue";
 import { useSettingsStore } from "../stores/settings";
+import { useAuthStore } from "../stores/auth";
 import type { AccountForm, FamilyMember, MemberRole } from "../types/account";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
 const activeSection = ref<SettingsSectionId>("account");
 const savingAccount = ref(false);
 const addingMember = ref(false);
@@ -127,6 +129,14 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 };
 
 onMounted(() => {
+    if (!authStore.isAuthenticated) {
+        syncAccountForm();
+        syncIntegrationSnapshot();
+        authStore.openLogin();
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return;
+    }
+
     void settingsStore.loadAccountHome().then(syncAccountForm).catch((error: unknown) => {
         ElMessage.error(
             error instanceof Error ? error.message : "璐︽埛涓庡搴俊鎭姞杞藉け璐?",
@@ -365,7 +375,10 @@ const removeMember = async (membershipId: number) => {
 </script>
 
 <template>
-    <div class="contents">
+    <fieldset
+        class="contents m-0 min-w-0 border-0 p-0"
+        :disabled="!authStore.isAuthenticated"
+    >
         <section
             class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
@@ -430,6 +443,7 @@ const removeMember = async (membershipId: number) => {
             >
                 <button
                     class="primary-button"
+                    :class="{ 'button-loading': savingAccount }"
                     :disabled="savingAccount || !settingsDirty"
                     type="button"
                     @click="saveAllSettings"
@@ -467,5 +481,5 @@ const removeMember = async (membershipId: number) => {
                 @select="selectSection"
             />
         </aside>
-    </div>
+    </fieldset>
 </template>

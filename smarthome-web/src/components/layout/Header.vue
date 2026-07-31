@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useSettingsStore } from "../../stores/settings";
+import { useAuthStore } from "../../stores/auth";
 
 const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
 const username = computed(
-    () => settingsStore.settings.account.username.trim() || "用户",
+    () => authStore.isAuthenticated
+        ? settingsStore.settings.account.username.trim() || "用户"
+        : "访客",
 );
+const avatarUrl = computed(() => settingsStore.settings.account.avatarUrl);
+const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
 const today = new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "long",
@@ -28,7 +34,7 @@ const greeting = computed(() => {
     >
         <div>
             <h1 class="text-xl font-extrabold tracking-normal text-slate-900">
-                {{ greeting }}，{{ username }} 👋
+                {{ greeting }}，{{ username }}
             </h1>
             <p class="mt-1 text-sm font-medium text-slate-500">
                 今天是 {{ today }}
@@ -38,15 +44,26 @@ const greeting = computed(() => {
         <div class="flex items-center gap-3">
             <label class="header-search-native">
                 <span aria-hidden="true">⌕</span>
-                <input type="search" placeholder="搜索设备、场景或房间" />
+                <input :disabled="!authStore.isAuthenticated" type="search" :placeholder="authStore.isAuthenticated ? '搜索设备、场景或房间' : '登录后可搜索'" />
             </label>
-            <button aria-label="通知，3 条未读" class="notification-button" type="button">
-                <span aria-hidden="true">🔔</span>
+            <button v-if="authStore.isAuthenticated" aria-label="通知，3 条未读" class="notification-button" type="button">
+                <span aria-hidden="true">●</span>
                 <small>3</small>
             </button>
+            <button class="rounded-full" type="button" title="登录或查看账户" @click="authStore.openLogin">
+            <img
+                v-if="authStore.isAuthenticated && avatarUrl"
+                class="h-10 w-10 rounded-full border border-[var(--color-border-default)] object-cover"
+                :src="avatarUrl"
+                alt=""
+            />
             <div
-                class="h-10 w-10 rounded-full border border-[var(--color-border-default)] bg-gradient-to-br from-blue-100 to-blue-600"
-            ></div>
+                v-else
+                class="grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border-default)] bg-gradient-to-br from-blue-100 to-blue-600 text-sm font-bold text-white"
+            >
+                {{ accountInitial }}
+            </div>
+            </button>
         </div>
     </header>
 </template>
@@ -87,6 +104,7 @@ const greeting = computed(() => {
   place-items: center;
   border: 1px solid var(--color-border-default);
   border-radius: 50%;
+  color: var(--color-primary-600);
   background: var(--color-panel-background);
 }
 

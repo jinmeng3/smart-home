@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ElButton, ElDialog, ElMessage, ElMessageBox } from "element-plus";
+import { ElButton, ElMessage, ElMessageBox } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import { useSettingsStore } from "../../stores/settings";
-import "element-plus/theme-chalk/el-dialog.css";
 import "element-plus/theme-chalk/el-message-box.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -50,7 +49,7 @@ const revokeDevice = async (deviceId: number) => {
 </script>
 
 <template>
-    <ElDialog
+    <BaseModal
         :model-value="props.modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
@@ -60,7 +59,7 @@ const revokeDevice = async (deviceId: number) => {
         append-to-body
         class="account-family-dialog device-dialog"
         modal-class="settings-dialog-overlay"
-        width="760px"
+        width="720px"
         @update:model-value="emit('update:modelValue', $event)"
     >
         <template #header>
@@ -156,7 +155,7 @@ const revokeDevice = async (deviceId: number) => {
                 </div>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

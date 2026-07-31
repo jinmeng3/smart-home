@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElButton, ElDialog, ElMessage } from "element-plus";
+import { ElButton, ElMessage } from "element-plus";
+import BaseModal from "../common/BaseModal.vue";
 import type { FamilyMember, MemberRole } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import MemberListItem from "./MemberListItem.vue";
-import "element-plus/theme-chalk/el-dialog.css";
-import "element-plus/theme-chalk/el-overlay.css";
 
 const props = defineProps<{
     adminCount: number;
@@ -108,7 +107,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
         </button>
     </SettingsSectionCard>
 
-    <ElDialog
+    <BaseModal
         v-model="dialogVisible"
         :close-on-click-modal="!submitting && loadingMemberId === null"
         :close-on-press-escape="!submitting && loadingMemberId === null"
@@ -198,7 +197,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
                 <ElButton @click="dialogVisible = false">完成</ElButton>
             </footer>
         </template>
-    </ElDialog>
+    </BaseModal>
 </template>
 
 <style scoped>

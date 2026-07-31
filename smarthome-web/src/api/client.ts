@@ -14,6 +14,21 @@ export class ApiError extends Error {
   }
 }
 
+interface ApiResponse<T> {
+  code: number;
+  message?: string;
+  data: T;
+}
+
+const isApiResponse = <T>(data: unknown): data is ApiResponse<T> => {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "code" in data &&
+    "data" in data
+  );
+};
+
 export const getCurrentUserId = () => {
   for (const key of currentUserStorageKeys) {
     const userId =
@@ -33,15 +48,30 @@ export const parseResponse = async <T>(response: Response): Promise<T> => {
       return undefined as T;
     }
 
-    return response.json() as Promise<T>;
+    const data = (await response.json()) as T | ApiResponse<T>;
+
+    if (isApiResponse<T>(data)) {
+      if (data.code !== 0) {
+        throw new ApiError(data.message ?? "请求失败", response.status);
+      }
+
+      return data.data;
+    }
+
+    return data;
   }
 
   const data = await response.json().catch(() => ({ detail: "请求失败" }));
-  throw new ApiError(data.detail ?? "请求失败", response.status);
+  throw new ApiError(data.detail ?? data.message ?? "请求失败", response.status);
 };
 
 export const createApiHeaders = (init?: HeadersInit) => {
   const headers = new Headers(init);
+  const accessToken = window.sessionStorage.getItem("smart-home-access-token");
+
+  if (accessToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
 
   if (!headers.has("X-User-Id")) {
     headers.set("X-User-Id", getCurrentUserId());

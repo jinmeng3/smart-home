@@ -10,5 +10,8 @@ defineProps<{
 
 <template>
     <UserMessage v-if="message.role === 'user'" :message="message" />
-    <AssistantMessage v-else :message="message" />
+    <AssistantMessage
+        v-else-if="message.content.trim()"
+        :message="message"
+    />
 </template>

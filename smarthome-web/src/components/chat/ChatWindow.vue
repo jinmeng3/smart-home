@@ -7,16 +7,20 @@ import AIThinking from '../animation/AIThinking.vue'
 import AnimatedList from '../animation/AnimatedList.vue'
 import StatusPulse from '../animation/StatusPulse.vue'
 import ChatMessage from './ChatMessage.vue'
+import { useAuthStore } from '../../stores/auth'
 import SuggestionButtons from './SuggestionButtons.vue'
 
 const store = useHomeStore()
+const authStore = useAuthStore()
 const inputValue = ref('')
 const chatScrollRef = ref<HTMLElement | null>(null)
 
 const messageCount = computed(() => store.messages.length)
 const visibleMessages = computed(() => store.messages.slice(-30))
 const generating = computed(() => store.agentStatus === 'thinking' || store.agentStatus === 'executing')
-const sendDisabled = computed(() => !generating.value && !inputValue.value.trim())
+const sendDisabled = computed(() =>
+  !authStore.isAuthenticated || (!generating.value && !inputValue.value.trim()),
+)
 const statusToneClass = computed(() =>
   store.hasWarning
     ? 'border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] text-[var(--color-text-primary)]'
@@ -44,6 +48,7 @@ const fillPrompt = (prompt: string) => {
 <template>
   <div class="flex min-h-0 flex-1 flex-col px-6 pb-5">
     <button
+      v-if="false"
       class="motion-card page-enter-stagger my-3 flex h-12 shrink-0 items-center justify-between rounded-lg border px-5 text-left shadow-sm"
       :class="statusToneClass"
       style="animation-delay: 120ms"
@@ -81,12 +86,13 @@ const fillPrompt = (prompt: string) => {
       <input
         v-model="inputValue"
         class="h-8 w-full border-0 bg-transparent pr-16 text-sm outline-none placeholder:text-slate-400"
-        placeholder="向 Orion Home Assistant 发送设备控制或自动化需求..."
+        :disabled="!authStore.isAuthenticated"
+        :placeholder="authStore.isAuthenticated ? '向 Orion Home 发送设备控制或自动化需求...' : '登录后可使用智能对话'"
       />
       <div class="mt-5 flex items-center gap-4 text-[var(--color-primary-600)]">
-        <button class="motion-button grid h-8 w-8 place-items-center rounded-full bg-[var(--color-surface-hover)] text-lg" type="button">+</button>
-        <button class="motion-button" type="button">附件</button>
-        <button class="motion-button" type="button">@</button>
+        <button :disabled="!authStore.isAuthenticated" class="motion-button grid h-8 w-8 place-items-center rounded-full bg-[var(--color-surface-hover)] text-lg" type="button">+</button>
+        <button :disabled="!authStore.isAuthenticated" class="motion-button" type="button">附件</button>
+        <button :disabled="!authStore.isAuthenticated" class="motion-button" type="button">@</button>
       </div>
       <button
         class="motion-button absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-[var(--color-primary-600)] text-xl text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--color-primary-700)] active:bg-[var(--color-primary-800)] disabled:bg-[var(--color-text-disabled)]"

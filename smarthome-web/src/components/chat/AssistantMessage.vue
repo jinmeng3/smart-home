@@ -45,7 +45,7 @@ onBeforeUnmount(() => {
             class="motion-card rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-secondary)] px-5 py-4"
         >
             <p
-                class="mb-4 inline-block overflow-hidden whitespace-nowrap text-sm font-medium text-slate-600 first-line-stream"
+                class="mb-4 block whitespace-pre-wrap break-words text-sm font-medium leading-6 text-slate-600 first-line-stream"
             >
                 {{ message.content }}
             </p>
