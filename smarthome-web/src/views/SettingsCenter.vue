@@ -127,6 +127,11 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 };
 
 onMounted(() => {
+    void settingsStore.loadAccountHome().then(syncAccountForm).catch((error: unknown) => {
+        ElMessage.error(
+            error instanceof Error ? error.message : "璐︽埛涓庡搴俊鎭姞杞藉け璐?",
+        );
+    });
     void settingsStore
         .loadAIModel()
         .then(syncIntegrationSnapshot)

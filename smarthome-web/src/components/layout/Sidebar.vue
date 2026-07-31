@@ -47,12 +47,12 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
 
 <template>
     <aside
-        class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border-default)] border-r-[var(--color-border-default)] bg-[var(--color-sidebar-background)] py-5 shadow-soft backdrop-blur transition-[padding] duration-500 ease-out"
+        class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border-default)] border-r-[var(--color-border-default)] bg-[var(--color-sidebar-background)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
         :class="store.sidebarCollapsed ? 'px-2' : 'px-4'"
         style="animation-delay: 0ms"
     >
         <div
-            class="flex items-center transition-all duration-500 ease-out"
+            class="flex items-center transition-[gap,height,margin] duration-500 ease-out"
             :class="
                 store.sidebarCollapsed
                     ? 'relative mb-4 h-11 gap-0'
@@ -60,7 +60,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
             "
         >
             <button
-                class="motion-button grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-all duration-300 hover:scale-105"
+                class="motion-button grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-lg font-bold text-white shadow-lg shadow-blue-500/20 transition-[width,height,transform] duration-300 hover:scale-105"
                 :class="
                     store.sidebarCollapsed
                         ? 'absolute left-1/2 h-10 w-10 -translate-x-1/2'
@@ -76,7 +76,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
             </button>
 
             <strong
-                class="block overflow-hidden whitespace-normal text-lg font-extrabold leading-7 text-blue-700 transition-all duration-300 ease-out"
+                class="block overflow-hidden whitespace-normal text-lg font-extrabold leading-7 text-blue-700 transition-[width,opacity,transform] duration-300 ease-out"
                 :class="
                     store.sidebarCollapsed
                         ? 'w-0 translate-x-2 opacity-0'
@@ -87,7 +87,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
             </strong>
 
             <button
-                class="motion-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition-all duration-300 hover:bg-blue-50 hover:text-blue-700"
+                class="motion-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition-[width,opacity,transform,background-color,color] duration-300 hover:bg-blue-50 hover:text-blue-700"
                 :class="
                     store.sidebarCollapsed
                         ? 'w-0 scale-75 overflow-hidden opacity-0'
@@ -145,7 +145,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
             </nav>
 
             <section
-                class="mt-5 overflow-hidden transition-all duration-300 ease-out"
+                class="mt-5 overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-out"
                 :class="
                     store.sidebarCollapsed
                         ? 'max-h-0 translate-y-2 opacity-0'
@@ -181,7 +181,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
         </div>
 
         <section
-            class="absolute bottom-5 flex items-center overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-500 ease-out"
+            class="absolute bottom-5 flex items-center overflow-hidden border border-slate-200 bg-white shadow-sm transition-[left,right,width,height,transform,border-radius,padding] duration-500 ease-out"
             :class="
                 store.sidebarCollapsed
                     ? 'left-1/2 h-11 w-11 -translate-x-1/2 justify-center gap-0 rounded-full p-0'
@@ -201,7 +201,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
                 {{ accountInitial }}
             </div>
             <div
-                class="min-w-0 overflow-hidden transition-all duration-300 ease-out"
+                class="min-w-0 overflow-hidden transition-[width,opacity,transform] duration-300 ease-out"
                 :class="
                     store.sidebarCollapsed
                         ? 'w-0 translate-x-3 opacity-0'
@@ -216,7 +216,7 @@ const selectMenu = async (item: (typeof menuItems)[number]) => {
                 }}</span>
             </div>
             <span
-                class="ml-auto text-slate-400 transition-all duration-300 ease-out"
+                class="ml-auto text-slate-400 transition-[width,opacity] duration-300 ease-out"
                 :class="
                     store.sidebarCollapsed
                         ? 'w-0 opacity-0'

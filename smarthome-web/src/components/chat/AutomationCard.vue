@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useHomeStore } from "../../stores/home";
 import type { Automation } from "../../types/automation";
+import BaseSwitch from "../BaseSwitch.vue";
 
 defineProps<{
     automation: Automation;
@@ -22,10 +23,10 @@ const store = useHomeStore();
                     automation.trigger
                 }}</span>
             </div>
-            <el-switch
+            <BaseSwitch
                 :model-value="automation.enabled"
-                size="small"
-                @change="store.toggleAutomation(automation.id)"
+                small
+                @update:model-value="store.toggleAutomation(automation.id)"
             />
         </div>
         <p class="mt-2 text-xs leading-5 text-slate-500">

@@ -5,6 +5,7 @@ import type {
     ThemeMode,
 } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import BaseSwitch from "../BaseSwitch.vue";
 
 defineProps<{
     appearance: AppearanceSettings;
@@ -55,11 +56,11 @@ const fontOptions: Array<{ value: FontSize; label: string }> = [
         </div>
         <div class="settings-field">
             <span>动画效果</span
-            ><el-switch v-model="appearance.animationsEnabled" />
+            ><BaseSwitch v-model="appearance.animationsEnabled" />
         </div>
         <div class="settings-field">
             <span>侧边栏折叠</span
-            ><el-switch v-model="appearance.sidebarCollapsed" />
+            ><BaseSwitch v-model="appearance.sidebarCollapsed" />
         </div>
     </SettingsSectionCard>
 </template>

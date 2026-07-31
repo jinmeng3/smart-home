@@ -7,13 +7,11 @@
         transform 220ms var(--motion-ease),
         border-color 220ms var(--motion-ease),
         background-color 220ms var(--motion-ease),
-        box-shadow 220ms var(--motion-ease),
         opacity 220ms var(--motion-ease);
 }
 
 .motion-card:hover {
     transform: translateY(-1px);
-    box-shadow: var(--shadow-card-hover);
 }
 
 .motion-button {
@@ -36,23 +34,6 @@
 .motion-button:disabled {
     pointer-events: none;
     opacity: 0.5;
-}
-
-button:not(:disabled) {
-    transition:
-        transform 160ms var(--motion-ease),
-        background-color 160ms var(--motion-ease),
-        border-color 160ms var(--motion-ease),
-        color 160ms var(--motion-ease),
-        opacity 160ms var(--motion-ease);
-}
-
-button:not(:disabled):hover {
-    transform: translateY(-1px);
-}
-
-button:not(:disabled):active {
-    transform: scale(0.97);
 }
 
 .page-enter-stagger {

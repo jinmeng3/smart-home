@@ -9,7 +9,7 @@ defineProps<{
 <template>
     <section
         :id="id"
-        class="motion-card rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-4"
+        class="settings-section motion-card rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-4"
     >
         <div class="mb-4 flex items-center gap-3">
             <span
@@ -23,3 +23,10 @@ defineProps<{
         <slot />
     </section>
 </template>
+
+<style scoped>
+.settings-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 320px;
+}
+</style>

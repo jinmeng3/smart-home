@@ -6,8 +6,6 @@ import {
     ElInputNumber,
     ElMessage,
     ElMessageBox,
-    ElOption,
-    ElSelect,
     ElSlider,
 } from "element-plus";
 import type {
@@ -16,12 +14,12 @@ import type {
 } from "../../types/settings";
 import { useSettingsStore } from "../../stores/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import BaseSwitch from "../BaseSwitch.vue";
 import "element-plus/theme-chalk/el-dialog.css";
 import "element-plus/theme-chalk/el-input-number.css";
 import "element-plus/theme-chalk/el-message.css";
 import "element-plus/theme-chalk/el-message-box.css";
 import "element-plus/theme-chalk/el-overlay.css";
-import "element-plus/theme-chalk/el-select.css";
 import "element-plus/theme-chalk/el-slider.css";
 
 const props = defineProps<{
@@ -165,11 +163,11 @@ const applySettings = async () => {
         </label>
         <div class="settings-field">
             <span>低风险操作自动执行</span
-            ><el-switch v-model="ai.autoExecuteLowRisk" />
+            ><BaseSwitch v-model="ai.autoExecuteLowRisk" />
         </div>
         <div class="settings-field">
             <span>高风险操作二次确认</span
-            ><el-switch v-model="ai.confirmHighRisk" />
+            ><BaseSwitch v-model="ai.confirmHighRisk" />
         </div>
         <div class="settings-field">
             <span>模型高级参数</span>
@@ -190,7 +188,7 @@ const applySettings = async () => {
         append-to-body
         class="model-advanced-dialog"
         modal-class="model-advanced-overlay"
-        width="680px"
+        width="720px"
     >
         <template #header>
             <header class="dialog-header">
@@ -223,14 +221,17 @@ const applySettings = async () => {
                     </div>
                 </div>
                 <p>选择助手默认使用的回复语言。</p>
-                <ElSelect v-model="draft.language" class="full-width">
-                    <ElOption
+                <div class="language-options">
+                    <button
                         v-for="option in languageOptions"
                         :key="option.value"
-                        :label="option.label"
-                        :value="option.value"
-                    />
-                </ElSelect>
+                        :class="{ active: draft.language === option.value }"
+                        type="button"
+                        @click="draft.language = option.value"
+                    >
+                        {{ option.label }}
+                    </button>
+                </div>
             </section>
 
             <section class="setting-card">
@@ -285,19 +286,16 @@ const applySettings = async () => {
                     :step="256"
                     class="full-width"
                     controls-position="right"
+                    size="large"
                 />
                 <div class="token-presets">
                     <ElButton
                         v-for="value in tokenPresets"
                         :key="value"
-                        :type="
-                            draft.maxTokens === value ? 'primary' : 'default'
-                        "
-                        plain
-                        size="small"
+                        :class="{ active: draft.maxTokens === value }"
                         @click="draft.maxTokens = value"
                     >
-                        {{ value }}
+                        {{ value.toLocaleString() }}
                     </ElButton>
                 </div>
             </section>
@@ -324,6 +322,9 @@ const applySettings = async () => {
 
 <style scoped>
 :global(.model-advanced-dialog) {
+    display: flex;
+    max-height: calc(100vh - 48px);
+    flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--color-border-default);
     border-radius: 20px;
@@ -332,14 +333,19 @@ const applySettings = async () => {
 }
 
 :global(.model-advanced-overlay) {
-    background: rgb(15 23 42 / 45%);
+    background: var(--color-overlay);
     backdrop-filter: blur(4px);
 }
 
 :global(.model-advanced-dialog .el-dialog__header),
-:global(.model-advanced-dialog .el-dialog__body),
 :global(.model-advanced-dialog .el-dialog__footer) {
     padding: 0;
+}
+
+:global(.model-advanced-dialog .el-dialog__body) {
+    min-height: 0;
+    padding: 0;
+    overflow-y: auto;
 }
 
 .dialog-header {
@@ -348,7 +354,11 @@ const applySettings = async () => {
     gap: 12px;
     padding: 17px 20px 14px;
     border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(135deg, rgb(59 130 246 / 10%), transparent 62%);
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-header-start),
+        var(--color-dialog-header-end)
+    );
 }
 
 .ai-icon {
@@ -360,20 +370,24 @@ const applySettings = async () => {
     border-radius: 11px;
     color: white;
     font-size: 18px;
-    background: linear-gradient(135deg, var(--color-primary-600), #60a5fa);
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-icon-start),
+        var(--color-dialog-icon-end)
+    );
     box-shadow: 0 8px 20px rgb(59 130 246 / 24%);
 }
 
 .dialog-header h2 {
     color: var(--color-text-primary);
-    font-size: 17px;
+    font-size: 20px;
     font-weight: 800;
 }
 
 .dialog-header p {
     margin-top: 2px;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .close-button {
@@ -383,27 +397,31 @@ const applySettings = async () => {
 }
 
 .model-status {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 9px;
-    margin: 13px 20px 0;
-    padding: 9px 12px;
+    margin: 16px 20px 0;
+    padding: 10px 12px;
     border: 1px solid var(--color-divider);
     border-radius: 11px;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 14px;
     background: var(--color-workspace-background);
 }
 
 .model-status strong {
+    min-width: 0;
+    overflow: hidden;
     color: var(--color-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .active-status {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-left: auto;
     color: var(--color-success);
     font-weight: 700;
 }
@@ -418,13 +436,17 @@ const applySettings = async () => {
 .settings-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 12px 20px 16px;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 20px 20px;
 }
 
 .setting-card {
+    display: flex;
     min-width: 0;
-    padding: 13px;
+    min-height: 180px;
+    flex-direction: column;
+    padding: 14px;
     border: 1px solid var(--color-border-default);
     border-radius: 14px;
     background: var(--color-workspace-background);
@@ -453,51 +475,155 @@ const applySettings = async () => {
 
 .setting-title strong {
     color: var(--color-text-primary);
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .setting-title span {
-    margin-top: 1px;
+    margin-top: 2px;
     color: var(--color-text-tertiary);
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .setting-title output {
     color: var(--color-primary-600);
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 800;
 }
 
 .setting-card > p {
-    min-height: 34px;
-    margin: 7px 0 5px;
+    min-height: 38px;
+    margin: 7px 0 9px;
     color: var(--color-text-tertiary);
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .full-width {
     width: 100%;
+    margin-top: auto;
+}
+
+.language-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: auto;
+    padding: 4px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 11px;
+    background: var(--color-surface-subtle);
+}
+
+.language-options button {
+    min-width: 0;
+    height: 40px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 650;
+    background: transparent;
+    transition:
+        color 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.language-options button:hover {
+    color: var(--color-primary-700);
+    background: var(--color-surface-hover);
+}
+
+.language-options button.active {
+    border-color: var(--color-primary-200);
+    color: var(--color-primary-700);
+    background: var(--color-panel-background);
+    box-shadow: 0 2px 8px rgb(15 23 42 / 8%);
+}
+
+.setting-card :deep(.el-slider) {
+    height: 32px;
+    margin-top: auto;
+}
+
+.setting-card :deep(.el-slider__runway) {
+    height: 6px;
+    background: var(--color-border-default);
+}
+
+.setting-card :deep(.el-slider__bar) {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-primary-600);
+}
+
+.setting-card :deep(.el-slider__button-wrapper) {
+    top: -15px;
+    width: 36px;
+    height: 36px;
+}
+
+.setting-card :deep(.el-slider__button) {
+    width: 18px;
+    height: 18px;
+    border: 3px solid var(--color-primary-600);
+    background: var(--color-panel-background);
+    box-shadow: 0 2px 8px var(--color-focus-ring);
+    transition:
+        transform 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.setting-card :deep(.el-slider__button:hover),
+.setting-card :deep(.el-slider__button.hover),
+.setting-card :deep(.el-slider__button.dragging) {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 5px var(--color-focus-ring);
+}
+
+.setting-card :deep(.el-select__wrapper),
+.setting-card :deep(.el-input__wrapper) {
+    min-height: 44px;
+    font-size: 16px;
 }
 
 .range-labels {
     display: flex;
     justify-content: space-between;
-    margin-top: -4px;
+    margin-top: -2px;
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 12px;
 }
 
 .token-presets {
     display: flex;
-    gap: 5px;
-    margin-top: 7px;
+    gap: 7px;
+    margin-top: 9px;
 }
 
 .token-presets :deep(.el-button) {
     flex: 1;
+    height: 36px;
     margin-left: 0;
-    padding: 5px;
+    padding: 0 8px;
+    border-color: var(--color-border-default);
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--color-panel-background);
+}
+
+.token-presets :deep(.el-button:hover) {
+    border-color: var(--color-primary-300);
+    color: var(--color-primary-700);
+}
+
+.token-presets :deep(.el-button.active) {
+    border-color: var(--color-primary-500);
+    color: var(--color-text-on-primary);
+    background: var(--color-primary-600);
+    box-shadow: 0 4px 10px var(--color-focus-ring);
 }
 
 .dialog-footer {
@@ -512,7 +638,7 @@ const applySettings = async () => {
 
 .dialog-footer p {
     color: var(--color-text-tertiary);
-    font-size: 10px;
+    font-size: 13px;
 }
 
 .dialog-footer > div {
@@ -527,6 +653,14 @@ const applySettings = async () => {
 
     .settings-grid {
         grid-template-columns: 1fr;
+    }
+
+    .model-status {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .active-status {
+        grid-column: 1 / -1;
     }
 
     .dialog-footer {

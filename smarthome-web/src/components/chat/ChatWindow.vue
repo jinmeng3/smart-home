@@ -14,7 +14,7 @@ const inputValue = ref('')
 const chatScrollRef = ref<HTMLElement | null>(null)
 
 const messageCount = computed(() => store.messages.length)
-const visibleMessages = computed(() => store.messages.slice(-50))
+const visibleMessages = computed(() => store.messages.slice(-30))
 const generating = computed(() => store.agentStatus === 'thinking' || store.agentStatus === 'executing')
 const sendDisabled = computed(() => !generating.value && !inputValue.value.trim())
 const statusToneClass = computed(() =>

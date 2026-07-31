@@ -1,4 +1,4 @@
-import { onScopeDispose, ref, watch } from "vue";
+import { onScopeDispose, ref } from "vue";
 import { defineStore } from "pinia";
 import {
   addMember as apiAddMember,
@@ -22,8 +22,62 @@ import type {
 } from "../types/settings";
 
 const storageKey = "smart-home-settings";
+const securityStorageKey = "smart-home-security-meta";
+const backupStorageKey = "smart-home-backup-history";
 
 const cloneSettings = (): SettingsState => structuredClone(defaultSettings);
+
+interface SecurityDevice {
+  id: number;
+  name: string;
+  location: string;
+  lastActive: string;
+  trusted: boolean;
+  current: boolean;
+}
+
+interface SecurityLog {
+  id: number;
+  title: string;
+  detail: string;
+  at: string;
+}
+
+interface SecurityMeta {
+  passwordUpdatedAt: string | null;
+  devices: SecurityDevice[];
+  logs: SecurityLog[];
+}
+
+interface BackupRecord {
+  id: number;
+  type: "manual" | "auto";
+  at: string;
+  note: string;
+}
+
+const formatLocalTime = (date = new Date()) =>
+  new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+const loadJson = <T>(key: string, fallback: T): T => {
+  const raw = window.localStorage.getItem(key);
+
+  if (!raw) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
 
 const normalizeModelLanguage = (
   language: unknown,
@@ -89,8 +143,44 @@ const getLocalPreferences = (
 const isAdminRole = (role: string | undefined) =>
   role?.toLowerCase() === "admin";
 
+const createDefaultSecurityMeta = (): SecurityMeta => ({
+  passwordUpdatedAt: null,
+  devices: [
+    {
+      id: 1,
+      name: "当前设备",
+      location: "上海 · 桌面浏览器",
+      lastActive: formatLocalTime(),
+      trusted: true,
+      current: true,
+    },
+    {
+      id: 2,
+      name: "移动设备",
+      location: "上海 · 手机",
+      lastActive: "07/30 21:18",
+      trusted: false,
+      current: false,
+    },
+  ],
+  logs: [
+    {
+      id: 1,
+      title: "已启用二次验证",
+      detail: "当前账户的本地安全开关已同步到设置中心",
+      at: "07/31 09:40",
+    },
+  ],
+});
+
 export const useSettingsStore = defineStore("settings", () => {
   const settings = ref<SettingsState>(loadSettings());
+  const securityMeta = ref<SecurityMeta>(
+    loadJson(securityStorageKey, createDefaultSecurityMeta()),
+  );
+  const backupHistory = ref<BackupRecord[]>(
+    loadJson(backupStorageKey, [] as BackupRecord[]),
+  );
   const savedAt = ref<string | null>(null);
   const saveStatus = ref<"idle" | "saved">("idle");
   const loading = ref(false);
@@ -104,20 +194,27 @@ export const useSettingsStore = defineStore("settings", () => {
       JSON.stringify(getLocalPreferences(settings.value)),
     );
   };
+  const persistSecurityMeta = () => {
+    window.localStorage.setItem(
+      securityStorageKey,
+      JSON.stringify(securityMeta.value),
+    );
+  };
+  const persistBackupHistory = () => {
+    window.localStorage.setItem(
+      backupStorageKey,
+      JSON.stringify(backupHistory.value),
+    );
+  };
   persistLocalPreferences();
-
-  watch(
-    () => [
-      settings.value.appearance.themeMode,
-      settings.value.appearance.fontSize,
-      settings.value.appearance.animationsEnabled,
-      settings.value.appearance.sidebarCollapsed,
-    ],
-    persistLocalPreferences,
-  );
+  persistSecurityMeta();
+  persistBackupHistory();
 
   const saveSettings = () => {
     persistLocalPreferences();
+    if (settings.value.backup.autoBackup) {
+      recordBackup("auto", "设置已保存时执行自动备份");
+    }
     savedAt.value = new Intl.DateTimeFormat("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
@@ -145,8 +242,18 @@ export const useSettingsStore = defineStore("settings", () => {
         getAccount(),
         listHouseholds(),
       ]);
-      const household = households[0];
-      const members = household ? await listMembers(household.id) : [];
+      const householdEntries = await Promise.all(
+        households.map(async (household) => ({
+          household,
+          members: await listMembers(household.id),
+        })),
+      );
+      const householdEntry =
+        householdEntries.find(({ members }) =>
+          members.some((member) => member.userId === account.id),
+        ) ?? householdEntries[0];
+      const household = householdEntry?.household;
+      const members = householdEntry?.members ?? [];
       const role = isAdminRole(household?.role) ? "管理员" : "成员";
 
       settings.value.account = {
@@ -362,6 +469,69 @@ export const useSettingsStore = defineStore("settings", () => {
     }).format(new Date());
   };
 
+  const recordSecurityLog = (title: string, detail: string) => {
+    securityMeta.value.logs = [
+      {
+        id: Date.now(),
+        title,
+        detail,
+        at: formatLocalTime(),
+      },
+      ...securityMeta.value.logs,
+    ].slice(0, 8);
+    persistSecurityMeta();
+  };
+
+  const changeLocalPassword = () => {
+    securityMeta.value.passwordUpdatedAt = formatLocalTime();
+    recordSecurityLog("已修改密码", "当前账户的本地安全记录已更新");
+  };
+
+  const updateDeviceTrust = (deviceId: number, trusted: boolean) => {
+    securityMeta.value.devices = securityMeta.value.devices.map((device) =>
+      device.id === deviceId ? { ...device, trusted } : device,
+    );
+    recordSecurityLog(
+      trusted ? "已信任设备" : "已取消信任设备",
+      "设备信任状态已在本地更新",
+    );
+  };
+
+  const revokeSecurityDevice = (deviceId: number) => {
+    const device = securityMeta.value.devices.find(
+      (item) => item.id === deviceId,
+    );
+
+    if (!device || device.current) {
+      return;
+    }
+
+    securityMeta.value.devices = securityMeta.value.devices.filter(
+      (item) => item.id !== deviceId,
+    );
+    recordSecurityLog("已移除登录设备", device.name);
+  };
+
+  const recordBackup = (type: "manual" | "auto", note?: string) => {
+    const at = formatLocalTime();
+    backupHistory.value = [
+      {
+        id: Date.now(),
+        type,
+        at,
+        note:
+          note ??
+          (type === "auto"
+            ? "自动备份已完成"
+            : "手动备份已生成"),
+      },
+      ...backupHistory.value,
+    ].slice(0, 6);
+    settings.value.backup.lastBackupTime = at;
+    persistBackupHistory();
+    persistLocalPreferences();
+  };
+
   const importSettings = (nextSettings: SettingsState) => {
     const runtimeAccount = settings.value.account;
     const runtimeHomeAssistant = settings.value.homeAssistant;
@@ -405,8 +575,14 @@ export const useSettingsStore = defineStore("settings", () => {
     saveStatus,
     savedAt,
     settings,
+    backupHistory,
+    changeLocalPassword,
+    recordBackup,
+    revokeSecurityDevice,
     syncDevices,
+    securityMeta,
     updateBackupTime,
+    updateDeviceTrust,
     updateMemberRole,
     uploadAccountAvatar,
   };

@@ -1,6 +1,7 @@
 import { computed, onScopeDispose, ref, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import { streamChatCompletion } from "../api/chat";
+import { useSettingsStore } from "./settings";
 import {
   useBatchedDeviceUpdates,
   type DeviceUpdate,
@@ -18,6 +19,7 @@ import type { Device } from "../types/device";
 
 const createMessageId = () =>
   `message-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const maxMessages = 100;
 const currentTime = () =>
   new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
@@ -34,7 +36,10 @@ const createExecutionSteps = (): AgentExecutionStep[] => [
 
 export const useHomeStore = defineStore("home", () => {
   const activeMenu = ref("智能对话");
-  const sidebarCollapsed = ref(false);
+  const settingsStore = useSettingsStore();
+  const sidebarCollapsed = computed(
+    () => settingsStore.settings.appearance.sidebarCollapsed,
+  );
   const selectedDeviceId = ref<string | null>(null);
   const deviceDrawerOpen = ref(false);
   const deviceIds = shallowRef(mockDevices.map((device) => device.id));
@@ -113,7 +118,15 @@ export const useHomeStore = defineStore("home", () => {
   };
 
   const toggleSidebar = () => {
-    sidebarCollapsed.value = !sidebarCollapsed.value;
+    settingsStore.settings.appearance.sidebarCollapsed =
+      !settingsStore.settings.appearance.sidebarCollapsed;
+  };
+
+  const trimMessages = () => {
+    const overflow = messages.value.length - maxMessages;
+    if (overflow > 0) {
+      messages.value.splice(0, overflow);
+    }
   };
 
   const selectDevice = (device: Device) => {
@@ -192,9 +205,11 @@ export const useHomeStore = defineStore("home", () => {
       timestamp: currentTime(),
     };
     messages.value.push(assistantMessage);
+    trimMessages();
     const assistantMessageIndex = messages.value.length - 1;
     const controller = new AbortController();
     chatController = controller;
+    let streamStarted = false;
 
     const flushContent = () => {
       streamFrameId = 0;
@@ -227,11 +242,14 @@ export const useHomeStore = defineStore("home", () => {
           .map((message) => ({ role: message.role, content: message.content })),
         (delta) => {
           queueContent(delta);
-          agentStatus.value = "executing";
-          executionSteps.value = executionSteps.value.map((step) => ({
-            ...step,
-            status: "completed",
-          }));
+          if (!streamStarted) {
+            streamStarted = true;
+            agentStatus.value = "executing";
+            executionSteps.value = executionSteps.value.map((step) => ({
+              ...step,
+              status: "completed",
+            }));
+          }
         },
         controller.signal,
       );
@@ -283,6 +301,7 @@ export const useHomeStore = defineStore("home", () => {
       content: trimmedContent,
       timestamp: currentTime(),
     });
+    trimMessages();
     void runAgentFlow();
   };
 

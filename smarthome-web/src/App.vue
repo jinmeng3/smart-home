@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, watchEffect } from "vue";
 import Sidebar from "./components/layout/Sidebar.vue";
 import { useHomeStore } from "./stores/home";
 import { useSettingsStore } from "./stores/settings";
@@ -31,15 +31,7 @@ watchEffect(() => {
         .animationsEnabled
         ? "on"
         : "off";
-    store.sidebarCollapsed = settingsStore.settings.appearance.sidebarCollapsed;
 });
-
-watch(
-    () => store.sidebarCollapsed,
-    (sidebarCollapsed) => {
-        settingsStore.settings.appearance.sidebarCollapsed = sidebarCollapsed;
-    },
-);
 
 onMounted(() => {
     systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");

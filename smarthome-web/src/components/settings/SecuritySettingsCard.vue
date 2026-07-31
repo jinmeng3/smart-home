@@ -1,67 +1,48 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ref } from "vue";
 import type { SecuritySettings } from "../../types/settings";
+import BaseSwitch from "../BaseSwitch.vue";
+import ChangePasswordDialog from "./ChangePasswordDialog.vue";
+import DeviceManagementDialog from "./DeviceManagementDialog.vue";
+import SecurityLogsDialog from "./SecurityLogsDialog.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 
 defineProps<{
     security: SecuritySettings;
 }>();
 
-const changePassword = async () => {
-    try {
-        await ElMessageBox.prompt("请输入新密码", "修改密码", {
-            confirmButtonText: "保存",
-            cancelButtonText: "取消",
-            inputType: "password",
-            inputPattern: /^.{6,}$/,
-            inputErrorMessage: "密码至少 6 位",
-        });
-        ElMessage.success("密码已更新");
-    } catch {
-        ElMessage.info("已取消修改密码");
-    }
-};
-
-const showPending = (name: string) => {
-    ElMessage.info(`${name}功能已进入待办流程`);
-};
+const passwordDialogVisible = ref(false);
+const devicesDialogVisible = ref(false);
+const logsDialogVisible = ref(false);
 </script>
 
 <template>
-    <SettingsSectionCard id="security" icon="◇" title="安全">
+    <SettingsSectionCard id="security" icon="⊙" title="安全">
         <div class="settings-field">
-            <span>修改密码</span
-            ><button
-                class="secondary-button"
-                type="button"
-                @click="changePassword"
-            >
+            <span>修改密码</span>
+            <button class="secondary-button" type="button" @click="passwordDialogVisible = true">
                 修改
             </button>
         </div>
         <div class="settings-field">
-            <span>双重认证</span
-            ><el-switch v-model="security.twoFactorEnabled" />
+            <span>双重认证</span>
+            <BaseSwitch v-model="security.twoFactorEnabled" />
         </div>
         <div class="settings-field">
-            <span>登录设备管理</span
-            ><button
-                class="secondary-button"
-                type="button"
-                @click="showPending('登录设备管理')"
-            >
+            <span>登录设备管理</span>
+            <button class="secondary-button" type="button" @click="devicesDialogVisible = true">
                 管理
             </button>
         </div>
         <div class="settings-field">
-            <span>操作日志</span
-            ><button
-                class="secondary-button"
-                type="button"
-                @click="showPending('操作日志')"
-            >
+            <span>操作日志</span>
+            <button class="secondary-button" type="button" @click="logsDialogVisible = true">
                 查看
             </button>
         </div>
+
+        <ChangePasswordDialog v-model="passwordDialogVisible" />
+        <DeviceManagementDialog v-model="devicesDialogVisible" />
+        <SecurityLogsDialog v-model="logsDialogVisible" />
     </SettingsSectionCard>
 </template>

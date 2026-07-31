@@ -12,21 +12,6 @@ export default defineConfig({
   ].filter(Boolean),
   build: {
     sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/vue') || id.includes('node_modules/pinia')) {
-            return 'vue-vendor'
-          }
-
-          if (id.includes('node_modules/element-plus') || id.includes('node_modules/@element-plus')) {
-            return 'ui-vendor'
-          }
-
-          return undefined
-        },
-      },
-    },
   },
   server: {
     proxy: {

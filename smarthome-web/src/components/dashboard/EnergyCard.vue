@@ -67,9 +67,7 @@ const areaPoints = computed(
       />
     </svg>
     <span class="text-xs text-slate-500">本月用电</span>
-    <strong class="block text-sm">
-      <AnimatedNumber :value="326.8" :decimals="1" suffix=" kWh" />
-    </strong>
+    <strong class="block text-sm">326.8 kWh</strong>
   </section>
 </template>
 
