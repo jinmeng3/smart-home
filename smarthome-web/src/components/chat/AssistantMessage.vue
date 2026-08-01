@@ -39,8 +39,9 @@ onBeforeUnmount(() => {
         <div
             class="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-white"
         >
-            ✦
+            <img src="/orion-sidebar-icon.svg" alt="Orion Home" />
         </div>
+
         <div
             class="motion-card rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-secondary)] px-5 py-4"
         >

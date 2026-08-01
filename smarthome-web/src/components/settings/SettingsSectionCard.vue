@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SvgIcon from "../common/SvgIcon.vue";
+
 defineProps<{
     id: string;
     icon: string;
@@ -14,8 +16,9 @@ defineProps<{
         <div class="mb-4 flex items-center gap-3">
             <span
                 class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-ai-soft)] text-[var(--color-ai)]"
-                >{{ icon }}</span
             >
+                <SvgIcon :name="icon" />
+            </span>
             <h2 class="text-xl font-extrabold text-[var(--color-text-primary)]">
                 {{ title }}
             </h2>

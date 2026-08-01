@@ -58,7 +58,7 @@ const readBackupFile = (event: Event) => {
 </script>
 
 <template>
-    <SettingsSectionCard id="backup" icon="○" title="备份恢复">
+    <SettingsSectionCard id="backup" icon="backup" title="备份恢复">
         <div class="settings-field">
             <span>导出配置</span>
             <button class="secondary-button" type="button" @click="emit('export')">

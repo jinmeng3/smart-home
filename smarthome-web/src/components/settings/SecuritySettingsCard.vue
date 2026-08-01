@@ -17,7 +17,7 @@ const logsDialogVisible = ref(false);
 </script>
 
 <template>
-    <SettingsSectionCard id="security" icon="⊙" title="安全">
+    <SettingsSectionCard id="security" icon="security" title="安全">
         <div class="settings-field">
             <span>修改密码</span>
             <button class="secondary-button" type="button" @click="passwordDialogVisible = true">

@@ -1,5 +1,5 @@
 import { onScopeDispose } from "vue";
-import type { Device } from "../types/device";
+import type { DashboardDevice } from "../types/device";
 
 export interface DeviceUpdate {
   id: string;
@@ -11,7 +11,7 @@ export interface DeviceUpdate {
 
 type CommitDeviceUpdates = (updates: DeviceUpdate[]) => void;
 
-const isSameUpdate = (device: Device | undefined, update: DeviceUpdate) => {
+const isSameUpdate = (device: DashboardDevice | undefined, update: DeviceUpdate) => {
   if (!device) {
     return false;
   }
@@ -26,7 +26,7 @@ const isSameUpdate = (device: Device | undefined, update: DeviceUpdate) => {
 
 export const useBatchedDeviceUpdates = (
   commit: CommitDeviceUpdates,
-  getDevice: (id: string) => Device | undefined,
+  getDevice: (id: string) => DashboardDevice | undefined,
 ) => {
   const pendingUpdates = new Map<string, DeviceUpdate>();
   let frameId = 0;

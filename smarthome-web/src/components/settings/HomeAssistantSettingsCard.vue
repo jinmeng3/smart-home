@@ -26,7 +26,7 @@ const syncDevices = () => {
 </script>
 
 <template>
-    <SettingsSectionCard id="homeAssistant" icon="⌘" title="平台接入">
+    <SettingsSectionCard id="homeAssistant" icon="platform" title="平台接入">
         <label class="settings-field integration-field"
             ><span class="integration-label">服务地址</span
             ><input

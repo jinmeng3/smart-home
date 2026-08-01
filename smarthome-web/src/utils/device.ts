@@ -1,7 +1,7 @@
 import type { DeviceStatus } from "../types/animation";
-import type { Device } from "../types/device";
+import type { DashboardDevice } from "../types/device";
 
-export const getDeviceRuntimeStatus = (device: Device): DeviceStatus => {
+export const getDeviceRuntimeStatus = (device: DashboardDevice): DeviceStatus => {
   if (!device.online) {
     return "offline";
   }

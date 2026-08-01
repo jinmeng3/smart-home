@@ -19,7 +19,7 @@ import {
 import type { AgentExecutionStep, AgentStatus } from "../types/animation";
 import type { Automation } from "../types/automation";
 import type { ChatMessage, RecentConversation } from "../types/chat";
-import type { Device } from "../types/device";
+import type { DashboardDevice } from "../types/device";
 
 const createMessageId = () =>
   `message-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -53,8 +53,8 @@ export const useHomeStore = defineStore("home", () => {
   const selectedDeviceId = ref<string | null>(null);
   const deviceDrawerOpen = ref(false);
   const deviceIds = shallowRef(mockDevices.map((device) => device.id));
-  const devicesById = shallowRef<Record<string, Device>>(
-    mockDevices.reduce<Record<string, Device>>((record, device) => {
+  const devicesById = shallowRef<Record<string, DashboardDevice>>(
+    mockDevices.reduce<Record<string, DashboardDevice>>((record, device) => {
       record[device.id] = device;
       return record;
     }, {}),
@@ -75,7 +75,7 @@ export const useHomeStore = defineStore("home", () => {
   const devices = computed(() =>
     deviceIds.value
       .map((id) => devicesById.value[id])
-      .filter((device): device is Device => Boolean(device)),
+      .filter((device): device is DashboardDevice => Boolean(device)),
   );
   const selectedDevice = computed(() =>
     selectedDeviceId.value
@@ -141,7 +141,7 @@ export const useHomeStore = defineStore("home", () => {
     }
   };
 
-  const selectDevice = (device: Device) => {
+  const selectDevice = (device: DashboardDevice) => {
     selectedDeviceId.value = device.id;
     deviceDrawerOpen.value = true;
   };

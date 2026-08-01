@@ -13,5 +13,10 @@ export const router = createRouter({
       name: "settings-center",
       component: () => import("../views/SettingsCenter.vue"),
     },
+    {
+      path: "/devices",
+      name: "device-management",
+      component: () => import("../views/DeviceManagement.vue"),
+    },
   ],
 });

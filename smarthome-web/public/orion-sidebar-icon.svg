@@ -1,0 +1,35 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(497 449) rotate(90) scale(369)">
+      <stop stop-color="#7DD3FC" stop-opacity=".85"/>
+      <stop offset=".58" stop-color="#1D7CFF" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#0B1220" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="planet" x1="324" x2="709" y1="248" y2="738" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5DD5FF"/>
+      <stop offset=".5" stop-color="#1475FF"/>
+      <stop offset="1" stop-color="#003BDB"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="155" x2="852" y1="616" y2="418" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#045BE8"/>
+      <stop offset=".47" stop-color="#6ED6FF"/>
+      <stop offset="1" stop-color="#0057F2"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="333" x2="610" y1="241" y2="570" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8DE7FF" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".04"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="transparent"/>
+  <circle cx="506" cy="503" r="409" fill="url(#glow)"/>
+  <path d="M867 382c27 54-96 158-276 232S242 702 215 648c-27-55 96-159 276-233s349-87 376-33Z" fill="#005AEF"/>
+  <path d="M833 398c21 43-89 127-247 188s-303 77-324 34c-21-42 90-126 247-188 158-61 303-76 324-34Z" fill="url(#ring)"/>
+  <path d="M775 430c12 28-80 91-207 140s-240 66-252 38c-12-29 80-91 207-141 127-49 240-66 252-37Z" fill="#BEEBFF" opacity=".32"/>
+  <circle cx="512" cy="502" r="264" fill="url(#planet)"/>
+  <path d="M297 467c49-150 184-230 340-197 62 14 116 46 157 89-83 12-187 48-292 101-104 52-192 112-251 166 11-56 25-110 46-159Z" fill="url(#shine)"/>
+  <path d="M512 238c146 0 264 118 264 264 0 51-14 98-39 138C623 662 489 651 366 601c-43-18-81-39-113-63a268 268 0 0 1-5-36c0-146 118-264 264-264Z" fill="#69D8FF" opacity=".28"/>
+  <circle cx="494" cy="493" r="68" fill="#EAFBFF"/>
+  <path d="M543 445a68 68 0 0 1-96 96l96-96Z" fill="#C6F1FF" opacity=".7"/>
+  <path d="M786 282c12 27 21 35 49 47-28 12-37 21-49 48-12-27-20-36-48-48 28-12 36-20 48-47Z" fill="#B9ECFF"/>
+  <path d="M867 382c27 54-96 158-276 232S242 702 215 648" stroke="#0037BE" stroke-width="18" stroke-linecap="round" opacity=".55"/>
+</svg>

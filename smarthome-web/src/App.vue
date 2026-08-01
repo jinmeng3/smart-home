@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, watchEffect } from "vue";
 import Sidebar from "./components/layout/Sidebar.vue";
 import LoginDialog from "./components/account/LoginDialog.vue";
 import ModalTransition from "./components/common/ModalTransition.vue";
+import SvgSprite from "./components/common/SvgSprite.vue";
 import { useAuthStore } from "./stores/auth";
 import { useHomeStore } from "./stores/home";
 import { useSettingsStore } from "./stores/settings";
@@ -56,6 +57,7 @@ onUnmounted(() => {
     <main
         class="h-screen overflow-hidden bg-[var(--color-page-background)] text-[var(--color-text-primary)]"
     >
+        <SvgSprite />
         <div
             class="grid h-full gap-2 bg-[radial-gradient(circle_at_20%_10%,rgba(37,99,235,0.08),transparent_28%),linear-gradient(135deg,var(--color-page-background)_0%,var(--color-sidebar-background)_100%)] p-2 transition-[grid-template-columns] duration-500 ease-out"
             :class="

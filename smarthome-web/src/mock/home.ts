@@ -1,8 +1,8 @@
 import type { Automation } from "../types/automation";
 import type { ChatMessage, RecentConversation } from "../types/chat";
-import type { Device } from "../types/device";
+import type { DashboardDevice } from "../types/device";
 
-export const devices: Device[] = [
+export const devices: DashboardDevice[] = [
   {
     id: "living-room-light",
     name: "客厅吸顶灯",

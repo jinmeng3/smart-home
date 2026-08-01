@@ -101,7 +101,7 @@ const deleteAvatar = async () => {
 </script>
 
 <template>
-    <SettingsSectionCard id="account" icon="♙" title="账户与家庭">
+    <SettingsSectionCard id="account" icon="account" title="账户与家庭">
         <div class="account-summary">
             <img
                 v-if="visibleAvatarUrl"

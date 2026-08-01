@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useHomeStore } from "../../stores/home";
 import { statusColorMap } from "../../constants/status-colors";
-import type { Device } from "../../types/device";
+import type { DashboardDevice } from "../../types/device";
 import type { SemanticStatus } from "../../types/theme";
 import { getDeviceRuntimeStatus } from "../../utils/device";
 import AnimatedList from "../animation/AnimatedList.vue";
@@ -12,7 +12,7 @@ import BaseModal from "../common/BaseModal.vue";
 const store = useHomeStore();
 const lastFocusedElement = ref<HTMLElement | null>(null);
 
-const statusClass = (device: Device) => {
+const statusClass = (device: DashboardDevice) => {
     const status = getDeviceRuntimeStatus(device) as SemanticStatus;
     const colors = statusColorMap[status];
 
@@ -35,7 +35,7 @@ const detailText = computed(() => {
     return `${device.room} · ${device.status}${device.value ? ` · ${device.value}` : ""} · ${device.updatedAt}`;
 });
 
-const openDevice = async (device: Device, event: MouseEvent) => {
+const openDevice = async (device: DashboardDevice, event: MouseEvent) => {
     lastFocusedElement.value = event.currentTarget as HTMLElement;
     store.selectDevice(device);
     await nextTick();

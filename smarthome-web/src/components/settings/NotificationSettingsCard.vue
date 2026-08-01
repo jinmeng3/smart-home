@@ -6,10 +6,11 @@ import BaseSwitch from "../BaseSwitch.vue";
 defineProps<{
     notifications: NotificationSettings;
 }>();
+
 </script>
 
 <template>
-    <SettingsSectionCard id="notifications" icon="♙" title="通知">
+    <SettingsSectionCard id="notifications" icon="notification" title="通知">
         <div class="settings-field">
             <span>设备离线通知</span
             ><BaseSwitch v-model="notifications.deviceOffline" />
