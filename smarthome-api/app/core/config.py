@@ -5,14 +5,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # 应用
     app_name: str = "Smart Home API"
+    development_mode: bool = True
+
+    # 数据库
     database_url: str = "sqlite:///./db/orion_home.db"
+
+    # 身份认证
+    jwt_secret_key: str = "change-me-in-production"
+    access_token_expire_seconds: int = 3600
+
+    # 跨域资源共享
+    cors_origins: list[str] = [
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ]
+
+    # 文件上传
     upload_dir: str = "app/uploads"
     max_avatar_size: int = 2 * 1024 * 1024
     allowed_avatar_types: set[str] = {"image/jpeg", "image/png", "image/webp"}
-    development_mode: bool = True
 
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="SMART_HOME_")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @property
     def avatar_dir(self) -> Path:
