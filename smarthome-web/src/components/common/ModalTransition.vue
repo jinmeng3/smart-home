@@ -29,8 +29,8 @@ withDefaults(
 .dialog-leave-enter-active,
 .dialog-leave-leave-active {
     transition:
-        opacity 280ms cubic-bezier(0.16, 1, 0.3, 1),
-        transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 250ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
     will-change: opacity, transform;
 }
 
@@ -50,17 +50,22 @@ withDefaults(
 .slide-up-enter-from,
 .slide-up-leave-to {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(14px) scale(0.985);
 }
 
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
-    animation-duration: 280ms !important;
+    animation-duration: 250ms !important;
+}
+
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+    opacity: 0;
 }
 
 .dialog-fade-enter-active .el-overlay,
 .dialog-fade-leave-active .el-overlay {
-    transition: opacity 280ms ease;
+    transition: opacity 250ms ease;
 }
 
 .el-overlay {
@@ -74,15 +79,32 @@ withDefaults(
 }
 
 .dialog-fade-enter-active .el-dialog {
-    animation: orion-dialog-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    animation: orion-dialog-enter 250ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
     transform-origin: 50% 50%;
     will-change: opacity, transform;
 }
 
 .dialog-fade-leave-active .el-dialog {
-    animation: orion-dialog-leave 220ms cubic-bezier(0.4, 0, 1, 1) both !important;
+    animation: orion-dialog-leave 250ms cubic-bezier(0.4, 0, 1, 1) both !important;
     transform-origin: 50% 50%;
     will-change: opacity, transform;
+}
+
+.dialog-fade-enter-active .orion-base-modal .orion-modal-content > *,
+.dialog-fade-enter-active .orion-base-modal .dialog-footer {
+    animation: orion-dialog-content 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dialog-fade-enter-active .orion-base-modal .orion-modal-content > :nth-child(1) {
+    animation-delay: 70ms;
+}
+
+.dialog-fade-enter-active .orion-base-modal .orion-modal-content > :nth-child(2) {
+    animation-delay: 110ms;
+}
+
+.dialog-fade-enter-active .orion-base-modal .dialog-footer {
+    animation-delay: 150ms;
 }
 
 .dialog-fade-enter-active .el-dialog__header,

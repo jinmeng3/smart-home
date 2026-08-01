@@ -34,3 +34,8 @@ export const register = (payload: RegisterPayload) =>
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+export const logout = () =>
+  apiRequest<null>("/api/auth/logout", {
+    method: "POST",
+  });

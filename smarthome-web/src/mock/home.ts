@@ -72,20 +72,7 @@ export const automations: Automation[] = [
   },
 ];
 
-export const messages: ChatMessage[] = [
-  {
-    id: "message-1",
-    role: "user",
-    content: "帮我总结一下家里当前状态，并给出今晚的智能控制建议。",
-    timestamp: "10:30",
-  },
-  {
-    id: "message-2",
-    role: "assistant",
-    content: "好的，以下是您家当前状态及今晚建议：",
-    timestamp: "10:31",
-  },
-];
+export const messages: ChatMessage[] = [];
 
 export const recentConversations: RecentConversation[] = [
   { id: "recent-1", title: "打开客厅灯光", time: "10:22", icon: "Lightbulb" },

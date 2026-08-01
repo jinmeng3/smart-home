@@ -30,6 +30,7 @@ export const defaultSettings: SettingsState = {
   homeAssistant: {
     serviceUrl: "https://home.example.com:8123",
     accessToken: "",
+    parameters: "{}",
     tokenConfigured: false,
     websocketStatus: "disconnected",
   },

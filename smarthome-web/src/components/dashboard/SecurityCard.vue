@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useHomeStore } from "../../stores/home";
+import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
 const expanded = ref(false);
@@ -17,7 +18,10 @@ const knowledgeItems = [
         style="animation-delay: 420ms"
     >
         <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-sm font-extrabold text-slate-800">安防与知识库</h2>
+            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                <SvgIcon name="security" size="sm" />
+                安防与知识库
+            </h2>
             <a class="motion-button text-xs font-bold text-blue-600" href="#"
                 >更多</a
             >
@@ -34,13 +38,18 @@ const knowledgeItems = [
             @click="expanded = !expanded"
         >
             <span
+                class="grid h-6 w-6 shrink-0 place-items-center"
                 :class="
                     store.securityAlertHandled
                         ? 'text-[var(--color-success)]'
                         : 'warning-shake text-[var(--color-warning)]'
                 "
-                >{{ store.securityAlertHandled ? "✓" : "▲" }}</span
             >
+                <SvgIcon
+                    :name="store.securityAlertHandled ? 'check-circle' : 'warning'"
+                    size="sm"
+                />
+            </span>
             <div class="min-w-0">
                 <strong class="block text-sm text-slate-800">{{
                     store.securityAlertHandled ? "告警已处理" : "门窗传感器异常"

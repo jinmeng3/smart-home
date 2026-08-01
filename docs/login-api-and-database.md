@@ -55,8 +55,27 @@
 建议同时提供：
 
 - `POST /api/auth/refresh`：输入 `refresh_token`，输出新 token 对。
-- `POST /api/auth/logout`：注销当前 refresh token/会话。
 - `GET /api/auth/me`：输出当前用户基础资料与权限。
+
+## 1.1 登出接口
+
+`POST /api/auth/logout`
+
+请求头：`Authorization: Bearer <access_token>`
+
+当前后端使用无状态 JWT，服务端没有持久化 refresh session，因此接口返回成功即可；前端收到结果后会清理 `sessionStorage` 中的 `smart-home-access-token` 和 `smart-home-current-user-id`，并关闭登录弹窗。
+
+成功响应：
+
+```json
+{
+  "code": 0,
+  "message": "logged out",
+  "data": null
+}
+```
+
+后续如果接入 `auth_sessions` 表和 refresh token，登出时应根据当前 refresh token 或 session id 将 `auth_sessions.revoked_at` 写为当前时间，并拒绝已撤销 session 后续刷新 token。
 
 ## 2. 注册接口
 

@@ -17,9 +17,7 @@ def login(
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
-    auth_response = authenticate_user(
-        db, settings, payload.account, payload.password
-    )
+    auth_response = authenticate_user(db, settings, payload.account, payload.password)
     return ApiResponse(data=auth_response)
 
 
@@ -37,3 +35,8 @@ def register(
         payload.password,
     )
     return ApiResponse(message="created", data=auth_response)
+
+
+@router.post("/logout", response_model=ApiResponse[None])
+def logout() -> ApiResponse[None]:
+    return ApiResponse(message="logged out", data=None)

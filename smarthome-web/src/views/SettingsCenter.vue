@@ -380,7 +380,7 @@ const removeMember = async (membershipId: number) => {
         :disabled="!authStore.isAuthenticated"
     >
         <section
-            class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
+            class="route-panel-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
             <header
                 class="mb-4 shrink-0 border-b border-[var(--color-divider)] pb-4"
@@ -398,8 +398,8 @@ const removeMember = async (membershipId: number) => {
                 @select="selectSection"
             />
 
-            <div class="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-                <div class="grid grid-cols-2 gap-4">
+            <div class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+                <div class="settings-card-grid grid grid-cols-2 gap-4">
                     <AccountFamilyCard
                         :dirty="accountDirty"
                         :form="accountForm"
@@ -423,6 +423,7 @@ const removeMember = async (membershipId: number) => {
                     <AppearanceSettingsCard :appearance="settings.appearance" />
                     <AiAssistantSettingsCard :ai="settings.aiAssistant" />
                     <HomeAssistantSettingsCard
+                        :ai="settings.aiAssistant"
                         :home-assistant="settings.homeAssistant"
                         @sync="syncDevices"
                     />
@@ -468,7 +469,8 @@ const removeMember = async (membershipId: number) => {
         </section>
 
         <aside
-            class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
+            class="route-panel-enter flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
+            style="animation-delay: 70ms"
         >
             <SettingsSummaryPanel :summary="settings.summary" />
             <SecurityStatusPanel
@@ -483,3 +485,36 @@ const removeMember = async (membershipId: number) => {
         </aside>
     </fieldset>
 </template>
+
+<style scoped>
+.settings-scroll-area {
+    contain: layout paint;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+}
+
+.settings-card-grid > * {
+    animation: settings-card-enter 360ms var(--motion-ease) both;
+}
+
+.settings-card-grid > :nth-child(1) { animation-delay: 40ms; }
+.settings-card-grid > :nth-child(2) { animation-delay: 90ms; }
+.settings-card-grid > :nth-child(3) { animation-delay: 140ms; }
+.settings-card-grid > :nth-child(4) { animation-delay: 190ms; }
+.settings-card-grid > :nth-child(5) { animation-delay: 240ms; }
+.settings-card-grid > :nth-child(6) { animation-delay: 290ms; }
+.settings-card-grid > :nth-child(7) { animation-delay: 340ms; }
+.settings-card-grid > :nth-child(8) { animation-delay: 390ms; }
+
+@keyframes settings-card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>

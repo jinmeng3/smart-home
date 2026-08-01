@@ -38,6 +38,7 @@ export interface AiAssistantSettings extends ModelAdvancedSettings {
 export interface HomeAssistantSettings {
   serviceUrl: string
   accessToken: string
+  parameters: string
   tokenConfigured: boolean
   websocketStatus: WebSocketStatus
 }

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useHomeStore } from '../../stores/home'
 import AnimatedNumber from '../animation/AnimatedNumber.vue'
+import SvgIcon from '../common/SvgIcon.vue'
 
 const store = useHomeStore()
 const energyTrend = [3, 8, 6, 10, 14, 7, 13, 11]
@@ -32,7 +33,10 @@ const areaPoints = computed(
 <template>
   <section class="motion-card page-enter-stagger min-w-0 rounded-xl border border-blue-100 bg-white/90 p-3 shadow-soft" style="animation-delay: 340ms">
     <div class="mb-3 flex items-center justify-between">
-      <h2 class="text-sm font-extrabold text-slate-800">能耗概览</h2>
+      <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+        <SvgIcon name="energy" size="sm" />
+        能耗概览
+      </h2>
       <a class="motion-button text-xs font-bold text-blue-600" href="#">更多</a>
     </div>
     <span class="text-xs text-slate-500">今日用电</span>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { ElButton, ElMessage } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { FamilyMember, MemberRole } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import MemberListItem from "./MemberListItem.vue";
@@ -107,7 +108,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
         </button>
     </SettingsSectionCard>
 
-    <BaseModal
+    <BaseSmartModal
         v-model="dialogVisible"
         :close-on-click-modal="!submitting && loadingMemberId === null"
         :close-on-press-escape="!submitting && loadingMemberId === null"
@@ -121,7 +122,9 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     >
         <template #header>
             <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">▣</span>
+                <span class="dialog-icon" aria-hidden="true">
+                    <SvgIcon name="members" size="sm" />
+                </span>
                 <div>
                     <h2>家庭成员与权限</h2>
                     <p>查看家庭成员，并管理每位成员的访问权限</p>
@@ -197,7 +200,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
                 <ElButton @click="dialogVisible = false">完成</ElButton>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>

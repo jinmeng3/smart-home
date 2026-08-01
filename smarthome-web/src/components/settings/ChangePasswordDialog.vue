@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { ElButton, ElMessage, ElMessageBox } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
 
@@ -113,7 +114,7 @@ const requestClose = async () => {
     emit("update:modelValue", false);
 };
 
-const handleBeforeClose = async (done: () => void) => {
+const confirmBeforeClose = async () => {
     if (hasChanges.value) {
         try {
             await ElMessageBox.confirm(
@@ -126,12 +127,11 @@ const handleBeforeClose = async (done: () => void) => {
                 },
             );
         } catch {
-            return;
+            return false;
         }
     }
 
-    done();
-    emit("update:modelValue", false);
+    return true;
 };
 
 const savePassword = async () => {
@@ -153,14 +153,14 @@ const savePassword = async () => {
 </script>
 
 <template>
-    <BaseModal
+    <BaseSmartModal
         :model-value="modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
         :lock-scroll="true"
         :modal="true"
         :show-close="false"
-        :before-close="handleBeforeClose"
+        :before-close="confirmBeforeClose"
         append-to-body
         class="account-family-dialog password-dialog"
         modal-class="settings-dialog-overlay"
@@ -169,7 +169,9 @@ const savePassword = async () => {
     >
         <template #header>
             <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">🔒</span>
+                <span class="dialog-icon" aria-hidden="true">
+                    <SvgIcon name="lock" size="sm" />
+                </span>
                 <div>
                     <h2>修改密码</h2>
                     <p>更新当前账户的本地安全记录</p>
@@ -260,7 +262,7 @@ const savePassword = async () => {
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>

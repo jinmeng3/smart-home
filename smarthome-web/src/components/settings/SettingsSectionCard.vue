@@ -26,10 +26,3 @@ defineProps<{
         <slot />
     </section>
 </template>
-
-<style scoped>
-.settings-section {
-    content-visibility: auto;
-    contain-intrinsic-size: 320px;
-}
-</style>

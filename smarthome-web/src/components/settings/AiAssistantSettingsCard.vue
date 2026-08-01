@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { reactive, ref } from "vue";
 import {
     ElButton,
     ElInputNumber,
     ElMessage,
-    ElMessageBox,
     ElSlider,
 } from "element-plus";
-import type {
-    AiAssistantSettings,
-    ModelAdvancedSettings,
-} from "../../types/settings";
+import type { AiAssistantSettings } from "../../types/settings";
 import { useSettingsStore } from "../../stores/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import BaseSwitch from "../BaseSwitch.vue";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import ModalSection from "../common/ModalSection.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import "element-plus/theme-chalk/el-input-number.css";
 import "element-plus/theme-chalk/el-message.css";
-import "element-plus/theme-chalk/el-message-box.css";
 import "element-plus/theme-chalk/el-slider.css";
+
+interface ModelSettings {
+    language: string;
+    detailLevel: number;
+    temperature: number;
+    maxTokens: number;
+}
 
 const props = defineProps<{
     ai: AiAssistantSettings;
@@ -27,8 +31,7 @@ const props = defineProps<{
 const settingsStore = useSettingsStore();
 const dialogVisible = ref(false);
 const saving = ref(false);
-const savedDraft = ref("");
-const draft = reactive<ModelAdvancedSettings>({
+const draft = reactive<ModelSettings>({
     language: "zh-CN",
     detailLevel: 70,
     temperature: 0.7,
@@ -37,17 +40,13 @@ const draft = reactive<ModelAdvancedSettings>({
 
 const languageOptions: Array<{
     label: string;
-    value: ModelAdvancedSettings["language"];
+    value: string;
 }> = [
     { label: "简体中文", value: "zh-CN" },
     { label: "English", value: "en-US" },
     { label: "自动检测", value: "auto" },
 ];
 const tokenPresets = [2048, 4096, 8192];
-const currentDraft = computed(() => JSON.stringify(draft));
-const hasUnsavedChanges = computed(
-    () => currentDraft.value !== savedDraft.value,
-);
 
 const copyCurrentSettings = () => {
     Object.assign(draft, {
@@ -56,7 +55,6 @@ const copyCurrentSettings = () => {
         temperature: props.ai.temperature,
         maxTokens: props.ai.maxTokens,
     });
-    savedDraft.value = currentDraft.value;
 };
 
 const openDialog = () => {
@@ -64,41 +62,12 @@ const openDialog = () => {
     dialogVisible.value = true;
 };
 
-const confirmDiscard = async () => {
-    if (!hasUnsavedChanges.value) {
-        return true;
-    }
-
-    try {
-        await ElMessageBox.confirm(
-            "当前设置尚未应用，确定放弃修改吗？",
-            "放弃修改",
-            {
-                confirmButtonText: "放弃",
-                cancelButtonText: "继续编辑",
-                type: "warning",
-            },
-        );
-        return true;
-    } catch {
-        return false;
-    }
-};
-
 const requestClose = async () => {
-    if (saving.value || !(await confirmDiscard())) {
+    if (saving.value) {
         return;
     }
 
     dialogVisible.value = false;
-};
-
-const handleBeforeClose = async (done: () => void) => {
-    if (saving.value || !(await confirmDiscard())) {
-        return;
-    }
-
-    done();
 };
 
 const validateDraft = () => {
@@ -124,7 +93,7 @@ const applySettings = async () => {
         return;
     }
 
-    const previousSettings: ModelAdvancedSettings = {
+    const previousSettings: ModelSettings = {
         language: props.ai.language,
         detailLevel: props.ai.detailLevel,
         temperature: props.ai.temperature,
@@ -136,7 +105,6 @@ const applySettings = async () => {
 
     try {
         await settingsStore.saveAIModel();
-        savedDraft.value = currentDraft.value;
         dialogVisible.value = false;
         ElMessage.success("模型高级设置已保存");
     } catch (error) {
@@ -187,129 +155,112 @@ const applySettings = async () => {
         </div>
     </SettingsSectionCard>
 
-    <BaseModal
+    <BaseSmartModal
         v-model="dialogVisible"
-        :before-close="handleBeforeClose"
-        :close-on-click-modal="true"
-        :close-on-press-escape="true"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
-        append-to-body
-        class="model-advanced-dialog"
-        modal-class="model-advanced-overlay"
-        width="720px"
+        :loading="saving"
+        close-on-overlay
+        confirm-text="应用设置"
+        description="调整回复的创造性和长度上限。"
+        icon="ai"
+        title="模型高级设置"
+        width="medium"
+        @cancel="requestClose"
+        @confirm="applySettings"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="ai-icon" aria-hidden="true">✦</span>
-                <div>
-                    <h2>模型高级设置</h2>
-                    <p>调整回复的创造性和长度上限</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    text
-                    @click="requestClose"
-                    >×</ElButton
-                >
-            </header>
+        <template #status>
+            <div class="model-status">
+                <span>当前模型</span>
+                <strong>{{ ai.model || "Orion GPT-4o" }}</strong>
+                <span class="active-status">
+                    <SvgIcon name="check-circle" size="sm" />
+                    配置生效中
+                </span>
+            </div>
         </template>
 
-        <div class="model-status">
-            <span>当前模型</span>
-            <strong>{{ ai.model }}</strong>
-            <span class="active-status"><i />配置生效中</span>
-        </div>
+        <ModalSection>
+            <div class="setting-title">
+                <div>
+                    <strong>回复语言</strong><span>Response language</span>
+                </div>
+            </div>
+            <p class="setting-copy">设置助手默认使用的回复语言。</p>
+            <select v-model="draft.language" class="settings-input full-width">
+                <option
+                    v-for="option in languageOptions"
+                    :key="option.value"
+                    :value="option.value"
+                >
+                    {{ option.label }}
+                </option>
+            </select>
+        </ModalSection>
 
-        <div class="settings-grid">
-            <section class="setting-card">
-                <div class="setting-title">
-                    <div>
-                        <strong>回复语言</strong><span>Response language</span>
-                    </div>
+        <ModalSection>
+            <div class="setting-title">
+                <div>
+                    <strong>回复详细程度</strong><span>Detail level</span>
                 </div>
-                <p>选择助手默认使用的回复语言。</p>
-                <div class="language-options">
-                    <button
-                        v-for="option in languageOptions"
-                        :key="option.value"
-                        :class="{ active: draft.language === option.value }"
-                        type="button"
-                        @click="draft.language = option.value"
-                    >
-                        {{ option.label }}
-                    </button>
-                </div>
-            </section>
+                <output>{{ draft.detailLevel }}%</output>
+            </div>
+            <p class="setting-copy">数值越高，回复会包含更多背景和步骤。</p>
+            <ElSlider
+                v-model="draft.detailLevel"
+                :max="100"
+                :min="0"
+                :show-tooltip="false"
+            />
+            <div class="range-labels">
+                <span>简洁</span><span>均衡</span><span>详细</span>
+            </div>
+        </ModalSection>
 
-            <section class="setting-card">
-                <div class="setting-title">
-                    <div>
-                        <strong>回复详细程度</strong><span>Detail level</span>
-                    </div>
-                    <output>{{ draft.detailLevel }}%</output>
-                </div>
-                <p>数值越高，回复会包含更多背景和步骤。</p>
-                <ElSlider
-                    v-model="draft.detailLevel"
-                    :max="100"
-                    :min="0"
-                    :show-tooltip="false"
-                />
-                <div class="range-labels">
-                    <span>简洁</span><span>均衡</span><span>详细</span>
-                </div>
-            </section>
+        <ModalSection>
+            <div class="setting-title">
+                <div><strong>创造性</strong><span>Temperature</span></div>
+                <output>{{ draft.temperature.toFixed(1) }}</output>
+            </div>
+            <p class="setting-copy">数值越低越稳定，越高则更有创造性。</p>
+            <ElSlider
+                v-model="draft.temperature"
+                :max="2"
+                :min="0"
+                :show-tooltip="false"
+                :step="0.1"
+            />
+            <div class="range-labels">
+                <span>精确 0</span><span>均衡 1</span><span>创意 2</span>
+            </div>
+        </ModalSection>
 
-            <section class="setting-card">
-                <div class="setting-title">
-                    <div><strong>创造性</strong><span>Temperature</span></div>
-                    <output>{{ draft.temperature.toFixed(1) }}</output>
+        <ModalSection>
+            <div class="setting-title">
+                <div>
+                    <strong>回复长度上限</strong><span>Max tokens</span>
                 </div>
-                <p>数值越低越稳定，越高则更有创造性。</p>
-                <ElSlider
-                    v-model="draft.temperature"
-                    :max="2"
-                    :min="0"
-                    :show-tooltip="false"
-                    :step="0.1"
-                />
-                <div class="range-labels">
-                    <span>精确 0</span><span>均衡 1</span><span>创意 2</span>
-                </div>
-            </section>
-
-            <section class="setting-card">
-                <div class="setting-title">
-                    <div>
-                        <strong>回复长度上限</strong><span>Max tokens</span>
-                    </div>
-                    <output>{{ draft.maxTokens.toLocaleString() }}</output>
-                </div>
-                <p>控制单次回复最多可生成的 token 数量。</p>
-                <ElInputNumber
-                    v-model="draft.maxTokens"
-                    :max="32768"
-                    :min="1"
-                    :step="256"
-                    class="full-width"
-                    controls-position="right"
-                    size="large"
-                />
-                <div class="token-presets">
-                    <ElButton
-                        v-for="value in tokenPresets"
-                        :key="value"
-                        :class="{ active: draft.maxTokens === value }"
-                        @click="draft.maxTokens = value"
-                    >
-                        {{ value.toLocaleString() }}
-                    </ElButton>
-                </div>
-            </section>
-        </div>
+                <output>{{ draft.maxTokens.toLocaleString() }}</output>
+            </div>
+            <p class="setting-copy">控制单次回复最多可生成的 token 数量。</p>
+            <ElInputNumber
+                v-model="draft.maxTokens"
+                :max="32768"
+                :min="1"
+                :step="256"
+                class="full-width"
+                controls-position="right"
+                size="large"
+            />
+            <div class="token-presets">
+                <ElButton
+                    v-for="value in tokenPresets"
+                    :key="value"
+                    :class="{ active: draft.maxTokens === value }"
+                    @click="draft.maxTokens = value"
+                >
+                    {{ value.toLocaleString() }}
+                </ElButton>
+            </div>
+        </ModalSection>
 
         <template #footer>
             <footer class="dialog-footer">
@@ -327,103 +278,33 @@ const applySettings = async () => {
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>
-:global(.model-advanced-dialog) {
-    display: flex;
-    max-height: calc(100vh - 48px);
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
-}
-
-:global(.model-advanced-overlay) {
-    background: var(--color-overlay);
-    backdrop-filter: blur(4px);
-}
-
-:global(.model-advanced-dialog .el-dialog__header),
-:global(.model-advanced-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
-:global(.model-advanced-dialog .el-dialog__body) {
-    min-height: 0;
-    padding: 0;
-    overflow-y: auto;
-}
-
-.dialog-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 17px 20px 14px;
-    border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-header-start),
-        var(--color-dialog-header-end)
-    );
-}
-
-.ai-icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    place-items: center;
-    border-radius: 11px;
-    color: white;
-    font-size: 18px;
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-icon-start),
-        var(--color-dialog-icon-end)
-    );
-    box-shadow: 0 8px 20px rgb(59 130 246 / 24%);
-}
-
-.dialog-header h2 {
-    color: var(--color-text-primary);
-    font-size: 20px;
-    font-weight: 800;
-}
-
-.dialog-header p {
-    margin-top: 2px;
-    color: var(--color-text-tertiary);
-    font-size: 14px;
-}
-
-.close-button {
-    margin: -4px -6px 0 auto;
-    color: var(--color-text-tertiary);
-    font-size: 22px;
-}
-
 .model-status {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 9px;
-    margin: 16px 20px 0;
-    padding: 10px 12px;
-    border: 1px solid var(--color-divider);
-    border-radius: 11px;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
     color: var(--color-text-tertiary);
     font-size: 14px;
-    background: var(--color-workspace-background);
+    background: #f8fafc;
+}
+
+.model-status span,
+.model-status strong {
+    display: block;
 }
 
 .model-status strong {
     min-width: 0;
     overflow: hidden;
     color: var(--color-text-primary);
+    font-size: 14px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -432,44 +313,12 @@ const applySettings = async () => {
     display: flex;
     align-items: center;
     gap: 6px;
+    border-radius: 999px;
+    padding: 5px 10px;
     color: var(--color-success);
+    font-size: 12px;
     font-weight: 700;
-}
-
-.active-status i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
-.settings-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    gap: 12px;
-    padding: 14px 20px 20px;
-}
-
-.setting-card {
-    display: flex;
-    min-width: 0;
-    min-height: 180px;
-    flex-direction: column;
-    padding: 14px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 14px;
-    background: var(--color-workspace-background);
-    transition:
-        border-color 160ms ease,
-        box-shadow 160ms ease,
-        transform 160ms ease;
-}
-
-.setting-card:hover {
-    border-color: var(--color-border-focus);
-    box-shadow: 0 8px 20px rgb(15 23 42 / 6%);
-    transform: translateY(-1px);
+    background: var(--color-success-soft);
 }
 
 .setting-title {
@@ -486,6 +335,7 @@ const applySettings = async () => {
 .setting-title strong {
     color: var(--color-text-primary);
     font-size: 16px;
+    font-weight: 800;
 }
 
 .setting-title span {
@@ -496,11 +346,11 @@ const applySettings = async () => {
 
 .setting-title output {
     color: var(--color-primary-600);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 800;
 }
 
-.setting-card > p {
+.setting-copy {
     min-height: 38px;
     margin: 7px 0 9px;
     color: var(--color-text-tertiary);
@@ -513,68 +363,29 @@ const applySettings = async () => {
     margin-top: auto;
 }
 
-.language-options {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: auto;
-    padding: 4px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 11px;
-    background: var(--color-surface-subtle);
-}
-
-.language-options button {
-    min-width: 0;
-    height: 40px;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 650;
-    background: transparent;
-    transition:
-        color 160ms ease,
-        border-color 160ms ease,
-        background 160ms ease,
-        box-shadow 160ms ease;
-}
-
-.language-options button:hover {
-    color: var(--color-primary-700);
-    background: var(--color-surface-hover);
-}
-
-.language-options button.active {
-    border-color: var(--color-primary-200);
-    color: var(--color-primary-700);
-    background: var(--color-panel-background);
-    box-shadow: 0 2px 8px rgb(15 23 42 / 8%);
-}
-
-.setting-card :deep(.el-slider) {
+:deep(.smart-modal-section .el-slider) {
     height: 32px;
     margin-top: auto;
 }
 
-.setting-card :deep(.el-slider__runway) {
+:deep(.smart-modal-section .el-slider__runway) {
     height: 6px;
     background: var(--color-border-default);
 }
 
-.setting-card :deep(.el-slider__bar) {
+:deep(.smart-modal-section .el-slider__bar) {
     height: 6px;
     border-radius: 999px;
     background: var(--color-primary-600);
 }
 
-.setting-card :deep(.el-slider__button-wrapper) {
+:deep(.smart-modal-section .el-slider__button-wrapper) {
     top: -15px;
     width: 36px;
     height: 36px;
 }
 
-.setting-card :deep(.el-slider__button) {
+:deep(.smart-modal-section .el-slider__button) {
     width: 18px;
     height: 18px;
     border: 3px solid var(--color-primary-600);
@@ -585,15 +396,15 @@ const applySettings = async () => {
         box-shadow 150ms ease;
 }
 
-.setting-card :deep(.el-slider__button:hover),
-.setting-card :deep(.el-slider__button.hover),
-.setting-card :deep(.el-slider__button.dragging) {
+:deep(.smart-modal-section .el-slider__button:hover),
+:deep(.smart-modal-section .el-slider__button.hover),
+:deep(.smart-modal-section .el-slider__button.dragging) {
     transform: scale(1.08);
     box-shadow: 0 0 0 5px var(--color-focus-ring);
 }
 
-.setting-card :deep(.el-select__wrapper),
-.setting-card :deep(.el-input__wrapper) {
+:deep(.smart-modal-section .el-select__wrapper),
+:deep(.smart-modal-section .el-input__wrapper) {
     min-height: 44px;
     font-size: 16px;
 }
@@ -641,9 +452,9 @@ const applySettings = async () => {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-workspace-background);
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
 }
 
 .dialog-footer p {
@@ -653,24 +464,39 @@ const applySettings = async () => {
 
 .dialog-footer > div {
     display: flex;
-    gap: 8px;
+    gap: 12px;
+}
+
+.dialog-footer :deep(.el-button--primary) {
+    border-color: var(--color-primary-600);
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-600),
+        var(--color-primary-500)
+    );
+    transition:
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.dialog-footer :deep(.el-button--primary:hover) {
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-700),
+        var(--color-primary-600)
+    );
+    box-shadow: 0 8px 18px var(--color-focus-ring);
+    transform: translateY(-1px);
 }
 
 @media (max-width: 640px) {
-    :global(.model-advanced-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
-    .settings-grid {
+    .model-status {
         grid-template-columns: 1fr;
     }
 
-    .model-status {
-        grid-template-columns: auto minmax(0, 1fr);
-    }
-
     .active-status {
-        grid-column: 1 / -1;
+        width: fit-content;
     }
 
     .dialog-footer {
@@ -680,6 +506,16 @@ const applySettings = async () => {
 
     .dialog-footer > div {
         justify-content: flex-end;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialog-footer :deep(.el-button--primary) {
+        transition-duration: 1ms;
+    }
+
+    .dialog-footer :deep(.el-button--primary:hover) {
+        transform: none;
     }
 }
 </style>

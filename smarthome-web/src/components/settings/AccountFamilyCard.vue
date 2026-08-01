@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { ElButton, ElMessageBox } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { AccountForm } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import "element-plus/theme-chalk/el-message-box.css";
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const avatarInput = ref<HTMLInputElement | null>(null);
 const dialogVisible = ref(false);
 const previewUrl = ref<string | null>(null);
+const avatarLoadError = ref(false);
 const timezones = [
     "Asia/Shanghai",
     "Asia/Tokyo",
@@ -31,9 +33,9 @@ const timezones = [
 ];
 
 const visibleAvatarUrl = computed(
-    () => previewUrl.value ?? props.form.avatarUrl,
+    () => (avatarLoadError.value ? null : previewUrl.value ?? props.form.avatarUrl),
 );
-const accountInitial = computed(() => props.form.name.trim().slice(0, 1));
+const accountInitial = computed(() => props.form.name.trim().slice(0, 1) || "用");
 const householdSummary = computed(
     () =>
         [props.form.householdName, props.form.address]
@@ -44,6 +46,7 @@ const householdSummary = computed(
 watch(
     () => props.form.avatarUrl,
     () => {
+        avatarLoadError.value = false;
         if (previewUrl.value) {
             URL.revokeObjectURL(previewUrl.value);
             previewUrl.value = null;
@@ -108,10 +111,11 @@ const deleteAvatar = async () => {
                 class="h-14 w-14 shrink-0 rounded-full object-cover"
                 :src="visibleAvatarUrl"
                 :alt="form.name"
+                @error="avatarLoadError = true"
             />
             <span
                 v-else
-                class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-600 text-lg font-extrabold text-white"
+                class="account-avatar account-avatar-large"
             >
                 {{ accountInitial }}
             </span>
@@ -139,7 +143,7 @@ const deleteAvatar = async () => {
         </button>
     </SettingsSectionCard>
 
-    <BaseModal
+    <BaseSmartModal
         v-model="dialogVisible"
         :close-on-click-modal="!loading"
         :close-on-press-escape="!loading"
@@ -153,7 +157,9 @@ const deleteAvatar = async () => {
     >
         <template #header>
             <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">♙</span>
+                <span class="dialog-icon" aria-hidden="true">
+                    <SvgIcon name="account" size="sm" />
+                </span>
                 <div>
                     <h2>账户与家庭</h2>
                     <p>查看当前账户信息并管理所属家庭</p>
@@ -174,6 +180,7 @@ const deleteAvatar = async () => {
                 v-if="visibleAvatarUrl"
                 :src="visibleAvatarUrl"
                 :alt="form.name"
+                @error="avatarLoadError = true"
             />
             <span v-else class="account-avatar">{{ accountInitial }}</span>
             <div class="min-w-0">
@@ -292,7 +299,7 @@ const deleteAvatar = async () => {
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>
@@ -396,10 +403,20 @@ const deleteAvatar = async () => {
 .account-avatar {
     display: grid;
     place-items: center;
+    overflow: hidden;
     color: white;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
     background: linear-gradient(135deg, #93c5fd, var(--color-primary-600));
+}
+
+.account-avatar-large {
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    font-size: 15px;
 }
 
 .current-account span,

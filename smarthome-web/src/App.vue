@@ -67,9 +67,9 @@ onUnmounted(() => {
             "
         >
             <Sidebar />
-            <RouterView v-slot="{ Component }">
+            <RouterView v-slot="{ Component, route }">
                 <ModalTransition name="slide-up" mode="out-in">
-                    <component :is="Component" />
+                    <component :is="Component" :key="route.fullPath" />
                 </ModalTransition>
             </RouterView>
             <LoginDialog />

@@ -7,7 +7,8 @@ import type { SemanticStatus } from "../../types/theme";
 import { getDeviceRuntimeStatus } from "../../utils/device";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
 const lastFocusedElement = ref<HTMLElement | null>(null);
@@ -23,6 +24,18 @@ const statusClass = (device: DashboardDevice) => {
         colors.backgroundClass,
         colors.borderClass,
     ];
+};
+
+const deviceIconName = (device: DashboardDevice) => {
+    if (device.type === "air_conditioner") {
+        return "air-conditioner";
+    }
+
+    if (device.type === "socket") {
+        return "plug";
+    }
+
+    return device.type;
 };
 
 const detailText = computed(() => {
@@ -67,7 +80,10 @@ onBeforeUnmount(() => {
         style="animation-delay: 260ms"
     >
         <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-extrabold text-slate-800">▣ 设备清单</h2>
+            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                <SvgIcon name="device-management" size="sm" />
+                设备清单
+            </h2>
             <a class="motion-button text-xs font-bold text-blue-600" href="#"
                 >更多</a
             >
@@ -99,14 +115,15 @@ onBeforeUnmount(() => {
                     device.online,
                     store.selectedDevice?.id === device.id,
                 ]"
-                class="motion-button device-row grid h-10 min-w-0 grid-cols-[26px_minmax(0,1fr)_minmax(66px,88px)] items-center gap-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-panel-background)] px-2 text-left transition hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-subtle)]"
+                class="motion-button device-row grid h-12 min-w-0 grid-cols-[28px_minmax(0,1fr)_minmax(70px,92px)] items-center gap-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-panel-background)] px-2 text-left transition hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-subtle)]"
                 type="button"
                 @click="openDevice(device, $event)"
             >
                 <span
-                    class="grid h-6 w-6 place-items-center rounded-lg bg-slate-100 text-xs"
-                    >{{ device.type.slice(0, 1).toUpperCase() }}</span
+                    class="grid h-6 w-6 place-items-center rounded-lg bg-slate-100 text-[var(--color-primary-700)]"
                 >
+                    <SvgIcon :name="deviceIconName(device)" size="sm" />
+                </span>
                 <strong class="truncate text-sm text-slate-700">{{
                     device.name
                 }}</strong>
@@ -133,10 +150,10 @@ onBeforeUnmount(() => {
             >查看全部设备</a
         >
 
-        <BaseModal
+        <BaseSmartModal
             :model-value="store.deviceDrawerOpen"
             description="查看设备状态与最近更新时间"
-            icon="▣"
+            icon="device-management"
             title="设备详情"
             width="560px"
             @update:model-value="$event ? undefined : closeDrawer()"
@@ -152,7 +169,7 @@ onBeforeUnmount(() => {
                     <div><dt>更新时间</dt><dd>{{ store.selectedDevice.updatedAt }}</dd></div>
                 </dl>
             </section>
-        </BaseModal>
+        </BaseSmartModal>
     </section>
 </template>
 

@@ -4,6 +4,7 @@ import type {
     NotificationSettings,
     SecuritySettings,
 } from "../../types/settings";
+import SvgIcon from "../common/SvgIcon.vue";
 
 defineProps<{
     security: SecuritySettings;
@@ -19,8 +20,9 @@ defineProps<{
         <div class="mb-4 flex items-center gap-3">
             <span
                 class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-success-soft)] text-[var(--color-success)]"
-                >◇</span
             >
+                <SvgIcon name="security" size="sm" />
+            </span>
             <h2 class="text-base font-extrabold">安全状态</h2>
         </div>
         <div class="grid gap-4 text-sm">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SettingsSuggestionItem } from "../../types/settings";
+import SvgIcon from "../common/SvgIcon.vue";
 
 defineProps<{
     suggestions: SettingsSuggestionItem[];
@@ -17,8 +18,9 @@ const emit = defineEmits<{
         <div class="mb-4 flex items-center gap-3">
             <span
                 class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-warning-soft)] text-[var(--color-warning)]"
-                >☼</span
             >
+                <SvgIcon name="settings" size="sm" />
+            </span>
             <h2 class="text-base font-extrabold">设置建议</h2>
         </div>
         <div class="grid gap-3">
@@ -31,8 +33,9 @@ const emit = defineEmits<{
             >
                 <span
                     class="grid h-9 w-9 place-items-center rounded-full bg-[var(--color-primary-50)] text-[var(--color-primary-600)]"
-                    >✦</span
                 >
+                    <SvgIcon name="ai" size="sm" />
+                </span>
                 <span class="min-w-0">
                     <strong class="block truncate text-sm">{{
                         item.title
@@ -42,7 +45,7 @@ const emit = defineEmits<{
                         >{{ item.description }}</span
                     >
                 </span>
-                <span class="text-[var(--color-text-tertiary)]">›</span>
+                <SvgIcon class="text-[var(--color-text-tertiary)]" name="chevron-right" size="sm" />
             </button>
         </div>
     </section>

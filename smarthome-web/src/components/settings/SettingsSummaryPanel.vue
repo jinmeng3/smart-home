@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SettingsSummary } from "../../types/settings";
+import SvgIcon from "../common/SvgIcon.vue";
 
 defineProps<{
     summary: SettingsSummary;
@@ -13,8 +14,9 @@ defineProps<{
         <div class="mb-4 flex items-center gap-3">
             <span
                 class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-ai-soft)] text-[var(--color-ai)]"
-                >♙</span
             >
+                <SvgIcon name="account" size="sm" />
+            </span>
             <h2 class="text-base font-extrabold">账户与系统</h2>
         </div>
         <div class="grid gap-4 text-sm">
@@ -31,9 +33,10 @@ defineProps<{
             </div>
             <div class="flex justify-between">
                 <span class="text-[var(--color-text-tertiary)]">平台接入</span
-                ><span class="font-semibold text-[var(--color-success)]"
-                    >● 在线</span
-                >
+                ><span class="inline-flex items-center gap-1 font-semibold text-[var(--color-success)]">
+                    <SvgIcon name="check-circle" size="sm" />
+                    在线
+                </span>
             </div>
             <div class="flex justify-between">
                 <span class="text-[var(--color-text-tertiary)]">最近同步</span

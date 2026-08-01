@@ -40,6 +40,10 @@
     animation: panel-enter 480ms var(--motion-ease) both;
 }
 
+.route-panel-enter {
+    animation: route-panel-enter 360ms var(--motion-ease) both;
+}
+
 .ai-message-enter {
     animation: ai-message-enter 320ms var(--motion-ease) both;
 }
@@ -99,6 +103,17 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes route-panel-enter {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.99);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 

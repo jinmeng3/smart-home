@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useHomeStore } from "../../stores/home";
 import AutomationCard from "../chat/AutomationCard.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
 const expandedId = ref<string | null>("arrive-home");
@@ -13,8 +14,9 @@ const expandedId = ref<string | null>("arrive-home");
         style="animation-delay: 180ms"
     >
         <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-sm font-extrabold text-slate-800">
-                ▣ 家庭日程 / 自动化计划
+            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+                <SvgIcon name="calendar" size="sm" />
+                家庭日程 / 自动化计划
             </h2>
             <a class="motion-button text-xs font-bold text-blue-600" href="#"
                 >更多</a
@@ -22,13 +24,13 @@ const expandedId = ref<string | null>("arrive-home");
         </div>
 
         <div class="mb-3 flex items-center justify-between text-sm">
-            <button class="motion-button text-lg text-slate-400" type="button">
-                ‹
-            </button>
-            <strong>2025年5月20日 星期二</strong>
-            <button class="motion-button text-lg text-slate-400" type="button">
-                ›
-            </button>
+                <button class="motion-button text-slate-400" type="button" aria-label="上一个日期">
+                    <SvgIcon name="chevron-left" size="sm" />
+                </button>
+                <strong>2025年5月20日 星期二</strong>
+                <button class="motion-button text-slate-400" type="button" aria-label="下一个日期">
+                    <SvgIcon name="chevron-right" size="sm" />
+                </button>
         </div>
 
         <div

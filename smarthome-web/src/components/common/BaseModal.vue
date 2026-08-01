@@ -73,11 +73,13 @@ const close = () => {
         :class="modalClass"
         :close-on-click-modal="closeOnClickModal"
         :close-on-press-escape="closeOnPressEscape"
+        :draggable="false"
         :lock-scroll="true"
         :modal="true"
         :modal-class="overlayClass"
         :model-value="modelValue"
         :show-close="false"
+        transition="dialog-fade"
         :width="width"
         append-to-body
         @update:model-value="emit('update:modelValue', $event)"
@@ -130,9 +132,11 @@ const close = () => {
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgb(226 232 240 / 80%);
-    border-radius: 20px;
-    background: #fff;
-    box-shadow: 0 20px 50px rgb(15 23 42 / 15%);
+    border-radius: 18px;
+    background: var(--color-panel-background);
+    box-shadow: 0 28px 80px rgb(15 23 42 / 22%);
+    transform-origin: center;
+    user-select: none;
 }
 
 .orion-modal-overlay {
@@ -155,9 +159,10 @@ const close = () => {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 20px 24px;
+    cursor: default;
+    padding: 18px 22px;
     border-bottom: 1px solid var(--color-border-subtle);
-    background: #fff;
+    background: linear-gradient(180deg, #fff, var(--color-workspace-background));
 }
 
 .el-dialog.orion-base-modal .dialog-icon,
@@ -167,8 +172,8 @@ const close = () => {
     height: 44px;
     flex: 0 0 44px;
     place-items: center;
-    border-radius: 14px;
-    color: var(--color-primary-600);
+    border-radius: 12px;
+    color: var(--color-primary-700);
     font-size: 20px;
     background: var(--color-primary-50);
     box-shadow: none;
@@ -192,7 +197,7 @@ const close = () => {
 }
 
 .orion-modal-content {
-    padding: 24px;
+    padding: 22px;
 }
 
 .orion-base-modal .orion-modal-content > .current-account,
@@ -222,9 +227,9 @@ const close = () => {
 .orion-base-modal .dialog-footer {
     position: sticky;
     bottom: 0;
-    padding: 16px 24px;
+    padding: 14px 22px;
     border-top: 1px solid var(--color-border-subtle);
-    background: #fff;
+    background: var(--color-workspace-background);
 }
 
 .orion-base-modal .dialog-footer > div { gap: 12px; }

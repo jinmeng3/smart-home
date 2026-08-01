@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useSettingsStore } from "../../stores/settings";
 import { useAuthStore } from "../../stores/auth";
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
+const avatarLoadError = ref(false);
 const username = computed(
     () => authStore.isAuthenticated
         ? settingsStore.settings.account.username.trim() || "用户"
         : "访客",
 );
-const avatarUrl = computed(() => settingsStore.settings.account.avatarUrl);
+const avatarUrl = computed(() =>
+    avatarLoadError.value ? null : settingsStore.settings.account.avatarUrl,
+);
 const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
 const today = new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
@@ -36,8 +39,13 @@ const greeting = computed(() => {
             <h1 class="text-xl font-extrabold tracking-normal text-slate-900">
                 {{ greeting }}，{{ username }}
             </h1>
-            <p class="mt-1 text-sm font-medium text-slate-500">
-                今天是 {{ today }}
+            <p class="date-chip">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 3v4M17 3v4M4 9h16" />
+                    <path d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+                    <path d="M8 13h3M8 16h6" />
+                </svg>
+                <span>今天是 {{ today }}</span>
             </p>
         </div>
 
@@ -56,6 +64,7 @@ const greeting = computed(() => {
                 class="h-10 w-10 rounded-full border border-[var(--color-border-default)] object-cover"
                 :src="avatarUrl"
                 alt=""
+                @error="avatarLoadError = true"
             />
             <div
                 v-else
@@ -80,6 +89,33 @@ const greeting = computed(() => {
   padding: 0 11px;
   color: var(--color-text-tertiary);
   background: var(--color-panel-background);
+}
+
+.date-chip {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  background: rgb(255 255 255 / 72%);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+
+.date-chip svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary-600);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .header-search-native:focus-within {

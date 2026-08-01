@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ElButton, ElMessage, ElMessageBox } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
 
@@ -49,7 +50,7 @@ const revokeDevice = async (deviceId: number) => {
 </script>
 
 <template>
-    <BaseModal
+    <BaseSmartModal
         :model-value="props.modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
@@ -64,7 +65,9 @@ const revokeDevice = async (deviceId: number) => {
     >
         <template #header>
             <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">▣</span>
+                <span class="dialog-icon" aria-hidden="true">
+                    <SvgIcon name="device-management" size="sm" />
+                </span>
                 <div>
                     <h2>登录设备管理</h2>
                     <p>管理当前账户已记录的登录设备</p>
@@ -155,7 +158,7 @@ const revokeDevice = async (deviceId: number) => {
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>

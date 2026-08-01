@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ElButton } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 
 const props = defineProps<{
@@ -21,7 +22,7 @@ const closeDialog = () => {
 </script>
 
 <template>
-    <BaseModal
+    <BaseSmartModal
         :model-value="props.modelValue"
         :close-on-click-modal="true"
         :close-on-press-escape="true"
@@ -36,7 +37,9 @@ const closeDialog = () => {
     >
         <template #header>
             <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">◇</span>
+                <span class="dialog-icon" aria-hidden="true">
+                    <SvgIcon name="log" size="sm" />
+                </span>
                 <div>
                     <h2>操作日志</h2>
                     <p>查看最近的本地安全变更</p>
@@ -82,7 +85,7 @@ const closeDialog = () => {
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>

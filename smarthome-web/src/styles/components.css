@@ -175,6 +175,7 @@ input:focus-visible {
 }
 
 .account-family-dialog,
+.login-dialog,
 .member-management-dialog,
 .model-advanced-dialog,
 .security-dialog,
@@ -191,6 +192,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button:not(.close-button),
+.login-dialog .el-button:not(.close-button),
 .member-management-dialog .el-button:not(.close-button),
 .model-advanced-dialog .el-button:not(.close-button),
 .security-dialog .el-button:not(.close-button),
@@ -215,6 +217,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button:not(.close-button):hover,
+.login-dialog .el-button:not(.close-button):hover,
 .member-management-dialog .el-button:not(.close-button):hover,
 .model-advanced-dialog .el-button:not(.close-button):hover,
 .security-dialog .el-button:not(.close-button):hover,
@@ -226,6 +229,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button:not(.close-button):active,
+.login-dialog .el-button:not(.close-button):active,
 .member-management-dialog .el-button:not(.close-button):active,
 .model-advanced-dialog .el-button:not(.close-button):active,
 .security-dialog .el-button:not(.close-button):active,
@@ -235,6 +239,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button--primary:not(.close-button),
+.login-dialog .el-button--primary:not(.close-button),
 .member-management-dialog .el-button--primary:not(.close-button),
 .model-advanced-dialog .el-button--primary:not(.close-button),
 .security-dialog .el-button--primary:not(.close-button),
@@ -250,6 +255,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button--primary:not(.close-button):hover,
+.login-dialog .el-button--primary:not(.close-button):hover,
 .member-management-dialog .el-button--primary:not(.close-button):hover,
 .model-advanced-dialog .el-button--primary:not(.close-button):hover,
 .security-dialog .el-button--primary:not(.close-button):hover,
@@ -265,6 +271,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .el-button.is-disabled:not(.close-button),
+.login-dialog .el-button.is-disabled:not(.close-button),
 .member-management-dialog .el-button.is-disabled:not(.close-button),
 .model-advanced-dialog .el-button.is-disabled:not(.close-button),
 .security-dialog .el-button.is-disabled:not(.close-button),
@@ -276,6 +283,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .close-button,
+.login-dialog .close-button,
 .member-management-dialog .close-button,
 .model-advanced-dialog .close-button,
 .security-dialog .close-button,
@@ -296,6 +304,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .close-button:hover,
+.login-dialog .close-button:hover,
 .member-management-dialog .close-button:hover,
 .model-advanced-dialog .close-button:hover,
 .security-dialog .close-button:hover,
@@ -305,6 +314,7 @@ input:focus-visible {
 }
 
 .account-family-dialog .close-button:active,
+.login-dialog .close-button:active,
 .member-management-dialog .close-button:active,
 .model-advanced-dialog .close-button:active,
 .security-dialog .close-button:active,

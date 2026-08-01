@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { useHomeStore } from "../../stores/home";
@@ -11,6 +11,7 @@ const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const avatarLoadError = ref(false);
 
 interface MenuItem {
     icon: string;
@@ -144,10 +145,11 @@ const selectMenu = async (item: MenuItem) => {
             @click="authStore.openLogin"
         >
             <img
-                v-if="authStore.isAuthenticated && account.avatarUrl"
+                v-if="authStore.isAuthenticated && account.avatarUrl && !avatarLoadError"
                 class="h-10 w-10 shrink-0 rounded-full object-cover"
                 :src="account.avatarUrl"
                 alt=""
+                @error="avatarLoadError = true"
             />
             <div
                 v-else

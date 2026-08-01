@@ -115,6 +115,7 @@ const mergeSettings = (nextSettings: Partial<SettingsState>): SettingsState => {
       ...defaults.homeAssistant,
       ...nextSettings.homeAssistant,
       accessToken: "",
+      parameters: nextSettings.homeAssistant?.parameters ?? "{}",
     },
     notifications: { ...defaults.notifications, ...nextSettings.notifications },
     security: { ...defaults.security, ...nextSettings.security },
@@ -309,6 +310,7 @@ export const useSettingsStore = defineStore("settings", () => {
         ...settings.value.homeAssistant,
         serviceUrl: model.api_endpoint,
         accessToken: "",
+        parameters: JSON.stringify(model.parameters ?? {}, null, 2),
         tokenConfigured: model.is_active,
         websocketStatus: model.is_active ? "connected" : "disconnected",
       };
@@ -355,17 +357,30 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const saveAIModel = async () => {
     const homeAssistant = settings.value.homeAssistant;
+    const [modelName, modelProvider] = settings.value.aiAssistant.model
+      .split(" · ")
+      .map((value) => value.trim());
+    let parameters: Record<string, unknown> = {};
+
+    try {
+      parameters = JSON.parse(homeAssistant.parameters || "{}") as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      parameters = {};
+    }
+
     const payload = {
-      name: settings.value.aiAssistant.model,
-      provider:
-        settings.value.aiAssistant.model.split(" ")[0] ??
-        settings.value.aiAssistant.model,
+      name: modelName || settings.value.aiAssistant.model,
+      provider: modelProvider || modelName || settings.value.aiAssistant.model,
       api_endpoint: homeAssistant.serviceUrl,
       ...(homeAssistant.accessToken
         ? { api_key: homeAssistant.accessToken }
         : {}),
       temperature: settings.value.aiAssistant.temperature,
       max_tokens: settings.value.aiAssistant.maxTokens,
+      parameters,
       is_active: Boolean(
         homeAssistant.serviceUrl &&
         (homeAssistant.tokenConfigured || homeAssistant.accessToken),
@@ -396,6 +411,7 @@ export const useSettingsStore = defineStore("settings", () => {
       ...settings.value.homeAssistant,
       serviceUrl: response.api_endpoint,
       accessToken: "",
+      parameters: JSON.stringify(response.parameters ?? {}, null, 2),
       tokenConfigured: response.is_active,
       websocketStatus: response.is_active ? "connected" : "disconnected",
     };
@@ -424,6 +440,7 @@ export const useSettingsStore = defineStore("settings", () => {
       ...settings.value.homeAssistant,
       serviceUrl: activeModel.api_endpoint,
       accessToken: "",
+      parameters: JSON.stringify(activeModel.parameters ?? {}, null, 2),
       tokenConfigured: activeModel.is_active,
       websocketStatus: activeModel.is_active ? "connected" : "disconnected",
     };
