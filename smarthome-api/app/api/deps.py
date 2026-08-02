@@ -1,13 +1,16 @@
 from collections.abc import Generator
 
-from fastapi import Depends, Header, HTTPException, Path, status
+from fastapi import Depends, HTTPException, Path, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.db.session import get_db as session_get_db
 from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.user import User
+from app.services.auth import parse_token
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -16,20 +19,28 @@ def get_db() -> Generator[Session, None, None]:
 
 DB_DEPENDENCY = Depends(get_db)
 HOUSEHOLD_ID_PATH = Path(...)
+SETTINGS_DEPENDENCY = Depends(get_settings)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def get_current_user(
+    token: str = Depends(oauth2_scheme),
     db: Session = DB_DEPENDENCY,
-    x_user_id: int | None = Header(default=None, alias="X-User-Id"),
+    settings: Settings = SETTINGS_DEPENDENCY,
 ) -> User:
-    if x_user_id is None:
-        x_user_id = 1
-
-    user = db.get(User, x_user_id)
-
+    payload = parse_token(token, settings.jwt_secret_key)
+    user_id = payload.get("user_id")
+    if not isinstance(user_id, int) or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    user = db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
     return user
 
 

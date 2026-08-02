@@ -1,9 +1,5 @@
-const defaultUserId = "1";
-const currentUserStorageKeys = [
-  "smart-home-current-user-id",
-  "currentUserId",
-  "userId",
-];
+export const authExpiredEvent = "smart-home-auth-expired";
+export const tokenKey = "smart-home-access-token";
 
 export class ApiError extends Error {
   constructor(
@@ -29,17 +25,9 @@ const isApiResponse = <T>(data: unknown): data is ApiResponse<T> => {
   );
 };
 
-export const getCurrentUserId = () => {
-  for (const key of currentUserStorageKeys) {
-    const userId =
-      window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
-
-    if (userId) {
-      return userId;
-    }
-  }
-
-  return defaultUserId;
+const clearAuthSession = () => {
+  window.sessionStorage.removeItem(tokenKey);
+  window.dispatchEvent(new Event(authExpiredEvent));
 };
 
 export const parseResponse = async <T>(response: Response): Promise<T> => {
@@ -62,19 +50,20 @@ export const parseResponse = async <T>(response: Response): Promise<T> => {
   }
 
   const data = await response.json().catch(() => ({ detail: "请求失败" }));
+
+  if (response.status === 401) {
+    clearAuthSession();
+  }
+
   throw new ApiError(data.detail ?? data.message ?? "请求失败", response.status);
 };
 
 export const createApiHeaders = (init?: HeadersInit) => {
   const headers = new Headers(init);
-  const accessToken = window.sessionStorage.getItem("smart-home-access-token");
+  const accessToken = window.sessionStorage.getItem(tokenKey);
 
   if (accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  if (!headers.has("X-User-Id")) {
-    headers.set("X-User-Id", getCurrentUserId());
   }
 
   return headers;

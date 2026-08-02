@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./db/orion_home.db"
 
     # 身份认证
-    jwt_secret_key: str = "change-me-in-production"
+    jwt_secret_key: str
     access_token_expire_seconds: int = 3600
 
     # 跨域资源共享

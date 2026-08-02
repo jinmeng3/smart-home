@@ -139,7 +139,7 @@ onMounted(() => {
 
     void settingsStore.loadAccountHome().then(syncAccountForm).catch((error: unknown) => {
         ElMessage.error(
-            error instanceof Error ? error.message : "璐︽埛涓庡搴俊鎭姞杞藉け璐?",
+            error instanceof Error ? error.message : "账户与家庭信息加载失败",
         );
     });
     void settingsStore
@@ -232,7 +232,7 @@ const saveAllSettings = async () => {
         ElMessage.error(
             error instanceof Error
                 ? error.message
-                : "AI 鍔╂墜閰嶇疆淇濆瓨澶辫触",
+                : "AI 助手配置保存失败",
         );
     }
 };

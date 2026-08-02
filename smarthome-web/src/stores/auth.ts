@@ -8,8 +8,7 @@ import {
   type LoginResult,
   type RegisterPayload,
 } from "../api/auth";
-
-const tokenKey = "smart-home-access-token";
+import { authExpiredEvent, tokenKey } from "../api/client";
 
 export const useAuthStore = defineStore("auth", () => {
   const accessToken = ref(window.sessionStorage.getItem(tokenKey));
@@ -23,18 +22,15 @@ export const useAuthStore = defineStore("auth", () => {
   const saveSession = (result: LoginResult) => {
     accessToken.value = result.access_token;
     window.sessionStorage.setItem(tokenKey, result.access_token);
-    window.sessionStorage.setItem(
-      "smart-home-current-user-id",
-      String(result.user.id),
-    );
     loginVisible.value = false;
   };
 
   const clearSession = () => {
     accessToken.value = null;
     window.sessionStorage.removeItem(tokenKey);
-    window.sessionStorage.removeItem("smart-home-current-user-id");
   };
+
+  window.addEventListener(authExpiredEvent, clearSession);
 
   const login = async (payload: LoginPayload) => {
     const result = await apiLogin(payload);

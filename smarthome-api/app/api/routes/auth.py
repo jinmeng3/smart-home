@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
-from app.api.deps import DB_DEPENDENCY
-from app.core.config import Settings, get_settings
+from app.api.deps import DB_DEPENDENCY, SETTINGS_DEPENDENCY
+from app.core.config import Settings
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.common import ApiResponse
 from app.services.auth import authenticate_user, register_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-SETTINGS_DEPENDENCY = Depends(get_settings)
 
 
 @router.post("/login", response_model=ApiResponse[AuthResponse])

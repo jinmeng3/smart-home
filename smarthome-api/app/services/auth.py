@@ -18,12 +18,34 @@ def generate_token(
     secret_key: str,
     expires_in: int = 3600,
 ) -> str:
-    exp_time = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    now = datetime.now(timezone.utc)
+    exp_time = now + timedelta(seconds=expires_in)
     payload = {
+        "sub": str(user_id),
         "user_id": user_id,
+        "type": "access",
+        "iat": now,
         "exp": exp_time,
     }
     return jwt.encode(payload, secret_key, algorithm="HS256")
+
+
+def parse_token(
+    token: str,
+    secret_key: str,
+) -> dict:
+    try:
+        return jwt.decode(token, secret_key, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
 
 
 def authenticate_user(

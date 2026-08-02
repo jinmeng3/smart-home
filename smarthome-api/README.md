@@ -6,4 +6,4 @@
 uvicorn app.main:app --reload
 ```
 
-开发模式使用 `X-User-Id` 请求头识别当前用户，不能用于生产环境。
+登录成功后使用 `Authorization: Bearer <access_token>` 访问需要认证的接口。
