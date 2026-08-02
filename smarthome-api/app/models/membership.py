@@ -19,16 +19,18 @@ class HouseholdMembership(Base):
         UniqueConstraint("household_id", "user_id", name="uq_household_user"),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, comment="主键")
     household_id: Mapped[int] = mapped_column(
-        ForeignKey("households.id", ondelete="CASCADE")
+        ForeignKey("households.id", ondelete="CASCADE"), comment="家庭主键"
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), comment="用户主键"
+    )
     role: Mapped[HouseholdRole] = mapped_column(
-        SqlEnum(HouseholdRole), default=HouseholdRole.MEMBER
+        SqlEnum(HouseholdRole), default=HouseholdRole.MEMBER, comment="家庭角色"
     )
     joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), comment="加入时间"
     )
 
     household = relationship("Household", back_populates="memberships")
