@@ -18,5 +18,10 @@ export const router = createRouter({
       name: "device-management",
       component: () => import("../views/DeviceManagement.vue"),
     },
+    {
+      path: "/scenes",
+      name: "scene-mode",
+      component: () => import("../views/SceneModeView.vue"),
+    },
   ],
 });

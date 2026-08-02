@@ -24,7 +24,7 @@ const menuItems: MenuItem[] = [
     { icon: "home", label: "全屋总览" },
     { icon: "room", label: "房间控制" },
     { icon: "device-management", label: "设备管理", path: "/devices" },
-    { icon: "scene", label: "场景模式" },
+    { icon: "scene", label: "场景模式", path: "/scenes" },
     { icon: "automation", label: "自动化" },
     { icon: "energy", label: "能耗分析" },
     { icon: "security", label: "安防中心" },
@@ -38,6 +38,10 @@ const activeLabel = computed(() => {
 
     if (route.path === "/devices") {
         return "设备管理";
+    }
+
+    if (route.path === "/scenes") {
+        return "场景模式";
     }
 
     return "智能对话";
