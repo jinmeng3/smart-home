@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import {
-    ElButton,
-    ElInputNumber,
-    ElMessage,
-    ElSlider,
-} from "element-plus";
+import { ElButton, ElInputNumber, ElMessage, ElSlider } from "element-plus";
 import type { AiAssistantSettings } from "../../types/settings";
 import { useSettingsStore } from "../../stores/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
@@ -178,89 +173,96 @@ const applySettings = async () => {
             </div>
         </template>
 
-        <ModalSection>
-            <div class="setting-title">
-                <div>
-                    <strong>回复语言</strong><span>Response language</span>
+        <div class="advanced-settings-grid">
+            <ModalSection>
+                <div class="setting-title">
+                    <div>
+                        <strong>回复语言</strong><span>Response language</span>
+                    </div>
                 </div>
-            </div>
-            <p class="setting-copy">设置助手默认使用的回复语言。</p>
-            <select v-model="draft.language" class="settings-input full-width">
-                <option
-                    v-for="option in languageOptions"
-                    :key="option.value"
-                    :value="option.value"
+                <p class="setting-copy">设置助手默认使用的回复语言。</p>
+                <select
+                    v-model="draft.language"
+                    class="settings-input full-width"
                 >
-                    {{ option.label }}
-                </option>
-            </select>
-        </ModalSection>
+                    <option
+                        v-for="option in languageOptions"
+                        :key="option.value"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
+            </ModalSection>
 
-        <ModalSection>
-            <div class="setting-title">
-                <div>
-                    <strong>回复详细程度</strong><span>Detail level</span>
+            <ModalSection>
+                <div class="setting-title">
+                    <div>
+                        <strong>回复详细程度</strong><span>Detail level</span>
+                    </div>
+                    <output>{{ draft.detailLevel }}%</output>
                 </div>
-                <output>{{ draft.detailLevel }}%</output>
-            </div>
-            <p class="setting-copy">数值越高，回复会包含更多背景和步骤。</p>
-            <ElSlider
-                v-model="draft.detailLevel"
-                :max="100"
-                :min="0"
-                :show-tooltip="false"
-            />
-            <div class="range-labels">
-                <span>简洁</span><span>均衡</span><span>详细</span>
-            </div>
-        </ModalSection>
-
-        <ModalSection>
-            <div class="setting-title">
-                <div><strong>创造性</strong><span>Temperature</span></div>
-                <output>{{ draft.temperature.toFixed(1) }}</output>
-            </div>
-            <p class="setting-copy">数值越低越稳定，越高则更有创造性。</p>
-            <ElSlider
-                v-model="draft.temperature"
-                :max="2"
-                :min="0"
-                :show-tooltip="false"
-                :step="0.1"
-            />
-            <div class="range-labels">
-                <span>精确 0</span><span>均衡 1</span><span>创意 2</span>
-            </div>
-        </ModalSection>
-
-        <ModalSection>
-            <div class="setting-title">
-                <div>
-                    <strong>回复长度上限</strong><span>Max tokens</span>
+                <p class="setting-copy">数值越高，回复会包含更多背景和步骤。</p>
+                <ElSlider
+                    v-model="draft.detailLevel"
+                    :max="100"
+                    :min="0"
+                    :show-tooltip="false"
+                />
+                <div class="range-labels">
+                    <span>简洁</span><span>均衡</span><span>详细</span>
                 </div>
-                <output>{{ draft.maxTokens.toLocaleString() }}</output>
-            </div>
-            <p class="setting-copy">控制单次回复最多可生成的 token 数量。</p>
-            <ElInputNumber
-                v-model="draft.maxTokens"
-                :max="32768"
-                :min="1"
-                :step="256"
-                class="full-width"
-                controls-position="right"
-                size="large"
-            />
-            <div class="token-presets">
-                <ElButton
-                    v-for="value in tokenPresets"
-                    :key="value"
-                    :class="{ active: draft.maxTokens === value }"
-                    @click="draft.maxTokens = value"
-                >
-                    {{ value.toLocaleString() }}
-                </ElButton>
-            </div>
-        </ModalSection>
+            </ModalSection>
+
+            <ModalSection>
+                <div class="setting-title">
+                    <div><strong>创造性</strong><span>Temperature</span></div>
+                    <output>{{ draft.temperature.toFixed(1) }}</output>
+                </div>
+                <p class="setting-copy">数值越低越稳定，越高则更有创造性。</p>
+                <ElSlider
+                    v-model="draft.temperature"
+                    :max="2"
+                    :min="0"
+                    :show-tooltip="false"
+                    :step="0.1"
+                />
+                <div class="range-labels">
+                    <span>精确 0</span><span>均衡 1</span><span>创意 2</span>
+                </div>
+            </ModalSection>
+
+            <ModalSection>
+                <div class="setting-title">
+                    <div>
+                        <strong>回复长度上限</strong><span>Max tokens</span>
+                    </div>
+                    <output>{{ draft.maxTokens.toLocaleString() }}</output>
+                </div>
+                <p class="setting-copy">
+                    控制单次回复最多可生成的 token 数量。
+                </p>
+                <ElInputNumber
+                    v-model="draft.maxTokens"
+                    :max="32768"
+                    :min="1"
+                    :step="256"
+                    class="full-width max-token-input"
+                    controls-position="right"
+                    size="large"
+                />
+                <div class="token-presets">
+                    <ElButton
+                        v-for="value in tokenPresets"
+                        :key="value"
+                        :class="{ active: draft.maxTokens === value }"
+                        @click="draft.maxTokens = value"
+                    >
+                        {{ value.toLocaleString() }}
+                    </ElButton>
+                </div>
+            </ModalSection>
+        </div>
 
         <template #footer>
             <footer class="dialog-footer">
@@ -282,17 +284,32 @@ const applySettings = async () => {
 </template>
 
 <style scoped>
+.advanced-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.advanced-settings-grid :deep(.smart-modal-section) {
+    display: flex;
+    min-height: 214px;
+    flex-direction: column;
+    border-color: var(--color-border);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
+}
+
 .model-status {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     color: var(--color-text-tertiary);
     font-size: 14px;
-    background: #f8fafc;
+    background: var(--color-surface-subtle);
 }
 
 .model-status span,
@@ -345,9 +362,13 @@ const applySettings = async () => {
 }
 
 .setting-title output {
+    min-width: 64px;
     color: var(--color-primary-600);
     font-size: 20px;
     font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .setting-copy {
@@ -361,6 +382,26 @@ const applySettings = async () => {
 .full-width {
     width: 100%;
     margin-top: auto;
+}
+
+:deep(.el-input-number.full-width) {
+    display: block;
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+:deep(.el-input-number.full-width .el-input__inner) {
+    padding-right: 58px;
+    padding-left: 14px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    text-align: left;
+}
+
+:deep(.max-token-input .el-input),
+:deep(.max-token-input .el-input__wrapper) {
+    width: 100%;
+    min-height: 44px;
 }
 
 :deep(.smart-modal-section .el-slider) {
@@ -453,8 +494,8 @@ const applySettings = async () => {
     justify-content: space-between;
     gap: 12px;
     padding: 16px 24px;
-    border-top: 1px solid #e2e8f0;
-    background: #fff;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-card-bg);
 }
 
 .dialog-footer p {
@@ -491,6 +532,14 @@ const applySettings = async () => {
 }
 
 @media (max-width: 640px) {
+    .advanced-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .advanced-settings-grid :deep(.smart-modal-section) {
+        min-height: auto;
+    }
+
     .model-status {
         grid-template-columns: 1fr;
     }

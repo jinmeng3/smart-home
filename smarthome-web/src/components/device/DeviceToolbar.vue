@@ -67,29 +67,45 @@ defineEmits<{
                 {{ item.value ? item.label : "状态" }}
             </option>
         </select>
-        <button class="device-primary-button" type="button" @click="$emit('add')">
-            <SvgIcon name="plus" /> 添加设备
-        </button>
-        <button class="device-secondary-button" type="button" @click="$emit('batch')">
-            <SvgIcon name="layers" /> 批量操作
-        </button>
-        <button
-            class="device-secondary-button"
-            :disabled="syncing"
-            type="button"
-            @click="$emit('sync')"
-        >
-            <SvgIcon name="refresh" /> {{ syncing ? "同步中" : "同步设备" }}
-        </button>
+        <div class="device-toolbar-actions">
+            <button class="device-primary-button" type="button" @click="$emit('add')">
+                <SvgIcon name="plus" /> 添加设备
+            </button>
+            <button class="device-secondary-button" type="button" @click="$emit('batch')">
+                <SvgIcon name="layers" /> 批量操作
+            </button>
+            <button
+                class="device-secondary-button device-sync-button"
+                :disabled="syncing"
+                type="button"
+                @click="$emit('sync')"
+            >
+                <SvgIcon name="refresh" /> {{ syncing ? "同步中" : "同步设备" }}
+            </button>
+        </div>
     </section>
 </template>
 
 <style scoped>
 .device-toolbar {
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) 112px 112px 112px auto auto auto;
-    gap: 10px;
+    grid-template-columns: minmax(180px, 1fr) repeat(3, 88px) auto;
+    gap: 8px;
     align-items: center;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
+}
+
+.device-toolbar-actions {
+    display: flex;
+    width: auto;
+    justify-content: flex-end;
+    gap: 6px;
+    justify-self: end;
+    min-width: 0;
 }
 
 .device-search {
@@ -101,9 +117,9 @@ defineEmits<{
 select {
     width: 100%;
     height: 40px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-panel-background);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-card-bg);
     color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 600;
@@ -143,8 +159,9 @@ select:focus {
     gap: 7px;
     height: 40px;
     border-radius: 8px;
-    padding: 0 16px;
-    font-size: 14px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 13px;
     font-weight: 800;
     white-space: nowrap;
     transition:
@@ -157,14 +174,28 @@ select:focus {
 .device-primary-button {
     border: 1px solid var(--color-primary-600);
     background: var(--color-primary-600);
-    color: #fff;
-    box-shadow: 0 10px 20px rgb(37 99 235 / 18%);
+    color: var(--color-text-on-primary);
+    box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 
 .device-secondary-button {
-    border: 1px solid var(--color-border-default);
-    background: var(--color-panel-background);
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
     color: var(--color-text-secondary);
+}
+
+.device-secondary-button:not(:disabled):hover {
+    border-color: var(--color-primary-200);
+    color: var(--color-primary-700);
+    background: var(--color-primary-50);
+}
+
+.device-sync-button svg {
+    transition: transform 180ms var(--motion-ease);
+}
+
+.device-sync-button:disabled svg {
+    animation: device-sync-spin 900ms linear infinite;
 }
 
 button:not(:disabled):hover {
@@ -182,8 +213,50 @@ button:disabled {
 
 @media (max-width: 1280px) {
     .device-toolbar {
-        grid-template-columns: minmax(220px, 1fr) repeat(3, 104px);
+        grid-template-columns: minmax(160px, 1fr) repeat(3, 82px) auto;
     }
+
+    .device-primary-button,
+    .device-secondary-button {
+        padding: 0 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 860px) {
+    .device-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .device-search {
+        grid-column: 1 / -1;
+    }
+
+    .device-toolbar-actions {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+}
+
+@media (max-width: 560px) {
+    .device-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .device-search {
+        grid-column: auto;
+    }
+
+    .device-toolbar-actions {
+        display: grid;
+        width: 100%;
+        grid-column: auto;
+        grid-template-columns: 1fr;
+    }
+}
+
+@keyframes device-sync-spin {
+    to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

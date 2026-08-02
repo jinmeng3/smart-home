@@ -19,7 +19,7 @@ defineProps<{
     >
         <div class="mb-4 flex items-center gap-3">
             <span
-                class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-success-soft)] text-[var(--color-success)]"
+                class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-teal-soft)] text-[var(--color-teal-600)]"
             >
                 <SvgIcon name="security" size="sm" />
             </span>
@@ -28,7 +28,7 @@ defineProps<{
         <div class="grid gap-4 text-sm">
             <div class="flex justify-between">
                 <span>双重认证</span
-                ><strong class="text-[var(--color-success)]">{{
+                ><strong class="text-[var(--color-teal-600)]">{{
                     security.twoFactorEnabled ? "已开启" : "未开启"
                 }}</strong>
             </div>

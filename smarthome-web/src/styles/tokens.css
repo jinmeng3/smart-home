@@ -9,34 +9,46 @@
     --color-primary-700: #1d4ed8;
     --color-primary-800: #1e40af;
 
-    --color-page-background: #edf2fa;
-    --color-sidebar-background: #f4f7fc;
-    --color-workspace-background: #f1f5fb;
-    --color-panel-background: #ffffff;
-    --color-panel-secondary: #f8fafc;
-    --color-surface-subtle: #f1f5f9;
-    --color-surface-hover: #e8f0fc;
-    --color-surface-active: #dce9fb;
-    --color-action-subtle: #f4f7fd;
+    --color-teal-500: #14b8a6;
+    --color-teal-600: #0d9488;
+    --color-teal-soft: #ecfdfa;
+    --color-teal-border: #99f6e4;
+
+    /* Canonical surface tokens supplied by the product color system. */
+    --color-page-bg: #f3f6fb;
+    --color-sidebar-bg: #f8fafd;
+    --color-card-bg: #ffffff;
+    --color-surface-subtle: #eef3f9;
+    --color-border: #d9e3f0;
+    --color-border-strong: #c5d2e3;
+
+    /* Compatibility aliases keep existing components semantic and concise. */
+    --color-page-background: var(--color-page-bg);
+    --color-sidebar-background: var(--color-sidebar-bg);
+    --color-workspace-background: var(--color-page-bg);
+    --color-panel-background: var(--color-card-bg);
+    --color-panel-secondary: var(--color-card-bg);
+    --color-surface-hover: #e8f1fd;
+    --color-surface-active: #dbeafe;
+    --color-action-subtle: #eff6ff;
 
     --color-text-primary: #0f172a;
     --color-text-secondary: #334155;
     --color-text-tertiary: #64748b;
-    --color-text-muted: #8795a8;
-    --color-text-disabled: #aeb9c8;
+    --color-text-muted: #94a3b8;
+    --color-text-disabled: #a8b4c5;
     --color-text-on-primary: #ffffff;
 
-    --color-border-default: #d5deea;
-    --color-border-subtle: #e1e7f0;
-    --color-border-strong: #bdc9d8;
+    --color-border-default: var(--color-border);
+    --color-border-subtle: #e5ecf5;
     --color-border-focus: #3b82f6;
-    --color-divider: #dfe6ef;
+    --color-divider: var(--color-border);
 
-    --color-success: #15803d;
+    --color-success: #16a34a;
     --color-success-soft: #ecfdf3;
     --color-success-border: #a7e7bd;
 
-    --color-warning: #c66a05;
+    --color-warning: #d97706;
     --color-warning-soft: #fff7ed;
     --color-warning-border: #f5c78c;
 
@@ -44,13 +56,22 @@
     --color-danger-soft: #fef2f2;
     --color-danger-border: #f3b6b6;
 
-    --color-info: #0369a1;
-    --color-info-soft: #eef8ff;
+    --color-info: #0284c7;
+    --color-info-soft: #f0f9ff;
     --color-info-border: #acd9f3;
 
-    --color-ai: #4f46e5;
-    --color-ai-soft: #eef2ff;
-    --color-ai-border: #c7d2fe;
+    --color-ai: var(--color-primary-700);
+    --color-ai-soft: var(--color-primary-50);
+    --color-ai-border: var(--color-primary-200);
+
+    --color-scene-home: var(--color-primary-600);
+    --color-scene-home-soft: var(--color-primary-50);
+    --color-scene-sleep: #6366f1;
+    --color-scene-sleep-soft: #eef2ff;
+    --color-scene-energy: var(--color-teal-600);
+    --color-scene-energy-soft: var(--color-teal-soft);
+    --color-scene-security: #334155;
+    --color-scene-security-soft: var(--color-surface-subtle);
 
     --color-device-light: #f59e0b;
     --color-device-climate: #0ea5e9;
@@ -59,20 +80,25 @@
     --color-device-energy: #10b981;
     --color-device-air: #22c55e;
 
-    --color-focus-ring: rgba(37, 99, 235, 0.2);
-    --color-overlay: rgba(15, 23, 42, 0.42);
+    --color-focus-ring: rgb(37 99 235 / 20%);
+    --color-brand-glow: rgb(59 130 246 / 9%);
+    --color-overlay: rgb(15 23 42 / 42%);
     --color-dialog-header-start: #edf5ff;
     --color-dialog-header-end: #f8fbff;
     --color-dialog-icon-start: #2563eb;
     --color-dialog-icon-end: #60a5fa;
 
     --shadow-card:
-        0 1px 2px rgba(15, 23, 42, 0.035), 0 3px 10px rgba(15, 23, 42, 0.03);
+        0 1px 2px rgb(15 23 42 / 4%), 0 3px 10px rgb(15 23 42 / 3%);
     --shadow-card-hover:
-        0 2px 4px rgba(15, 23, 42, 0.05), 0 8px 18px rgba(15, 23, 42, 0.045);
+        0 2px 4px rgb(15 23 42 / 5%), 0 8px 18px rgb(15 23 42 / 5%);
 }
 
 :root[data-theme="dark"] {
+    --color-teal-500: #2dd4bf;
+    --color-teal-600: #14b8a6;
+    --color-teal-soft: rgba(20, 184, 166, 0.14);
+    --color-teal-border: rgba(45, 212, 191, 0.34);
     --color-primary-50: rgba(90, 72, 255, 0.16);
     --color-primary-100: rgba(90, 72, 255, 0.22);
     --color-primary-200: rgba(118, 93, 255, 0.38);
@@ -92,6 +118,11 @@
     --color-surface-hover: #14243b;
     --color-surface-active: #1a2d49;
     --color-action-subtle: #0f1a2b;
+
+    --color-page-bg: var(--color-page-background);
+    --color-sidebar-bg: var(--color-sidebar-background);
+    --color-card-bg: var(--color-panel-background);
+    --color-border: var(--color-border-default);
 
     --color-text-primary: #f4f7ff;
     --color-text-secondary: #c9d3e7;
@@ -134,6 +165,7 @@
     --color-device-air: #4ade80;
 
     --color-focus-ring: rgba(83, 113, 255, 0.32);
+    --color-brand-glow: rgba(83, 113, 255, 0.12);
     --color-overlay: rgba(0, 4, 12, 0.68);
     --color-dialog-header-start: #111d35;
     --color-dialog-header-end: #0b1526;

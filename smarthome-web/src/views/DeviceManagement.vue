@@ -379,13 +379,12 @@ onMounted(() => {
     min-width: 0;
     min-height: 0;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 16px;
-    background: var(--color-workspace-background);
-    padding: 20px;
-    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    background: var(--color-page-bg);
+    padding: 14px;
     animation: device-page-enter 240ms var(--motion-ease) both;
 }
 
@@ -393,16 +392,21 @@ onMounted(() => {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
+    padding: 14px 18px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
 }
 
 .device-page-header h1 {
     margin: 0;
     font-size: 26px;
     font-weight: 900;
+    color: var(--color-text-primary);
 }
 
 .device-page-header p {
-    margin: 8px 0 0;
+    margin: 5px 0 0;
     color: var(--color-text-tertiary);
     font-size: 14px;
     font-weight: 700;
@@ -411,7 +415,7 @@ onMounted(() => {
 .device-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
 }
 
 .device-right-panel {
@@ -421,9 +425,29 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
-    border-left: 1px solid var(--color-border-default);
-    background: var(--color-sidebar-background);
-    padding: 0 2px 0 10px;
+    border-left: 1px solid var(--color-border);
+    background: var(--color-sidebar-bg);
+    padding: 0 4px 0 12px;
+}
+
+@media (max-width: 1180px) {
+    .device-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .device-management-page {
+        padding: 12px;
+    }
+
+    .device-page-header {
+        padding: 16px;
+    }
+
+    .device-stats-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @keyframes device-page-enter {

@@ -10,7 +10,7 @@ const expandedId = ref<string | null>("arrive-home");
 
 <template>
     <section
-        class="motion-card page-enter-stagger shrink-0 rounded-xl border border-blue-100 bg-white/90 p-3 shadow-soft"
+        class="motion-card page-enter-stagger shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
         style="animation-delay: 180ms"
     >
         <div class="mb-3 flex items-center justify-between">
@@ -49,17 +49,17 @@ const expandedId = ref<string | null>("arrive-home");
                 <div
                     class="relative pl-4 before:absolute before:left-0 before:top-1.5 before:h-2 before:w-2 before:rounded-full"
                     :class="{
-                        'before:bg-[var(--color-warning)]':
+                        'before:bg-[var(--color-scene-energy)]':
                             automation.id === 'wake-up',
-                        'before:bg-[var(--color-primary-600)]':
+                        'before:bg-[var(--color-scene-home)]':
                             automation.id === 'arrive-home',
-                        'before:bg-[var(--color-ai)]':
+                        'before:bg-[var(--color-scene-sleep)]':
                             automation.id === 'sleep',
                     }"
                 >
                     <span
                         v-if="automation.id === 'arrive-home'"
-                        class="absolute left-[-3px] top-[-1px] h-4 w-4 rounded-full bg-blue-400/20 status-pulse"
+                        class="absolute left-[-3px] top-[-1px] h-4 w-4 rounded-full bg-[var(--color-primary-100)] status-pulse"
                     ></span>
                     <strong class="block text-sm">{{ automation.name }}</strong>
                     <p class="mt-1 text-xs leading-5 text-slate-500">

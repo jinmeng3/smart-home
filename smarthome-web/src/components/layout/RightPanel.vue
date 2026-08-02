@@ -12,7 +12,7 @@ const authStore = useAuthStore();
     <aside
         :inert="!authStore.isAuthenticated"
         :aria-disabled="!authStore.isAuthenticated"
-        class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
+        class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-sidebar-bg)] pl-2 pr-1"
     >
         <ScheduleCard />
         <DeviceListCard />

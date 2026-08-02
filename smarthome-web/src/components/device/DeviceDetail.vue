@@ -109,7 +109,7 @@ header button {
     height: 92px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(180deg, #f8fbff, var(--color-primary-50));
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
     overflow: hidden;
 }
 

@@ -69,7 +69,7 @@ withDefaults(
 }
 
 .el-overlay {
-    background: rgb(15 23 42 / 35%) !important;
+    background: var(--color-overlay) !important;
     backdrop-filter: blur(4px);
 }
 
@@ -145,7 +145,7 @@ withDefaults(
 .el-dialog select:focus,
 .el-dialog .el-input__wrapper.is-focus {
     border-color: var(--color-primary-600) !important;
-    box-shadow: 0 0 0 3px rgb(37 99 235 / 15%) !important;
+    box-shadow: 0 0 0 3px var(--color-focus-ring) !important;
 }
 
 .setting-card,
@@ -161,7 +161,7 @@ withDefaults(
 .settings-card:hover,
 .settings-section:hover {
     border-color: var(--color-primary-300);
-    box-shadow: 0 8px 20px rgb(15 23 42 / 7%);
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-2px);
 }
 

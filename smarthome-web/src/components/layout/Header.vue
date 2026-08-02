@@ -103,8 +103,8 @@ const greeting = computed(() => {
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 700;
-  background: rgb(255 255 255 / 72%);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+  background: var(--color-card-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .date-chip svg {

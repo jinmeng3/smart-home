@@ -183,6 +183,10 @@ const logout = async () => {
 
         <!-- 使用单一根节点，避免通用弹窗把标签栏和表单自动排成双栏。 -->
         <div v-if="!authStore.isAuthenticated" class="auth-content">
+            <div class="auth-assurance">
+                <span aria-hidden="true">✓</span>
+                <p>安全连接已启用，账户凭据仅用于 Orion Home 身份认证</p>
+            </div>
             <nav class="auth-tabs" aria-label="账户操作">
                 <button :class="{ active: mode === 'login' }" type="button" @click="selectMode('login')">登录</button>
                 <button :class="{ active: mode === 'register' }" type="button" @click="selectMode('register')">注册</button>
@@ -228,16 +232,48 @@ const logout = async () => {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     padding: 4px;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
-    background: #f8fafc;
+    background: var(--color-surface-subtle);
 }
 
 .auth-content {
     display: grid;
     min-width: 0;
+}
+
+.auth-assurance {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 14px;
+    border: 1px solid var(--color-teal-border);
+    border-radius: 10px;
+    background: var(--color-teal-soft);
+    padding: 10px 12px;
+    color: var(--color-teal-600);
+}
+
+.auth-assurance span {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-teal-600);
+    color: var(--color-text-on-primary);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.auth-assurance p {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
 }
 
 .auth-tabs button {
@@ -247,12 +283,23 @@ const logout = async () => {
     color: var(--color-text-tertiary);
     font-weight: 700;
     background: transparent;
+    transition:
+        color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease);
+}
+
+.auth-tabs button:not(.active):hover {
+    color: var(--color-primary-700);
+    background: var(--color-primary-50);
 }
 
 .auth-tabs button.active {
     color: var(--color-primary-700);
-    background: #fff;
-    box-shadow: 0 2px 8px rgb(15 23 42 / 8%);
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    box-shadow:
+        inset 0 0 0 1px var(--color-primary-200),
+        var(--shadow-card);
 }
 
 .dialog-footer {
@@ -280,6 +327,9 @@ const logout = async () => {
     gap: 14px;
     margin-bottom: 18px;
     padding: 16px;
+    border: 1px solid var(--color-teal-border);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-teal-soft));
 }
 
 .current-account strong {
@@ -309,27 +359,74 @@ const logout = async () => {
 .account-avatar-fallback {
     display: grid;
     place-items: center;
-    color: white;
+    color: var(--color-text-on-primary);
     font-size: 14px;
     font-weight: 800;
     background: linear-gradient(135deg, var(--color-primary-200), var(--color-primary-600));
 }
 
-.login-form { display: grid; gap: 16px; }
+.login-form {
+    display: grid;
+    gap: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 18px;
+}
+
 .login-field { display: grid; gap: 8px; margin: 0 !important; }
+.login-field > span {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 800;
+}
 .password-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 
 :deep(.login-field .el-input__wrapper) {
     min-height: 44px;
     border-radius: 10px;
     padding: 0 14px;
-    background: linear-gradient(180deg, #fff, #f8fafc);
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    box-shadow: none;
+    transition:
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease);
+}
+
+:deep(.login-field .el-input__wrapper:hover) {
+    border-color: var(--color-border-strong);
+    background: var(--color-primary-50);
+}
+
+:deep(.login-field .el-input__wrapper.is-focus) {
+    border-color: var(--color-primary-500);
+    background: var(--color-card-bg);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 :deep(.login-field .el-input__inner) {
     color: var(--color-text-primary);
     font-size: 14px;
     font-weight: 600;
+}
+
+.dialog-header {
+    border-bottom-color: var(--color-border) !important;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50)) !important;
+}
+
+.dialog-icon {
+    color: var(--color-text-on-primary) !important;
+    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
+    box-shadow: 0 6px 16px var(--color-focus-ring);
+}
+
+.dialog-footer :deep(.el-button--primary) {
+    border-color: var(--color-primary-600) !important;
+    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
+    color: var(--color-text-on-primary) !important;
 }
 
 @media (max-width: 640px) {

@@ -201,11 +201,10 @@ onBeforeUnmount(() => {
                             </header>
                         </slot>
 
-                        <div v-if="$slots.status" class="smart-modal-status smart-modal-stagger-2">
-                            <slot name="status" />
-                        </div>
-
                         <main class="smart-modal-body">
+                            <div v-if="$slots.status" class="smart-modal-status smart-modal-stagger-2">
+                                <slot name="status" />
+                            </div>
                             <div class="smart-modal-content smart-modal-stagger-3">
                                 <slot />
                             </div>
@@ -259,7 +258,7 @@ onBeforeUnmount(() => {
     display: grid;
     place-items: center;
     padding: 24px;
-    background: rgb(15 23 42 / 42%);
+    background: var(--color-overlay);
     backdrop-filter: blur(5px);
 }
 
@@ -270,10 +269,10 @@ onBeforeUnmount(() => {
     max-height: 88vh;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border-strong);
     border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: 0 24px 64px rgb(15 23 42 / 18%);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card-hover);
 }
 
 .smart-modal.is-small { width: min(100%, 560px); }
@@ -285,7 +284,8 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 16px;
     padding: 22px 28px;
-    border-bottom: 1px solid var(--color-border-default);
+    border-bottom: 1px solid var(--color-border);
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
 }
 
 .smart-modal-icon {
@@ -295,8 +295,9 @@ onBeforeUnmount(() => {
     flex: 0 0 56px;
     place-items: center;
     border-radius: 16px;
-    color: var(--color-primary-700);
-    background: var(--color-primary-50);
+    color: var(--color-text-on-primary);
+    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+    box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 
 .smart-modal-title {
@@ -342,22 +343,19 @@ onBeforeUnmount(() => {
 }
 
 .smart-modal-status {
-    margin: 18px 28px 0;
+    margin: 0 0 20px;
 }
 
 .smart-modal-body {
     min-height: 0;
     overflow-y: auto;
-    padding: 24px 28px;
+    padding: 22px 24px;
+    background: var(--color-surface-subtle);
 }
 
 .smart-modal-content {
-    display: grid;
-    gap: 16px;
-}
-
-.smart-modal-content:has(> :nth-child(2)) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: block;
+    min-width: 0;
 }
 
 .smart-modal-warning,
@@ -373,8 +371,8 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 16px;
     padding: 16px 28px;
-    border-top: 1px solid var(--color-border-default);
-    background: var(--color-panel-background);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-card-bg);
 }
 
 .smart-modal-footer-note {
@@ -426,9 +424,9 @@ onBeforeUnmount(() => {
 .smart-modal :deep(textarea),
 .smart-modal :deep(.el-input__wrapper) {
     min-height: 42px;
-    border-color: #d8e1ee;
+    border-color: var(--color-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--color-card-bg);
 }
 
 .smart-modal :deep(input:not(.el-input__inner):focus),
@@ -436,7 +434,7 @@ onBeforeUnmount(() => {
 .smart-modal :deep(textarea:focus),
 .smart-modal :deep(.el-input__wrapper.is-focus) {
     border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 3px rgb(37 99 235 / 14%);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .smart-modal :deep(.dialog-header) {
@@ -444,8 +442,8 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 16px;
     padding: 22px 28px !important;
-    border-bottom: 1px solid var(--color-border-default) !important;
-    background: linear-gradient(180deg, #fff, var(--color-workspace-background)) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50)) !important;
 }
 
 .smart-modal :deep(.dialog-icon),
@@ -456,8 +454,9 @@ onBeforeUnmount(() => {
     flex: 0 0 48px !important;
     place-items: center;
     border-radius: 14px;
-    color: var(--color-primary-700) !important;
-    background: var(--color-primary-50) !important;
+    color: var(--color-text-on-primary) !important;
+    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
+    box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 
 .smart-modal :deep(.dialog-header h2) {
@@ -497,10 +496,76 @@ onBeforeUnmount(() => {
 .smart-modal :deep(.backup-panel),
 .smart-modal :deep(.backup-summary),
 .smart-modal :deep(.backup-history-item),
+.smart-modal :deep(.logs-card),
 .smart-modal :deep(.model-config-status) {
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
-    background: #f8fafc;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
+}
+
+.smart-modal :deep(.device-dialog-body),
+.smart-modal :deep(.password-dialog-body),
+.smart-modal :deep(.backup-dialog-body),
+.smart-modal :deep(.logs-dialog-body) {
+    gap: 18px;
+    padding: 0 !important;
+}
+
+.smart-modal :deep(.current-account) {
+    margin: 0 !important;
+    padding: 16px 18px !important;
+    border-color: var(--color-primary-200);
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+}
+
+.smart-modal :deep(.device-summary),
+.smart-modal :deep(.password-summary),
+.smart-modal :deep(.backup-summary) {
+    border-color: var(--color-primary-200);
+    background: linear-gradient(160deg, var(--color-card-bg), var(--color-primary-50));
+}
+
+.smart-modal :deep(.model-config-status) {
+    border-color: var(--color-teal-500);
+    background: linear-gradient(145deg, var(--color-card-bg), var(--color-teal-soft));
+}
+
+.smart-modal :deep(.member-toolbar) {
+    margin: 0 0 16px !important;
+    padding: 14px !important;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
+}
+
+.smart-modal :deep(.device-item),
+.smart-modal :deep(.log-item),
+.smart-modal :deep(.backup-action),
+.smart-modal :deep(.backup-history-item) {
+    border-color: var(--color-border);
+    background: var(--color-surface-subtle);
+    transition:
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.smart-modal :deep(.device-item:hover),
+.smart-modal :deep(.log-item:hover),
+.smart-modal :deep(.backup-action:hover),
+.smart-modal :deep(.backup-history-item:hover) {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+}
+
+.smart-modal :deep(.device-card-header),
+.smart-modal :deep(.logs-card-header),
+.smart-modal :deep(.backup-panel-heading),
+.smart-modal :deep(.password-card-header) {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .smart-modal :deep(.dialog-footer) {
@@ -511,8 +576,8 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 16px;
     padding: 16px 28px !important;
-    border-top: 1px solid var(--color-border-default) !important;
-    background: var(--color-panel-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+    background: var(--color-card-bg) !important;
 }
 
 .smart-modal :deep(.dialog-footer > span),

@@ -274,7 +274,7 @@ const savePassword = async () => {
     border: 1px solid var(--color-border-default);
     border-radius: 20px;
     background: var(--color-panel-background);
-    box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
+    box-shadow: var(--shadow-card-hover);
 }
 
 :global(.password-dialog .el-dialog__header),
@@ -315,7 +315,7 @@ const savePassword = async () => {
         var(--color-dialog-icon-start),
         var(--color-dialog-icon-end)
     );
-    box-shadow: 0 8px 20px rgb(59 130 246 / 24%);
+    box-shadow: 0 8px 20px var(--color-focus-ring);
 }
 
 .dialog-header h2 {

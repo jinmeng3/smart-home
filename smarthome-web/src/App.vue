@@ -59,7 +59,7 @@ onUnmounted(() => {
     >
         <SvgSprite />
         <div
-            class="grid h-full gap-2 bg-[radial-gradient(circle_at_20%_10%,rgba(37,99,235,0.08),transparent_28%),linear-gradient(135deg,var(--color-page-background)_0%,var(--color-sidebar-background)_100%)] p-2 transition-[grid-template-columns] duration-500 ease-out"
+            class="grid h-full gap-2 bg-[radial-gradient(circle_at_20%_10%,var(--color-brand-glow),transparent_28%),linear-gradient(135deg,var(--color-page-bg)_0%,var(--color-sidebar-bg)_100%)] p-2 transition-[grid-template-columns] duration-500 ease-out"
             :class="
                 store.sidebarCollapsed
                     ? 'grid-cols-[72px_minmax(0,1fr)_330px]'

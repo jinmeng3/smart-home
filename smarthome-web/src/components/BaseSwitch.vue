@@ -39,8 +39,8 @@ defineProps<{
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: white;
-  box-shadow: 0 1px 3px rgb(15 23 42 / 22%);
+  background: var(--color-card-bg);
+  box-shadow: var(--shadow-card);
   transition: transform 160ms ease;
 }
 

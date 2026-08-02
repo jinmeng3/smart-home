@@ -31,7 +31,7 @@ const areaPoints = computed(
 </script>
 
 <template>
-  <section class="motion-card page-enter-stagger min-w-0 rounded-xl border border-blue-100 bg-white/90 p-3 shadow-soft" style="animation-delay: 340ms">
+  <section class="motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft" style="animation-delay: 340ms">
     <div class="mb-3 flex items-center justify-between">
       <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
         <SvgIcon name="energy" size="sm" />
@@ -54,8 +54,8 @@ const areaPoints = computed(
     >
       <defs>
         <linearGradient id="energy-area" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--color-primary-600)" stop-opacity="0.2" />
-          <stop offset="1" stop-color="var(--color-primary-600)" stop-opacity="0" />
+          <stop offset="0" stop-color="var(--color-teal-500)" stop-opacity="0.2" />
+          <stop offset="1" stop-color="var(--color-teal-500)" stop-opacity="0" />
         </linearGradient>
       </defs>
       <polygon :points="areaPoints" fill="url(#energy-area)" />
@@ -63,7 +63,7 @@ const areaPoints = computed(
         class="sparkline"
         :points="points"
         fill="none"
-        stroke="var(--color-primary-600)"
+        stroke="var(--color-teal-600)"
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="3"

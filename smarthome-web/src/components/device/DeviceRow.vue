@@ -86,7 +86,7 @@ const iconNameMap: Record<Device["type"], string> = {
 .device-row:hover,
 .device-row.is-selected {
     background: var(--color-surface-hover);
-    box-shadow: 0 8px 18px rgb(37 99 235 / 8%);
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-2px);
 }
 
@@ -118,7 +118,7 @@ const iconNameMap: Record<Device["type"], string> = {
     height: 28px;
     place-items: center;
     border-radius: 7px;
-    background: linear-gradient(180deg, #fff, var(--color-primary-50));
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
     color: var(--color-primary-700);
     font-size: 12px;
     font-weight: 900;

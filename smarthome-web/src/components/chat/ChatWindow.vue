@@ -177,7 +177,7 @@ const starterPrompts = [
         </section>
 
         <form
-            class="page-enter-stagger relative mt-4 shrink-0 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition focus-within:border-[var(--color-border-focus)] focus-within:shadow-[0_0_0_3px_var(--color-focus-ring)]"
+            class="page-enter-stagger relative mt-4 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-4 shadow-soft transition focus-within:border-[var(--color-border-focus)] focus-within:shadow-[0_0_0_3px_var(--color-focus-ring)]"
             style="animation-delay: 400ms"
             @submit.prevent="send"
         >
@@ -246,7 +246,7 @@ const starterPrompts = [
     max-width: 44%;
     max-height: 148px;
     object-fit: contain;
-    filter: drop-shadow(0 16px 24px rgb(15 23 42 / 8%));
+    filter: drop-shadow(0 8px 18px var(--color-focus-ring));
 }
 
 .empty-chat h2 {
@@ -278,11 +278,11 @@ const starterPrompts = [
     grid-template-columns: 38px minmax(0, 1fr);
     gap: 8px 12px;
     min-height: 126px;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 16px;
     text-align: left;
-    background: var(--color-panel-background);
+    background: var(--color-card-bg);
     box-shadow: var(--shadow-card);
     transition:
         border-color 160ms ease,
@@ -292,7 +292,7 @@ const starterPrompts = [
 
 .starter-card:hover {
     border-color: var(--color-primary-300);
-    box-shadow: 0 8px 22px rgb(15 23 42 / 8%);
+    box-shadow: var(--shadow-card-hover);
 }
 
 .starter-card:active {

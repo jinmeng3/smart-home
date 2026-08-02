@@ -320,7 +320,7 @@ const deleteAvatar = async () => {
     border: 1px solid var(--color-border-default);
     border-radius: 20px;
     background: var(--color-panel-background);
-    box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
+    box-shadow: var(--shadow-card-hover);
 }
 
 :global(.settings-dialog-overlay) {
@@ -409,7 +409,7 @@ const deleteAvatar = async () => {
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
-    background: linear-gradient(135deg, #93c5fd, var(--color-primary-600));
+    background: linear-gradient(135deg, var(--color-primary-300), var(--color-primary-600));
 }
 
 .account-avatar-large {

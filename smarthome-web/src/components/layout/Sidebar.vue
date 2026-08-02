@@ -70,7 +70,7 @@ const selectMenu = async (item: MenuItem) => {
 
 <template>
     <aside
-        class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
+        class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
         :class="store.sidebarCollapsed ? 'px-2' : 'px-4'"
     >
         <div
@@ -135,7 +135,7 @@ const selectMenu = async (item: MenuItem) => {
         </nav>
 
         <button
-            class="absolute bottom-5 flex items-center overflow-hidden border border-slate-200 bg-white shadow-sm transition-[left,right,width,height,transform,border-radius,padding] duration-500 ease-out"
+            class="absolute bottom-5 flex items-center overflow-hidden border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-sm transition-[left,right,width,height,transform,border-radius,padding] duration-500 ease-out"
             :class="
                 store.sidebarCollapsed
                     ? 'left-1/2 h-11 w-11 -translate-x-1/2 justify-center gap-0 rounded-full p-0'

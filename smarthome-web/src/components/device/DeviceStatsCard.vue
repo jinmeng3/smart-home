@@ -30,15 +30,36 @@ defineProps<{
 
 <style scoped>
 .device-stats-card {
+    position: relative;
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
     align-items: center;
+    overflow: hidden;
+    padding: 11px 14px;
+    border-color: var(--color-border);
+    background: var(--color-card-bg);
     animation: device-card-enter 220ms var(--motion-ease) both;
     transition:
         transform 180ms var(--motion-ease),
         box-shadow 180ms var(--motion-ease);
 }
+
+.device-stats-card::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 3px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--color-text-muted);
+    content: "";
+    transform: translateY(-50%);
+}
+
+.is-success::before { background: var(--color-success); }
+.is-warning::before { background: var(--color-warning); }
+.is-primary::before { background: var(--color-primary-600); }
 
 .device-stats-card:hover {
     box-shadow: var(--shadow-card-hover);
@@ -47,16 +68,29 @@ defineProps<{
 
 .device-stats-icon {
     display: grid;
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     place-items: center;
     border-radius: 999px;
+}
+
+.device-stats-card p {
+    margin-bottom: 2px;
+    line-height: 1.25;
+}
+
+.device-stats-card strong {
+    line-height: 1.1;
 }
 
 .is-success .device-stats-icon { background: var(--color-success-soft); }
 .is-muted .device-stats-icon { background: var(--color-surface-subtle); }
 .is-warning .device-stats-icon { background: var(--color-warning-soft); }
 .is-primary .device-stats-icon { background: var(--color-primary-100); }
+.is-success .device-stats-icon { color: var(--color-success); }
+.is-muted .device-stats-icon { color: var(--color-text-muted); }
+.is-warning .device-stats-icon { color: var(--color-warning); }
+.is-primary .device-stats-icon { color: var(--color-primary-600); }
 .is-success strong { color: var(--color-success); }
 .is-muted strong { color: var(--color-text-secondary); }
 .is-warning strong { color: var(--color-warning); }

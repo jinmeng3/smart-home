@@ -50,12 +50,22 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  border-color: var(--color-border);
+  background: var(--color-card-bg);
+  color: var(--color-text-secondary);
 }
 
 .header-search {

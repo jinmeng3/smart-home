@@ -129,12 +129,12 @@ const pageSizeOptions = [10, 20, 50];
 .device-list-panel {
     display: flex;
     min-height: 0;
-    flex: 1;
+    flex: 0 1 auto;
     flex-direction: column;
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    background: var(--color-panel-background);
-    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-card-bg);
+    padding: 0;
     box-shadow: var(--shadow-card);
     animation: device-list-enter 240ms var(--motion-ease) both;
 }
@@ -151,6 +151,7 @@ const pageSizeOptions = [10, 20, 50];
 .device-list-header {
     justify-content: space-between;
     gap: 16px;
+    padding: 16px 18px 12px;
 }
 
 .device-list-header h2 {
@@ -175,6 +176,13 @@ const pageSizeOptions = [10, 20, 50];
     font-weight: 700;
 }
 
+.device-list-tools select {
+    width: 132px;
+    height: 34px;
+    padding: 0 28px 0 10px;
+    font-size: 12px;
+}
+
 .device-list-tools button,
 .device-type-tabs button,
 .device-page-actions button,
@@ -193,8 +201,10 @@ const pageSizeOptions = [10, 20, 50];
 }
 
 .device-type-tabs {
-    margin: 14px 0;
+    margin: 0;
+    padding: 0 18px 14px;
     flex-wrap: wrap;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .device-type-tabs button {
@@ -208,13 +218,15 @@ const pageSizeOptions = [10, 20, 50];
 .device-page-actions strong {
     border-color: var(--color-primary-500);
     background: var(--color-primary-600);
-    color: #fff;
+    color: var(--color-text-on-primary);
 }
 
 .device-table-wrap {
     min-height: 0;
-    flex: 1;
+    flex: 0 1 auto;
+    max-height: min(44vh, 460px);
     overflow: auto;
+    padding: 0 8px;
 }
 
 table {
@@ -230,6 +242,7 @@ th {
     font-weight: 900;
     text-align: left;
     white-space: nowrap;
+    background: var(--color-surface-subtle);
 }
 
 th:first-child {
@@ -255,7 +268,9 @@ th:last-child {
 .device-pagination {
     justify-content: space-between;
     gap: 14px;
-    padding-top: 14px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 700;

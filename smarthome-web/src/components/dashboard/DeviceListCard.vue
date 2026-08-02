@@ -76,7 +76,7 @@ onBeforeUnmount(() => {
 
 <template>
     <section
-        class="motion-card page-enter-stagger min-w-0 shrink-0 rounded-xl border border-blue-100 bg-white/90 p-3 shadow-soft"
+        class="motion-card page-enter-stagger min-w-0 shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
         style="animation-delay: 260ms"
     >
         <div class="mb-2 flex items-center justify-between">
@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
     padding: 18px;
     border: 1px solid var(--color-border-default);
     border-radius: 16px;
-    background: #f8fafc;
+    background: var(--color-surface-subtle);
 }
 
 .device-detail-heading,

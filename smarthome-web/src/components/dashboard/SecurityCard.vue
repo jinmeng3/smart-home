@@ -14,7 +14,7 @@ const knowledgeItems = [
 
 <template>
     <section
-        class="motion-card page-enter-stagger min-w-0 rounded-xl border border-blue-100 bg-white/90 p-3 shadow-soft"
+        class="motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
         style="animation-delay: 420ms"
     >
         <div class="mb-3 flex items-center justify-between">

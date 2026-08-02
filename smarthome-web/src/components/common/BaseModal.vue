@@ -131,16 +131,16 @@ const close = () => {
     max-height: 80vh;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgb(226 232 240 / 80%);
+    border: 1px solid var(--color-border);
     border-radius: 18px;
     background: var(--color-panel-background);
-    box-shadow: 0 28px 80px rgb(15 23 42 / 22%);
+    box-shadow: var(--shadow-card-hover);
     transform-origin: center;
     user-select: none;
 }
 
 .orion-modal-overlay {
-    background: rgb(15 23 42 / 45%) !important;
+    background: var(--color-overlay) !important;
     backdrop-filter: blur(6px);
 }
 
@@ -162,7 +162,7 @@ const close = () => {
     cursor: default;
     padding: 18px 22px;
     border-bottom: 1px solid var(--color-border-subtle);
-    background: linear-gradient(180deg, #fff, var(--color-workspace-background));
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-page-bg));
 }
 
 .el-dialog.orion-base-modal .dialog-icon,
@@ -241,21 +241,21 @@ const close = () => {
 }
 
 .orion-base-modal .el-button--danger.is-plain {
-    border-color: #fecaca;
-    color: #dc2626;
-    background: #fef2f2;
+    border-color: var(--color-danger-border);
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
 }
 
 .orion-base-modal input:not(.el-input__inner),
 .orion-base-modal select,
 .orion-base-modal .el-input__wrapper {
     min-height: 42px;
-    border-color: #dbe3ef;
-    background: #fff;
+    border-color: var(--color-border);
+    background: var(--color-card-bg);
 }
 
 .orion-base-modal .el-input__wrapper {
-    border: 1px solid #dbe3ef;
+    border: 1px solid var(--color-border);
     box-shadow: none;
 }
 
@@ -265,7 +265,7 @@ const close = () => {
 
 .orion-base-modal .el-input__wrapper.is-focus {
     border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 3px rgb(37 99 235 / 15%);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .orion-base-modal .el-input__inner,
@@ -294,7 +294,7 @@ const close = () => {
 .orion-base-modal .backup-option {
     border: 1px solid var(--color-border-default);
     border-radius: 16px;
-    background: #f8fafc;
+    background: var(--color-surface-subtle);
 }
 
 .orion-status-badge {
@@ -307,10 +307,10 @@ const close = () => {
     font-weight: 700;
 }
 
-.orion-status-badge.is-online { color: #15803d; background: #dcfce7; }
-.orion-status-badge.is-warning { color: #c2410c; background: #ffedd5; }
-.orion-status-badge.is-error { color: #dc2626; background: #fee2e2; }
-.orion-status-badge.is-processing { color: #2563eb; background: #dbeafe; }
+.orion-status-badge.is-online { color: var(--color-success); background: var(--color-success-soft); }
+.orion-status-badge.is-warning { color: var(--color-warning); background: var(--color-warning-soft); }
+.orion-status-badge.is-error { color: var(--color-danger); background: var(--color-danger-soft); }
+.orion-status-badge.is-processing { color: var(--color-info); background: var(--color-info-soft); }
 
 .orion-base-modal .active-status,
 .orion-base-modal .device-badge,
@@ -327,21 +327,21 @@ const close = () => {
 .orion-base-modal .active-status,
 .orion-base-modal .device-badge-current,
 .orion-base-modal .device-badge-trusted {
-    color: #15803d;
-    background: #dcfce7;
+    color: var(--color-success);
+    background: var(--color-success-soft);
 }
 
 .orion-base-modal .device-badge-muted {
-    color: #c2410c;
-    background: #ffedd5;
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
 }
 
 .el-message-box {
     max-width: calc(100vw - 32px);
-    border: 1px solid rgb(226 232 240 / 80%);
+    border: 1px solid var(--color-border);
     border-radius: 20px;
     padding: 0;
-    box-shadow: 0 20px 50px rgb(15 23 42 / 15%);
+    box-shadow: var(--shadow-card-hover);
 }
 
 .el-message-box__header { padding: 20px 24px 12px; }

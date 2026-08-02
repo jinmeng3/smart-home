@@ -27,7 +27,7 @@ withDefaults(
     border: 1px solid var(--color-border-default);
     border-radius: 16px;
     padding: 18px;
-    background: #f8fafc;
+    background: var(--color-surface-subtle);
     transition:
         border-color 180ms var(--motion-ease),
         box-shadow 180ms var(--motion-ease),
@@ -36,7 +36,7 @@ withDefaults(
 
 .smart-modal-section:hover {
     border-color: var(--color-primary-200);
-    box-shadow: 0 10px 24px rgb(15 23 42 / 7%);
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-2px);
 }
 
