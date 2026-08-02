@@ -1,9 +1,15 @@
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.membership import HouseholdMembership
 
 
 class User(Base):
@@ -43,8 +49,8 @@ class User(Base):
         comment="更新时间",
     )
 
-    memberships = relationship(
-        "HouseholdMembership", back_populates="user", cascade="all, delete-orphan"
+    memberships: Mapped[list[HouseholdMembership]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -57,20 +63,24 @@ class AuthSession(Base):
     refresh_token_hash: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, comment="刷新令牌哈希"
     )
-    device_name: Mapped[str] = mapped_column(
+    device_name: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="设备名称"
     )
-    ip_address: Mapped[str] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         String(45), nullable=True, comment="IP 地址"
     )
-    user_agent: Mapped[str] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         String(500), nullable=True, comment="用户代理"
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True, comment="过期时间"
     )
     revoked: Mapped[bool] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="撤销时间"
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+        comment="是否已撤销",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

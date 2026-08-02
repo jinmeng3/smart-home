@@ -26,8 +26,8 @@ class ChatSession(Base):
         comment="更新时间",
     )
 
-    messages = relationship(
-        "ChatMessage", back_populates="session", cascade="all, delete-orphan"
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
     )
 
 
@@ -44,4 +44,4 @@ class ChatMessage(Base):
         DateTime(timezone=True), server_default=func.now(), comment="创建时间"
     )
 
-    session = relationship("ChatSession", back_populates="messages")
+    session: Mapped[ChatSession] = relationship(back_populates="messages")

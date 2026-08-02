@@ -26,6 +26,7 @@ HOUSEHOLD_ADMIN_DEPENDENCY = Depends(require_household_admin)
 
 
 def validate_timezone(timezone: str) -> None:
+    """确认时区名称存在于系统 IANA 时区数据库。"""
     try:
         ZoneInfo(timezone)
     except ZoneInfoNotFoundError as exc:
@@ -35,6 +36,7 @@ def validate_timezone(timezone: str) -> None:
 
 
 def serialize_role(role: HouseholdRole | str) -> str:
+    """将 ORM 枚举或字符串统一序列化为小写角色值。"""
     value = role.value if isinstance(role, HouseholdRole) else role
     return value.lower()
 
@@ -44,24 +46,30 @@ def list_households(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[list[HouseholdListItem]]:
-    current_memberships = db.scalars(
-        select(HouseholdMembership).where(
-            HouseholdMembership.user_id == current_user.id
+    """列出当前用户加入的家庭及成员统计。"""
+    # 预聚合成员数，避免按家庭逐条查询造成 N+1 问题。
+    member_counts = (
+        select(
+            HouseholdMembership.household_id,
+            func.count(HouseholdMembership.id).label("member_count"),
         )
+        .group_by(HouseholdMembership.household_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(
+            Household,
+            HouseholdMembership.role,
+            member_counts.c.member_count,
+        )
+        .join(
+            HouseholdMembership,
+            HouseholdMembership.household_id == Household.id,
+        )
+        .join(member_counts, member_counts.c.household_id == Household.id)
+        .where(HouseholdMembership.user_id == current_user.id)
+        .order_by(Household.updated_at.desc())
     ).all()
-    rows = []
-
-    for membership in current_memberships:
-        household = db.get(Household, membership.household_id)
-        member_count = (
-            db.scalar(
-                select(func.count())
-                .select_from(HouseholdMembership)
-                .where(HouseholdMembership.household_id == membership.household_id),
-            )
-            or 0
-        )
-        rows.append((household, membership.role, member_count))
 
     items = [
         HouseholdListItem.model_validate(
@@ -84,6 +92,7 @@ def create_household(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[HouseholdRead]:
+    """创建家庭，并将创建者登记为管理员。"""
     validate_timezone(payload.timezone)
     household = Household(
         name=payload.name.strip(),
@@ -112,10 +121,13 @@ def read_household(
     membership: HouseholdMembership = HOUSEHOLD_MEMBER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[HouseholdRead]:
+    """读取当前用户有权访问的家庭详情。"""
     household = db.get(Household, membership.household_id)
 
     if household is None:
-        raise HTTPException(status_code=404, detail="家庭不存在")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="家庭不存在"
+        )
 
     return ApiResponse(data=household)
 
@@ -126,10 +138,13 @@ def update_household(
     membership: HouseholdMembership = HOUSEHOLD_ADMIN_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[HouseholdRead]:
+    """更新家庭资料，仅家庭管理员可操作。"""
     household = db.get(Household, membership.household_id)
 
     if household is None:
-        raise HTTPException(status_code=404, detail="家庭不存在")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="家庭不存在"
+        )
 
     if payload.timezone is not None:
         validate_timezone(payload.timezone)
@@ -138,7 +153,8 @@ def update_household(
     if payload.name is not None and payload.name.strip():
         household.name = payload.name.strip()
 
-    if payload.address is not None:
+    # model_fields_set 用于区分“未传 address”和“显式传 null 清空地址”。
+    if "address" in payload.model_fields_set:
         household.address = payload.address
 
     db.commit()

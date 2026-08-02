@@ -46,7 +46,7 @@ class DeviceCreate(BaseModel):
     )
     @classmethod
     def strip_strings(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else value
+        return value.strip() if isinstance(value, str) else value
 
 
 class DeviceUpdate(BaseModel):
@@ -62,7 +62,7 @@ class DeviceUpdate(BaseModel):
     @field_validator("name", "room", "brand", "firmware", "image_url", mode="before")
     @classmethod
     def strip_strings(cls, value: str | None) -> str | None:
-        return value.strip() if value is not None else value
+        return value.strip() if isinstance(value, str) else value
 
     @model_validator(mode="after")
     def require_update_field(self) -> "DeviceUpdate":

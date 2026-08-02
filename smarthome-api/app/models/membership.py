@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.household import Household
+    from app.models.user import User
 
 
 class HouseholdRole(str, Enum):
@@ -33,5 +40,5 @@ class HouseholdMembership(Base):
         DateTime(timezone=True), server_default=func.now(), comment="加入时间"
     )
 
-    household = relationship("Household", back_populates="memberships")
-    user = relationship("User", back_populates="memberships")
+    household: Mapped[Household] = relationship(back_populates="memberships")
+    user: Mapped[User] = relationship(back_populates="memberships")

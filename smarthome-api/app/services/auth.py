@@ -18,6 +18,7 @@ def generate_token(
     secret_key: str,
     expires_in: int = 3600,
 ) -> str:
+    """生成带用户标识和过期时间的访问令牌。"""
     now = datetime.now(timezone.utc)
     exp_time = now + timedelta(seconds=expires_in)
     payload = {
@@ -34,6 +35,7 @@ def parse_token(
     token: str,
     secret_key: str,
 ) -> dict:
+    """验证访问令牌并返回载荷。"""
     try:
         return jwt.decode(token, secret_key, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
@@ -54,6 +56,7 @@ def authenticate_user(
     account: str,
     password: str,
 ) -> AuthResponse:
+    """校验邮箱和密码，并返回认证结果。"""
     user = db.scalar(select(User).where(User.email == account))
 
     if not user or not bcrypt.checkpw(
@@ -83,6 +86,7 @@ def register_user(
     email: str,
     password: str,
 ) -> AuthResponse:
+    """注册用户，数据库唯一约束作为并发场景的最终防线。"""
     user = db.scalar(select(User).where(User.email == email))
     if user:
         raise HTTPException(

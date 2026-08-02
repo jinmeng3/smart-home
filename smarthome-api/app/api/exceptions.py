@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.schemas.common import ApiResponse, AppCode
+
+logger = logging.getLogger(__name__)
 
 HTTP_TO_APP_CODE = {
     status.HTTP_400_BAD_REQUEST: AppCode.BAD_REQUEST,
@@ -27,14 +31,14 @@ def error_response(status_code: int, message: str) -> JSONResponse:
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(HTTPException)
     async def http_exception_handler(
-        request: Request, exc: HTTPException
+        _request: Request, exc: HTTPException
     ) -> JSONResponse:
         detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
         return error_response(exc.status_code, detail)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
+        _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         return error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc.errors()))
 
@@ -42,6 +46,13 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def unhandled_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:
+        # 对客户端隐藏内部错误细节，但在服务端保留完整堆栈便于排查。
+        logger.exception(
+            "Unhandled error while processing %s %s",
+            request.method,
+            request.url.path,
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
         return error_response(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "Internal server error"
         )

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from collections.abc import Iterator
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -11,16 +12,6 @@ from app.models.ai import AIModel
 from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest
-
-
-def get_current_ai_model(db: Session, current_user: User) -> AIModel:
-    """获取当前用户绑定的 AI 模型。"""
-    model = db.scalar(select(AIModel).where(AIModel.user_id == current_user.id))
-    if not model:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Model not found"
-        )
-    return model
 
 
 def get_chat_session(
@@ -92,6 +83,8 @@ def save_request_messages(
         for message in payload.messages
     ]
     db.add_all(saved_messages)
+    # 新增关联消息不会自动触发会话行的 onupdate，需要显式更新时间。
+    session.updated_at = datetime.now(timezone.utc)
     db.commit()
 
 
@@ -100,7 +93,12 @@ def save_assistant_message(db: Session, session_id: int, content: str) -> None:
     if not content.strip():
         return
 
+    session = db.get(ChatSession, session_id)
+    if not session:
+        return
+
     db.add(ChatMessage(session_id=session_id, role="assistant", content=content))
+    session.updated_at = datetime.now(timezone.utc)
     db.commit()
 
 
@@ -236,6 +234,8 @@ def stream_chat_response(
 ) -> Iterator[bytes]:
     """流式转发上游响应，并在结束后保存助手消息。"""
     assistant_chunks = []
+    done_seen = False
+    stream_tail = b""
 
     try:
         with urlopen(request, timeout=60) as response:
@@ -245,8 +245,11 @@ def stream_chat_response(
                     break
 
                 assistant_chunks.append(parse_stream_delta(chunk))
+                done_seen = done_seen or b"data: [DONE]" in stream_tail + chunk
+                stream_tail = (stream_tail + chunk)[-32:]
                 yield chunk
-            yield format_stream_done()
+            if not done_seen:
+                yield format_stream_done()
     except HTTPError as exc:
         yield format_stream_error(read_upstream_error(exc))
     except URLError as exc:

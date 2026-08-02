@@ -14,6 +14,7 @@ from app.schemas.device import (
     DeviceListRead,
     DeviceLogListRead,
     DeviceLogRead,
+    DevicePlatform,
     DeviceQueryParams,
     DeviceSyncRead,
     DeviceUpdate,
@@ -21,15 +22,15 @@ from app.schemas.device import (
 
 
 def get_device_or_404(db: Session, device_id: int) -> Device:
+    """按主键获取设备，并统一处理不存在的情况。"""
     device = db.get(Device, device_id)
     if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在")
     return device
 
 
 def list_devices(db: Session, params: DeviceQueryParams) -> DeviceListRead:
+    """组合设备筛选条件并返回分页结果。"""
     filters = []
     if params.keyword:
         keyword = params.keyword.strip()
@@ -56,6 +57,7 @@ def list_devices(db: Session, params: DeviceQueryParams) -> DeviceListRead:
 
 
 def read_device(db: Session, device_id: int) -> DeviceDetailWithLogs:
+    """返回设备详情及最近二十条操作日志。"""
     device = get_device_or_404(db, device_id)
     logs = db.scalars(
         select(DeviceLog)
@@ -70,11 +72,10 @@ def read_device(db: Session, device_id: int) -> DeviceDetailWithLogs:
 
 
 def create_device(db: Session, payload: DeviceCreate) -> Device:
+    """创建设备和首条日志，使用同一个事务保证数据一致性。"""
     platform_id = payload.device_id or f"device-{uuid4().hex}"
     if db.scalar(select(Device.id).where(Device.device_id == platform_id)):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="设备重复"
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="设备重复")
 
     device = Device(
         **payload.model_dump(exclude={"device_id"}),
@@ -83,9 +84,7 @@ def create_device(db: Session, payload: DeviceCreate) -> Device:
     )
     db.add(device)
     db.flush()
-    db.add(
-        DeviceLog(device_id=device.id, action="create", message="设备创建完成")
-    )
+    db.add(DeviceLog(device_id=device.id, action="create", message="设备创建完成"))
     try:
         db.commit()
     except IntegrityError as exc:
@@ -98,6 +97,7 @@ def create_device(db: Session, payload: DeviceCreate) -> Device:
 
 
 def update_device(db: Session, device_id: int, payload: DeviceUpdate) -> Device:
+    """更新传入字段，并在设备上线时刷新最后在线时间。"""
     device = get_device_or_404(db, device_id)
     changes = payload.model_dump(exclude_unset=True)
     for field, value in changes.items():
@@ -114,12 +114,14 @@ def update_device(db: Session, device_id: int, payload: DeviceUpdate) -> Device:
 
 
 def delete_device(db: Session, device_id: int) -> None:
+    """删除设备，关联日志由 ORM 级联清理。"""
     device = get_device_or_404(db, device_id)
     db.delete(device)
     db.commit()
 
 
-def sync_devices(db: Session, platform: str) -> DeviceSyncRead:
+def sync_devices(db: Session, platform: DevicePlatform) -> DeviceSyncRead:
+    """刷新指定平台的本地设备状态；平台适配器可在此处接入。"""
     devices = list(
         db.scalars(select(Device).where(Device.connection == platform)).all()
     )
@@ -141,11 +143,10 @@ def sync_devices(db: Session, platform: str) -> DeviceSyncRead:
 def list_device_logs(
     db: Session, device_id: int, page: int, page_size: int
 ) -> DeviceLogListRead:
+    """按创建时间倒序返回指定设备的分页日志。"""
     get_device_or_404(db, device_id)
     condition = DeviceLog.device_id == device_id
-    total = (
-        db.scalar(select(func.count()).select_from(DeviceLog).where(condition)) or 0
-    )
+    total = db.scalar(select(func.count()).select_from(DeviceLog).where(condition)) or 0
     logs = db.scalars(
         select(DeviceLog)
         .where(condition)

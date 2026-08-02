@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class AccountRead(BaseModel):
@@ -17,6 +17,12 @@ class AccountRead(BaseModel):
 class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=50)
     email: EmailStr | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value: str | None) -> str | None:
+        """先清理空白，再执行字段长度校验。"""
+        return value.strip() if isinstance(value, str) else value
 
 
 class AvatarResponse(BaseModel):

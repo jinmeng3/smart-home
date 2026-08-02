@@ -16,6 +16,7 @@ def login(
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
+    """验证账号密码并签发访问令牌。"""
     auth_response = authenticate_user(db, settings, payload.account, payload.password)
     return ApiResponse(data=auth_response)
 
@@ -26,6 +27,7 @@ def register(
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
+    """创建用户账号并返回首次登录凭证。"""
     auth_response = register_user(
         db,
         settings,
@@ -38,4 +40,5 @@ def register(
 
 @router.post("/logout", response_model=ApiResponse[None])
 def logout() -> ApiResponse[None]:
+    """结束客户端登录状态；当前 JWT 由客户端负责清除。"""
     return ApiResponse(message="logged out", data=None)

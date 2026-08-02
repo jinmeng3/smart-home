@@ -21,14 +21,16 @@ DB_DEPENDENCY = Depends(get_db)
 HOUSEHOLD_ID_PATH = Path(...)
 SETTINGS_DEPENDENCY = Depends(get_settings)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+OAUTH2_SCHEME_DEPENDENCY = Depends(oauth2_scheme)
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str = OAUTH2_SCHEME_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> User:
+    """解析访问令牌并加载当前用户。"""
     payload = parse_token(token, settings.jwt_secret_key)
     user_id = payload.get("user_id")
     if not isinstance(user_id, int) or payload.get("type") != "access":
@@ -67,6 +69,7 @@ def require_household_member(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> HouseholdMembership:
+    """确认当前用户属于路径指定的家庭。"""
     household = db.get(Household, household_id)
 
     if not household:
@@ -88,6 +91,7 @@ HOUSEHOLD_MEMBER_DEPENDENCY = Depends(require_household_member)
 def require_household_admin(
     membership: HouseholdMembership = HOUSEHOLD_MEMBER_DEPENDENCY,
 ) -> HouseholdMembership:
+    """在成员校验基础上继续确认管理员权限。"""
     if membership.role != HouseholdRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="无权管理该家庭"

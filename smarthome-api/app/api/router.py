@@ -3,6 +3,8 @@ from fastapi import APIRouter
 from app.api.routes import account, ai_model, auth, chat, device, households, members
 
 api_router = APIRouter(prefix="/api")
+
+# 统一在此注册业务路由，避免各模块直接依赖 FastAPI 应用实例。
 api_router.include_router(account.router)
 api_router.include_router(ai_model.router)
 api_router.include_router(chat.router)

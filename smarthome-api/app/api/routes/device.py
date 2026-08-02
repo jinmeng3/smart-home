@@ -25,6 +25,7 @@ from app.services.device import (
 )
 
 router = APIRouter(prefix="/devices", tags=["devices"])
+# FastAPI 参数对象在模块加载时创建，避免在函数默认值中执行调用。
 DEVICE_QUERY_PARAMS = Query()
 LOG_PAGE_QUERY = Query(default=1, ge=1)
 LOG_PAGE_SIZE_QUERY = Query(default=20, ge=1, le=100)
@@ -35,6 +36,7 @@ def get_devices(
     params: DeviceQueryParams = DEVICE_QUERY_PARAMS,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[DeviceListRead]:
+    """按关键字和设备属性筛选分页列表。"""
     return ApiResponse(data=list_devices(db, params))
 
 
@@ -46,6 +48,7 @@ def get_devices(
 def add_device(
     payload: DeviceCreate, db: Session = DB_DEPENDENCY
 ) -> ApiResponse[DeviceDetailRead]:
+    """创建设备并写入创建日志。"""
     return ApiResponse(data=create_device(db, payload), message="created")
 
 
@@ -53,6 +56,7 @@ def add_device(
 def synchronize_devices(
     payload: DeviceSync, db: Session = DB_DEPENDENCY
 ) -> ApiResponse[DeviceSyncRead]:
+    """同步指定接入平台下的设备。"""
     return ApiResponse(data=sync_devices(db, payload.platform))
 
 
@@ -60,6 +64,7 @@ def synchronize_devices(
 def get_device(
     device_id: int, db: Session = DB_DEPENDENCY
 ) -> ApiResponse[DeviceDetailWithLogs]:
+    """读取设备详情及最近操作日志。"""
     return ApiResponse(data=read_device(db, device_id))
 
 
@@ -69,11 +74,13 @@ def edit_device(
     payload: DeviceUpdate,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[DeviceDetailRead]:
+    """更新设备信息和在线状态。"""
     return ApiResponse(data=update_device(db, device_id, payload))
 
 
 @router.delete("/{device_id}", response_model=ApiResponse[None])
 def remove_device(device_id: int, db: Session = DB_DEPENDENCY) -> ApiResponse[None]:
+    """删除设备及其关联日志。"""
     delete_device(db, device_id)
     return ApiResponse(message="deleted")
 
@@ -85,4 +92,5 @@ def get_device_logs(
     page_size: int = LOG_PAGE_SIZE_QUERY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[DeviceLogListRead]:
+    """分页读取指定设备的操作日志。"""
     return ApiResponse(data=list_device_logs(db, device_id, page, page_size))

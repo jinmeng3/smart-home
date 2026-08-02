@@ -1,17 +1,27 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.account import AccountRead
 
 
 class LoginRequest(BaseModel):
-    account: str
-    password: str
+    account: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("account", mode="before")
+    @classmethod
+    def strip_account(cls, value: str) -> str:
+        return value.strip()
 
 
 class RegisterRequest(BaseModel):
-    username: str
+    username: str = Field(min_length=2, max_length=50)
     email: EmailStr
-    password: str
+    password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def strip_username(cls, value: str) -> str:
+        return value.strip()
 
 
 class AuthResponse(BaseModel):

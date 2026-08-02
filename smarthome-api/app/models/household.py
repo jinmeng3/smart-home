@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.membership import HouseholdMembership
 
 
 class Household(Base):
@@ -30,6 +36,6 @@ class Household(Base):
         comment="更新时间",
     )
 
-    memberships = relationship(
-        "HouseholdMembership", back_populates="household", cascade="all, delete-orphan"
+    memberships: Mapped[list[HouseholdMembership]] = relationship(
+        back_populates="household", cascade="all, delete-orphan"
     )

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
@@ -15,10 +16,7 @@ SETTINGS_DEPENDENCY = Depends(get_settings)
 
 @router.get("/me", response_model=ApiResponse[AccountRead])
 def read_me(current_user: User = CURRENT_USER_DEPENDENCY) -> ApiResponse[AccountRead]:
-    """
-    获取当前用户资料。
-
-    """
+    """获取当前用户资料。"""
     return ApiResponse(data=current_user)
 
 
@@ -48,7 +46,13 @@ def update_me(
 
         current_user.email = str(payload.email)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="邮箱已被使用"
+        ) from exc
     db.refresh(current_user)
     return ApiResponse(data=current_user)
 
@@ -63,10 +67,18 @@ async def upload_avatar(
     """
     上传当前用户头像，并返回新的头像访问地址。
     """
+    old_avatar_url = current_user.avatar_url
     avatar_url = await save_avatar_file(settings, avatar)
-    delete_avatar_file(settings, current_user.avatar_url)
     current_user.avatar_url = avatar_url
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        delete_avatar_file(settings, avatar_url)
+        raise
+
+    # 数据库成功指向新文件后再清理旧文件，避免提交失败造成头像丢失。
+    delete_avatar_file(settings, old_avatar_url)
     return ApiResponse(data=AvatarResponse(avatar_url=avatar_url), message="created")
 
 

@@ -24,6 +24,7 @@ HOUSEHOLD_ADMIN_DEPENDENCY = Depends(require_household_admin)
 
 
 def member_to_schema(membership: HouseholdMembership) -> MemberRead:
+    """将成员关系及关联用户整理为接口响应。"""
     return MemberRead(
         membership_id=membership.id,
         user_id=membership.user.id,
@@ -38,6 +39,7 @@ def member_to_schema(membership: HouseholdMembership) -> MemberRead:
 def get_household_membership(
     db: Session, household_id: int, membership_id: int
 ) -> HouseholdMembership:
+    """获取属于指定家庭的成员关系。"""
     membership = db.scalar(
         select(HouseholdMembership).where(
             HouseholdMembership.id == membership_id,
@@ -52,6 +54,7 @@ def get_household_membership(
 
 
 def ensure_not_last_admin(db: Session, membership: HouseholdMembership) -> None:
+    """阻止降级或删除家庭中的最后一名管理员。"""
     if (
         membership.role == HouseholdRole.ADMIN
         and count_admins(db, membership.household_id) <= 1
@@ -79,7 +82,11 @@ def list_members(
     return ApiResponse(data=MemberListResponse(items=items, total=len(items)))
 
 
-@router.post("", response_model=ApiResponse[MemberRead], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ApiResponse[MemberRead],
+    status_code=status.HTTP_201_CREATED,
+)
 def add_member(
     household_id: int,
     payload: MemberCreate,

@@ -1,17 +1,19 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatCompletionMessage(BaseModel):
-    role: str
-    content: str
+    role: Literal["system", "user", "assistant", "tool"]
+    content: str = Field(min_length=1)
 
 
 class ChatCompletionRequest(BaseModel):
     model: str | None = None
-    messages: list[ChatCompletionMessage]
-    session_id: int | None = None
+    messages: list[ChatCompletionMessage] = Field(min_length=1)
+    session_id: int | None = Field(default=None, gt=0)
     stream: bool = False
 
     model_config = ConfigDict(extra="allow")

@@ -5,7 +5,7 @@ from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import Settings
 
-extension_by_type = {
+EXTENSION_BY_TYPE = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
@@ -13,6 +13,7 @@ extension_by_type = {
 
 
 def avatar_path_from_url(settings: Settings, avatar_url: str | None) -> Path | None:
+    """只取 URL 文件名，避免外部路径逃逸上传目录。"""
     if not avatar_url:
         return None
 
@@ -21,6 +22,7 @@ def avatar_path_from_url(settings: Settings, avatar_url: str | None) -> Path | N
 
 
 def delete_avatar_file(settings: Settings, avatar_url: str | None) -> None:
+    """删除应用管理的头像文件；文件不存在时保持幂等。"""
     avatar_path = avatar_path_from_url(settings, avatar_url)
 
     if avatar_path and avatar_path.exists():
@@ -28,7 +30,9 @@ def delete_avatar_file(settings: Settings, avatar_url: str | None) -> None:
 
 
 async def save_avatar_file(settings: Settings, upload: UploadFile) -> str:
-    if upload.content_type not in settings.allowed_avatar_types:
+    """校验头像类型和大小后保存，并返回静态资源地址。"""
+    extension = EXTENSION_BY_TYPE.get(upload.content_type or "")
+    if upload.content_type not in settings.allowed_avatar_types or not extension:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="不支持该头像格式",
@@ -36,13 +40,17 @@ async def save_avatar_file(settings: Settings, upload: UploadFile) -> str:
 
     content = await upload.read()
 
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="头像文件不能为空"
+        )
+
     if len(content) > settings.max_avatar_size:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="头像文件过大"
         )
 
     settings.avatar_dir.mkdir(parents=True, exist_ok=True)
-    extension = extension_by_type[upload.content_type]
     filename = f"{uuid4().hex}{extension}"
     avatar_path = settings.avatar_dir / filename
     avatar_path.write_bytes(content)

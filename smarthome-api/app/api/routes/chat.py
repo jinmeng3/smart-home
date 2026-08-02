@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -10,12 +10,12 @@ from app.schemas.chat import (
     ChatSessionRead,
 )
 from app.schemas.common import ApiResponse
+from app.services.ai_model import get_active_ai_model
 from app.services.chat import (
     build_chat_request,
     create_chat_completion,
     extract_assistant_content,
     get_chat_session,
-    get_current_ai_model,
     list_session_messages,
     list_user_chat_sessions,
     save_assistant_message,
@@ -32,18 +32,20 @@ def list_chat_sessions(
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[list[ChatSessionRead]]:
+    """按更新时间列出当前用户的聊天会话。"""
     return ApiResponse(data=list_user_chat_sessions(db, current_user))
 
 
 @router.post(
     "/sessions",
     response_model=ApiResponse[ChatSessionRead],
-    status_code=201,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_session(
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[ChatSessionRead]:
+    """创建一条空聊天会话。"""
     session = get_chat_session(db, current_user, None, [])
     db.commit()
     db.refresh(session)
@@ -58,6 +60,7 @@ def list_chat_messages(
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[list[ChatMessageRead]]:
+    """读取指定会话的历史消息。"""
     return ApiResponse(data=list_session_messages(db, current_user, session_id))
 
 
@@ -68,7 +71,8 @@ def create_chat(
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ):
-    model = get_current_ai_model(db, current_user)
+    """转发聊天请求，并根据 stream 参数返回普通或流式响应。"""
+    model = get_active_ai_model(db, current_user)
     session = get_chat_session(db, current_user, payload.session_id, payload.messages)
     save_request_messages(db, session, payload)
     request = build_chat_request(model, payload)

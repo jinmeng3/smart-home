@@ -30,10 +30,8 @@ class AIModel(Base):
     api_endpoint: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="API 地址"
     )
-    api_key: Mapped[str] = mapped_column(Text, comment="API 密钥")
-    parameters: Mapped[dict] = mapped_column(
-        JSON, default=dict, comment="模型参数"
-    )
+    api_key: Mapped[str | None] = mapped_column(Text, nullable=True, comment="API 密钥")
+    parameters: Mapped[dict] = mapped_column(JSON, default=dict, comment="模型参数")
     temperature: Mapped[float] = mapped_column(
         Float,
         default=0.7,
@@ -49,16 +47,24 @@ class AIModel(Base):
         comment="最大令牌数",
     )
     is_active: Mapped[bool] = mapped_column(
-        Boolean, default=True, comment="是否启用"
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+        comment="是否启用",
     )
-    description: Mapped[str] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="模型描述"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), comment="创建时间"
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
         comment="更新时间",
