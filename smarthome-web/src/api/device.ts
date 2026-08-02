@@ -6,6 +6,7 @@ import type {
   DeviceFilters,
   DeviceListResponse,
   DeviceLog,
+  DevicePlatform,
   DeviceUpdatePayload,
 } from "../types/device";
 
@@ -17,8 +18,8 @@ interface ApiDevice {
   type: Device["type"];
   brand: string;
   status: Device["status"];
-  connection?: string;
-  firmware?: string;
+  connection: DevicePlatform;
+  firmware: string;
   image_url?: string | null;
   last_online?: string | null;
   created_at?: string;
@@ -46,8 +47,8 @@ const mapDevice = (device: ApiDevice): Device => ({
   type: device.type,
   brand: device.brand,
   status: device.status,
-  connection: device.connection ?? "Home Assistant",
-  firmware: device.firmware ?? "1.0.0",
+  connection: device.connection,
+  firmware: device.firmware,
   lastOnline: device.last_online ?? "",
   image: device.image_url ?? undefined,
 });
@@ -112,25 +113,54 @@ export const getDevice = async (id: number): Promise<DeviceDetail> => {
   return mapDeviceDetail(response);
 };
 
-export const createDevice = (payload: DeviceCreatePayload) =>
-  apiRequest<ApiDevice>("/api/devices", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+const mapCreatePayload = (payload: DeviceCreatePayload) => ({
+  name: payload.name,
+  room: payload.room,
+  type: payload.type,
+  brand: payload.brand,
+  connection: payload.connection,
+  device_id: payload.deviceId,
+  firmware: payload.firmware,
+  image_url: payload.imageUrl,
+});
 
-export const updateDevice = (id: number, payload: DeviceUpdatePayload) =>
-  apiRequest<ApiDevice>(`/api/devices/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+const mapUpdatePayload = (payload: DeviceUpdatePayload) => ({
+  name: payload.name,
+  room: payload.room,
+  type: payload.type,
+  brand: payload.brand,
+  status: payload.status,
+  connection: payload.connection,
+  firmware: payload.firmware,
+  image_url: payload.imageUrl,
+});
+
+export const createDevice = async (payload: DeviceCreatePayload): Promise<Device> => {
+  const response = await apiRequest<ApiDevice>("/api/devices", {
+    method: "POST",
+    body: JSON.stringify(mapCreatePayload(payload)),
   });
+  return mapDevice(response);
+};
+
+export const updateDevice = async (
+  id: number,
+  payload: DeviceUpdatePayload,
+): Promise<Device> => {
+  const response = await apiRequest<ApiDevice>(`/api/devices/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(mapUpdatePayload(payload)),
+  });
+  return mapDevice(response);
+};
 
 export const deleteDevice = (id: number) =>
   apiRequest<null>(`/api/devices/${id}`, {
     method: "DELETE",
   });
 
-export const syncDevices = (platform: string) =>
-  apiRequest<{ platform: string; synced_count: number }>("/api/devices/sync", {
+export const syncDevices = (platform: DevicePlatform) =>
+  apiRequest<{ platform: DevicePlatform; synced_count: number }>("/api/devices/sync", {
     method: "POST",
     body: JSON.stringify({ platform }),
   });

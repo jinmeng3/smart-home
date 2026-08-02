@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import { ElButton, ElInput, ElMessage } from "element-plus";
 import { useAuthStore } from "../../stores/auth";
 import { useSettingsStore } from "../../stores/settings";
@@ -14,6 +14,7 @@ const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const mode = ref<AuthMode>("login");
 const submitting = ref(false);
+const accountInput = ref<{ focus: () => void } | null>(null);
 const loginForm = reactive({ account: "", password: "" });
 const registerForm = reactive({
     username: "",
@@ -52,6 +53,10 @@ const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
 const selectMode = (nextMode: AuthMode) => {
     if (submitting.value || authStore.isAuthenticated) return;
     mode.value = nextMode;
+
+    if (nextMode === "login") {
+        void nextTick(() => accountInput.value?.focus());
+    }
 };
 
 const validateRegisterForm = () => {
@@ -63,8 +68,8 @@ const validateRegisterForm = () => {
         ElMessage.warning("请输入有效的邮箱地址");
         return false;
     }
-    if (registerForm.password.length < 8) {
-        ElMessage.warning("密码至少需要 8 位字符");
+    if (registerForm.password.length < 6) {
+        ElMessage.warning("密码至少需要 6 位字符");
         return false;
     }
     if (registerForm.password !== registerForm.confirmPassword) {
@@ -100,7 +105,8 @@ const submit = async () => {
             registerForm.confirmPassword = "";
             ElMessage.success("注册成功");
         }
-        window.location.reload();
+        // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
+        void settingsStore.loadAccountHome().catch(() => undefined);
     } catch (error) {
         ElMessage.error(
             error instanceof Error
@@ -113,6 +119,15 @@ const submit = async () => {
         submitting.value = false;
     }
 };
+
+watch(
+    () => authStore.loginVisible,
+    (visible) => {
+        if (!visible || authStore.isAuthenticated) return;
+        mode.value = "login";
+        void nextTick(() => accountInput.value?.focus());
+    },
+);
 
 const logout = async () => {
     submitting.value = true;
@@ -166,31 +181,34 @@ const logout = async () => {
             </div>
         </section>
 
-        <nav v-if="!authStore.isAuthenticated" class="auth-tabs" aria-label="账户操作">
-            <button :class="{ active: mode === 'login' }" type="button" @click="selectMode('login')">登录</button>
-            <button :class="{ active: mode === 'register' }" type="button" @click="selectMode('register')">注册</button>
-        </nav>
+        <!-- 使用单一根节点，避免通用弹窗把标签栏和表单自动排成双栏。 -->
+        <div v-if="!authStore.isAuthenticated" class="auth-content">
+            <nav class="auth-tabs" aria-label="账户操作">
+                <button :class="{ active: mode === 'login' }" type="button" @click="selectMode('login')">登录</button>
+                <button :class="{ active: mode === 'register' }" type="button" @click="selectMode('register')">注册</button>
+            </nav>
 
-        <form v-if="!authStore.isAuthenticated" class="login-form" @submit.prevent="submit">
-            <template v-if="mode === 'login'">
-                <label class="login-field">
-                    <span>账号</span>
-                    <ElInput v-model="loginForm.account" autocomplete="username" placeholder="邮箱或用户名" />
-                </label>
-                <label class="login-field">
-                    <span>密码</span>
-                    <ElInput v-model="loginForm.password" autocomplete="current-password" placeholder="请输入密码" show-password type="password" />
-                </label>
-            </template>
-            <template v-else>
-                <label class="login-field"><span>用户名</span><ElInput v-model="registerForm.username" autocomplete="username" placeholder="请输入用户名" /></label>
-                <label class="login-field"><span>邮箱</span><ElInput v-model="registerForm.email" autocomplete="email" placeholder="name@example.com" type="email" /></label>
-                <div class="password-grid">
-                    <label class="login-field"><span>密码</span><ElInput v-model="registerForm.password" autocomplete="new-password" placeholder="至少 8 位字符" show-password type="password" /></label>
-                    <label class="login-field"><span>确认密码</span><ElInput v-model="registerForm.confirmPassword" autocomplete="new-password" placeholder="再次输入密码" show-password type="password" /></label>
-                </div>
-            </template>
-        </form>
+            <form class="login-form" @submit.prevent="submit">
+                <template v-if="mode === 'login'">
+                    <label class="login-field">
+                        <span>邮箱</span>
+                        <ElInput ref="accountInput" v-model="loginForm.account" autocomplete="username" placeholder="name@example.com" type="email" />
+                    </label>
+                    <label class="login-field">
+                        <span>密码</span>
+                        <ElInput v-model="loginForm.password" autocomplete="current-password" placeholder="请输入密码" show-password type="password" />
+                    </label>
+                </template>
+                <template v-else>
+                    <label class="login-field"><span>用户名</span><ElInput v-model="registerForm.username" autocomplete="username" placeholder="请输入用户名" /></label>
+                    <label class="login-field"><span>邮箱</span><ElInput v-model="registerForm.email" autocomplete="email" placeholder="name@example.com" type="email" /></label>
+                    <div class="password-grid">
+                        <label class="login-field"><span>密码</span><ElInput v-model="registerForm.password" autocomplete="new-password" placeholder="至少 6 位字符" show-password type="password" /></label>
+                        <label class="login-field"><span>确认密码</span><ElInput v-model="registerForm.confirmPassword" autocomplete="new-password" placeholder="再次输入密码" show-password type="password" /></label>
+                    </div>
+                </template>
+            </form>
+        </div>
 
         <template #footer>
             <footer class="dialog-footer">
@@ -215,6 +233,11 @@ const logout = async () => {
     border: 1px solid var(--color-border-default);
     border-radius: 12px;
     background: #f8fafc;
+}
+
+.auth-content {
+    display: grid;
+    min-width: 0;
 }
 
 .auth-tabs button {

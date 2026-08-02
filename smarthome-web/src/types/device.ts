@@ -9,6 +9,8 @@ export type DeviceType =
 
 export type DeviceStatus = "online" | "offline" | "warning" | "running";
 
+export type DevicePlatform = "Home Assistant" | "Matter" | "Zigbee" | "MQTT";
+
 export interface Device {
   id: number;
   name: string;
@@ -16,7 +18,7 @@ export interface Device {
   type: DeviceType;
   brand: string;
   status: DeviceStatus;
-  connection: string;
+  connection: DevicePlatform;
   firmware: string;
   lastOnline: string;
   image?: string;
@@ -57,7 +59,10 @@ export interface DeviceCreatePayload {
   room: string;
   type: DeviceType;
   brand: string;
-  connection: string;
+  connection: DevicePlatform;
+  deviceId?: string;
+  firmware?: string;
+  imageUrl?: string;
 }
 
 export interface DeviceUpdatePayload {
@@ -66,7 +71,7 @@ export interface DeviceUpdatePayload {
   type?: DeviceType;
   brand?: string;
   status?: DeviceStatus;
-  connection?: string;
+  connection?: DevicePlatform;
   firmware?: string;
   imageUrl?: string;
 }

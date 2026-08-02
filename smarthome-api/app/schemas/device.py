@@ -84,6 +84,9 @@ class DeviceRead(BaseModel):
     type: DeviceType
     brand: str
     status: DeviceStatus
+    connection: DevicePlatform
+    firmware: str
+    image_url: str | None
     last_online: datetime | None
 
 
@@ -99,9 +102,6 @@ class DeviceLogRead(BaseModel):
 
 class DeviceDetailRead(DeviceRead):
     device_id: str
-    connection: DevicePlatform
-    firmware: str
-    image_url: str | None
     created_at: datetime
     updated_at: datetime
 

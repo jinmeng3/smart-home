@@ -2,17 +2,29 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
+    createDevice,
     deleteDevice,
+    getDevice,
+    listDeviceLogs,
     listDevices,
     syncDevices,
+    updateDevice,
 } from "../api/device";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
+import DeviceEditorDialog from "../components/device/DeviceEditorDialog.vue";
 import DeviceList from "../components/device/DeviceList.vue";
 import DeviceQuickActions from "../components/device/DeviceQuickActions.vue";
 import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
 import DeviceToolbar from "../components/device/DeviceToolbar.vue";
 import PlatformStatus from "../components/device/PlatformStatus.vue";
-import type { Device, DeviceFilters, DeviceStatus, DeviceType } from "../types/device";
+import type {
+    Device,
+    DeviceCreatePayload,
+    DeviceDetail as DeviceDetailType,
+    DeviceFilters,
+    DeviceStatus,
+    DeviceType,
+} from "../types/device";
 
 const filters = reactive<DeviceFilters>({
     page: 1,
@@ -26,12 +38,12 @@ const devices = ref<Device[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const syncing = ref(false);
+const saving = ref(false);
 const selectedId = ref<number | null>(null);
+const selectedDevice = ref<DeviceDetailType | null>(null);
+const editorOpen = ref(false);
+const editingDevice = ref<Device | null>(null);
 const sort = ref<"updated" | "name" | "status">("updated");
-
-const selectedDevice = computed(
-    () => devices.value.find((device) => device.id === selectedId.value) ?? null,
-);
 
 const rooms = computed(() =>
     Array.from(new Set(devices.value.map((device) => device.room))).filter(Boolean),
@@ -75,6 +87,20 @@ const platforms = computed(() => {
     });
 });
 
+const loadSelectedDevice = async () => {
+    if (selectedId.value === null) {
+        selectedDevice.value = null;
+        return;
+    }
+
+    try {
+        selectedDevice.value = await getDevice(selectedId.value);
+    } catch (error) {
+        selectedDevice.value = null;
+        ElMessage.error(error instanceof Error ? error.message : "设备详情加载失败");
+    }
+};
+
 const loadDevices = async () => {
     loading.value = true;
 
@@ -83,11 +109,13 @@ const loadDevices = async () => {
         devices.value = response.items;
         total.value = response.total;
 
-        const firstDevice = response.items[0];
-
-        if (!selectedId.value && firstDevice) {
-            selectedId.value = firstDevice.id;
-        }
+        const selectedExists = response.items.some(
+            (device) => device.id === selectedId.value,
+        );
+        selectedId.value = selectedExists
+            ? selectedId.value
+            : (response.items[0]?.id ?? null);
+        await loadSelectedDevice();
     } catch (error) {
         devices.value = [];
         total.value = 0;
@@ -130,15 +158,40 @@ const updatePageSize = (value: number) => {
 
 const selectDevice = (device: Device) => {
     selectedId.value = device.id;
+    void loadSelectedDevice();
 };
 
 const addDevice = () => {
-    ElMessage.info("添加设备接口已预留");
+    editingDevice.value = null;
+    editorOpen.value = true;
 };
 
 const editDevice = (device: Device) => {
     selectedId.value = device.id;
-    ElMessage.info("编辑设备接口已预留");
+    editingDevice.value = device;
+    editorOpen.value = true;
+};
+
+const saveDevice = async (payload: DeviceCreatePayload) => {
+    saving.value = true;
+
+    try {
+        if (editingDevice.value) {
+            await updateDevice(editingDevice.value.id, payload);
+            ElMessage.success("设备已更新");
+        } else {
+            const created = await createDevice(payload);
+            selectedId.value = created.id;
+            ElMessage.success("设备已添加");
+        }
+
+        editorOpen.value = false;
+        await loadDevices();
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "设备保存失败");
+    } finally {
+        saving.value = false;
+    }
 };
 
 const removeDevice = async (device: Device) => {
@@ -180,11 +233,31 @@ const runBatch = () => {
 };
 
 const runQuickAction = (key: "scan" | "group" | "firmware" | "logs") => {
+    if (key === "logs") {
+        if (selectedId.value === null) {
+            ElMessage.warning("请先选择设备");
+            return;
+        }
+
+        void listDeviceLogs(selectedId.value)
+            .then((logs) => {
+                const latest = logs[0];
+                ElMessage.info(
+                    latest
+                        ? `共 ${logs.length} 条日志，最近：${latest.message}`
+                        : "该设备暂无日志",
+                );
+            })
+            .catch((error: unknown) => {
+                ElMessage.error(error instanceof Error ? error.message : "日志加载失败");
+            });
+        return;
+    }
+
     const messageMap: Record<typeof key, string> = {
         scan: "扫描新设备接口已预留",
         group: "批量分组接口已预留",
         firmware: "固件更新接口已预留",
-        logs: "设备日志接口已预留",
     };
 
     ElMessage.info(messageMap[key]);
@@ -290,6 +363,13 @@ onMounted(() => {
             <DeviceQuickActions @action="runQuickAction" />
             <PlatformStatus :platforms="platforms" />
         </aside>
+
+        <DeviceEditorDialog
+            v-model="editorOpen"
+            :device="editingDevice"
+            :loading="saving"
+            @submit="saveDevice"
+        />
     </div>
 </template>
 
