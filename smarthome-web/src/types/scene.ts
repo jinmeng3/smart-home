@@ -1,110 +1,102 @@
-export type SceneTriggerType =
-    | "manual"
-    | "schedule"
-    | "location"
-    | "device";
+export type SceneTriggerType = "manual" | "schedule" | "location" | "device";
 
-export type SceneStatus =
-    | "enabled"
-    | "disabled"
-    | "running"
-    | "failed";
+export type SceneStatus = "enabled" | "disabled" | "running" | "failed";
 
 export interface SceneStep {
-    id: string;
-    name: string;
-    description: string;
-    deviceId: string;
-    order: number;
+  id: string;
+  name: string;
+  description: string;
+  deviceId: string;
+  order: number;
 }
 
 export interface Scene {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-    color: string;
-    triggerType: SceneTriggerType;
-    triggerLabel: string;
-    deviceCount: number;
-    enabled: boolean;
-    recommended: boolean;
-    roomLabels?: string[];
-    highRisk?: boolean;
-    sortOrder?: number;
-    sourceTemplateId?: string | null;
-    steps: SceneStep[];
-    createdAt: string;
-    updatedAt: string;
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  triggerType: SceneTriggerType;
+  triggerLabel: string;
+  deviceCount: number;
+  enabled: boolean;
+  recommended: boolean;
+  roomLabels?: string[];
+  highRisk?: boolean;
+  sortOrder?: number;
+  sourceTemplateId?: string | null;
+  steps: SceneStep[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SceneFilters {
-    keyword: string;
-    triggerType: SceneTriggerType | "";
-    enabled: "all" | "enabled" | "disabled";
+  keyword: string;
+  triggerType: SceneTriggerType | "";
+  enabled: "all" | "enabled" | "disabled";
 }
 
 export type SceneStepStatus = "pending" | "running" | "completed";
 
 export interface SceneStepInput {
-    name: string;
-    description: string;
-    deviceId: string;
-    order: number;
+  name: string;
+  description: string;
+  deviceId: string;
+  order: number;
 }
 
 export interface SceneInput {
-    name: string;
-    description: string;
-    icon: string;
-    color: string;
-    triggerType: SceneTriggerType;
-    triggerLabel: string;
-    roomLabels: string[];
-    deviceIds: string[];
-    enabled: boolean;
-    recommended?: boolean;
-    highRisk?: boolean;
-    steps: SceneStepInput[];
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  triggerType: SceneTriggerType;
+  triggerLabel: string;
+  roomLabels: string[];
+  deviceIds: string[];
+  enabled: boolean;
+  recommended?: boolean;
+  highRisk?: boolean;
+  steps: SceneStepInput[];
 }
 
 export interface SceneTemplate {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-    color: string;
-    triggerType: SceneTriggerType;
-    triggerLabel: string;
-    roomLabels: string[];
-    deviceCount: number;
-    recommended: boolean;
-    category: string;
-    steps: SceneStep[];
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  triggerType: SceneTriggerType;
+  triggerLabel: string;
+  roomLabels: string[];
+  deviceCount: number;
+  recommended: boolean;
+  category: string;
+  steps: SceneStep[];
 }
 
 export interface SceneSummary {
-    enabled: number;
-    automation: number;
-    manual: number;
-    monthlyExecutions: number;
-    enabledRate: number;
-    automationRate: number;
-    manualRate: number;
-    monthlyGrowthRate: number;
+  enabled: number;
+  automation: number;
+  manual: number;
+  monthlyExecutions: number;
+  enabledRate: number;
+  automationRate: number;
+  manualRate: number;
+  monthlyGrowthRate: number;
 }
 
 export interface SceneExecution {
-    executionId: string;
-    sceneId: string;
-    status: string;
-    startedAt: string;
-    finishedAt: string | null;
-    steps: Array<{ stepId: string; status: string; message: string | null }>;
+  executionId: string;
+  sceneId: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  steps: Array<{ stepId: string; status: string; message: string | null }>;
 }
 
 export interface SceneTemplateUseInput {
-    name?: string;
-    enabled: boolean;
-    deviceMapping?: Record<string, string>;
+  name?: string;
+  enabled: boolean;
+  deviceMapping?: Record<string, string>;
 }

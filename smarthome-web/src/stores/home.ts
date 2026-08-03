@@ -7,27 +7,14 @@ import {
 } from "../composables/useBatchedDeviceUpdates";
 import { useHomeChat } from "../composables/useHomeChat";
 import { deviceService } from "../services/device";
+import { mapDashboardDevice } from "../utils/device";
 import {
   automations as mockAutomations,
   devices as mockDevices,
   messages as mockMessages,
 } from "../mock/home";
 import type { Automation } from "../types/automation";
-import type { DashboardDevice, Device } from "../types/device";
-
-const mapDashboardDevice = (device: Device): DashboardDevice => ({
-  id: String(device.id),
-  name: device.name,
-  type: device.type,
-  status: device.status,
-  room: device.room,
-  online: device.status === "online" || device.status === "running",
-  updatedAt: device.lastOnline || "暂无",
-  brand: device.brand,
-  connection: device.connection,
-  firmware: device.firmware,
-  image: device.image,
-});
+import type { DashboardDevice } from "../types/device";
 
 export const useHomeStore = defineStore("home", () => {
   const activeMenu = ref("智能对话");

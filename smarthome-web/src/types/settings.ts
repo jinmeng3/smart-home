@@ -99,3 +99,32 @@ export interface HouseholdMember {
   role: HouseholdRole
   joinedAt: string
 }
+
+export interface SecurityDevice {
+  id: number
+  name: string
+  location: string
+  lastActive: string
+  trusted: boolean
+  current: boolean
+}
+
+export interface SecurityLog {
+  id: number
+  title: string
+  detail: string
+  at: string
+}
+
+export interface SecurityMeta {
+  passwordUpdatedAt: string | null
+  devices: SecurityDevice[]
+  logs: SecurityLog[]
+}
+
+export interface BackupRecord {
+  id: number
+  type: 'manual' | 'auto'
+  at: string
+  note: string
+}

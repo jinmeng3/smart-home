@@ -1,90 +1,62 @@
-import { apiRequest } from "../api/client";
+import {
+  copyScene as apiCopyScene,
+  createScene as apiCreateScene,
+  executeScene as apiExecuteScene,
+  fetchSceneSummary,
+  fetchSceneTemplates,
+  fetchScenes,
+  saveSceneDraft as apiSaveSceneDraft,
+  updateSceneEnabled as apiUpdateSceneEnabled,
+  useSceneTemplate as apiUseSceneTemplate,
+} from "../api/scenes";
 import type {
-    Scene,
-    SceneExecution,
-    SceneFilters,
-    SceneInput,
-    SceneSummary,
-    SceneTemplate,
-    SceneTemplateUseInput,
+  Scene,
+  SceneExecution,
+  SceneFilters,
+  SceneInput,
+  SceneSummary,
+  SceneTemplate,
+  SceneTemplateUseInput,
 } from "../types/scene";
 
-interface ListResult<T> {
-    items: T[];
-    total?: number;
-}
+/**
+ * 场景领域服务层（DIP：store 与组件只依赖此抽象，
+ * 不直接依赖 API 实现；单一职责——仅编排场景操作）。
+ */
+export const listScenes = (filters: SceneFilters): Promise<Scene[]> =>
+  fetchScenes(filters);
 
-const buildSceneQuery = (filters: SceneFilters) => {
-    const query = new URLSearchParams({ enabled: filters.enabled });
+export const getSceneSummary = (): Promise<SceneSummary> =>
+  fetchSceneSummary();
 
-    if (filters.keyword.trim()) query.set("keyword", filters.keyword.trim());
-    if (filters.triggerType) query.set("trigger_type", filters.triggerType);
-    return query.toString();
-};
-
-export const listScenes = async (filters: SceneFilters): Promise<Scene[]> => {
-    const result = await apiRequest<ListResult<Scene>>(
-        `/api/scenes?${buildSceneQuery(filters)}`,
-    );
-    return result.items;
-};
-
-export const getSceneSummary = () =>
-    apiRequest<SceneSummary>("/api/scenes/summary");
-
-export const createScene = (payload: SceneInput) =>
-    apiRequest<Scene>("/api/scenes", {
-        method: "POST",
-        body: JSON.stringify(payload),
-    });
+export const createScene = (payload: SceneInput): Promise<Scene> =>
+  apiCreateScene(payload);
 
 export const saveSceneDraft = (payload: SceneInput) =>
-    apiRequest<{ draftId: string; updatedAt: string }>("/api/scenes/drafts", {
-        method: "POST",
-        body: JSON.stringify(payload),
-    });
+  apiSaveSceneDraft(payload);
 
 export const updateSceneEnabled = async (
-    scene: Pick<Scene, "id">,
-    enabled: boolean,
+  scene: Pick<Scene, "id">,
+  enabled: boolean,
 ) => {
-    const result = await apiRequest<Pick<Scene, "id" | "enabled" | "updatedAt">>(
-        `/api/scenes/${scene.id}/enabled`,
-        { method: "PATCH", body: JSON.stringify({ enabled }) },
-    );
-    return { ...scene, ...result };
+  const result = await apiUpdateSceneEnabled(scene.id, enabled);
+  return { ...scene, ...result };
 };
 
-export const executeScene = (sceneId: string, confirmHighRisk: boolean) =>
-    apiRequest<SceneExecution>(`/api/scenes/${sceneId}/execute`, {
-        method: "POST",
-        body: JSON.stringify({ confirmHighRisk, source: "manual" }),
-    });
+export const executeScene = (
+  sceneId: string,
+  confirmHighRisk: boolean,
+): Promise<SceneExecution> => apiExecuteScene(sceneId, confirmHighRisk);
 
-export const copyScene = (sceneId: string, name: string) =>
-    apiRequest<Scene>(`/api/scenes/${sceneId}/copy`, {
-        method: "POST",
-        body: JSON.stringify({ name }),
-    });
+export const copyScene = (sceneId: string, name: string): Promise<Scene> =>
+  apiCopyScene(sceneId, name);
 
-export const listSceneTemplates = async (
-    keyword = "",
-    category = "",
-): Promise<SceneTemplate[]> => {
-    const query = new URLSearchParams({ limit: "20" });
-    if (keyword.trim()) query.set("keyword", keyword.trim());
-    if (category && category !== "全部") query.set("category", category);
-    const result = await apiRequest<ListResult<SceneTemplate>>(
-        `/api/scenes/templates?${query.toString()}`,
-    );
-    return result.items;
-};
+export const listSceneTemplates = (
+  keyword = "",
+  category = "",
+): Promise<SceneTemplate[]> => fetchSceneTemplates(keyword, category);
 
 export const useSceneTemplate = (
-    templateId: string,
-    payload: SceneTemplateUseInput,
-) =>
-    apiRequest<Scene>(`/api/scenes/templates/${templateId}/use`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-    });
+  templateId: string,
+  payload: SceneTemplateUseInput,
+): Promise<Scene> => apiUseSceneTemplate(templateId, payload);

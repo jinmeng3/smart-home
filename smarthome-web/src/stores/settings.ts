@@ -17,38 +17,11 @@ import {
   persistSettings,
 } from "../utils/settingsPersistence";
 import type {
+  BackupRecord,
   HouseholdRole,
+  SecurityMeta,
   SettingsState,
 } from "../types/settings";
-
-interface SecurityDevice {
-  id: number;
-  name: string;
-  location: string;
-  lastActive: string;
-  trusted: boolean;
-  current: boolean;
-}
-
-interface SecurityLog {
-  id: number;
-  title: string;
-  detail: string;
-  at: string;
-}
-
-interface SecurityMeta {
-  passwordUpdatedAt: string | null;
-  devices: SecurityDevice[];
-  logs: SecurityLog[];
-}
-
-interface BackupRecord {
-  id: number;
-  type: "manual" | "auto";
-  at: string;
-  note: string;
-}
 
 const isAdminRole = (role: string | undefined) =>
   role?.toLowerCase() === "admin";

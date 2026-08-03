@@ -1,5 +1,23 @@
 import type { DeviceStatus } from "../types/animation";
-import type { DashboardDevice, DeviceType } from "../types/device";
+import type { DashboardDevice, Device, DeviceType } from "../types/device";
+
+/**
+ * 设备展示层工具（SRP：模型转换与状态解析，不含请求与业务编排）。
+ */
+
+export const mapDashboardDevice = (device: Device): DashboardDevice => ({
+  id: String(device.id),
+  name: device.name,
+  type: device.type,
+  status: device.status,
+  room: device.room,
+  online: device.status === "online" || device.status === "running",
+  updatedAt: device.lastOnline || "暂无",
+  brand: device.brand,
+  connection: device.connection,
+  firmware: device.firmware,
+  image: device.image,
+});
 
 /**
  * 设备运行时状态解析策略（OCP：对扩展开放，对修改关闭）。
