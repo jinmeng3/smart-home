@@ -1,67 +1,87 @@
-import { scenes as mockScenes } from "../mock/scenes";
-import type { Scene, SceneFilters } from "../types/scene";
+import { apiRequest } from "../api/client";
+import type {
+    Scene,
+    SceneExecution,
+    SceneFilters,
+    SceneInput,
+    SceneSummary,
+    SceneTemplate,
+    SceneTemplateUseInput,
+} from "../types/scene";
 
-const delay = (duration = 220) =>
-    new Promise<void>((resolve) => {
-        window.setTimeout(resolve, duration);
-    });
+interface ListResult<T> {
+    items: T[];
+    total?: number;
+}
 
-const matchesKeyword = (scene: Scene, keyword: string) => {
-    const normalizedKeyword = keyword.trim().toLocaleLowerCase();
+const buildSceneQuery = (filters: SceneFilters) => {
+    const query = new URLSearchParams({ enabled: filters.enabled });
 
-    if (!normalizedKeyword) {
-        return true;
-    }
-
-    return [scene.name, scene.description, scene.triggerLabel]
-        .join(" ")
-        .toLocaleLowerCase()
-        .includes(normalizedKeyword);
+    if (filters.keyword.trim()) query.set("keyword", filters.keyword.trim());
+    if (filters.triggerType) query.set("trigger_type", filters.triggerType);
+    return query.toString();
 };
 
 export const listScenes = async (filters: SceneFilters): Promise<Scene[]> => {
-    await delay();
-
-    return mockScenes
-        .filter((scene) => matchesKeyword(scene, filters.keyword))
-        .filter((scene) =>
-            filters.triggerType ? scene.triggerType === filters.triggerType : true,
-        )
-        .filter((scene) => {
-            if (filters.enabled === "enabled") return scene.enabled;
-            if (filters.enabled === "disabled") return !scene.enabled;
-            return true;
-        })
-        .map((scene) => ({
-            ...scene,
-            steps: [...scene.steps].sort((first, second) => first.order - second.order),
-        }));
+    const result = await apiRequest<ListResult<Scene>>(
+        `/api/scenes?${buildSceneQuery(filters)}`,
+    );
+    return result.items;
 };
 
-export const updateSceneEnabled = async (
-    sceneId: string,
-    enabled: boolean,
-): Promise<Scene> => {
-    await delay(180);
-    const scene = mockScenes.find((item) => item.id === sceneId);
+export const getSceneSummary = () =>
+    apiRequest<SceneSummary>("/api/scenes/summary");
 
-    if (!scene) {
-        throw new Error("场景不存在");
-    }
+export const createScene = (payload: SceneInput) =>
+    apiRequest<Scene>("/api/scenes", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
 
-    scene.enabled = enabled;
-    scene.updatedAt = "2026-08-02 18:30";
-    return { ...scene, steps: [...scene.steps] };
+export const saveSceneDraft = (payload: SceneInput) =>
+    apiRequest<{ draftId: string; updatedAt: string }>("/api/scenes/drafts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+
+export const updateSceneEnabled = async (scene: Scene, enabled: boolean) => {
+    const result = await apiRequest<Pick<Scene, "id" | "enabled" | "updatedAt">>(
+        `/api/scenes/${scene.id}/enabled`,
+        { method: "PATCH", body: JSON.stringify({ enabled }) },
+    );
+    return { ...scene, ...result };
 };
 
-export const executeScene = async (sceneId: string): Promise<Scene> => {
-    await delay(480);
-    const scene = mockScenes.find((item) => item.id === sceneId);
+export const executeScene = (sceneId: string, confirmHighRisk: boolean) =>
+    apiRequest<SceneExecution>(`/api/scenes/${sceneId}/execute`, {
+        method: "POST",
+        body: JSON.stringify({ confirmHighRisk, source: "manual" }),
+    });
 
-    if (!scene) {
-        throw new Error("场景不存在");
-    }
+export const copyScene = (sceneId: string, name: string) =>
+    apiRequest<Scene>(`/api/scenes/${sceneId}/copy`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+    });
 
-    scene.updatedAt = "2026-08-02 18:35";
-    return { ...scene, steps: [...scene.steps] };
+export const listSceneTemplates = async (
+    keyword = "",
+    category = "",
+): Promise<SceneTemplate[]> => {
+    const query = new URLSearchParams({ limit: "20" });
+    if (keyword.trim()) query.set("keyword", keyword.trim());
+    if (category && category !== "全部") query.set("category", category);
+    const result = await apiRequest<ListResult<SceneTemplate>>(
+        `/api/scenes/templates?${query.toString()}`,
+    );
+    return result.items;
 };
+
+export const useSceneTemplate = (
+    templateId: string,
+    payload: SceneTemplateUseInput,
+) =>
+    apiRequest<Scene>(`/api/scenes/templates/${templateId}/use`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });

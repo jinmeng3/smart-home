@@ -10,6 +10,7 @@ import "element-plus/theme-chalk/el-input.css";
 type AuthMode = "login" | "register";
 type FeedbackType = "error" | "warning" | "success";
 type Feedback = { type: FeedbackType; message: string };
+type AuthOutcome = "login" | "register" | "logout";
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
@@ -17,6 +18,7 @@ const mode = ref<AuthMode>("login");
 const submitting = ref(false);
 const feedback = ref<Feedback | null>(null);
 const shaking = ref(false);
+const outcome = ref<AuthOutcome | null>(null);
 const accountInput = ref<{ focus: () => void } | null>(null);
 const loginForm = reactive({ account: "", password: "" });
 const registerForm = reactive({
@@ -27,14 +29,18 @@ const registerForm = reactive({
 });
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const title = computed(() =>
-    authStore.isAuthenticated
+    outcome.value
+        ? "操作已完成"
+        : authStore.isAuthenticated
         ? "账户已登录"
         : mode.value === "login"
           ? "登录 Orion Home"
           : "注册 Orion Home",
 );
 const description = computed(() =>
-    authStore.isAuthenticated
+    outcome.value
+        ? "Orion Home 已安全更新你的账户状态"
+        : authStore.isAuthenticated
         ? "你可以继续使用当前账户，或切换到其他 Orion Home 账户"
         : mode.value === "login"
         ? "登录后同步家庭、会话和智能助手配置"
@@ -52,6 +58,14 @@ const username = computed(
 );
 const avatarUrl = computed(() => settingsStore.settings.account.avatarUrl);
 const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
+const outcomeContent = computed(() => {
+    const content = {
+        login: { title: "欢迎回来", message: "登录成功，正在同步家庭设备与智能助手配置" },
+        register: { title: "账户创建成功", message: "你的 Orion Home 空间已经准备就绪" },
+        logout: { title: "已安全登出", message: "本机登录凭证已清除，期待与你再次见面" },
+    };
+    return outcome.value ? content[outcome.value] : null;
+});
 
 const selectMode = (nextMode: AuthMode) => {
     if (submitting.value || authStore.isAuthenticated) return;
@@ -110,8 +124,8 @@ const submit = async () => {
                 false,
             );
             loginForm.password = "";
-            feedback.value = { type: "success", message: "登录成功" };
-            await wait(700);
+            outcome.value = "login";
+            await wait(1200);
             authStore.loginVisible = false;
         } else {
             await authStore.register(
@@ -124,8 +138,8 @@ const submit = async () => {
             );
             registerForm.password = "";
             registerForm.confirmPassword = "";
-            feedback.value = { type: "success", message: "注册成功" };
-            await wait(700);
+            outcome.value = "register";
+            await wait(1200);
             authStore.loginVisible = false;
         }
         // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
@@ -148,7 +162,9 @@ const submit = async () => {
 watch(
     () => authStore.loginVisible,
     (visible) => {
-        if (!visible || authStore.isAuthenticated) return;
+        if (!visible) return;
+        outcome.value = null;
+        if (authStore.isAuthenticated) return;
         feedback.value = null;
         mode.value = "login";
         void nextTick(() => accountInput.value?.focus());
@@ -163,8 +179,8 @@ const logout = async () => {
     submitting.value = true;
     try {
         await authStore.logout(false);
-        feedback.value = { type: "success", message: "已登出" };
-        await wait(700);
+        outcome.value = "logout";
+        await wait(1200);
         authStore.loginVisible = false;
     } catch (error) {
         showFeedback("error", error instanceof Error ? error.message : "登出失败", true);
@@ -197,8 +213,15 @@ const logout = async () => {
             </header>
         </template>
 
+        <section v-if="outcomeContent" class="auth-result" role="status">
+            <span class="result-mark" aria-hidden="true">✓</span>
+            <strong>{{ outcomeContent.title }}</strong>
+            <p>{{ outcomeContent.message }}</p>
+            <small>账户状态已通过安全连接更新</small>
+        </section>
+
         <div
-            v-if="feedback"
+            v-else-if="feedback"
             :class="['auth-feedback', `is-${feedback.type}`]"
             role="alert"
         >
@@ -208,7 +231,7 @@ const logout = async () => {
             <p>{{ feedback.message }}</p>
         </div>
 
-        <section v-if="authStore.isAuthenticated" class="current-account">
+        <section v-if="!outcome && authStore.isAuthenticated" class="current-account">
             <img
                 v-if="avatarUrl"
                 class="account-avatar"
@@ -225,7 +248,7 @@ const logout = async () => {
         </section>
 
         <!-- 使用单一根节点，避免通用弹窗把标签栏和表单自动排成双栏。 -->
-        <div v-if="!authStore.isAuthenticated" class="auth-content">
+        <div v-if="!outcome && !authStore.isAuthenticated" class="auth-content">
             <div class="auth-assurance">
                 <span aria-hidden="true">✓</span>
                 <p>安全连接已启用，账户凭据仅用于 Orion Home 身份认证</p>
@@ -258,7 +281,7 @@ const logout = async () => {
         </div>
 
         <template #footer>
-            <footer class="dialog-footer">
+            <footer v-if="!outcome" class="dialog-footer">
                 <span>{{ footerHint }}</span>
                 <div>
                     <ElButton :disabled="submitting" @click="authStore.loginVisible = false">取消</ElButton>
@@ -271,6 +294,60 @@ const logout = async () => {
 </template>
 
 <style scoped>
+.auth-result {
+    display: grid;
+    min-height: 238px;
+    place-items: center;
+    align-content: center;
+    border: 1px solid color-mix(in srgb, var(--color-success-border) 74%, transparent);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 50% 15%, var(--color-success-soft), transparent 48%),
+        linear-gradient(180deg, var(--color-card-bg), var(--color-surface-subtle));
+    padding: 28px;
+    text-align: center;
+    animation: auth-result-in 360ms var(--motion-ease) both;
+}
+
+.result-mark {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-success), var(--color-teal-600));
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--color-success) 24%, transparent);
+    color: var(--color-text-on-primary);
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.auth-result strong {
+    color: var(--color-text-primary);
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.auth-result p {
+    margin: 8px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.auth-result small {
+    margin-top: 18px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+@keyframes auth-result-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .auth-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

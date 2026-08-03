@@ -2,15 +2,24 @@
 import { computed, reactive } from "vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import type { SceneInput, SceneTriggerType } from "../../types/scene";
 
 const model = defineModel<boolean>({ required: true });
 
 const emit = defineEmits<{
-    create: [];
-    draft: [];
+    create: [payload: SceneInput];
+    draft: [payload: SceneInput];
 }>();
 
-const form = reactive({
+const form = reactive<{
+    name: string;
+    description: string;
+    icon: string;
+    color: string;
+    triggerType: SceneTriggerType;
+    triggerLabel: string;
+    rooms: string[];
+}>({
     name: "回家模式",
     description: "回到家时自动开启舒适环境",
     icon: "home",
@@ -44,9 +53,32 @@ const triggerLabel = computed(() => {
     return "手动执行";
 });
 
+const payload = computed<SceneInput>(() => ({
+    name: form.name.trim(),
+    description: form.description.trim(),
+    icon: form.icon,
+    color: form.color,
+    triggerType: form.triggerType,
+    triggerLabel: triggerLabel.value,
+    roomLabels: [...form.rooms],
+    deviceIds: actions.map((action) => action.id),
+    enabled: true,
+    steps: actions.map((action, index) => ({
+        name: action.name,
+        description: action.target,
+        deviceId: action.id,
+        order: index + 1,
+    })),
+}));
+
 const createScene = () => {
-    emit("create");
+    if (!payload.value.name) return;
+    emit("create", payload.value);
     model.value = false;
+};
+
+const saveDraft = () => {
+    emit("draft", payload.value);
 };
 </script>
 
@@ -59,8 +91,11 @@ const createScene = () => {
         width="920px"
         confirm-text="创建场景"
         cancel-text="取消"
+        draft-text="保存草稿"
+        show-draft
         show-footer
         @confirm="createScene"
+        @save-draft="saveDraft"
     >
         <div class="create-dialog">
             <section class="create-form">

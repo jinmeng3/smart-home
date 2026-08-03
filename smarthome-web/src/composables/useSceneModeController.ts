@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { useScenesStore } from "../stores/scenes";
-import type { Scene, SceneTemplate } from "../types/scene";
+import type { Scene, SceneInput, SceneTemplate } from "../types/scene";
 
 type ScenesStore = ReturnType<typeof useScenesStore>;
 type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
@@ -9,6 +9,7 @@ type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
 const highRiskDeviceKeywords = ["lock", "camera"];
 
 const isHighRiskScene = (scene: Scene) =>
+    scene.highRisk === true ||
     scene.id === "away" ||
     scene.steps.some((step) =>
         highRiskDeviceKeywords.some((keyword) => step.deviceId.includes(keyword)),
@@ -48,20 +49,44 @@ export const useSceneModeController = (store: ScenesStore) => {
         templateDialogOpen.value = true;
     };
 
-    const createScene = () => {
-        ElMessage.success("场景已创建");
+    const createScene = async (payload: SceneInput) => {
+        try {
+            const scene = await store.addScene(payload);
+            ElMessage.success(`${scene.name} 已创建`);
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "场景创建失败");
+        }
     };
 
-    const importTemplate = (template: SceneTemplate) => {
-        ElMessage.success(`${template.name} 已导入`);
+    const saveDraft = async (payload: SceneInput) => {
+        try {
+            await store.saveDraft(payload);
+            ElMessage.success("场景草稿已保存");
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "草稿保存失败");
+        }
+    };
+
+    const importTemplate = async (template: SceneTemplate) => {
+        try {
+            await store.importTemplate(template);
+            ElMessage.success(`${template.name} 已导入`);
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "模板导入失败");
+        }
     };
 
     const editScene = (scene: Scene) => {
         ElMessage.info(`编辑 ${scene.name} 的入口已预留`);
     };
 
-    const copyScene = (scene: Scene) => {
-        ElMessage.success(`${scene.name} 已复制`);
+    const copyScene = async (scene: Scene) => {
+        try {
+            await store.duplicateScene(scene);
+            ElMessage.success(`${scene.name} 已复制`);
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "场景复制失败");
+        }
     };
 
     const runScene = async (scene: Scene) => {
@@ -72,7 +97,7 @@ export const useSceneModeController = (store: ScenesStore) => {
         }
 
         try {
-            await store.runScene(scene);
+            await store.runScene(scene, isHighRiskScene(scene));
             ElMessage.success(`${scene.name} 执行成功`);
         } catch (error) {
             ElMessage.error(error instanceof Error ? error.message : "场景执行失败");
@@ -109,6 +134,7 @@ export const useSceneModeController = (store: ScenesStore) => {
         openTemplateDialog,
         runAction,
         runScene,
+        saveDraft,
         templateDialogOpen,
         toggleScene,
     };

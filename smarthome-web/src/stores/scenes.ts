@@ -1,11 +1,23 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import {
+    copyScene as apiCopyScene,
+    createScene as apiCreateScene,
     executeScene,
+    getSceneSummary,
     listScenes,
+    saveSceneDraft,
+    useSceneTemplate,
     updateSceneEnabled,
 } from "../services/scenes";
-import type { Scene, SceneFilters, SceneStepStatus } from "../types/scene";
+import type {
+    Scene,
+    SceneFilters,
+    SceneInput,
+    SceneStepStatus,
+    SceneSummary,
+    SceneTemplate,
+} from "../types/scene";
 
 export const useScenesStore = defineStore("scenes", () => {
     const filters = reactive<SceneFilters>({
@@ -18,7 +30,7 @@ export const useScenesStore = defineStore("scenes", () => {
     const runningSceneId = ref<string | null>(null);
     const selectedSceneId = ref<string | null>(null);
     const stepStatuses = ref<Record<string, SceneStepStatus>>({});
-    const monthlyExecutions = ref(86);
+    const summary = ref<SceneSummary | null>(null);
 
     const selectedScene = computed(() =>
         selectedSceneId.value
@@ -27,17 +39,22 @@ export const useScenesStore = defineStore("scenes", () => {
     );
 
     const stats = computed(() => ({
-        enabled: scenes.value.filter((scene) => scene.enabled).length,
-        automation: scenes.value.filter((scene) => scene.triggerType !== "manual").length,
-        manual: scenes.value.filter((scene) => scene.triggerType === "manual").length,
-        monthlyExecutions: monthlyExecutions.value,
+        enabled: summary.value?.enabled ?? 0,
+        automation: summary.value?.automation ?? 0,
+        manual: summary.value?.manual ?? 0,
+        monthlyExecutions: summary.value?.monthlyExecutions ?? 0,
     }));
 
     const loadScenes = async () => {
         loading.value = true;
 
         try {
-            scenes.value = await listScenes(filters);
+            const [sceneItems, sceneSummary] = await Promise.all([
+                listScenes(filters),
+                getSceneSummary(),
+            ]);
+            scenes.value = sceneItems;
+            summary.value = sceneSummary;
             selectedSceneId.value = scenes.value.some(
                 (scene) => scene.id === selectedSceneId.value,
             )
@@ -66,43 +83,81 @@ export const useScenesStore = defineStore("scenes", () => {
     };
 
     const setSceneEnabled = async (sceneId: string, enabled: boolean) => {
-        const updatedScene = await updateSceneEnabled(sceneId, enabled);
+        const scene = scenes.value.find((item) => item.id === sceneId);
+        if (!scene) throw new Error("场景不存在");
+        const updatedScene = await updateSceneEnabled(scene, enabled);
         scenes.value = scenes.value.map((scene) =>
             scene.id === sceneId ? updatedScene : scene,
         );
+        summary.value = await getSceneSummary();
     };
 
-    const runScene = async (scene: Scene) => {
+    const runScene = async (scene: Scene, confirmHighRisk: boolean) => {
         runningSceneId.value = scene.id;
         selectedSceneId.value = scene.id;
         resetStepStatuses();
 
-        for (const step of scene.steps) {
-            stepStatuses.value = {
-                ...stepStatuses.value,
-                [step.id]: "running",
-            };
-            await new Promise<void>((resolve) => {
-                window.setTimeout(resolve, 260);
-            });
-            stepStatuses.value = {
-                ...stepStatuses.value,
-                [step.id]: "completed",
-            };
-        }
+        try {
+            for (const step of scene.steps) {
+                stepStatuses.value = {
+                    ...stepStatuses.value,
+                    [step.id]: "running",
+                };
+                await new Promise<void>((resolve) => {
+                    window.setTimeout(resolve, 180);
+                });
+                stepStatuses.value = {
+                    ...stepStatuses.value,
+                    [step.id]: "completed",
+                };
+            }
 
-        const updatedScene = await executeScene(scene.id);
-        monthlyExecutions.value += 1;
-        scenes.value = scenes.value.map((item) =>
-            item.id === scene.id ? updatedScene : item,
-        );
-        runningSceneId.value = null;
+            const execution = await executeScene(scene.id, confirmHighRisk);
+            scenes.value = scenes.value.map((item) =>
+                item.id === scene.id
+                    ? { ...item, updatedAt: execution.finishedAt ?? execution.startedAt }
+                    : item,
+            );
+            summary.value = await getSceneSummary();
+        } finally {
+            runningSceneId.value = null;
+        }
+    };
+
+    const addScene = async (payload: SceneInput) => {
+        const scene = await apiCreateScene(payload);
+        await loadScenes();
+        selectedSceneId.value = scene.id;
+        resetStepStatuses();
+        return scene;
+    };
+
+    const saveDraft = (payload: SceneInput) => saveSceneDraft(payload);
+
+    const importTemplate = async (template: SceneTemplate) => {
+        const scene = await useSceneTemplate(template.id, {
+            name: template.name,
+            enabled: true,
+        });
+        await loadScenes();
+        selectedSceneId.value = scene.id;
+        resetStepStatuses();
+        return scene;
+    };
+
+    const duplicateScene = async (scene: Scene) => {
+        const duplicate = await apiCopyScene(scene.id, `${scene.name} 副本`);
+        await loadScenes();
+        selectedSceneId.value = duplicate.id;
+        resetStepStatuses();
+        return duplicate;
     };
 
     return {
         filters,
         loading,
-        monthlyExecutions,
+        addScene,
+        duplicateScene,
         runningSceneId,
         scenes,
         selectedScene,
@@ -110,8 +165,10 @@ export const useScenesStore = defineStore("scenes", () => {
         stats,
         stepStatuses,
         loadScenes,
+        importTemplate,
         resetStepStatuses,
         runScene,
+        saveDraft,
         selectScene,
         setSceneEnabled,
     };

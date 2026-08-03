@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from "vue";
+import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import SceneCreateDialog from "../components/scenes/SceneCreateDialog.vue";
 import SceneDetailPanel from "../components/scenes/SceneDetailPanel.vue";
@@ -24,15 +25,23 @@ const {
 } = storeToRefs(store);
 const controller = useSceneModeController(store);
 
+const loadScenes = async () => {
+    try {
+        await store.loadScenes();
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "场景数据加载失败");
+    }
+};
+
 watch(
     () => [filters.value.keyword, filters.value.triggerType, filters.value.enabled],
     () => {
-        void store.loadScenes();
+        void loadScenes();
     },
 );
 
 onMounted(() => {
-    void store.loadScenes();
+    void loadScenes();
 });
 </script>
 
@@ -94,6 +103,7 @@ onMounted(() => {
         <SceneCreateDialog
             v-model="controller.createDialogOpen.value"
             @create="controller.createScene"
+            @draft="controller.saveDraft"
         />
         <SceneTemplateDialog
             v-model="controller.templateDialogOpen.value"

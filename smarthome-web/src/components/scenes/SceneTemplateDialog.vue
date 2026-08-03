@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { sceneTemplates } from "../../mock/sceneTemplates";
+import { listSceneTemplates } from "../../services/scenes";
 import type { SceneTemplate } from "../../types/scene";
 
 const model = defineModel<boolean>({ required: true });
@@ -12,15 +12,18 @@ const emit = defineEmits<{
     preview: [template: SceneTemplate];
 }>();
 
-const selectedId = ref(sceneTemplates[0]?.id ?? "");
+const sceneTemplates = ref<SceneTemplate[]>([]);
+const selectedId = ref("");
 const keyword = ref("");
 const activeCategory = ref("全部");
+const loading = ref(false);
+const loadError = ref("");
 const categories = ["全部", "娱乐", "安防", "睡眠", "学习"];
 
 const filteredTemplates = computed(() => {
     const normalizedKeyword = keyword.value.trim();
 
-    return sceneTemplates.filter((template) => {
+    return sceneTemplates.value.filter((template) => {
         const matchesKeyword =
             !normalizedKeyword ||
             [template.name, template.description].join(" ").includes(normalizedKeyword);
@@ -32,9 +35,26 @@ const filteredTemplates = computed(() => {
 });
 const selectedTemplate = computed(
     () =>
-        sceneTemplates.find((template) => template.id === selectedId.value) ??
-        sceneTemplates[0],
+        sceneTemplates.value.find((template) => template.id === selectedId.value) ??
+        sceneTemplates.value[0],
 );
+
+const loadTemplates = async () => {
+    loading.value = true;
+    loadError.value = "";
+    try {
+        sceneTemplates.value = await listSceneTemplates();
+        selectedId.value = sceneTemplates.value[0]?.id ?? "";
+    } catch (error) {
+        loadError.value = error instanceof Error ? error.message : "模板加载失败";
+    } finally {
+        loading.value = false;
+    }
+};
+
+watch(model, (visible) => {
+    if (visible) void loadTemplates();
+});
 
 const selectTemplate = (template: SceneTemplate) => {
     selectedId.value = template.id;
@@ -101,7 +121,10 @@ const importSelectedTemplate = () => {
                     </article>
                 </div>
 
-                <div class="template-grid">
+                <p v-if="loading" class="template-state">正在加载推荐模板…</p>
+                <p v-else-if="loadError" class="template-state is-error">{{ loadError }}</p>
+                <p v-else-if="filteredTemplates.length === 0" class="template-state">暂无匹配模板</p>
+                <div v-else class="template-grid">
                     <article
                         v-for="template in filteredTemplates"
                         :key="template.id"
@@ -284,6 +307,22 @@ dl {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+}
+
+.template-state {
+    border: 1px dashed var(--color-border);
+    border-radius: 10px;
+    padding: 32px 16px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.template-state.is-error {
+    border-color: var(--color-danger-border);
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
 }
 
 .template-card {
