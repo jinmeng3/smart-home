@@ -543,98 +543,6 @@ onBeforeUnmount(() => {
     background: var(--color-surface-hover);
 }
 
-.smart-modal :deep(.current-account),
-.smart-modal :deep(.device-list-card),
-.smart-modal :deep(.device-summary),
-.smart-modal :deep(.password-card),
-.smart-modal :deep(.password-summary),
-.smart-modal :deep(.backup-panel),
-.smart-modal :deep(.backup-summary),
-.smart-modal :deep(.backup-history-item),
-.smart-modal :deep(.logs-card),
-.smart-modal :deep(.model-config-status) {
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    background: var(--color-card-bg);
-    box-shadow: var(--shadow-card);
-}
-
-.smart-modal :deep(.device-dialog-body),
-.smart-modal :deep(.password-dialog-body),
-.smart-modal :deep(.backup-dialog-body),
-.smart-modal :deep(.logs-dialog-body) {
-    gap: 18px;
-    padding: 0 !important;
-}
-
-.smart-modal :deep(.current-account) {
-    margin: 0 !important;
-    padding: 16px 18px !important;
-    border-color: var(--color-primary-200);
-    background: linear-gradient(
-        135deg,
-        var(--color-card-bg),
-        var(--color-primary-50)
-    );
-}
-
-.smart-modal :deep(.device-summary),
-.smart-modal :deep(.password-summary),
-.smart-modal :deep(.backup-summary) {
-    border-color: var(--color-primary-200);
-    background: linear-gradient(
-        160deg,
-        var(--color-card-bg),
-        var(--color-primary-50)
-    );
-}
-
-.smart-modal :deep(.model-config-status) {
-    border-color: var(--color-teal-500);
-    background: linear-gradient(
-        145deg,
-        var(--color-card-bg),
-        var(--color-teal-soft)
-    );
-}
-
-.smart-modal :deep(.member-toolbar) {
-    margin: 0 0 16px !important;
-    padding: 14px !important;
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    background: var(--color-card-bg);
-    box-shadow: var(--shadow-card);
-}
-
-.smart-modal :deep(.device-item),
-.smart-modal :deep(.log-item),
-.smart-modal :deep(.backup-action),
-.smart-modal :deep(.backup-history-item) {
-    border-color: var(--color-border);
-    background: var(--color-surface-subtle);
-    transition:
-        border-color 160ms var(--motion-ease),
-        background-color 160ms var(--motion-ease),
-        transform 160ms var(--motion-ease);
-}
-
-.smart-modal :deep(.device-item:hover),
-.smart-modal :deep(.log-item:hover),
-.smart-modal :deep(.backup-action:hover),
-.smart-modal :deep(.backup-history-item:hover) {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
-}
-
-.smart-modal :deep(.device-card-header),
-.smart-modal :deep(.logs-card-header),
-.smart-modal :deep(.backup-panel-heading),
-.smart-modal :deep(.password-card-header) {
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-border);
-}
-
 .smart-modal :deep(.dialog-footer) {
     position: sticky;
     bottom: 0;
@@ -750,10 +658,6 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
     .smart-modal-overlay {
         padding: 16px;
-    }
-
-    .smart-modal-content {
-        grid-template-columns: 1fr;
     }
 
     .smart-modal-footer {

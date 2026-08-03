@@ -56,14 +56,6 @@ const revokeDevice = async (deviceId: number) => {
 <template>
     <BaseSmartModal
         :model-value="props.modelValue"
-        :close-on-click-modal="true"
-        :close-on-press-escape="true"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
-        append-to-body
-        class="account-family-dialog device-dialog"
-        modal-class="settings-dialog-overlay"
         width="720px"
         @update:model-value="emit('update:modelValue', $event)"
     >
@@ -184,28 +176,6 @@ const revokeDevice = async (deviceId: number) => {
 </template>
 
 <style scoped>
-:global(.device-dialog) {
-    display: flex;
-    max-height: calc(100vh - 48px);
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: var(--shadow-card-hover);
-}
-
-:global(.device-dialog .el-dialog__header),
-:global(.device-dialog .el-dialog__body),
-:global(.device-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
-:global(.device-dialog .el-dialog__body) {
-    min-height: 0;
-    overflow-y: auto;
-}
-
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -255,16 +225,17 @@ const revokeDevice = async (deviceId: number) => {
 .device-dialog-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 220px;
-    gap: 16px;
-    padding: 16px 20px 18px;
+    gap: 18px;
+    padding: 0;
 }
 
 .device-list-card,
 .device-summary {
     min-width: 0;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
-    background: var(--color-workspace-background);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
 }
 
 .device-list-card,
@@ -274,6 +245,8 @@ const revokeDevice = async (deviceId: number) => {
 
 .device-card-header {
     margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .device-card-header strong,
@@ -301,9 +274,18 @@ const revokeDevice = async (deviceId: number) => {
     display: grid;
     gap: 12px;
     padding: 14px;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
-    background: var(--color-panel-background);
+    background: var(--color-surface-subtle);
+    transition:
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.device-item:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
 }
 
 .device-main,
@@ -356,6 +338,12 @@ const revokeDevice = async (deviceId: number) => {
 .device-summary {
     align-content: start;
     gap: 12px;
+    border-color: var(--color-primary-200);
+    background: linear-gradient(
+        160deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .device-summary p {
@@ -374,10 +362,6 @@ const revokeDevice = async (deviceId: number) => {
 }
 
 @media (max-width: 640px) {
-    :global(.device-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
     .device-dialog-body {
         grid-template-columns: 1fr;
     }

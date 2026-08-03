@@ -1,25 +1,18 @@
 import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { deviceService } from "../services/device";
+import { devicePlatformOptions } from "../components/device/deviceMeta";
 import type {
   Device,
   DeviceCreatePayload,
   DeviceDetail,
   DeviceFilters,
-  DevicePlatform,
   DeviceStatus,
   DeviceType,
 } from "../types/device";
 
 export type DeviceSortKey = "updated" | "name" | "status";
 export type DeviceQuickActionKey = "scan" | "group" | "firmware" | "logs";
-
-const platformNames: DevicePlatform[] = [
-  "Home Assistant",
-  "Matter",
-  "Zigbee",
-  "MQTT",
-];
 
 const createDefaultFilters = (): DeviceFilters => ({
   page: 1,
@@ -78,7 +71,7 @@ export const useDeviceManagementController = () => {
   }));
 
   const platforms = computed(() =>
-    platformNames.map((name) => {
+    devicePlatformOptions.map((name) => {
       const connected = devices.value.some(
         (device) => device.connection === name,
       );

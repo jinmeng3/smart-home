@@ -145,31 +145,6 @@ defineEmits<{
     font-weight: 900;
 }
 
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-}
-
-.status-dot.is-online {
-    background: var(--color-success);
-    animation: device-status-breathe 1800ms var(--motion-ease) infinite;
-}
-
-.status-dot.is-offline {
-    background: var(--color-text-muted);
-}
-
-.status-dot.is-running {
-    background: var(--color-info);
-    animation: device-status-blink 1500ms var(--motion-ease) infinite;
-}
-
-.status-dot.is-warning {
-    background: var(--color-warning);
-    animation: device-status-alert 1100ms var(--motion-ease) infinite;
-}
-
 .device-row-actions {
     display: flex;
     gap: 8px;
@@ -204,45 +179,8 @@ defineEmits<{
     }
 }
 
-@keyframes device-status-breathe {
-    0%,
-    100% {
-        opacity: 0.65;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.45);
-    }
-}
-
-@keyframes device-status-blink {
-    0%,
-    100% {
-        opacity: 0.55;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.25);
-    }
-}
-
-@keyframes device-status-alert {
-    0%,
-    100% {
-        opacity: 0.7;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.5);
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
     .device-row,
-    .status-dot,
     .device-row-actions button {
         animation-duration: 1ms;
         animation-iteration-count: 1;

@@ -146,14 +146,6 @@ const deleteAvatar = async () => {
 
     <BaseSmartModal
         v-model="dialogVisible"
-        :close-on-click-modal="!loading"
-        :close-on-press-escape="!loading"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
-        append-to-body
-        class="account-family-dialog"
-        modal-class="settings-dialog-overlay"
         width="620px"
     >
         <template #header>
@@ -323,25 +315,6 @@ const deleteAvatar = async () => {
     flex: 1;
 }
 
-:global(.account-family-dialog) {
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: var(--shadow-card-hover);
-}
-
-:global(.settings-dialog-overlay) {
-    background: var(--color-overlay);
-    backdrop-filter: blur(4px);
-}
-
-:global(.account-family-dialog .el-dialog__header),
-:global(.account-family-dialog .el-dialog__body),
-:global(.account-family-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -389,11 +362,16 @@ const deleteAvatar = async () => {
 }
 
 .current-account {
-    margin: 16px 20px 0;
-    padding: 14px;
-    border: 1px solid var(--color-divider);
-    border-radius: 14px;
-    background: var(--color-workspace-background);
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 16px;
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
+    box-shadow: var(--shadow-card);
 }
 
 .current-account > img,
@@ -501,10 +479,6 @@ const deleteAvatar = async () => {
 }
 
 @media (max-width: 640px) {
-    :global(.account-family-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
     .form-grid {
         grid-template-columns: 1fr;
     }

@@ -162,15 +162,7 @@ const savePassword = async () => {
 <template>
     <BaseSmartModal
         :model-value="modelValue"
-        :close-on-click-modal="true"
-        :close-on-press-escape="true"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
         :before-close="confirmBeforeClose"
-        append-to-body
-        class="account-family-dialog password-dialog"
-        modal-class="settings-dialog-overlay"
         width="680px"
         @update:model-value="emit('update:modelValue', $event)"
     >
@@ -295,28 +287,6 @@ const savePassword = async () => {
 </template>
 
 <style scoped>
-:global(.password-dialog) {
-    display: flex;
-    max-height: calc(100vh - 48px);
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: var(--shadow-card-hover);
-}
-
-:global(.password-dialog .el-dialog__header),
-:global(.password-dialog .el-dialog__body),
-:global(.password-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
-:global(.password-dialog .el-dialog__body) {
-    min-height: 0;
-    overflow-y: auto;
-}
-
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -368,16 +338,17 @@ const savePassword = async () => {
 .password-dialog-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 240px;
-    gap: 16px;
-    padding: 16px 20px 18px;
+    gap: 18px;
+    padding: 0;
 }
 
 .password-card,
 .password-summary {
     min-width: 0;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
-    background: var(--color-workspace-background);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
 }
 
 .password-card {
@@ -390,6 +361,8 @@ const savePassword = async () => {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .password-card-header strong {
@@ -503,6 +476,12 @@ const savePassword = async () => {
     gap: 12px;
     align-content: start;
     padding: 16px;
+    border-color: var(--color-primary-200);
+    background: linear-gradient(
+        160deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .password-summary-item {
@@ -548,10 +527,6 @@ const savePassword = async () => {
 }
 
 @media (max-width: 640px) {
-    :global(.password-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
     .password-dialog-body {
         grid-template-columns: 1fr;
     }

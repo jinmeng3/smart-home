@@ -112,14 +112,6 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
 
     <BaseSmartModal
         v-model="dialogVisible"
-        :close-on-click-modal="!submitting && loadingMemberId === null"
-        :close-on-press-escape="!submitting && loadingMemberId === null"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
-        append-to-body
-        class="member-management-dialog"
-        modal-class="settings-dialog-overlay"
         width="720px"
     >
         <template #header>
@@ -248,25 +240,6 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     background: var(--color-ai-soft);
 }
 
-:global(.member-management-dialog) {
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: var(--shadow-card-hover);
-}
-
-:global(.settings-dialog-overlay) {
-    background: var(--color-overlay);
-    backdrop-filter: blur(4px);
-}
-
-:global(.member-management-dialog .el-dialog__header),
-:global(.member-management-dialog .el-dialog__body),
-:global(.member-management-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -317,7 +290,12 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 112px 84px;
     gap: 8px;
-    padding: 16px 20px 12px;
+    margin: 0 0 16px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
 }
 
 .member-list {
@@ -344,10 +322,6 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
 }
 
 @media (max-width: 640px) {
-    :global(.member-management-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
     .member-toolbar {
         grid-template-columns: 1fr;
     }

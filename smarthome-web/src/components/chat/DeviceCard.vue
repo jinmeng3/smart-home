@@ -3,22 +3,18 @@ import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
 import type { DashboardDevice } from "../../types/device";
 import SvgIcon from "../common/SvgIcon.vue";
-import { deviceTypeIconMap } from "../device/deviceMeta";
+import {
+    deviceTypeIconMap,
+    getDeviceStatusLabel,
+} from "../device/deviceMeta";
 import { formatDeviceTimestamp } from "../../utils/date";
 
 const store = useHomeStore();
 
 const visibleDevices = computed(() => store.devices.slice(0, 6));
 
-const statusLabelMap: Record<string, string> = {
-    online: "在线",
-    offline: "离线",
-    running: "运行中",
-    warning: "告警",
-};
-
 const statusLabel = (device: DashboardDevice) =>
-    statusLabelMap[device.status] ?? device.status;
+    getDeviceStatusLabel(device.status);
 </script>
 
 <template>

@@ -3,12 +3,11 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import BaseModal from "../common/BaseModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { deviceTypeIconMap, deviceTypeOptions } from "./deviceMeta";
+import { devicePlatformOptions, deviceTypeIconMap, deviceTypeOptions } from "./deviceMeta";
 import { deviceService } from "../../services/device";
 import type {
     Device,
     DeviceCreatePayload,
-    DevicePlatform,
     DeviceType,
 } from "../../types/device";
 
@@ -23,12 +22,7 @@ const emit = defineEmits<{
     submit: [payload: DeviceCreatePayload];
 }>();
 
-const platforms: DevicePlatform[] = [
-    "Home Assistant",
-    "Matter",
-    "Zigbee",
-    "MQTT",
-];
+const platforms = devicePlatformOptions;
 const form = reactive<DeviceCreatePayload>({
     name: "",
     room: "",

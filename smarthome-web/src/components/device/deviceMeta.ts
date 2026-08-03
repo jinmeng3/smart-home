@@ -1,6 +1,13 @@
 import { statusColorMap } from "../../constants/status-colors";
-import type { DeviceStatus, DeviceType } from "../../types/device";
+import type { DevicePlatform, DeviceStatus, DeviceType } from "../../types/device";
 import type { SemanticStatus } from "../../types/theme";
+
+export const devicePlatformOptions: DevicePlatform[] = [
+  "Home Assistant",
+  "Matter",
+  "Zigbee",
+  "MQTT",
+];
 
 export const deviceTypeOptions: { label: string; value: DeviceType | "" }[] = [
   { label: "全部", value: "" },
@@ -40,6 +47,10 @@ export const deviceStatusLabelMap: Record<DeviceStatus, string> = {
   warning: "告警",
   running: "运行中",
 };
+
+/** 获取状态文案，未知状态回退为原始值。 */
+export const getDeviceStatusLabel = (status: string) =>
+  deviceStatusLabelMap[status as DeviceStatus] ?? status;
 
 export const deviceTypeIconMap: Record<DeviceType, string> = {
   light: "light",

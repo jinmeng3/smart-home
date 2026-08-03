@@ -24,14 +24,6 @@ const closeDialog = () => {
 <template>
     <BaseSmartModal
         :model-value="props.modelValue"
-        :close-on-click-modal="true"
-        :close-on-press-escape="true"
-        :lock-scroll="true"
-        :modal="true"
-        :show-close="false"
-        append-to-body
-        class="account-family-dialog security-logs-dialog"
-        modal-class="settings-dialog-overlay"
         width="680px"
         @update:model-value="emit('update:modelValue', $event)"
     >
@@ -96,28 +88,6 @@ const closeDialog = () => {
 </template>
 
 <style scoped>
-:global(.security-logs-dialog) {
-    display: flex;
-    max-height: calc(100vh - 48px);
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--color-border-default);
-    border-radius: 20px;
-    background: var(--color-panel-background);
-    box-shadow: var(--shadow-card-hover);
-}
-
-:global(.security-logs-dialog .el-dialog__header),
-:global(.security-logs-dialog .el-dialog__body),
-:global(.security-logs-dialog .el-dialog__footer) {
-    padding: 0;
-}
-
-:global(.security-logs-dialog .el-dialog__body) {
-    min-height: 0;
-    overflow-y: auto;
-}
-
 .dialog-header {
     display: flex;
     align-items: flex-start;
@@ -165,18 +135,22 @@ const closeDialog = () => {
 }
 
 .logs-dialog-body {
-    padding: 16px 20px 18px;
+    gap: 18px;
+    padding: 0;
 }
 
 .logs-card {
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
-    background: var(--color-workspace-background);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
     padding: 16px;
 }
 
 .logs-card-header {
     margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .logs-card-header strong,
@@ -203,9 +177,18 @@ const closeDialog = () => {
     grid-template-columns: 10px minmax(0, 1fr);
     gap: 12px;
     padding: 14px;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
-    background: var(--color-panel-background);
+    background: var(--color-surface-subtle);
+    transition:
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.log-item:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
 }
 
 .log-marker {
@@ -242,10 +225,6 @@ const closeDialog = () => {
 }
 
 @media (max-width: 640px) {
-    :global(.security-logs-dialog) {
-        width: calc(100% - 24px) !important;
-    }
-
     .log-head,
     .dialog-footer {
         align-items: stretch;

@@ -154,6 +154,7 @@ h2 {
     color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 900;
+    --status-dot-size: 8px;
 }
 
 dl {
@@ -200,28 +201,6 @@ dl div:last-child {
     font-weight: 700;
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-}
-
-.status-dot.is-online {
-    background: var(--color-success);
-    animation: pulse 1800ms var(--motion-ease) infinite;
-}
-.status-dot.is-offline {
-    background: var(--color-text-muted);
-}
-.status-dot.is-running {
-    background: var(--color-info);
-    animation: pulse 1500ms var(--motion-ease) infinite;
-}
-.status-dot.is-warning {
-    background: var(--color-warning);
-    animation: pulse 1100ms var(--motion-ease) infinite;
-}
-
 @keyframes side-card-enter {
     from {
         opacity: 0;
@@ -233,21 +212,8 @@ dl div:last-child {
     }
 }
 
-@keyframes pulse {
-    0%,
-    100% {
-        opacity: 0.7;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.45);
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .device-side-card,
-    .status-dot {
+    .device-side-card {
         animation-duration: 1ms;
         animation-iteration-count: 1;
     }

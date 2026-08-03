@@ -104,7 +104,6 @@ const applyParameters = () => {
 
     <BaseSmartModal
         v-model="dialogVisible"
-        class="model-advanced-dialog"
         width="760px"
     >
         <template #header>
@@ -246,10 +245,15 @@ const applyParameters = () => {
     min-height: 64px;
     align-content: center;
     gap: 5px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 10px;
+    border: 1px solid var(--color-teal-500);
+    border-radius: 16px;
     padding: 10px 12px;
-    background: var(--color-surface-subtle);
+    background: linear-gradient(
+        145deg,
+        var(--color-card-bg),
+        var(--color-teal-soft)
+    );
+    box-shadow: var(--shadow-card);
 }
 
 .model-config-status span {

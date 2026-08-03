@@ -209,7 +209,6 @@ const logout = async () => {
     <BaseSmartModal
         v-model="authStore.loginVisible"
         :closable="!submitting"
-        class="login-dialog"
         width="560px"
     >
         <template #header>
@@ -580,15 +579,16 @@ const logout = async () => {
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 18px;
-    padding: 16px;
-    border: 1px solid var(--color-teal-border);
-    border-radius: 14px;
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 16px;
     background: linear-gradient(
         135deg,
         var(--color-card-bg),
-        var(--color-teal-soft)
+        var(--color-primary-50)
     );
+    box-shadow: var(--shadow-card);
 }
 
 .current-account strong {

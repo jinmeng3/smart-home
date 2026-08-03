@@ -541,28 +541,6 @@ const viewMode = ref<"list" | "grid">("list");
     white-space: nowrap;
 }
 
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-}
-
-.status-dot.is-online {
-    background: var(--color-success);
-}
-
-.status-dot.is-offline {
-    background: var(--color-text-muted);
-}
-
-.status-dot.is-running {
-    background: var(--color-info);
-}
-
-.status-dot.is-warning {
-    background: var(--color-warning);
-}
-
 table {
     width: 100%;
     border-collapse: collapse;

@@ -5,7 +5,7 @@ import { statusColorMap } from "../../constants/status-colors";
 import type { DashboardDevice } from "../../types/device";
 import type { SemanticStatus } from "../../types/theme";
 import { getDeviceRuntimeStatus } from "../../utils/device";
-import { deviceTypeIconMap } from "../device/deviceMeta";
+import { deviceTypeIconMap, getDeviceStatusLabel } from "../device/deviceMeta";
 import { formatDeviceTimestamp } from "../../utils/date";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
@@ -38,15 +38,8 @@ const detailText = computed(() => {
     return `${device.room} · ${device.status}${device.value ? ` · ${device.value}` : ""} · ${device.updatedAt}`;
 });
 
-const statusLabelMap: Record<string, string> = {
-    online: "在线",
-    offline: "离线",
-    running: "运行中",
-    warning: "告警",
-};
-
 const statusLabel = (device: DashboardDevice) =>
-    statusLabelMap[device.status] ?? device.status;
+    getDeviceStatusLabel(device.status);
 
 const openDevice = async (device: DashboardDevice, event: MouseEvent) => {
     lastFocusedElement.value = event.currentTarget as HTMLElement;

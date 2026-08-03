@@ -121,14 +121,6 @@ const readBackupFile = (event: Event) => {
 
         <BaseSmartModal
             v-model="historyVisible"
-            :close-on-click-modal="true"
-            :close-on-press-escape="true"
-            :lock-scroll="true"
-            :modal="true"
-            :show-close="false"
-            append-to-body
-            class="account-family-dialog"
-            modal-class="settings-dialog-overlay"
             width="620px"
         >
             <template #header>
@@ -238,16 +230,17 @@ const readBackupFile = (event: Event) => {
 .backup-dialog-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 220px;
-    gap: 16px;
-    padding: 16px 20px 12px;
+    gap: 18px;
+    padding: 0;
 }
 
 .backup-panel,
 .backup-summary {
     min-width: 0;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
-    background: var(--color-workspace-background);
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
 }
 
 .backup-panel {
@@ -260,6 +253,8 @@ const readBackupFile = (event: Event) => {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .backup-panel-heading strong {
@@ -283,18 +278,19 @@ const readBackupFile = (event: Event) => {
     justify-items: start;
     gap: 4px;
     padding: 13px 14px;
-    border: 1px solid var(--color-border-default);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
-    background: var(--color-panel-background);
+    background: var(--color-surface-subtle);
     text-align: left;
     transition:
-        border-color 160ms ease,
-        box-shadow 160ms ease,
-        transform 120ms ease;
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
 }
 
 .backup-action:hover {
-    border-color: var(--color-primary-300);
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
     box-shadow: 0 4px 12px var(--color-focus-ring);
     transform: translateY(-1px);
 }
@@ -315,6 +311,12 @@ const readBackupFile = (event: Event) => {
     gap: 12px;
     align-content: start;
     padding: 16px;
+    border-color: var(--color-primary-200);
+    background: linear-gradient(
+        160deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .backup-summary-item {
@@ -341,9 +343,19 @@ const readBackupFile = (event: Event) => {
 
 .backup-history-item {
     padding: 14px 16px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 14px;
-    background: var(--color-panel-background);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-surface-subtle);
+    box-shadow: var(--shadow-card);
+    transition:
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.backup-history-item:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
 }
 
 .backup-history-head {
