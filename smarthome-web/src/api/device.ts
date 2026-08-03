@@ -182,3 +182,51 @@ export const uploadDeviceImage = async (file: File): Promise<string> => {
     body: formData,
   });
 };
+
+// ── 快捷操作 ──────────────────────────────────────────────────────────────────────
+
+interface ScanResult {
+  platform: string | null;
+  scanned_count: number;
+  found_count: number;
+  found: ApiDevice[];
+}
+
+interface FirmwareBatchResult {
+  updated_count: number;
+}
+
+interface BatchGroupResult {
+  group_id: number;
+  group: string;
+  assigned_count: number;
+}
+
+export const scanDevices = async (
+  platform: string | null,
+): Promise<ScanResult> => {
+  return apiRequest<ScanResult>("/api/devices/scan", {
+    method: "POST",
+    body: JSON.stringify({ platform }),
+  });
+};
+
+export const batchUpdateFirmware = async (
+  device_ids: number[],
+  version: string,
+): Promise<FirmwareBatchResult> => {
+  return apiRequest<FirmwareBatchResult>("/api/devices/firmware", {
+    method: "POST",
+    body: JSON.stringify({ device_ids, version }),
+  });
+};
+
+export const batchGroupDevices = async (
+  device_ids: number[],
+  group: string,
+): Promise<BatchGroupResult> => {
+  return apiRequest<BatchGroupResult>("/api/devices/groups/assign", {
+    method: "POST",
+    body: JSON.stringify({ device_ids, group }),
+  });
+};

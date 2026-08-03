@@ -123,3 +123,14 @@ class DeviceLogListRead(BaseModel):
 class DeviceSyncRead(BaseModel):
     platform: DevicePlatform
     synced_count: int
+
+
+class DeviceBatchGroup(BaseModel):
+    group: str = Field(min_length=1, max_length=80, description="分组名称")
+    device_ids: list[int] = Field(default=[], description="分配到该组的设备，为空则创建分组但不分配")
+
+
+class DeviceBatchGroupResult(BaseModel):
+    group_id: int
+    group: str
+    assigned_count: int = 0

@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import DB_DEPENDENCY
+from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
 from app.schemas.common import ApiResponse
 from app.schemas.scene import (
+    SceneBatchEnabledResult,
+    SceneBatchEnabledWrite,
+    SceneBatchScheduleResult,
+    SceneBatchScheduleWrite,
     SceneCopyWrite,
     SceneDraftRead,
     SceneDraftWrite,
@@ -25,6 +29,8 @@ from app.schemas.scene import (
     SceneWrite,
 )
 from app.services.scene import (
+    batch_set_scene_enabled,
+    batch_set_scene_schedule,
     copy_scene,
     create_scene,
     execute_scene,
@@ -42,7 +48,7 @@ from app.services.scene import (
     use_template,
 )
 
-router = APIRouter(prefix="/scenes", tags=["scenes"])
+router = APIRouter(prefix="/scenes", tags=["scenes"], dependencies=[CURRENT_USER_DEPENDENCY])
 KEYWORD_QUERY = Query(default=None, max_length=100)
 TRIGGER_QUERY = Query(default=None, pattern="^(manual|schedule|location|device)$")
 ENABLED_QUERY = Query(default="all", pattern="^(all|enabled|disabled)$")
@@ -196,3 +202,19 @@ def get_scene_preview(
 ) -> ApiResponse[ScenePreviewRead]:
     """返回动作链，不实际控制设备。"""
     return ApiResponse(data=preview_scene(db, scene_id))
+
+
+@router.post("/batch/enabled", response_model=ApiResponse[SceneBatchEnabledResult])
+def batch_change_enabled(
+    payload: SceneBatchEnabledWrite, db: Session = DB_DEPENDENCY
+) -> ApiResponse[SceneBatchEnabledResult]:
+    """批量启用或停用场景。"""
+    return ApiResponse(data=batch_set_scene_enabled(db, payload))
+
+
+@router.post("/batch/schedule", response_model=ApiResponse[SceneBatchScheduleResult])
+def batch_set_schedule(
+    payload: SceneBatchScheduleWrite, db: Session = DB_DEPENDENCY
+) -> ApiResponse[SceneBatchScheduleResult]:
+    """批量设置场景的触发类型和定时描述。"""
+    return ApiResponse(data=batch_set_scene_schedule(db, payload))

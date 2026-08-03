@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 
-from app.api.deps import DB_DEPENDENCY, SETTINGS_DEPENDENCY
+from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY, SETTINGS_DEPENDENCY
 from app.core.config import Settings
+from app.models.user import User
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.common import ApiResponse
 from app.services.auth import authenticate_user, register_user
@@ -39,6 +40,8 @@ def register(
 
 
 @router.post("/logout", response_model=ApiResponse[None])
-def logout() -> ApiResponse[None]:
+def logout(
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[None]:
     """结束客户端登录状态；当前 JWT 由客户端负责清除。"""
     return ApiResponse(message="logged out", data=None)

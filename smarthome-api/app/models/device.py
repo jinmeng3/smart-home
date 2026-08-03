@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
@@ -35,6 +37,12 @@ class Device(Base):
     image_url: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="设备图片地址"
     )
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("device_group.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+        comment="所属分组",
+    )
     last_online: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, comment="最后在线时间"
     )
@@ -52,9 +60,11 @@ class Device(Base):
         comment="更新时间",
     )
 
-    logs: Mapped[list["DeviceLog"]] = relationship(
+    logs: Mapped[list[DeviceLog]] = relationship(
         back_populates="device", cascade="all, delete-orphan"
     )
+
+    group: Mapped[DeviceGroup | None] = relationship(back_populates="devices")
 
 
 class DeviceGroup(Base):
@@ -74,6 +84,8 @@ class DeviceGroup(Base):
         comment="创建时间",
     )
 
+    devices: Mapped[list[Device]] = relationship(back_populates="group")
+
 
 class DeviceLog(Base):
     __tablename__ = "device_logs"
@@ -87,9 +99,7 @@ class DeviceLog(Base):
         nullable=False,
         comment="设备主键",
     )
-    action: Mapped[str] = mapped_column(
-        String(64), nullable=False, comment="操作类型"
-    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False, comment="操作类型")
     message: Mapped[str] = mapped_column(Text, nullable=False, comment="日志内容")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

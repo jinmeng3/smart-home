@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import datetime, timezone
+from typing import cast
 from uuid import uuid4
 
 from fastapi import HTTPException, status
@@ -17,6 +18,10 @@ from app.models.scene import (
     SceneTemplate,
 )
 from app.schemas.scene import (
+    SceneBatchEnabledResult,
+    SceneBatchEnabledWrite,
+    SceneBatchScheduleResult,
+    SceneBatchScheduleWrite,
     SceneDraftRead,
     SceneDraftWrite,
     SceneExecutionRead,
@@ -36,6 +41,7 @@ from app.schemas.scene import (
     SceneTemplateRead,
     SceneTemplateUseWrite,
     SceneWrite,
+    TriggerType,
 )
 
 HIGH_RISK_KEYWORDS = ("lock", "camera", "门锁", "摄像头", "安防")
@@ -70,7 +76,9 @@ def get_scene_or_404(db: Session, scene_id: str) -> Scene:
 def get_template_or_404(db: Session, template_id: str) -> SceneTemplate:
     template = db.get(SceneTemplate, template_id)
     if not template or not template.enabled:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="场景模板不存在")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="场景模板不存在"
+        )
     return template
 
 
@@ -91,7 +99,7 @@ def serialize_scene(scene: Scene) -> SceneRead:
         description=scene.description,
         icon=scene.icon,
         color=scene.color,
-        trigger_type=scene.trigger_type,
+        trigger_type=cast(TriggerType, scene.trigger_type),
         trigger_label=scene.trigger_label,
         room_labels=parse_json_list(scene.room_names),
         device_count=scene.device_count,
@@ -119,7 +127,9 @@ def detect_high_risk(payload: SceneWrite) -> bool:
     if payload.high_risk is not None:
         return payload.high_risk
     values = [payload.name, *(step.device_id for step in payload.steps)]
-    return any(keyword in value.lower() for value in values for keyword in HIGH_RISK_KEYWORDS)
+    return any(
+        keyword in value.lower() for value in values for keyword in HIGH_RISK_KEYWORDS
+    )
 
 
 def apply_scene_payload(scene: Scene, payload: SceneWrite) -> None:
@@ -159,7 +169,11 @@ def list_scenes(
     if keyword and keyword.strip():
         term = f"%{keyword.strip()}%"
         filters.append(
-            or_(Scene.name.like(term), Scene.description.like(term), Scene.trigger_label.like(term))
+            or_(
+                Scene.name.like(term),
+                Scene.description.like(term),
+                Scene.trigger_label.like(term),
+            )
         )
     if trigger_type:
         filters.append(Scene.trigger_type == trigger_type)
@@ -174,7 +188,9 @@ def list_scenes(
         .where(*filters)
         .order_by(Scene.sort_order, Scene.updated_at.desc())
     ).all()
-    return SceneListRead(items=[serialize_scene(scene) for scene in scenes], total=len(scenes))
+    return SceneListRead(
+        items=[serialize_scene(scene) for scene in scenes], total=len(scenes)
+    )
 
 
 def create_scene(db: Session, payload: SceneWrite) -> SceneRead:
@@ -212,7 +228,8 @@ def execute_scene(
     scene = get_scene_or_404(db, scene_id)
     if scene.high_risk and not confirm_high_risk:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="该场景包含高风险动作，请确认后执行"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该场景包含高风险动作，请确认后执行",
         )
     if not scene.enabled:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="场景已停用")
@@ -270,7 +287,7 @@ def copy_scene(db: Session, scene_id: str, name: str) -> SceneRead:
         description=source.description,
         icon=source.icon,
         color=source.color,
-        trigger_type=source.trigger_type,
+        trigger_type=cast(TriggerType, source.trigger_type),
         trigger_label=source.trigger_label,
         room_labels=parse_json_list(source.room_names),
         enabled=source.enabled,
@@ -297,20 +314,37 @@ def list_scene_logs(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
         .order_by(SceneExecutionLog.started_at.desc())
         .limit(limit)
     ).all()
-    return SceneLogListRead(items=[SceneLogRead.model_validate(log, from_attributes=True) for log in logs])
+    return SceneLogListRead(
+        items=[SceneLogRead.model_validate(log, from_attributes=True) for log in logs]
+    )
 
 
 def summarize_scenes(db: Session) -> SceneSummaryRead:
     total = db.scalar(select(func.count()).select_from(Scene)) or 0
-    enabled = db.scalar(select(func.count()).select_from(Scene).where(Scene.enabled.is_(True))) or 0
-    manual = db.scalar(select(func.count()).select_from(Scene).where(Scene.trigger_type == "manual")) or 0
+    enabled = (
+        db.scalar(
+            select(func.count()).select_from(Scene).where(Scene.enabled.is_(True))
+        )
+        or 0
+    )
+    manual = (
+        db.scalar(
+            select(func.count())
+            .select_from(Scene)
+            .where(Scene.trigger_type == "manual")
+        )
+        or 0
+    )
     automation = total - manual
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    monthly = db.scalar(
-        select(func.count()).select_from(SceneExecutionLog).where(
-            SceneExecutionLog.started_at >= month_start
+    monthly = (
+        db.scalar(
+            select(func.count())
+            .select_from(SceneExecutionLog)
+            .where(SceneExecutionLog.started_at >= month_start)
         )
-    ) or 0
+        or 0
+    )
     return SceneSummaryRead(
         enabled=enabled,
         automation=automation,
@@ -325,10 +359,14 @@ def summarize_scenes(db: Session) -> SceneSummaryRead:
 
 def update_scene_order(db: Session, payload: SceneOrderWrite) -> SceneOrderRead:
     ids = [item.id for item in payload.items]
-    scenes = {scene.id: scene for scene in db.scalars(select(Scene).where(Scene.id.in_(ids)))}
+    scenes = {
+        scene.id: scene for scene in db.scalars(select(Scene).where(Scene.id.in_(ids)))
+    }
     missing = set(ids) - scenes.keys()
     if missing:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="部分场景不存在")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="部分场景不存在"
+        )
     for item in payload.items:
         scenes[item.id].sort_order = item.sort_order
     db.commit()
@@ -349,7 +387,9 @@ def preview_scene(db: Session, scene_id: str) -> ScenePreviewRead:
                 estimated_ms=300,
                 risk_level=(
                     "high"
-                    if any(word in step.device_id.lower() for word in HIGH_RISK_KEYWORDS)
+                    if any(
+                        word in step.device_id.lower() for word in HIGH_RISK_KEYWORDS
+                    )
                     else "low"
                 ),
             )
@@ -365,7 +405,9 @@ def read_execution(db: Session, execution_id: str) -> SceneExecutionRead:
         .where(SceneExecutionLog.id == execution_id)
     )
     if not log:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="执行记录不存在")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="执行记录不存在"
+        )
     return serialize_execution(log)
 
 
@@ -377,7 +419,7 @@ def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
         description=template.description,
         icon=template.icon,
         color=template.color,
-        trigger_type=template.trigger_type,
+        trigger_type=cast(TriggerType, template.trigger_type),
         trigger_label=template.trigger_label,
         room_labels=parse_json_list(template.room_labels),
         device_count=template.device_count,
@@ -402,7 +444,9 @@ def list_templates(
     filters = [SceneTemplate.enabled.is_(True)]
     if keyword and keyword.strip():
         term = f"%{keyword.strip()}%"
-        filters.append(or_(SceneTemplate.name.like(term), SceneTemplate.description.like(term)))
+        filters.append(
+            or_(SceneTemplate.name.like(term), SceneTemplate.description.like(term))
+        )
     if category:
         filters.append(SceneTemplate.category == category)
     templates = db.scalars(
@@ -424,7 +468,7 @@ def use_template(
         description=template.description,
         icon=template.icon,
         color=template.color,
-        trigger_type=template.trigger_type,
+        trigger_type=cast(TriggerType, template.trigger_type),
         trigger_label=template.trigger_label,
         room_labels=data.room_labels,
         enabled=payload.enabled,
@@ -441,6 +485,10 @@ def use_template(
     )
     result = create_scene(db, scene_payload)
     scene = db.get(Scene, result.id)
+    if scene is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="创建的场景未找到"
+        )
     scene.source_template_id = template.id
     db.commit()
     return serialize_scene(get_scene_or_404(db, result.id))
@@ -477,3 +525,36 @@ def save_draft(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
     db.commit()
     db.refresh(draft)
     return SceneDraftRead(draft_id=draft.id, updated_at=draft.updated_at)
+
+
+def batch_set_scene_enabled(
+    db: Session, payload: SceneBatchEnabledWrite
+) -> SceneBatchEnabledResult:
+    """批量启用或停用场景。空列表时操作全部场景。"""
+    query = select(Scene)
+    if payload.scene_ids:
+        query = query.where(Scene.id.in_(payload.scene_ids))
+    scenes = list(db.scalars(query).all())
+    now = now_utc()
+    for scene in scenes:
+        scene.enabled = payload.enabled
+        scene.updated_at = now
+    db.commit()
+    return SceneBatchEnabledResult(updated_count=len(scenes))
+
+
+def batch_set_scene_schedule(
+    db: Session, payload: SceneBatchScheduleWrite
+) -> SceneBatchScheduleResult:
+    """批量设置场景的触发类型和定时触发描述。空列表时操作全部场景。"""
+    query = select(Scene)
+    if payload.scene_ids:
+        query = query.where(Scene.id.in_(payload.scene_ids))
+    scenes = list(db.scalars(query).all())
+    now = now_utc()
+    for scene in scenes:
+        scene.trigger_type = payload.trigger_type
+        scene.trigger_label = payload.trigger_label
+        scene.updated_at = now
+    db.commit()
+    return SceneBatchScheduleResult(updated_count=len(scenes))

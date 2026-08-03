@@ -3,10 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, File, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import DB_DEPENDENCY, SETTINGS_DEPENDENCY
+from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY, SETTINGS_DEPENDENCY
 from app.core.config import Settings
 from app.schemas.common import ApiResponse
 from app.schemas.device import (
+    DeviceBatchGroup,
+    DeviceBatchGroupResult,
     DeviceCreate,
     DeviceDetailRead,
     DeviceDetailWithLogs,
@@ -18,6 +20,7 @@ from app.schemas.device import (
     DeviceUpdate,
 )
 from app.services.device import (
+    batch_group_devices,
     create_device,
     delete_device,
     list_device_logs,
@@ -28,7 +31,7 @@ from app.services.device import (
     upload_device_image,
 )
 
-router = APIRouter(prefix="/devices", tags=["devices"])
+router = APIRouter(prefix="/devices", tags=["devices"], dependencies=[CURRENT_USER_DEPENDENCY])
 # FastAPI 参数对象在模块加载时创建，避免在函数默认值中执行调用。
 DEVICE_ID_QUERY = Query(default=None)
 LOG_PAGE_QUERY = Query(default=1, ge=1)
@@ -110,3 +113,11 @@ def upload_image(
 ) -> ApiResponse[str]:
     """上传设备图片，可选关联已有设备。"""
     return ApiResponse.ok(data=upload_device_image(db, device_id, file, settings))
+
+
+@router.post("/groups/assign", response_model=ApiResponse[DeviceBatchGroupResult])
+def batch_assign_group(
+    payload: DeviceBatchGroup, db: Session = DB_DEPENDENCY
+) -> ApiResponse[DeviceBatchGroupResult]:
+    """创建或复用分组，并将指定设备批量分配。"""
+    return ApiResponse(data=batch_group_devices(db, payload))

@@ -40,7 +40,9 @@ class SceneWrite(SceneSchema):
     high_risk: bool | None = None
     steps: list[SceneStepWrite] = Field(default_factory=list, max_length=100)
 
-    @field_validator("name", "description", "icon", "color", "trigger_label", mode="before")
+    @field_validator(
+        "name", "description", "icon", "color", "trigger_label", mode="before"
+    )
     @classmethod
     def strip_text(cls, value: str) -> str:
         return value.strip() if isinstance(value, str) else value
@@ -207,3 +209,26 @@ class SceneDraftWrite(SceneWrite):
 class SceneDraftRead(SceneSchema):
     draft_id: str
     updated_at: datetime
+
+
+class SceneBatchEnabledWrite(SceneSchema):
+    scene_ids: list[str] = Field(
+        default_factory=list, description="目标场景 ID 列表，为空则操作全部场景"
+    )
+    enabled: bool
+
+
+class SceneBatchEnabledResult(SceneSchema):
+    updated_count: int = 0
+
+
+class SceneBatchScheduleWrite(SceneSchema):
+    scene_ids: list[str] = Field(
+        default_factory=list, description="目标场景 ID 列表，为空则操作全部场景"
+    )
+    trigger_type: TriggerType = "schedule"
+    trigger_label: str = Field(min_length=1, max_length=255, description="定时触发描述")
+
+
+class SceneBatchScheduleResult(SceneSchema):
+    updated_count: int = 0

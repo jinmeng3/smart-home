@@ -30,7 +30,12 @@ export const useAuthStore = defineStore("auth", () => {
     window.sessionStorage.removeItem(tokenKey);
   };
 
-  window.addEventListener(authExpiredEvent, clearSession);
+  const handleAuthExpired = () => {
+    clearSession();
+    loginVisible.value = true;
+  };
+
+  window.addEventListener(authExpiredEvent, handleAuthExpired);
 
   const login = async (payload: LoginPayload, closeDialog = true) => {
     const result = await apiLogin(payload);
@@ -43,7 +48,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   const logout = async (closeDialog = true) => {
     try {
-      await apiLogout();
+      await apiLogout().catch(() => undefined);
     } finally {
       clearSession();
       if (closeDialog) loginVisible.value = false;

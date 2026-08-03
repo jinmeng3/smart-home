@@ -53,6 +53,7 @@ export const parseResponse = async <T>(response: Response): Promise<T> => {
 
   if (response.status === 401) {
     clearAuthSession();
+    throw new ApiError("登录状态已失效，请重新登录", response.status);
   }
 
   throw new ApiError(data.detail ?? data.message ?? "请求失败", response.status);

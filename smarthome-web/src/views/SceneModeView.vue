@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
+import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
 import SceneCreateDialog from "../components/scenes/SceneCreateDialog.vue";
 import SceneDetailPanel from "../components/scenes/SceneDetailPanel.vue";
@@ -10,9 +11,11 @@ import SceneStats from "../components/scenes/SceneStats.vue";
 import SceneTemplateDialog from "../components/scenes/SceneTemplateDialog.vue";
 import SceneToolbar from "../components/scenes/SceneToolbar.vue";
 import { useSceneModeController } from "../composables/useSceneModeController";
+import { useAuthStore } from "../stores/auth";
 import { useScenesStore } from "../stores/scenes";
 
 const store = useScenesStore();
+const authStore = useAuthStore();
 const {
     filters,
     loading,
@@ -26,9 +29,15 @@ const {
 const controller = useSceneModeController(store);
 
 const loadScenes = async () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
     try {
         await store.loadScenes();
     } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return;
         ElMessage.error(error instanceof Error ? error.message : "场景数据加载失败");
     }
 };
@@ -37,6 +46,13 @@ watch(
     () => [filters.value.keyword, filters.value.triggerType, filters.value.enabled],
     () => {
         void loadScenes();
+    },
+);
+
+watch(
+    () => authStore.isAuthenticated,
+    (authenticated) => {
+        if (authenticated) void loadScenes();
     },
 );
 

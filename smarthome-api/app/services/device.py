@@ -7,8 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.models.device import Device, DeviceLog
+from app.models.device import Device, DeviceGroup, DeviceLog
 from app.schemas.device import (
+    DeviceBatchGroup,
+    DeviceBatchGroupResult,
     DeviceCreate,
     DeviceDetailRead,
     DeviceDetailWithLogs,
@@ -184,7 +186,8 @@ def upload_device_image(
 
     if len(content) > settings.max_device_image_size:
         raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Image file is too large"
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="Image file is too large",
         )
 
     settings.device_image_dir.mkdir(parents=True, exist_ok=True)
@@ -198,3 +201,37 @@ def upload_device_image(
         device.image_url = image_url
         db.commit()
     return image_url
+
+
+def batch_group_devices(
+    db: Session, payload: DeviceBatchGroup
+) -> DeviceBatchGroupResult:
+    """创建或复用分组，将指定设备分配到该分组。"""
+    group = db.scalar(select(DeviceGroup).where(DeviceGroup.name == payload.group))
+    if not group:
+        group = DeviceGroup(name=payload.group)
+        db.add(group)
+        db.flush()
+
+    assigned_count = 0
+    if payload.device_ids:
+        devices = db.scalars(
+            select(Device).where(Device.id.in_(payload.device_ids))
+        ).all()
+
+        for device in devices:
+            device.group_id = group.id
+            device.updated_at = datetime.now(timezone.utc)
+            db.add(
+                DeviceLog(
+                    device_id=device.id,
+                    action="group",
+                    message=f"已分配到分组「{group.name}」",
+                )
+            )
+            assigned_count += 1
+
+    db.commit()
+    return DeviceBatchGroupResult(
+        group_id=group.id, group=group.name, assigned_count=assigned_count
+    )
