@@ -3,6 +3,8 @@ import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
 import type { DashboardDevice } from "../../types/device";
 import SvgIcon from "../common/SvgIcon.vue";
+import { deviceTypeIconMap } from "../device/deviceMeta";
+import { formatDeviceTimestamp } from "../../utils/date";
 
 const store = useHomeStore();
 
@@ -13,26 +15,6 @@ const statusLabelMap: Record<string, string> = {
     offline: "离线",
     running: "运行中",
     warning: "告警",
-};
-
-const iconNameMap: Record<DashboardDevice["type"], string> = {
-    light: "light",
-    air_conditioner: "air-conditioner",
-    lock: "lock",
-    camera: "camera",
-    sensor: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-};
-
-const formatUpdatedAt = (value: string) => {
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-
-    if (match) {
-        return `${match[1]} ${match[2]}`;
-    }
-
-    return value;
 };
 
 const statusLabel = (device: DashboardDevice) =>
@@ -71,13 +53,13 @@ const statusLabel = (device: DashboardDevice) =>
                 :class="`is-${device.status}`"
             >
                 <span class="device-icon" aria-hidden="true">
-                    <SvgIcon :name="iconNameMap[device.type]" size="sm" />
+                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
                 </span>
                 <div class="device-copy">
                     <strong>{{ device.name }}</strong>
                     <small
                         >{{ device.room }} ·
-                        {{ formatUpdatedAt(device.updatedAt) }}</small
+                        {{ formatDeviceTimestamp(device.updatedAt) }}</small
                     >
                 </div>
                 <span class="device-status">

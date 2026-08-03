@@ -1,21 +1,11 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Device } from "../../types/device";
-import { deviceStatusLabelMap, deviceTypeLabelMap } from "./deviceMeta";
+import { deviceStatusLabelMap, deviceTypeIconMap, deviceTypeLabelMap } from "./deviceMeta";
 
 defineProps<{
     device: Device | null;
 }>();
-
-const iconNameMap: Record<Device["type"], string> = {
-    light: "light",
-    air_conditioner: "air-conditioner",
-    lock: "lock",
-    camera: "camera",
-    sensor: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-};
 </script>
 
 <template>
@@ -29,7 +19,7 @@ const iconNameMap: Record<Device["type"], string> = {
                 <div class="device-image">
                     <img v-if="device.image" :src="device.image" alt="" />
                     <span v-else>
-                        <SvgIcon :name="iconNameMap[device.type]" size="lg" />
+                        <SvgIcon :name="deviceTypeIconMap[device.type]" size="lg" />
                     </span>
                 </div>
                 <div class="device-title">

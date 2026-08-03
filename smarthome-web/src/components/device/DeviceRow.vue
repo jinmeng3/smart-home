@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
+import { formatDeviceTimestamp } from "../../utils/date";
 import type { Device } from "../../types/device";
 import {
     deviceStatusLabelMap,
+    deviceTypeIconMap,
     deviceTypeLabelMap,
     getStatusClasses,
 } from "./deviceMeta";
@@ -17,25 +19,6 @@ defineEmits<{
     edit: [device: Device];
     remove: [device: Device];
 }>();
-
-const formatLastOnline = (value: string) => {
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-
-    if (match) {
-        return `${match[1]} ${match[2]}`;
-    }
-
-    return value || "从未在线";
-};
-const iconNameMap: Record<Device["type"], string> = {
-    light: "light",
-    air_conditioner: "air-conditioner",
-    lock: "lock",
-    camera: "camera",
-    sensor: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-};
 </script>
 
 <template>
@@ -55,7 +38,7 @@ const iconNameMap: Record<Device["type"], string> = {
         <td>
             <div class="device-name-cell">
                 <span class="device-thumb" aria-hidden="true">
-                    <SvgIcon :name="iconNameMap[device.type]" size="sm" />
+                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
                 </span>
                 <strong>{{ device.name }}</strong>
             </div>
@@ -72,7 +55,7 @@ const iconNameMap: Record<Device["type"], string> = {
                 {{ deviceStatusLabelMap[device.status] }}
             </span>
         </td>
-        <td>{{ formatLastOnline(device.lastOnline) }}</td>
+        <td>{{ formatDeviceTimestamp(device.lastOnline, "从未在线") }}</td>
         <td>
             <div class="device-row-actions">
                 <button type="button" @click.stop="$emit('edit', device)">

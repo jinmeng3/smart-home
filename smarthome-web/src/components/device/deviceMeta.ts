@@ -41,6 +41,16 @@ export const deviceStatusLabelMap: Record<DeviceStatus, string> = {
   running: "运行中",
 };
 
+export const deviceTypeIconMap: Record<DeviceType, string> = {
+  light: "light",
+  air_conditioner: "air-conditioner",
+  lock: "lock",
+  camera: "camera",
+  sensor: "sensor",
+  socket: "plug",
+  curtain: "curtain",
+};
+
 export const getStatusClasses = (status: DeviceStatus) => {
   const config = statusColorMap[status as SemanticStatus];
 

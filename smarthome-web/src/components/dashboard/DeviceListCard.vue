@@ -5,6 +5,8 @@ import { statusColorMap } from "../../constants/status-colors";
 import type { DashboardDevice } from "../../types/device";
 import type { SemanticStatus } from "../../types/theme";
 import { getDeviceRuntimeStatus } from "../../utils/device";
+import { deviceTypeIconMap } from "../device/deviceMeta";
+import { formatDeviceTimestamp } from "../../utils/date";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
@@ -26,18 +28,6 @@ const statusClass = (device: DashboardDevice) => {
     ];
 };
 
-const deviceIconName = (device: DashboardDevice) => {
-    if (device.type === "air_conditioner") {
-        return "air-conditioner";
-    }
-
-    if (device.type === "socket") {
-        return "plug";
-    }
-
-    return device.type;
-};
-
 const detailText = computed(() => {
     const device = store.selectedDevice;
 
@@ -53,16 +43,6 @@ const statusLabelMap: Record<string, string> = {
     offline: "离线",
     running: "运行中",
     warning: "告警",
-};
-
-const formatUpdatedAt = (value: string) => {
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-
-    if (match) {
-        return `${match[1]} ${match[2]}`;
-    }
-
-    return value;
 };
 
 const statusLabel = (device: DashboardDevice) =>
@@ -141,7 +121,7 @@ onBeforeUnmount(() => {
                 <span
                     class="grid h-6 w-6 place-items-center rounded-lg bg-slate-100 text-[var(--color-primary-700)]"
                 >
-                    <SvgIcon :name="deviceIconName(device)" size="sm" />
+                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
                 </span>
                 <strong class="truncate text-sm text-slate-700">{{
                     device.name
@@ -198,7 +178,7 @@ onBeforeUnmount(() => {
                         />
                         <SvgIcon
                             v-else
-                            :name="deviceIconName(store.selectedDevice)"
+                            :name="deviceTypeIconMap[store.selectedDevice.type]"
                             size="lg"
                         />
                     </div>
@@ -232,7 +212,7 @@ onBeforeUnmount(() => {
                         <dt>最后同步</dt>
                         <dd>
                             {{
-                                formatUpdatedAt(store.selectedDevice.updatedAt)
+                                formatDeviceTimestamp(store.selectedDevice.updatedAt)
                             }}
                         </dd>
                     </div>

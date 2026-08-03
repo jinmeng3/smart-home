@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import BaseModal from "../common/BaseModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { deviceTypeOptions } from "./deviceMeta";
+import { deviceTypeIconMap, deviceTypeOptions } from "./deviceMeta";
 import { deviceService } from "../../services/device";
 import type {
     Device,
@@ -41,16 +41,6 @@ const form = reactive<DeviceCreatePayload>({
 const imagePreviewUrl = ref("");
 const imageFileName = ref("");
 const pendingImageFile = ref<File | null>(null);
-
-const deviceTypeIconMap: Record<DeviceType, string> = {
-    light: "light",
-    air_conditioner: "air-conditioner",
-    lock: "lock",
-    camera: "camera",
-    sensor: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-};
 
 const selectedTypeMeta = computed(() =>
     deviceTypeOptions.find((item) => item.value === form.type),

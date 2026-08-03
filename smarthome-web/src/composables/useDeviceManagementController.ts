@@ -53,21 +53,19 @@ export const useDeviceManagementController = () => {
   );
 
   const sortedDevices = computed(() => {
-    const nextDevices = [...devices.value];
-
     if (sort.value === "name") {
-      return nextDevices.sort((first, second) =>
+      return [...devices.value].sort((first, second) =>
         first.name.localeCompare(second.name, "zh-CN"),
       );
     }
 
     if (sort.value === "status") {
-      return nextDevices.sort((first, second) =>
+      return [...devices.value].sort((first, second) =>
         first.status.localeCompare(second.status),
       );
     }
 
-    return nextDevices;
+    return devices.value;
   });
 
   const stats = computed(() => ({

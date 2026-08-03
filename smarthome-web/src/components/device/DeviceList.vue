@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { formatDeviceTimestamp } from "../../utils/date";
 import type { Device, DeviceType } from "../../types/device";
 import DeviceRow from "./DeviceRow.vue";
 import {
     deviceStatusLabelMap,
+    deviceTypeIconMap,
     deviceTypeLabelMap,
     deviceTypeOptions,
     getStatusClasses,
@@ -37,26 +39,6 @@ defineEmits<{
 
 const pageSizeOptions = [10, 20, 50];
 const viewMode = ref<"list" | "grid">("list");
-
-const formatLastOnline = (value: string) => {
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-
-    if (match) {
-        return `${match[1]} ${match[2]}`;
-    }
-
-    return value || "从未在线";
-};
-
-const iconNameMap: Record<Device["type"], string> = {
-    light: "light",
-    air_conditioner: "air-conditioner",
-    lock: "lock",
-    camera: "camera",
-    sensor: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-};
 </script>
 
 <template>
@@ -179,7 +161,7 @@ const iconNameMap: Record<Device["type"], string> = {
                 >
                     <header>
                         <span class="device-grid-icon" aria-hidden="true">
-                            <SvgIcon :name="iconNameMap[device.type]" />
+                            <SvgIcon :name="deviceTypeIconMap[device.type]" />
                         </span>
                         <span
                             class="device-status-badge"
@@ -204,7 +186,7 @@ const iconNameMap: Record<Device["type"], string> = {
                         </div>
                         <div>
                             <dt>最后在线</dt>
-                            <dd>{{ formatLastOnline(device.lastOnline) }}</dd>
+                            <dd>{{ formatDeviceTimestamp(device.lastOnline, "从未在线") }}</dd>
                         </div>
                     </dl>
                     <footer>
