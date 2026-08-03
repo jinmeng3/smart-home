@@ -6,7 +6,7 @@ import {
   type DeviceUpdate,
 } from "../composables/useBatchedDeviceUpdates";
 import { useHomeChat } from "../composables/useHomeChat";
-import { listDevices } from "../api/device";
+import { deviceService } from "../services/device";
 import {
   automations as mockAutomations,
   devices as mockDevices,
@@ -90,7 +90,7 @@ export const useHomeStore = defineStore("home", () => {
     devicesLoading.value = true;
 
     try {
-      const response = await listDevices({
+      const response = await deviceService.list({
         page: 1,
         pageSize: 20,
         keyword: "",

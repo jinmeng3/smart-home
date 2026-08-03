@@ -1,38 +1,25 @@
 import { onScopeDispose, ref } from "vue";
 import { defineStore } from "pinia";
-import {
-  addMember as apiAddMember,
-  deleteAvatar as apiDeleteAvatar,
-  deleteMember as apiDeleteMember,
-  getAccount,
-  listHouseholds,
-  listMembers,
-  updateAccount,
-  updateHousehold,
-  updateMemberRole as apiUpdateMemberRole,
-  uploadAvatar as apiUploadAvatar,
-} from "../api/account";
-import {
-  createAIModel,
-  activateAIModel,
-  getAIModel,
-  listAIModels,
-  updateAIModel,
-  type AIModelRead,
-} from "../api/aiModel";
+import { accountService } from "../services/account";
+import { aiModelService } from "../services/aiModel";
+import type { AIModelRead } from "../api/aiModel";
 import { ApiError } from "../api/client";
-import { defaultSettings } from "../mock/settings";
+import {
+  cloneSettings,
+  formatLocalTime,
+  loadBackupHistory,
+  loadSecurityMeta,
+  loadSettings,
+  mergeSettings,
+  normalizeModelLanguage,
+  persistBackupHistory,
+  persistSecurityMeta,
+  persistSettings,
+} from "../utils/settingsPersistence";
 import type {
   HouseholdRole,
-  ModelAdvancedSettings,
   SettingsState,
 } from "../types/settings";
-
-const storageKey = "smart-home-settings";
-const securityStorageKey = "smart-home-security-meta";
-const backupStorageKey = "smart-home-backup-history";
-
-const cloneSettings = (): SettingsState => structuredClone(defaultSettings);
 
 interface SecurityDevice {
   id: number;
@@ -62,91 +49,6 @@ interface BackupRecord {
   at: string;
   note: string;
 }
-
-const formatLocalTime = (date = new Date()) =>
-  new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-
-const loadJson = <T>(key: string, fallback: T): T => {
-  const raw = window.localStorage.getItem(key);
-
-  if (!raw) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-const normalizeModelLanguage = (
-  language: unknown,
-): ModelAdvancedSettings["language"] => {
-  if (language === "en-US" || language === "English") {
-    return "en-US";
-  }
-  if (language === "auto") {
-    return "auto";
-  }
-  return "zh-CN";
-};
-
-const mergeSettings = (nextSettings: Partial<SettingsState>): SettingsState => {
-  const defaults = cloneSettings();
-
-  return {
-    ...defaults,
-    ...nextSettings,
-    account: defaults.account,
-    appearance: { ...defaults.appearance, ...nextSettings.appearance },
-    aiAssistant: {
-      ...defaults.aiAssistant,
-      ...nextSettings.aiAssistant,
-      language: normalizeModelLanguage(nextSettings.aiAssistant?.language),
-    },
-    homeAssistant: {
-      ...defaults.homeAssistant,
-      ...nextSettings.homeAssistant,
-      accessToken: "",
-      parameters: nextSettings.homeAssistant?.parameters ?? "{}",
-    },
-    notifications: { ...defaults.notifications, ...nextSettings.notifications },
-    security: { ...defaults.security, ...nextSettings.security },
-    backup: { ...defaults.backup, ...nextSettings.backup },
-    summary: { ...defaults.summary, ...nextSettings.summary },
-  };
-};
-
-const loadSettings = (): SettingsState => {
-  const savedSettings = window.localStorage.getItem(storageKey);
-
-  if (!savedSettings) {
-    return cloneSettings();
-  }
-
-  try {
-    return mergeSettings(JSON.parse(savedSettings) as Partial<SettingsState>);
-  } catch {
-    return cloneSettings();
-  }
-};
-
-const getLocalPreferences = (
-  settings: SettingsState,
-): Partial<SettingsState> => ({
-  appearance: settings.appearance,
-  notifications: settings.notifications,
-  security: settings.security,
-  backup: settings.backup,
-  aiAssistant: settings.aiAssistant,
-});
 
 const isAdminRole = (role: string | undefined) =>
   role?.toLowerCase() === "admin";
@@ -184,10 +86,10 @@ const createDefaultSecurityMeta = (): SecurityMeta => ({
 export const useSettingsStore = defineStore("settings", () => {
   const settings = ref<SettingsState>(loadSettings());
   const securityMeta = ref<SecurityMeta>(
-    loadJson(securityStorageKey, createDefaultSecurityMeta()),
+    loadSecurityMeta(createDefaultSecurityMeta()),
   );
   const backupHistory = ref<BackupRecord[]>(
-    loadJson(backupStorageKey, [] as BackupRecord[]),
+    loadBackupHistory([] as BackupRecord[]),
   );
   const savedAt = ref<string | null>(null);
   const saveStatus = ref<"idle" | "saved">("idle");
@@ -197,30 +99,12 @@ export const useSettingsStore = defineStore("settings", () => {
   let accountHomePromise: Promise<void> | null = null;
   let saveStatusTimer = 0;
 
-  const persistLocalPreferences = () => {
-    window.localStorage.setItem(
-      storageKey,
-      JSON.stringify(getLocalPreferences(settings.value)),
-    );
-  };
-  const persistSecurityMeta = () => {
-    window.localStorage.setItem(
-      securityStorageKey,
-      JSON.stringify(securityMeta.value),
-    );
-  };
-  const persistBackupHistory = () => {
-    window.localStorage.setItem(
-      backupStorageKey,
-      JSON.stringify(backupHistory.value),
-    );
-  };
-  persistLocalPreferences();
-  persistSecurityMeta();
-  persistBackupHistory();
+  persistSettings(settings.value);
+  persistSecurityMeta(securityMeta.value);
+  persistBackupHistory(backupHistory.value);
 
   const saveSettings = () => {
-    persistLocalPreferences();
+    persistSettings(settings.value);
     if (settings.value.backup.autoBackup) {
       recordBackup("auto", "设置已保存时执行自动备份");
     }
@@ -248,13 +132,13 @@ export const useSettingsStore = defineStore("settings", () => {
     loading.value = true;
     accountHomePromise = (async () => {
       const [account, households] = await Promise.all([
-        getAccount(),
-        listHouseholds(),
+        accountService.getMe(),
+        accountService.listHouseholds(),
       ]);
       const householdEntries = await Promise.all(
         households.map(async (household) => ({
           household,
-          members: await listMembers(household.id),
+          members: await accountService.listMembers(household.id),
         })),
       );
       const householdEntry =
@@ -291,11 +175,11 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const loadAIModel = async () => {
     try {
-      aiModels.value = await listAIModels();
+      aiModels.value = await aiModelService.list();
       const model =
         aiModels.value.find((item) => item.is_active) ??
         aiModels.value[0] ??
-        (await getAIModel());
+        (await aiModelService.getCurrent());
 
       settings.value.aiAssistant = {
         ...settings.value.aiAssistant,
@@ -326,12 +210,12 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const saveAccountHome = async () => {
     const householdId = settings.value.account.householdId;
-    const accountRequest = updateAccount({
+    const accountRequest = accountService.updateMe({
       name: settings.value.account.username,
       email: settings.value.account.email,
     });
     const householdRequest = householdId
-      ? updateHousehold(householdId, {
+      ? accountService.updateHousehold(householdId, {
           name: settings.value.account.familyName,
           address: settings.value.account.householdAddress,
           timezone: settings.value.account.householdTimezone,
@@ -390,12 +274,12 @@ export const useSettingsStore = defineStore("settings", () => {
     let response;
 
     try {
-      response = await updateAIModel(payload);
+      response = await aiModelService.update(payload);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 404) {
         throw error;
       }
-      response = await createAIModel(payload);
+      response = await aiModelService.create(payload);
     }
 
     settings.value.aiAssistant = {
@@ -424,7 +308,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const selected = aiModels.value.find((model) => model.name === name);
     if (!selected) return;
 
-    const activeModel = await activateAIModel(selected.id);
+    const activeModel = await aiModelService.activate(selected.id);
     aiModels.value = aiModels.value.map((model) => ({
       ...model,
       is_active: model.id === activeModel.id,
@@ -447,12 +331,12 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const uploadAccountAvatar = async (file: File) => {
-    const response = await apiUploadAvatar(file);
+    const response = await accountService.uploadAvatar(file);
     settings.value.account.avatarUrl = response.avatar_url;
   };
 
   const deleteAccountAvatar = async () => {
-    const response = await apiDeleteAvatar();
+    const response = await accountService.deleteAvatar();
     settings.value.account.avatarUrl = response.avatar_url;
   };
 
@@ -460,7 +344,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    const member = await apiAddMember(householdId, { email, role });
+    const member = await accountService.addMember(householdId, { email, role });
     settings.value.account.members = [
       ...(settings.value.account.members ?? []),
       member,
@@ -474,7 +358,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    const updatedMember = await apiUpdateMemberRole(
+    const updatedMember = await accountService.updateMemberRole(
       householdId,
       membershipId,
       role,
@@ -489,7 +373,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    await apiDeleteMember(householdId, membershipId);
+    await accountService.deleteMember(householdId, membershipId);
     settings.value.account.members = (
       settings.value.account.members ?? []
     ).filter((member) => member.membershipId !== membershipId);
@@ -505,7 +389,7 @@ export const useSettingsStore = defineStore("settings", () => {
       },
       summary: runtimeSettings.summary,
     });
-    persistLocalPreferences();
+    persistSettings(settings.value);
     saveStatus.value = "idle";
   };
 
@@ -533,7 +417,7 @@ export const useSettingsStore = defineStore("settings", () => {
       },
       ...securityMeta.value.logs,
     ].slice(0, 8);
-    persistSecurityMeta();
+    persistSecurityMeta(securityMeta.value);
   };
 
   const changeLocalPassword = () => {
@@ -582,8 +466,8 @@ export const useSettingsStore = defineStore("settings", () => {
       ...backupHistory.value,
     ].slice(0, 6);
     settings.value.backup.lastBackupTime = at;
-    persistBackupHistory();
-    persistLocalPreferences();
+    persistBackupHistory(backupHistory.value);
+    persistSettings(settings.value);
   };
 
   const importSettings = (nextSettings: SettingsState) => {
@@ -598,7 +482,7 @@ export const useSettingsStore = defineStore("settings", () => {
       tokenConfigured: runtimeHomeAssistant.tokenConfigured,
       websocketStatus: runtimeHomeAssistant.websocketStatus,
     };
-    persistLocalPreferences();
+    persistSettings(settings.value);
     saveStatus.value = "idle";
   };
 

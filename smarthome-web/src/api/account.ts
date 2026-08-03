@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
-import type { HouseholdMember, HouseholdRole } from "../types/settings";
+import { toMember, type MemberListResponse, type MemberRead } from "./account/mappers";
+import type { HouseholdRole } from "../types/settings";
 
 export interface AccountRead {
   id: number;
@@ -16,31 +17,6 @@ export interface HouseholdRead {
   role?: HouseholdRole | "ADMIN" | "MEMBER";
   member_count?: number;
 }
-
-interface MemberRead {
-  membership_id: number;
-  user_id: number;
-  name: string;
-  email: string;
-  avatar_url: string | null;
-  role: HouseholdRole;
-  joined_at: string;
-}
-
-interface MemberListResponse {
-  items: MemberRead[];
-  total: number;
-}
-
-const toMember = (member: MemberRead): HouseholdMember => ({
-  membershipId: member.membership_id,
-  userId: member.user_id,
-  name: member.name,
-  email: member.email,
-  avatarUrl: member.avatar_url,
-  role: member.role,
-  joinedAt: member.joined_at,
-});
 
 export const getAccount = () => apiRequest<AccountRead>("/api/account/me");
 

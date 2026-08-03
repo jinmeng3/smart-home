@@ -1,14 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
-import {
-  createDevice,
-  deleteDevice,
-  getDevice,
-  listDeviceLogs,
-  listDevices,
-  syncDevices,
-  updateDevice,
-} from "../api/device";
+import { deviceService } from "../services/device";
 import type {
   Device,
   DeviceCreatePayload,
@@ -108,7 +100,7 @@ export const useDeviceManagementController = () => {
     }
 
     try {
-      selectedDevice.value = await getDevice(selectedId.value);
+      selectedDevice.value = await deviceService.get(selectedId.value);
     } catch (error) {
       selectedDevice.value = null;
       ElMessage.error(
@@ -121,7 +113,7 @@ export const useDeviceManagementController = () => {
     loading.value = true;
 
     try {
-      const response = await listDevices(filters);
+      const response = await deviceService.list(filters);
       devices.value = response.items;
       total.value = response.total;
 
@@ -193,10 +185,10 @@ export const useDeviceManagementController = () => {
 
     try {
       if (editingDevice.value) {
-        await updateDevice(editingDevice.value.id, payload);
+        await deviceService.update(editingDevice.value.id, payload);
         ElMessage.success("设备已更新");
       } else {
-        const created = await createDevice(payload);
+        const created = await deviceService.create(payload);
         selectedId.value = created.id;
         ElMessage.success("设备已添加");
       }
@@ -233,7 +225,7 @@ export const useDeviceManagementController = () => {
     deleting.value = true;
 
     try {
-      await deleteDevice(device.id);
+      await deviceService.remove(device.id);
       ElMessage.success("设备已删除");
       deleteDialogOpen.value = false;
       deletingDevice.value = null;
@@ -249,7 +241,7 @@ export const useDeviceManagementController = () => {
     syncing.value = true;
 
     try {
-      const response = await syncDevices("Home Assistant");
+      const response = await deviceService.sync("Home Assistant");
       ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
       await loadDevices();
     } catch (error) {
@@ -270,7 +262,7 @@ export const useDeviceManagementController = () => {
         return;
       }
 
-      void listDeviceLogs(selectedId.value)
+      void deviceService.listLogs(selectedId.value)
         .then((logs) => {
           const latest = logs[0];
           ElMessage.info(

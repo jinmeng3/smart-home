@@ -1,7 +1,9 @@
+import type { DeviceStatus } from "./device";
+
+export type { DeviceStatus };
+
 export type AgentStatus =
   "idle" | "thinking" | "executing" | "success" | "error";
-
-export type DeviceStatus = "online" | "offline" | "running" | "warning";
 
 export type SuggestionStatus = "pending" | "executing" | "completed" | "failed";
 

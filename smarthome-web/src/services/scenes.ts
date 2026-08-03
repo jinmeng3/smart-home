@@ -44,7 +44,10 @@ export const saveSceneDraft = (payload: SceneInput) =>
         body: JSON.stringify(payload),
     });
 
-export const updateSceneEnabled = async (scene: Scene, enabled: boolean) => {
+export const updateSceneEnabled = async (
+    scene: Pick<Scene, "id">,
+    enabled: boolean,
+) => {
     const result = await apiRequest<Pick<Scene, "id" | "enabled" | "updatedAt">>(
         `/api/scenes/${scene.id}/enabled`,
         { method: "PATCH", body: JSON.stringify({ enabled }) },

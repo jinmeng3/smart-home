@@ -1,10 +1,5 @@
 import { onScopeDispose, ref } from "vue";
-import {
-  createChatSession,
-  listChatMessages,
-  listChatSessions,
-  streamChatCompletion,
-} from "../api/chat";
+import { chatService } from "../services/chat";
 import type { AgentExecutionStep, AgentStatus } from "../types/animation";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
@@ -95,7 +90,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
   const refreshRecentConversations = async () => {
     try {
-      recentConversations.value = await listChatSessions();
+      recentConversations.value = await chatService.listRecentConversations();
     } catch {
       recentConversations.value = [];
     }
@@ -107,7 +102,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeSessionId.value = null;
 
     try {
-      const conversation = await createChatSession();
+      const conversation = await chatService.createSession();
       activeSessionId.value = conversation.id;
       recentConversations.value = [
         conversation,
@@ -125,7 +120,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeSessionId.value = sessionId;
 
     try {
-      messages.value = await listChatMessages(sessionId);
+      messages.value = await chatService.loadMessages(sessionId);
     } catch {
       messages.value = [];
     }
@@ -176,7 +171,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     };
 
     try {
-      await streamChatCompletion(
+      await chatService.streamCompletion(
         messages.value
           .filter((message) => message.content.trim())
           .slice(-12)

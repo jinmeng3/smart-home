@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { fetchRooms, runRoomQuickAction, updateRoomDevice } from "../api/room";
+import { roomService } from "../services/room";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import RoomControlDialogs, {
     type RoomDialog,
@@ -80,7 +80,7 @@ const load = async () => {
     loading.value = true;
 
     try {
-        const result = await fetchRooms(floor.value, roomType.value);
+        const result = await roomService.list(floor.value, roomType.value);
         rooms.value = result.items;
         selectedId.value = result.items[0]?.id;
         temperature.value = Math.round(result.items[0]?.temperature ?? 24);
@@ -92,7 +92,7 @@ const load = async () => {
 const quick = async (action: string) => {
     if (!selected.value) return;
 
-    replaceRoom(await runRoomQuickAction(selected.value.id, action));
+    replaceRoom(await roomService.runQuickAction(selected.value.id, action));
 };
 
 const selectRoom = (room: Room) => {
@@ -110,7 +110,7 @@ const toggleDevice = async (device: DeviceCard) => {
     if (!selected.value) return;
 
     replaceRoom(
-        await updateRoomDevice(
+        await roomService.updateDevice(
             selected.value.id,
             device.key,
             !selected.value.deviceStates[device.key],

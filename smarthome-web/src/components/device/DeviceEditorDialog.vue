@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus";
 import BaseModal from "../common/BaseModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { deviceTypeOptions } from "./deviceMeta";
-import { uploadDeviceImage } from "../../api/device";
+import { deviceService } from "../../services/device";
 import type {
     Device,
     DeviceCreatePayload,
@@ -122,7 +122,7 @@ const submit = async () => {
 
     if (pendingImageFile.value) {
         try {
-            form.imageUrl = await uploadDeviceImage(pendingImageFile.value);
+            form.imageUrl = await deviceService.uploadImage(pendingImageFile.value);
         } catch (error) {
             ElMessage.error(
                 error instanceof Error ? error.message : "图片上传失败",

@@ -1,41 +1,14 @@
 import { ref } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import {
+  confirmHighRiskScene,
+  isHighRiskScene,
+} from "../services/sceneRiskPolicy";
 import type { useScenesStore } from "../stores/scenes";
 import type { Scene, SceneInput, SceneTemplate } from "../types/scene";
 
 type ScenesStore = ReturnType<typeof useScenesStore>;
 type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
-
-const highRiskDeviceKeywords = ["lock", "camera"];
-
-const isHighRiskScene = (scene: Scene) =>
-    scene.highRisk === true ||
-    scene.id === "away" ||
-    scene.steps.some((step) =>
-        highRiskDeviceKeywords.some((keyword) => step.deviceId.includes(keyword)),
-    );
-
-const confirmHighRiskScene = async (scene: Scene) => {
-    if (!isHighRiskScene(scene)) {
-        return true;
-    }
-
-    try {
-        await ElMessageBox.confirm(
-            `${scene.name} 包含门锁或安防相关动作，确认执行？`,
-            "高风险动作确认",
-            {
-                confirmButtonText: "确认执行",
-                cancelButtonText: "取消",
-                type: "warning",
-            },
-        );
-
-        return true;
-    } catch {
-        return false;
-    }
-};
 
 export const useSceneModeController = (store: ScenesStore) => {
     const createDialogOpen = ref(false);

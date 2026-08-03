@@ -85,9 +85,9 @@ export const useScenesStore = defineStore("scenes", () => {
     const setSceneEnabled = async (sceneId: string, enabled: boolean) => {
         const scene = scenes.value.find((item) => item.id === sceneId);
         if (!scene) throw new Error("场景不存在");
-        const updatedScene = await updateSceneEnabled(scene, enabled);
-        scenes.value = scenes.value.map((scene) =>
-            scene.id === sceneId ? updatedScene : scene,
+        const updated = await updateSceneEnabled(scene, enabled);
+        scenes.value = scenes.value.map((item) =>
+            item.id === sceneId ? { ...item, ...updated } : item,
         );
         summary.value = await getSceneSummary();
     };
