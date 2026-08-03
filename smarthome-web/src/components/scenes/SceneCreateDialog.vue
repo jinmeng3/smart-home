@@ -37,15 +37,12 @@ const actions = [
     { id: "camera", icon: "camera", name: "摄像头切换在家模式", target: "摄像头 · 在家模式" },
 ];
 
-const triggerLabel = computed(() =>
-    form.triggerType === "location"
-        ? `位置触发（${form.triggerLabel}）`
-        : form.triggerType === "schedule"
-          ? "定时触发"
-          : form.triggerType === "device"
-            ? "设备触发"
-            : "手动执行",
-);
+const triggerLabel = computed(() => {
+    if (form.triggerType === "location") return `位置触发（${form.triggerLabel}）`;
+    if (form.triggerType === "schedule") return "定时触发";
+    if (form.triggerType === "device") return "设备触发";
+    return "手动执行";
+});
 
 const createScene = () => {
     emit("create");
@@ -59,7 +56,7 @@ const createScene = () => {
         title="创建场景"
         description="配置场景信息、触发条件与执行动作"
         icon="home"
-        width="880px"
+        width="920px"
         confirm-text="创建场景"
         cancel-text="取消"
         show-footer
@@ -68,10 +65,10 @@ const createScene = () => {
         <div class="create-dialog">
             <section class="create-form">
                 <nav class="create-steps" aria-label="创建步骤">
-                    <span class="active">1 基本信息</span>
-                    <span>2 触发条件</span>
-                    <span>3 执行动作</span>
-                    <span>4 预览发布</span>
+                    <span class="active"><b>1</b>基本信息</span>
+                    <span><b>2</b>触发条件</span>
+                    <span><b>3</b>执行动作</span>
+                    <span><b>4</b>预览发布</span>
                 </nav>
 
                 <section class="form-block">
@@ -86,7 +83,7 @@ const createScene = () => {
                             <textarea v-model="form.description" rows="2" />
                         </label>
                     </div>
-                    <div class="picker-row">
+                    <div class="option-row">
                         <span>场景图标</span>
                         <button
                             v-for="item in iconOptions"
@@ -98,18 +95,17 @@ const createScene = () => {
                             <SvgIcon :name="item" />
                         </button>
                     </div>
-                    <div class="picker-row">
+                    <div class="option-row">
                         <span>场景主色</span>
                         <button
                             v-for="item in colorOptions"
                             :key="item"
                             :class="{ active: form.color === item }"
                             :style="{ color: item }"
+                            class="color-dot"
                             type="button"
                             @click="form.color = item"
-                        >
-                            ●
-                        </button>
+                        />
                     </div>
                 </section>
 
@@ -143,7 +139,9 @@ const createScene = () => {
                         </label>
                         <label>
                             <span>关联设备</span>
-                            <button type="button">共 8 个设备 <SvgIcon name="chevron-right" /></button>
+                            <button class="select-device" type="button">
+                                共 8 个设备 <SvgIcon name="chevron-right" />
+                            </button>
                         </label>
                     </div>
                 </section>
@@ -156,7 +154,9 @@ const createScene = () => {
                             <SvgIcon :name="action.icon" />
                             <strong>{{ action.name }}</strong>
                             <small>{{ action.target }}</small>
-                            <SvgIcon name="more" />
+                            <button type="button" title="更多操作">
+                                <SvgIcon name="more" />
+                            </button>
                         </li>
                     </ol>
                     <button class="add-action" type="button">+ 添加执行动作</button>
@@ -192,7 +192,7 @@ const createScene = () => {
             </aside>
         </div>
         <template #footerHint>
-            您可以在创建后随时编辑和调整场景设置。
+            您可以在创建后继续编辑和调整场景设置。
         </template>
     </BaseSmartModal>
 </template>
@@ -200,12 +200,20 @@ const createScene = () => {
 <style scoped>
 .create-dialog {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: 16px;
+    align-items: start;
 }
 
-.create-form,
+.create-form {
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+}
+
 .create-preview {
+    position: sticky;
+    top: 0;
     min-width: 0;
 }
 
@@ -213,21 +221,39 @@ const createScene = () => {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
-    margin-bottom: 14px;
     color: var(--color-text-tertiary);
     font-size: 12px;
     font-weight: 900;
 }
 
 .create-steps span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     border-bottom: 2px solid var(--color-border);
-    padding-bottom: 8px;
-    text-align: center;
+    padding-bottom: 9px;
+    white-space: nowrap;
+}
+
+.create-steps b {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    font-size: 11px;
 }
 
 .create-steps .active {
     border-color: var(--color-primary-600);
     color: var(--color-primary-600);
+}
+
+.create-steps .active b {
+    background: var(--color-primary-600);
+    color: var(--color-text-on-primary);
 }
 
 .form-block,
@@ -236,10 +262,6 @@ const createScene = () => {
     border-radius: 10px;
     background: var(--color-card-bg);
     padding: 12px;
-}
-
-.form-block + .form-block {
-    margin-top: 10px;
 }
 
 h3,
@@ -284,7 +306,7 @@ textarea {
     outline: 0;
 }
 
-.picker-row,
+.option-row,
 .trigger-tabs,
 .preview-card,
 dl,
@@ -294,21 +316,21 @@ dl,
     align-items: center;
 }
 
-.picker-row {
-    gap: 10px;
+.option-row {
+    gap: 9px;
     margin-top: 12px;
 }
 
-.picker-row > span {
+.option-row > span {
     width: 76px;
     color: var(--color-text-tertiary);
     font-size: 12px;
     font-weight: 900;
 }
 
-.picker-row button,
+.option-row button,
 .trigger-tabs button,
-.room-device-row button {
+.select-device {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -323,9 +345,17 @@ dl,
     font-weight: 900;
 }
 
-.picker-row button {
+.option-row button {
     width: 34px;
     padding: 0;
+}
+
+.color-dot::before {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: currentColor;
+    content: "";
 }
 
 button.active {
@@ -340,7 +370,7 @@ button.active {
 }
 
 .inline-field {
-    max-width: 300px;
+    max-width: 320px;
 }
 
 .chips {
@@ -370,9 +400,9 @@ button.active {
 
 .action-list li {
     display: grid;
-    grid-template-columns: 24px 28px minmax(0, 1fr) minmax(0, 1fr) 24px;
+    grid-template-columns: 24px 28px minmax(0, 1fr) minmax(0, 1fr) 28px;
     gap: 8px;
-    min-height: 36px;
+    min-height: 38px;
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -397,6 +427,15 @@ button.active {
 .action-list small {
     color: var(--color-text-tertiary);
     font-size: 12px;
+}
+
+.action-list button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 7px;
+    color: var(--color-text-tertiary);
 }
 
 .add-action {
@@ -457,9 +496,14 @@ button.active {
 }
 
 dl {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 12px 0;
+}
+
+dl div:last-child {
+    grid-column: 1 / -1;
 }
 
 dt,
@@ -473,8 +517,11 @@ dt {
 }
 
 dd {
+    overflow: hidden;
     color: var(--color-text-primary);
     font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .create-preview h4 {
@@ -498,6 +545,7 @@ dd {
 }
 
 .create-preview li > svg {
+    flex: 0 0 auto;
     color: var(--color-primary-600);
 }
 
@@ -527,6 +575,18 @@ dd {
 
 @media (max-width: 980px) {
     .create-dialog {
+        grid-template-columns: 1fr;
+    }
+
+    .create-preview {
+        position: static;
+    }
+}
+
+@media (max-width: 680px) {
+    .create-steps,
+    .form-grid,
+    .room-device-row {
         grid-template-columns: 1fr;
     }
 }

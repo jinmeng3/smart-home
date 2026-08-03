@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     allowed_avatar_types: set[str] = Field(
         default_factory=lambda: {"image/jpeg", "image/png", "image/webp"}
     )
+    max_device_image_size: int = 5 * 1024 * 1024
+    allowed_device_image_types: set[str] = Field(
+        default_factory=lambda: {"image/jpeg", "image/png", "image/webp"}
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -41,6 +45,10 @@ class Settings(BaseSettings):
     @property
     def avatar_dir(self) -> Path:
         return Path(self.upload_dir) / "avatars"
+
+    @property
+    def device_image_dir(self) -> Path:
+        return Path(self.upload_dir) / "devices"
 
 
 @lru_cache

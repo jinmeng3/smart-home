@@ -48,6 +48,26 @@ const detailText = computed(() => {
     return `${device.room} · ${device.status}${device.value ? ` · ${device.value}` : ""} · ${device.updatedAt}`;
 });
 
+const statusLabelMap: Record<string, string> = {
+    online: "在线",
+    offline: "离线",
+    running: "运行中",
+    warning: "告警",
+};
+
+const formatUpdatedAt = (value: string) => {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+
+    if (match) {
+        return `${match[1]} ${match[2]}`;
+    }
+
+    return value;
+};
+
+const statusLabel = (device: DashboardDevice) =>
+    statusLabelMap[device.status] ?? device.status;
+
 const openDevice = async (device: DashboardDevice, event: MouseEvent) => {
     lastFocusedElement.value = event.currentTarget as HTMLElement;
     store.selectDevice(device);
@@ -84,9 +104,6 @@ onBeforeUnmount(() => {
                 <SvgIcon name="device-management" size="sm" />
                 设备清单
             </h2>
-            <a class="motion-button text-xs font-bold text-blue-600" href="#"
-                >更多</a
-            >
         </div>
 
         <div class="mb-2 flex justify-between text-sm text-slate-500">
@@ -144,31 +161,59 @@ onBeforeUnmount(() => {
         >
             {{ detailText }}
         </p>
-        <a
+        <RouterLink
             class="motion-button mt-2 block text-center text-xs font-bold text-blue-600"
-            href="#"
-            >查看全部设备</a
+            to="/devices"
+            >查看全部设备</RouterLink
         >
 
         <BaseSmartModal
             :model-value="store.deviceDrawerOpen"
-            description="查看设备状态与最近更新时间"
             icon="device-management"
             title="设备详情"
             width="560px"
             @update:model-value="$event ? undefined : closeDrawer()"
         >
+            <template #header>
+                <header class="device-modal-header">
+                    <h2>设备详情</h2>
+                    <button type="button" aria-label="关闭" @click="closeDrawer">
+                        <SvgIcon name="close" size="sm" />
+                    </button>
+                </header>
+            </template>
             <section v-if="store.selectedDevice" class="device-detail-card">
-                <div class="device-detail-heading">
-                    <strong>{{ store.selectedDevice.name }}</strong>
-                    <span class="orion-status-badge is-online">{{ store.selectedDevice.status }}</span>
+                <div class="device-detail-summary">
+                    <div class="device-detail-icon">
+                        <img
+                            v-if="store.selectedDevice.image"
+                            :src="store.selectedDevice.image"
+                            alt=""
+                        />
+                        <SvgIcon
+                            v-else
+                            :name="deviceIconName(store.selectedDevice)"
+                            size="lg"
+                        />
+                    </div>
+                    <div class="device-detail-title">
+                        <strong>{{ store.selectedDevice.name }}</strong>
+                        <span>{{ store.selectedDevice.type }}</span>
+                        <em>
+                            <i :class="`is-${store.selectedDevice.status}`"></i>
+                            {{ statusLabel(store.selectedDevice) }}
+                        </em>
+                    </div>
                 </div>
                 <dl>
                     <div><dt>房间</dt><dd>{{ store.selectedDevice.room }}</dd></div>
-                    <div><dt>当前数值</dt><dd>{{ store.selectedDevice.value ?? "无" }}</dd></div>
-                    <div><dt>更新时间</dt><dd>{{ store.selectedDevice.updatedAt }}</dd></div>
+                    <div><dt>品牌</dt><dd>{{ store.selectedDevice.brand ?? "暂无" }}</dd></div>
+                    <div><dt>连接方式</dt><dd>{{ store.selectedDevice.connection ?? "暂无" }}</dd></div>
+                    <div><dt>固件版本</dt><dd>{{ store.selectedDevice.firmware ?? "暂无" }}</dd></div>
+                    <div><dt>最后同步</dt><dd>{{ formatUpdatedAt(store.selectedDevice.updatedAt) }}</dd></div>
                 </dl>
             </section>
+            <template #footer></template>
         </BaseSmartModal>
     </section>
 </template>
@@ -178,26 +223,154 @@ onBeforeUnmount(() => {
     animation: device-highlight 600ms var(--motion-ease) both;
 }
 
-.device-detail-card {
-    padding: 18px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 16px;
-    background: var(--color-surface-subtle);
-}
-
-.device-detail-heading,
-.device-detail-card dl > div {
+.device-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+}
+
+.device-modal-header h2 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.device-modal-header button {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+    background: transparent;
+}
+
+.device-modal-header button:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
+}
+
+.device-detail-card {
+    display: grid;
+    gap: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 18px;
+}
+
+.device-detail-summary {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
     gap: 16px;
 }
 
-.device-detail-heading strong { font-size: 16px; }
-.device-detail-card dl { display: grid; gap: 12px; margin: 18px 0 0; }
-.device-detail-card dl > div { padding-top: 12px; border-top: 1px solid var(--color-border-subtle); }
-.device-detail-card dt { color: var(--color-text-tertiary); font-size: 14px; }
-.device-detail-card dd { margin: 0; color: var(--color-text-primary); font-size: 14px; font-weight: 600; }
+.device-detail-icon {
+    display: grid;
+    width: 104px;
+    height: 104px;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    color: var(--color-primary-700);
+}
+
+.device-detail-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.device-detail-title {
+    display: grid;
+    min-width: 0;
+    gap: 7px;
+}
+
+.device-detail-title strong {
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: 18px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-detail-title span {
+    color: var(--color-text-tertiary);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.device-detail-title em {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    padding: 5px 10px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.device-detail-title i {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.device-detail-title i.is-online { background: var(--color-success); }
+.device-detail-title i.is-running { background: var(--color-info); }
+.device-detail-title i.is-warning { background: var(--color-warning); }
+.device-detail-title i.is-offline { background: var(--color-text-muted); }
+
+.device-detail-card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.device-detail-card dl > div {
+    min-width: 0;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    background: var(--color-panel-secondary);
+    padding: 12px;
+}
+
+.device-detail-card dl > div:last-child {
+    grid-column: 1 / -1;
+}
+
+.device-detail-card dt {
+    margin-bottom: 7px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.device-detail-card dd {
+    overflow: hidden;
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 15px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 @keyframes device-highlight {
     0% {

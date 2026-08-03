@@ -18,7 +18,15 @@ defineEmits<{
     remove: [device: Device];
 }>();
 
-const formatLastOnline = (value: string) => value || "从未在线";
+const formatLastOnline = (value: string) => {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+
+    if (match) {
+        return `${match[1]} ${match[2]}`;
+    }
+
+    return value || "从未在线";
+};
 const iconNameMap: Record<Device["type"], string> = {
     light: "light",
     air_conditioner: "air-conditioner",
@@ -64,7 +72,6 @@ const iconNameMap: Record<Device["type"], string> = {
         <td>{{ formatLastOnline(device.lastOnline) }}</td>
         <td>
             <div class="device-row-actions">
-                <button type="button" @click.stop="$emit('select', device)">详情</button>
                 <button type="button" @click.stop="$emit('edit', device)">编辑</button>
                 <button type="button" @click.stop="$emit('remove', device)">删除</button>
             </div>
@@ -91,11 +98,13 @@ const iconNameMap: Record<Device["type"], string> = {
 }
 
 .device-row td {
+    overflow: hidden;
     border-top: 1px solid var(--color-border-subtle);
     padding: 12px 10px;
     color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 600;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -170,9 +179,11 @@ const iconNameMap: Record<Device["type"], string> = {
 .device-row-actions {
     display: flex;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .device-row-actions button {
+    flex: 0 0 auto;
     border: 0;
     background: transparent;
     color: var(--color-primary-600);

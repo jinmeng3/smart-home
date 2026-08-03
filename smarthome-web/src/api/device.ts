@@ -172,3 +172,13 @@ export const listDeviceLogs = async (id: number): Promise<DeviceLog[]> => {
 
   return response.items.map(mapDeviceLog);
 };
+
+export const uploadDeviceImage = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<string>("/api/devices/images", {
+    method: "POST",
+    body: formData,
+  });
+};

@@ -57,28 +57,55 @@ const accountInitial = computed(() =>
 const selectMenu = async (item: MenuItem) => {
     store.setActiveMenu(item.label);
 
-    if (item.path === "/" && route.path === "/") {
+    if (item.path === "/" && !authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
+    if (item.path && item.path !== route.path) {
         if (!authStore.isAuthenticated) {
             authStore.openLogin();
             return;
         }
 
-        await store.startNewConversation();
-    }
-
-    if (item.path && item.path !== route.path) {
         await router.push(item.path);
     }
+};
+
+const startConversation = async () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
+    if (route.path !== "/") {
+        await router.push("/");
+    }
+
+    await store.startNewConversation();
+};
+
+const openConversation = async (sessionId: string) => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
+    if (route.path !== "/") {
+        await router.push("/");
+    }
+
+    await store.loadConversation(sessionId);
 };
 </script>
 
 <template>
     <aside
-        class="page-enter-stagger relative min-h-0 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
+        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
         :class="store.sidebarCollapsed ? 'px-2' : 'px-4'"
     >
         <div
-            class="mb-6 flex items-center"
+            class="mb-6 flex shrink-0 items-center"
             :class="store.sidebarCollapsed ? 'justify-center' : 'gap-3'"
         >
             <button
@@ -112,7 +139,7 @@ const selectMenu = async (item: MenuItem) => {
             </button>
         </div>
 
-        <nav class="grid gap-1">
+        <nav class="grid shrink-0 gap-1">
             <button
                 v-for="item in menuItems"
                 :key="item.label"
@@ -138,12 +165,38 @@ const selectMenu = async (item: MenuItem) => {
             </button>
         </nav>
 
+        <section
+            v-show="route.path === '/' && !store.sidebarCollapsed"
+            class="conversation-panel"
+        >
+            <div class="conversation-heading">
+                <span>最近会话</span>
+                <button type="button" @click="startConversation">
+                    <SvgIcon name="plus" size="sm" />
+                    新建
+                </button>
+            </div>
+            <div v-if="store.recentConversations.length" class="conversation-list">
+                <button
+                    v-for="conversation in store.recentConversations"
+                    :key="conversation.id"
+                    class="conversation-item"
+                    type="button"
+                    @click="openConversation(conversation.id)"
+                >
+                    <span>{{ conversation.title }}</span>
+                    <small>{{ conversation.time }}</small>
+                </button>
+            </div>
+            <p v-else class="conversation-empty">暂无会话</p>
+        </section>
+
         <button
-            class="absolute bottom-5 flex items-center overflow-hidden border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-sm transition-[left,right,width,height,transform,border-radius,padding] duration-500 ease-out"
+            class="mt-auto flex shrink-0 items-center overflow-hidden border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-sm transition-[width,height,transform,border-radius,padding] duration-500 ease-out"
             :class="
                 store.sidebarCollapsed
-                    ? 'left-1/2 h-11 w-11 -translate-x-1/2 justify-center gap-0 rounded-full p-0'
-                    : 'left-4 right-4 h-[74px] translate-x-0 justify-start gap-3 rounded-xl p-3'
+                    ? 'h-11 w-11 self-center justify-center gap-0 rounded-full p-0'
+                    : 'h-[74px] w-full justify-start gap-3 rounded-xl p-3'
             "
             type="button"
             @click="authStore.openLogin"
@@ -175,3 +228,85 @@ const selectMenu = async (item: MenuItem) => {
         </button>
     </aside>
 </template>
+
+<style scoped>
+.conversation-panel {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    margin-top: 14px;
+    margin-bottom: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.conversation-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.conversation-heading button {
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    gap: 4px;
+    border-radius: 8px;
+    padding: 0 8px;
+    color: var(--color-primary-700);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.conversation-list {
+    display: grid;
+    min-height: 0;
+    gap: 6px;
+    margin-top: 8px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.conversation-item {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 8px 9px;
+    text-align: left;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.conversation-item:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-primary-700);
+}
+
+.conversation-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.conversation-item small {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.conversation-empty {
+    margin: 10px 0 0;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+</style>

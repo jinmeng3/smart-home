@@ -85,6 +85,10 @@ export interface DashboardDevice {
   room: string;
   online: boolean;
   updatedAt: string;
+  brand?: string;
+  connection?: DevicePlatform;
+  firmware?: string;
+  image?: string;
 }
 
 export interface DeviceSummary {

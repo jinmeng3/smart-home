@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import BaseModal from "../common/BaseModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { deviceTypeOptions } from "./deviceMeta";
+import { uploadDeviceImage } from "../../api/device";
 import type {
     Device,
     DeviceCreatePayload,
@@ -33,6 +35,7 @@ const form = reactive<DeviceCreatePayload>({
 });
 const imagePreviewUrl = ref("");
 const imageFileName = ref("");
+const pendingImageFile = ref<File | null>(null);
 
 const deviceTypeIconMap: Record<DeviceType, string> = {
     light: "light",
@@ -48,6 +51,13 @@ const selectedTypeMeta = computed(() =>
     deviceTypeOptions.find((item) => item.value === form.type),
 );
 const selectedTypeIcon = computed(() => deviceTypeIconMap[form.type]);
+const canSubmit = computed(
+    () =>
+        Boolean(form.name.trim()) &&
+        Boolean(form.room.trim()) &&
+        Boolean(form.brand.trim()) &&
+        !props.loading,
+);
 
 const releasePreviewUrl = () => {
     if (imagePreviewUrl.value.startsWith("blob:")) {
@@ -57,6 +67,7 @@ const releasePreviewUrl = () => {
 
 const resetForm = () => {
     releasePreviewUrl();
+    pendingImageFile.value = null;
     form.name = props.device?.name ?? "";
     form.room = props.device?.room ?? "";
     form.type = props.device?.type ?? "light";
@@ -77,13 +88,14 @@ const handleImageChange = (event: Event) => {
     }
 
     releasePreviewUrl();
+    pendingImageFile.value = file;
     imagePreviewUrl.value = URL.createObjectURL(file);
     imageFileName.value = file.name;
-    form.imageUrl = `/uploads/devices/${encodeURIComponent(file.name)}`;
 };
 
 const clearImage = () => {
     releasePreviewUrl();
+    pendingImageFile.value = null;
     imagePreviewUrl.value = "";
     imageFileName.value = "";
     form.imageUrl = "";
@@ -94,12 +106,24 @@ const close = () => {
         return;
     }
 
+    pendingImageFile.value = null;
     emit("update:modelValue", false);
 };
 
-const submit = () => {
+const submit = async () => {
     if (!form.name.trim() || !form.room.trim() || !form.brand.trim()) {
         return;
+    }
+
+    if (pendingImageFile.value) {
+        try {
+            form.imageUrl = await uploadDeviceImage(pendingImageFile.value);
+        } catch (error) {
+            ElMessage.error(
+                error instanceof Error ? error.message : "图片上传失败",
+            );
+            return;
+        }
     }
 
     emit("submit", {
@@ -131,7 +155,7 @@ onBeforeUnmount(releasePreviewUrl);
         :model-value="modelValue"
         show-footer
         :title="device ? '编辑设备' : '添加设备'"
-        width="620px"
+        width="720px"
         @confirm="submit"
         @update:model-value="emit('update:modelValue', $event)"
     >
@@ -157,15 +181,16 @@ onBeforeUnmount(releasePreviewUrl);
         </template>
 
         <form class="device-form" @submit.prevent="submit">
-            <section class="device-upload-card">
+            <section class="device-editor-hero">
                 <div class="device-upload-preview">
                     <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="" />
                     <SvgIcon v-else :name="selectedTypeIcon" size="lg" />
                 </div>
-                <div class="device-upload-meta">
-                    <strong>{{ selectedTypeMeta?.label ?? "设备图片" }}</strong>
-                    <p>{{ imageFileName || "支持 PNG、JPG、WEBP，后端保存到 /uploads/devices" }}</p>
-                    <div>
+                <div class="device-editor-summary">
+                    <span>{{ device ? "正在编辑" : "新建设备" }}</span>
+                    <strong>{{ form.name || "未命名设备" }}</strong>
+                    <p>{{ form.room || "未设置房间" }} · {{ selectedTypeMeta?.label ?? "设备" }}</p>
+                    <div class="device-upload-actions">
                         <label class="device-upload-button">
                             <SvgIcon name="plus" />
                             上传图片
@@ -184,45 +209,63 @@ onBeforeUnmount(releasePreviewUrl);
                             移除
                         </button>
                     </div>
+                    <small>{{ imageFileName || "支持 PNG、JPG、WEBP，保存后关联设备图片" }}</small>
                 </div>
             </section>
 
-            <label>
-                <span>设备名称</span>
-                <input v-model="form.name" maxlength="80" placeholder="例如：客厅灯带" />
-            </label>
-            <label>
-                <span>所在房间</span>
-                <input v-model="form.room" maxlength="80" placeholder="例如：客厅" />
-            </label>
-            <label>
-                <span>设备类型</span>
-                <select v-model="form.type">
-                    <option
-                        v-for="item in deviceTypeOptions.filter((item) => item.value)"
-                        :key="item.value"
-                        :value="item.value as DeviceType"
-                    >
-                        {{ item.label }}
-                    </option>
-                </select>
-            </label>
-            <label>
-                <span>品牌</span>
-                <input v-model="form.brand" maxlength="64" placeholder="例如：Orion" />
-            </label>
-            <label>
-                <span>接入平台</span>
-                <select v-model="form.connection">
-                    <option v-for="platform in platforms" :key="platform" :value="platform">
-                        {{ platform }}
-                    </option>
-                </select>
-            </label>
-            <label>
-                <span>固件版本</span>
-                <input v-model="form.firmware" maxlength="64" placeholder="1.0.0" />
-            </label>
+            <section class="device-form-section">
+                <header>
+                    <h3>基础信息</h3>
+                    <span>用于设备清单、筛选和详情展示</span>
+                </header>
+                <div class="device-form-grid">
+                    <label>
+                        <span>设备名称 <em>*</em></span>
+                        <input v-model="form.name" maxlength="80" placeholder="例如：客厅主灯" />
+                    </label>
+                    <label>
+                        <span>所在房间 <em>*</em></span>
+                        <input v-model="form.room" maxlength="80" placeholder="例如：客厅" />
+                    </label>
+                    <label>
+                        <span>设备类型</span>
+                        <select v-model="form.type">
+                            <option
+                                v-for="item in deviceTypeOptions.filter((item) => item.value)"
+                                :key="item.value"
+                                :value="item.value as DeviceType"
+                            >
+                                {{ item.label }}
+                            </option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>品牌 <em>*</em></span>
+                        <input v-model="form.brand" maxlength="64" placeholder="例如：Aqara" />
+                    </label>
+                </div>
+            </section>
+
+            <section class="device-form-section">
+                <header>
+                    <h3>接入信息</h3>
+                    <span>同步平台和固件版本会显示在设备详情中</span>
+                </header>
+                <div class="device-form-grid">
+                    <label>
+                        <span>接入平台</span>
+                        <select v-model="form.connection">
+                            <option v-for="platform in platforms" :key="platform" :value="platform">
+                                {{ platform }}
+                            </option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>固件版本</span>
+                        <input v-model="form.firmware" maxlength="64" placeholder="1.0.0" />
+                    </label>
+                </div>
+            </section>
         </form>
 
         <template #footer>
@@ -239,7 +282,7 @@ onBeforeUnmount(releasePreviewUrl);
                     </button>
                     <button
                         class="device-submit-button"
-                        :disabled="loading"
+                        :disabled="!canSubmit"
                         type="button"
                         @click="submit"
                     >
@@ -312,30 +355,28 @@ onBeforeUnmount(releasePreviewUrl);
 
 .device-form {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 16px;
 }
 
-.device-upload-card {
+.device-editor-hero {
     display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: 112px minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: 128px minmax(0, 1fr);
     align-items: center;
+    gap: 16px;
     border: 1px solid var(--color-border);
-    border-radius: 14px;
-    background: var(--color-surface-subtle);
-    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    padding: 16px;
 }
 
 .device-upload-preview {
     display: grid;
-    width: 112px;
-    height: 86px;
+    width: 128px;
+    height: 112px;
     place-items: center;
     overflow: hidden;
     border: 1px dashed var(--color-border-strong);
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--color-card-bg);
     color: var(--color-primary-600);
 }
@@ -346,19 +387,30 @@ onBeforeUnmount(releasePreviewUrl);
     object-fit: cover;
 }
 
-.device-upload-meta {
+.device-editor-summary {
+    display: grid;
     min-width: 0;
+    gap: 5px;
 }
 
-.device-upload-meta strong {
-    display: block;
-    color: var(--color-text-primary);
-    font-size: 15px;
+.device-editor-summary > span {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
     font-weight: 900;
 }
 
-.device-upload-meta p {
-    margin: 4px 0 12px;
+.device-editor-summary strong {
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: 19px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-editor-summary p,
+.device-editor-summary small {
+    margin: 0;
     overflow: hidden;
     color: var(--color-text-tertiary);
     font-size: 13px;
@@ -367,30 +419,80 @@ onBeforeUnmount(releasePreviewUrl);
     white-space: nowrap;
 }
 
-.device-upload-meta > div,
+.device-editor-summary small {
+    margin-top: 2px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.device-upload-actions,
 .device-dialog-footer,
 .device-dialog-footer div {
     display: flex;
     align-items: center;
 }
 
-.device-upload-meta > div {
+.device-upload-actions {
+    margin-top: 8px;
     gap: 8px;
 }
 
-.device-form label {
+.device-form-section {
+    display: grid;
+    gap: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 16px;
+}
+
+.device-form-section header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 12px;
+}
+
+.device-form-section h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.device-form-section header span {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.device-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.device-form-grid label {
     display: grid;
     gap: 7px;
 }
 
-.device-form span {
+.device-form-grid span {
     color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 800;
 }
 
-.device-form input,
-.device-form select {
+.device-form-grid em {
+    color: var(--color-danger);
+    font-style: normal;
+}
+
+.device-form-grid input,
+.device-form-grid select {
     width: 100%;
     height: 42px;
     border: 1px solid var(--color-border-default);
@@ -404,8 +506,8 @@ onBeforeUnmount(releasePreviewUrl);
         box-shadow 160ms var(--motion-ease);
 }
 
-.device-form input:focus,
-.device-form select:focus {
+.device-form-grid input:focus,
+.device-form-grid select:focus {
     border-color: var(--color-primary-400);
     box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
@@ -497,8 +599,8 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-    .device-form,
-    .device-upload-card {
+    .device-editor-hero,
+    .device-form-grid {
         grid-template-columns: 1fr;
     }
 
@@ -514,13 +616,21 @@ button:disabled {
     .device-dialog-footer div {
         justify-content: flex-end;
     }
+
+    .device-form-section header {
+        display: grid;
+    }
+
+    .device-form-section header span {
+        text-align: left;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     button,
     .device-upload-button,
-    .device-form input,
-    .device-form select {
+    .device-form-grid input,
+    .device-form-grid select {
         transition-duration: 1ms;
     }
 

@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, File, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import DB_DEPENDENCY
+from app.api.deps import DB_DEPENDENCY, SETTINGS_DEPENDENCY
+from app.core.config import Settings
 from app.schemas.common import ApiResponse
 from app.schemas.device import (
     DeviceCreate,
@@ -22,18 +25,20 @@ from app.services.device import (
     read_device,
     sync_devices,
     update_device,
+    upload_device_image,
 )
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 # FastAPI 参数对象在模块加载时创建，避免在函数默认值中执行调用。
-DEVICE_QUERY_PARAMS = Query()
+DEVICE_ID_QUERY = Query(default=None)
 LOG_PAGE_QUERY = Query(default=1, ge=1)
 LOG_PAGE_SIZE_QUERY = Query(default=20, ge=1, le=100)
+UPLOAD_IMAGE_FILE = File(...)
 
 
 @router.get("", response_model=ApiResponse[DeviceListRead])
 def get_devices(
-    params: DeviceQueryParams = DEVICE_QUERY_PARAMS,
+    params: Annotated[DeviceQueryParams, Query()],
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[DeviceListRead]:
     """按关键字和设备属性筛选分页列表。"""
@@ -94,3 +99,14 @@ def get_device_logs(
 ) -> ApiResponse[DeviceLogListRead]:
     """分页读取指定设备的操作日志。"""
     return ApiResponse(data=list_device_logs(db, device_id, page, page_size))
+
+
+@router.post("/images", response_model=ApiResponse[str])
+def upload_image(
+    file: UploadFile = UPLOAD_IMAGE_FILE,
+    device_id: int | None = DEVICE_ID_QUERY,
+    db: Session = DB_DEPENDENCY,
+    settings: Settings = SETTINGS_DEPENDENCY,
+) -> ApiResponse[str]:
+    """上传设备图片，可选关联已有设备。"""
+    return ApiResponse.ok(data=upload_device_image(db, device_id, file, settings))

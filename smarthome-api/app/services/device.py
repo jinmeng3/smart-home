@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.models.device import Device, DeviceLog
 from app.schemas.device import (
     DeviceCreate,
@@ -19,6 +20,12 @@ from app.schemas.device import (
     DeviceSyncRead,
     DeviceUpdate,
 )
+
+IMAGE_EXTENSION_BY_TYPE = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 def get_device_or_404(db: Session, device_id: int) -> Device:
@@ -155,3 +162,39 @@ def list_device_logs(
         .limit(page_size)
     ).all()
     return DeviceLogListRead(total=total, items=list(logs))
+
+
+def upload_device_image(
+    db: Session, device_id: int | None, file: UploadFile, settings: Settings
+) -> str:
+    """校验并保存设备图片，可选关联设备并更新其 image_url，返回访问地址。"""
+    extension = IMAGE_EXTENSION_BY_TYPE.get(file.content_type or "")
+    if file.content_type not in settings.allowed_device_image_types or not extension:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only PNG, JPG, and WEBP images are supported",
+        )
+
+    content = file.file.read()
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Image file cannot be empty"
+        )
+
+    if len(content) > settings.max_device_image_size:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Image file is too large"
+        )
+
+    settings.device_image_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid4().hex}{extension}"
+    image_path = settings.device_image_dir / filename
+    image_path.write_bytes(content)
+    image_url = f"/uploads/devices/{filename}"
+
+    if device_id is not None:
+        device = get_device_or_404(db, device_id)
+        device.image_url = image_url
+        db.commit()
+    return image_url

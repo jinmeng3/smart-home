@@ -22,20 +22,24 @@ const iconNameMap: Record<Device["type"], string> = {
     <section class="device-side-card">
         <header>
             <h2>设备详情</h2>
-            <button type="button" title="更多"><SvgIcon name="more" /></button>
         </header>
 
         <div v-if="device" class="device-detail-body">
-            <div class="device-image">
-                <img v-if="device.image" :src="device.image" alt="" />
-                <span v-else>
-                    <SvgIcon :name="iconNameMap[device.type]" size="lg" />
-                </span>
-            </div>
-            <div class="device-title">
-                <i :class="`status-dot is-${device.status}`"></i>
-                <strong>{{ device.name }}</strong>
-                <small>{{ deviceStatusLabelMap[device.status] }}</small>
+            <div class="device-summary">
+                <div class="device-image">
+                    <img v-if="device.image" :src="device.image" alt="" />
+                    <span v-else>
+                        <SvgIcon :name="iconNameMap[device.type]" size="lg" />
+                    </span>
+                </div>
+                <div class="device-title">
+                    <strong>{{ device.name }}</strong>
+                    <span class="device-type">{{ deviceTypeLabelMap[device.type] }}</span>
+                    <span class="device-status">
+                        <i :class="`status-dot is-${device.status}`"></i>
+                        {{ deviceStatusLabelMap[device.status] }}
+                    </span>
+                </div>
             </div>
             <dl>
                 <div>
@@ -80,7 +84,6 @@ const iconNameMap: Record<Device["type"], string> = {
 header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
 }
 
 h2 {
@@ -89,24 +92,23 @@ h2 {
     font-weight: 900;
 }
 
-header button {
-    border: 0;
-    background: transparent;
-    color: var(--color-text-tertiary);
-    font-size: 22px;
-}
-
 .device-detail-body {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr);
     gap: 14px;
     margin-top: 14px;
 }
 
+.device-summary {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+}
+
 .device-image {
     display: grid;
-    width: 88px;
-    height: 92px;
+    width: 76px;
+    height: 76px;
     place-items: center;
     border-radius: 8px;
     background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
@@ -127,51 +129,73 @@ header button {
 
 .device-title {
     display: grid;
-    grid-template-columns: 10px minmax(0, 1fr);
-    gap: 8px;
-    align-content: start;
-    align-items: center;
+    min-width: 0;
+    gap: 6px;
 }
 
 .device-title strong {
     overflow: hidden;
-    font-size: 15px;
+    color: var(--color-text-primary);
+    font-size: 16px;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.device-title small {
-    grid-column: 2;
+.device-type {
     color: var(--color-text-tertiary);
+    font-size: 13px;
     font-weight: 700;
 }
 
+.device-status {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    padding: 4px 9px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 900;
+}
+
 dl {
-    grid-column: 2;
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    margin: -50px 0 0;
+    margin: 0;
 }
 
 dl div {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
+    min-width: 0;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    background: var(--color-surface-subtle);
+    padding: 10px;
 }
 
 dt {
+    margin-bottom: 5px;
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
 }
 
 dd {
+    overflow: hidden;
     margin: 0;
     color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 900;
-    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+dl div:last-child {
+    grid-column: 1 / -1;
 }
 
 .device-detail-empty {

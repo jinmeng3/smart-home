@@ -19,10 +19,10 @@ export const useAuthStore = defineStore("auth", () => {
     loginVisible.value = true;
   };
 
-  const saveSession = (result: LoginResult) => {
+  const saveSession = (result: LoginResult, closeDialog = true) => {
     accessToken.value = result.access_token;
     window.sessionStorage.setItem(tokenKey, result.access_token);
-    loginVisible.value = false;
+    if (closeDialog) loginVisible.value = false;
   };
 
   const clearSession = () => {
@@ -32,21 +32,21 @@ export const useAuthStore = defineStore("auth", () => {
 
   window.addEventListener(authExpiredEvent, clearSession);
 
-  const login = async (payload: LoginPayload) => {
+  const login = async (payload: LoginPayload, closeDialog = true) => {
     const result = await apiLogin(payload);
-    saveSession(result);
+    saveSession(result, closeDialog);
   };
 
-  const register = async (payload: RegisterPayload) => {
-    saveSession(await apiRegister(payload));
+  const register = async (payload: RegisterPayload, closeDialog = true) => {
+    saveSession(await apiRegister(payload), closeDialog);
   };
 
-  const logout = async () => {
+  const logout = async (closeDialog = true) => {
     try {
       await apiLogout();
     } finally {
       clearSession();
-      loginVisible.value = false;
+      if (closeDialog) loginVisible.value = false;
     }
   };
 

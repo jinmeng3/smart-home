@@ -256,6 +256,8 @@ dd {
 }
 
 .scene-detail-actions {
+    display: grid;
+    width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
@@ -277,6 +279,8 @@ dd {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    min-width: 0;
     gap: 6px;
     height: 36px;
     font-size: 12px;

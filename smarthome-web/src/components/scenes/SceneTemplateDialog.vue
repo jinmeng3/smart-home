@@ -15,19 +15,21 @@ const emit = defineEmits<{
 const selectedId = ref(sceneTemplates[0]?.id ?? "");
 const keyword = ref("");
 const activeCategory = ref("全部");
-const categories = ["全部", "回家", "离家", "睡眠", "节能", "娱乐", "安防"];
+const categories = ["全部", "娱乐", "安防", "睡眠", "学习"];
 
-const filteredTemplates = computed(() =>
-    sceneTemplates.filter((template) => {
-        const matchesKeyword = [template.name, template.description]
-            .join(" ")
-            .includes(keyword.value.trim());
+const filteredTemplates = computed(() => {
+    const normalizedKeyword = keyword.value.trim();
+
+    return sceneTemplates.filter((template) => {
+        const matchesKeyword =
+            !normalizedKeyword ||
+            [template.name, template.description].join(" ").includes(normalizedKeyword);
         const matchesCategory =
             activeCategory.value === "全部" || template.category === activeCategory.value;
 
         return matchesKeyword && matchesCategory;
-    }),
-);
+    });
+});
 const selectedTemplate = computed(
     () =>
         sceneTemplates.find((template) => template.id === selectedId.value) ??
@@ -36,6 +38,7 @@ const selectedTemplate = computed(
 
 const selectTemplate = (template: SceneTemplate) => {
     selectedId.value = template.id;
+    emit("preview", template);
 };
 
 const importSelectedTemplate = () => {
@@ -51,7 +54,7 @@ const importSelectedTemplate = () => {
         title="导入模板"
         description="从推荐模板中快速创建场景"
         icon="layers"
-        width="980px"
+        width="1020px"
         confirm-text="导入并创建"
         cancel-text="取消"
         show-footer
@@ -170,10 +173,18 @@ const importSelectedTemplate = () => {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
     gap: 16px;
+    align-items: start;
 }
 
-.template-main,
+.template-main {
+    display: grid;
+    min-width: 0;
+    gap: 14px;
+}
+
 .template-preview {
+    position: sticky;
+    top: 0;
     min-width: 0;
 }
 
@@ -186,13 +197,13 @@ dl {
 }
 
 .template-filters {
+    flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
 }
 
 .template-filters label {
     display: flex;
-    width: 220px;
+    width: min(100%, 260px);
     height: 36px;
     align-items: center;
     gap: 8px;
@@ -232,7 +243,6 @@ dl {
 
 .template-feature-row {
     gap: 8px;
-    margin-bottom: 14px;
 }
 
 .template-feature-row article {
@@ -278,7 +288,7 @@ dl {
 
 .template-card {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-columns: 48px minmax(0, 1fr);
     gap: 12px;
     align-items: center;
     min-height: 112px;
@@ -287,6 +297,14 @@ dl {
     background: var(--color-card-bg);
     padding: 12px;
     cursor: pointer;
+    transition:
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.template-card:hover {
+    transform: translateY(-1px);
 }
 
 .template-card.selected {
@@ -302,6 +320,11 @@ dl {
     place-items: center;
     border-radius: 999px;
     background: var(--color-primary-50);
+}
+
+.template-card button {
+    grid-column: 2;
+    justify-self: end;
 }
 
 h3,
@@ -330,7 +353,7 @@ ul {
 
 .template-card small {
     display: block;
-    margin-top: 12px;
+    margin-top: 10px;
     color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 900;
@@ -361,6 +384,7 @@ ul {
 }
 
 .preview-head em {
+    flex: 0 0 auto;
     border-radius: 999px;
     background: var(--color-success-soft);
     padding: 4px 8px;
@@ -371,9 +395,14 @@ ul {
 }
 
 dl {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 12px 0;
+}
+
+dl div:first-child {
+    grid-column: 1 / -1;
 }
 
 dt,
@@ -388,7 +417,10 @@ dt {
 }
 
 dd {
+    overflow: hidden;
     color: var(--color-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 h4 {
@@ -447,6 +479,21 @@ ul li::before {
 @media (max-width: 980px) {
     .template-dialog {
         grid-template-columns: 1fr;
+    }
+
+    .template-preview {
+        position: static;
+    }
+}
+
+@media (max-width: 680px) {
+    .template-feature-row,
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .template-feature-row {
+        display: grid;
     }
 }
 </style>

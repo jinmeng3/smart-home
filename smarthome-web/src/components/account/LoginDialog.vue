@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { ElButton, ElInput, ElMessage } from "element-plus";
+import { ElButton, ElInput } from "element-plus";
 import { useAuthStore } from "../../stores/auth";
 import { useSettingsStore } from "../../stores/settings";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import "element-plus/theme-chalk/el-input.css";
-import "element-plus/theme-chalk/el-message.css";
 
 type AuthMode = "login" | "register";
+type FeedbackType = "error" | "warning" | "success";
+type Feedback = { type: FeedbackType; message: string };
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const mode = ref<AuthMode>("login");
 const submitting = ref(false);
+const feedback = ref<Feedback | null>(null);
+const shaking = ref(false);
 const accountInput = ref<{ focus: () => void } | null>(null);
 const loginForm = reactive({ account: "", password: "" });
 const registerForm = reactive({
@@ -52,6 +55,7 @@ const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
 
 const selectMode = (nextMode: AuthMode) => {
     if (submitting.value || authStore.isAuthenticated) return;
+    feedback.value = null;
     mode.value = nextMode;
 
     if (nextMode === "login") {
@@ -59,61 +63,82 @@ const selectMode = (nextMode: AuthMode) => {
     }
 };
 
-const validateRegisterForm = () => {
-    if (!registerForm.username.trim()) {
-        ElMessage.warning("请输入用户名");
-        return false;
-    }
-    if (!emailPattern.test(registerForm.email.trim())) {
-        ElMessage.warning("请输入有效的邮箱地址");
-        return false;
-    }
-    if (registerForm.password.length < 6) {
-        ElMessage.warning("密码至少需要 6 位字符");
-        return false;
-    }
-    if (registerForm.password !== registerForm.confirmPassword) {
-        ElMessage.warning("两次输入的密码不一致");
-        return false;
-    }
-    return true;
+const validateRegisterForm = (): string | null => {
+    if (!registerForm.username.trim()) return "请输入用户名";
+    if (!emailPattern.test(registerForm.email.trim())) return "请输入有效的邮箱地址";
+    if (registerForm.password.length < 6) return "密码至少需要 6 位字符";
+    if (registerForm.password !== registerForm.confirmPassword)
+        return "两次输入的密码不一致";
+    return null;
 };
 
-const submit = async () => {
-    if (mode.value === "login" && (!loginForm.account.trim() || !loginForm.password)) {
-        ElMessage.warning("请输入账号和密码");
-        return;
+const showFeedback = (type: FeedbackType, message: string, shake = false) => {
+    feedback.value = { type, message };
+    if (shake) {
+        shaking.value = false;
+        void nextTick(() => {
+            shaking.value = true;
+        });
     }
-    if (mode.value === "register" && !validateRegisterForm()) return;
+};
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const submit = async () => {
+    feedback.value = null;
+    if (mode.value === "login") {
+        if (!loginForm.account.trim() || !loginForm.password) {
+            showFeedback("warning", "请输入账号和密码", true);
+            return;
+        }
+    } else {
+        const message = validateRegisterForm();
+        if (message) {
+            showFeedback("warning", message, true);
+            return;
+        }
+    }
 
     submitting.value = true;
     try {
         if (mode.value === "login") {
-            await authStore.login({
-                account: loginForm.account.trim(),
-                password: loginForm.password,
-            });
+            await authStore.login(
+                {
+                    account: loginForm.account.trim(),
+                    password: loginForm.password,
+                },
+                false,
+            );
             loginForm.password = "";
-            ElMessage.success("登录成功");
+            feedback.value = { type: "success", message: "登录成功" };
+            await wait(700);
+            authStore.loginVisible = false;
         } else {
-            await authStore.register({
-                username: registerForm.username.trim(),
-                email: registerForm.email.trim(),
-                password: registerForm.password,
-            });
+            await authStore.register(
+                {
+                    username: registerForm.username.trim(),
+                    email: registerForm.email.trim(),
+                    password: registerForm.password,
+                },
+                false,
+            );
             registerForm.password = "";
             registerForm.confirmPassword = "";
-            ElMessage.success("注册成功");
+            feedback.value = { type: "success", message: "注册成功" };
+            await wait(700);
+            authStore.loginVisible = false;
         }
         // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
         void settingsStore.loadAccountHome().catch(() => undefined);
     } catch (error) {
-        ElMessage.error(
+        showFeedback(
+            "error",
             error instanceof Error
                 ? error.message
                 : mode.value === "login"
                   ? "登录失败"
                   : "注册失败",
+            true,
         );
     } finally {
         submitting.value = false;
@@ -124,18 +149,25 @@ watch(
     () => authStore.loginVisible,
     (visible) => {
         if (!visible || authStore.isAuthenticated) return;
+        feedback.value = null;
         mode.value = "login";
         void nextTick(() => accountInput.value?.focus());
     },
 );
 
+watch([loginForm, registerForm], () => {
+    if (feedback.value) feedback.value = null;
+});
+
 const logout = async () => {
     submitting.value = true;
     try {
-        await authStore.logout();
-        ElMessage.success("已登出");
+        await authStore.logout(false);
+        feedback.value = { type: "success", message: "已登出" };
+        await wait(700);
+        authStore.loginVisible = false;
     } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "登出失败");
+        showFeedback("error", error instanceof Error ? error.message : "登出失败", true);
     } finally {
         submitting.value = false;
     }
@@ -165,6 +197,17 @@ const logout = async () => {
             </header>
         </template>
 
+        <div
+            v-if="feedback"
+            :class="['auth-feedback', `is-${feedback.type}`]"
+            role="alert"
+        >
+            <span class="feedback-icon" aria-hidden="true">
+                {{ feedback.type === "error" ? "!" : feedback.type === "success" ? "✓" : "⚠" }}
+            </span>
+            <p>{{ feedback.message }}</p>
+        </div>
+
         <section v-if="authStore.isAuthenticated" class="current-account">
             <img
                 v-if="avatarUrl"
@@ -192,7 +235,7 @@ const logout = async () => {
                 <button :class="{ active: mode === 'register' }" type="button" @click="selectMode('register')">注册</button>
             </nav>
 
-            <form class="login-form" @submit.prevent="submit">
+            <form class="login-form" :class="{ shake: shaking }" @submit.prevent="submit">
                 <template v-if="mode === 'login'">
                     <label class="login-field">
                         <span>邮箱</span>
@@ -231,12 +274,12 @@ const logout = async () => {
 .auth-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
-    margin-bottom: 12px;
-    padding: 4px;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    background: var(--color-surface-subtle);
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 5px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-surface-subtle) 72%, transparent);
 }
 
 .auth-content {
@@ -249,11 +292,11 @@ const logout = async () => {
     align-items: center;
     gap: 9px;
     margin-bottom: 14px;
-    border: 1px solid var(--color-teal-border);
-    border-radius: 10px;
-    background: var(--color-teal-soft);
-    padding: 10px 12px;
-    color: var(--color-teal-600);
+    border: 1px solid color-mix(in srgb, var(--color-teal-border) 58%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-teal-soft) 68%, transparent);
+    padding: 10px 13px;
+    color: var(--color-text-secondary);
 }
 
 .auth-assurance span {
@@ -263,7 +306,7 @@ const logout = async () => {
     flex: 0 0 20px;
     place-items: center;
     border-radius: 50%;
-    background: var(--color-teal-600);
+    background: color-mix(in srgb, var(--color-teal-600) 82%, var(--color-primary-500));
     color: var(--color-text-on-primary);
     font-size: 12px;
     font-weight: 900;
@@ -279,7 +322,7 @@ const logout = async () => {
 .auth-tabs button {
     height: 38px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 10px;
     color: var(--color-text-tertiary);
     font-weight: 700;
     background: transparent;
@@ -291,15 +334,15 @@ const logout = async () => {
 
 .auth-tabs button:not(.active):hover {
     color: var(--color-primary-700);
-    background: var(--color-primary-50);
+    background: color-mix(in srgb, var(--color-primary-50) 58%, transparent);
 }
 
 .auth-tabs button.active {
     color: var(--color-primary-700);
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    background: color-mix(in srgb, var(--color-card-bg) 82%, var(--color-primary-50));
     box-shadow:
-        inset 0 0 0 1px var(--color-primary-200),
-        var(--shadow-card);
+        inset 0 0 0 1px color-mix(in srgb, var(--color-primary-200) 70%, transparent),
+        0 6px 18px rgb(15 23 42 / 6%);
 }
 
 .dialog-footer {
@@ -368,15 +411,94 @@ const logout = async () => {
 .login-form {
     display: grid;
     gap: 16px;
-    border: 1px solid var(--color-border);
+    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 64%, transparent);
+    border-radius: 16px;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-card-bg) 86%, transparent),
+        color-mix(in srgb, var(--color-surface-subtle) 42%, transparent)
+    );
+    padding: 16px;
+}
+
+.login-form.shake {
+    animation: warning-shake 420ms var(--motion-ease) both;
+}
+
+.auth-feedback {
+    display: flex;
+    align-items: center;
+    gap: 9px;
     border-radius: 12px;
-    background: var(--color-card-bg);
-    padding: 18px;
+    padding: 10px 13px;
+    animation: auth-feedback-in 220ms var(--motion-ease) both;
+}
+
+.auth-feedback p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.feedback-icon {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.auth-feedback.is-error {
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
+    border: 1px solid var(--color-danger-border);
+}
+
+.auth-feedback.is-error .feedback-icon {
+    color: var(--color-text-on-primary);
+    background: var(--color-danger);
+}
+
+.auth-feedback.is-warning {
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
+    border: 1px solid var(--color-warning-border);
+}
+
+.auth-feedback.is-warning .feedback-icon {
+    color: var(--color-text-on-primary);
+    background: var(--color-warning);
+}
+
+.auth-feedback.is-success {
+    color: var(--color-success);
+    background: var(--color-success-soft);
+    border: 1px solid var(--color-success-border);
+}
+
+.auth-feedback.is-success .feedback-icon {
+    color: var(--color-text-on-primary);
+    background: var(--color-success);
+}
+
+@keyframes auth-feedback-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .login-field { display: grid; gap: 8px; margin: 0 !important; }
 .login-field > span {
-    color: var(--color-text-secondary);
+    color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 800;
 }
@@ -384,11 +506,11 @@ const logout = async () => {
 
 :deep(.login-field .el-input__wrapper) {
     min-height: 44px;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 0 14px;
-    border: 1px solid var(--color-border);
-    background: var(--color-card-bg);
-    box-shadow: none;
+    border: 1px solid color-mix(in srgb, var(--color-border-default) 76%, transparent);
+    background: color-mix(in srgb, var(--color-card-bg) 84%, var(--color-surface-subtle));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
     transition:
         border-color 160ms var(--motion-ease),
         box-shadow 160ms var(--motion-ease),
@@ -396,14 +518,16 @@ const logout = async () => {
 }
 
 :deep(.login-field .el-input__wrapper:hover) {
-    border-color: var(--color-border-strong);
-    background: var(--color-primary-50);
+    border-color: color-mix(in srgb, var(--color-border-strong) 86%, transparent);
+    background: color-mix(in srgb, var(--color-card-bg) 78%, var(--color-primary-50));
 }
 
 :deep(.login-field .el-input__wrapper.is-focus) {
-    border-color: var(--color-primary-500);
+    border-color: color-mix(in srgb, var(--color-primary-500) 84%, transparent);
     background: var(--color-card-bg);
-    box-shadow: 0 0 0 3px var(--color-focus-ring);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 34%),
+        0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 62%, transparent);
 }
 
 :deep(.login-field .el-input__inner) {
@@ -412,15 +536,28 @@ const logout = async () => {
     font-weight: 600;
 }
 
+:deep(.login-field .el-input__inner::placeholder) {
+    color: color-mix(in srgb, var(--color-text-tertiary) 62%, transparent);
+    font-weight: 500;
+}
+
 .dialog-header {
     border-bottom-color: var(--color-border) !important;
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50)) !important;
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        color-mix(in srgb, var(--color-primary-50) 52%, var(--color-card-bg))
+    ) !important;
 }
 
 .dialog-icon {
     color: var(--color-text-on-primary) !important;
-    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
-    box-shadow: 0 6px 16px var(--color-focus-ring);
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-600),
+        color-mix(in srgb, var(--color-primary-500) 70%, var(--color-teal-600))
+    ) !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-focus-ring) 72%, transparent);
 }
 
 .dialog-footer :deep(.el-button--primary) {

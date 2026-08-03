@@ -1,8 +1,14 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Device, DeviceType } from "../../types/device";
 import DeviceRow from "./DeviceRow.vue";
-import { deviceTypeOptions } from "./deviceMeta";
+import {
+    deviceStatusLabelMap,
+    deviceTypeLabelMap,
+    deviceTypeOptions,
+    getStatusClasses,
+} from "./deviceMeta";
 
 defineProps<{
     devices: Device[];
@@ -11,6 +17,7 @@ defineProps<{
     pageSize: number;
     selectedId: number | null;
     loading: boolean;
+    syncing: boolean;
     sort: "updated" | "name" | "status";
     activeType: DeviceType | "";
 }>();
@@ -23,9 +30,33 @@ defineEmits<{
     select: [device: Device];
     edit: [device: Device];
     remove: [device: Device];
+    add: [];
+    batch: [];
+    sync: [];
 }>();
 
 const pageSizeOptions = [10, 20, 50];
+const viewMode = ref<"list" | "grid">("list");
+
+const formatLastOnline = (value: string) => {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+
+    if (match) {
+        return `${match[1]} ${match[2]}`;
+    }
+
+    return value || "从未在线";
+};
+
+const iconNameMap: Record<Device["type"], string> = {
+    light: "light",
+    air_conditioner: "air-conditioner",
+    lock: "lock",
+    camera: "camera",
+    sensor: "sensor",
+    socket: "plug",
+    curtain: "curtain",
+};
 </script>
 
 <template>
@@ -33,18 +64,48 @@ const pageSizeOptions = [10, 20, 50];
         <header class="device-list-header">
             <h2>设备列表</h2>
             <div class="device-list-tools">
+                <button class="device-list-primary" type="button" @click="$emit('add')">
+                    <SvgIcon name="plus" /> 添加设备
+                </button>
+                <button class="device-list-action" type="button" @click="$emit('batch')">
+                    <SvgIcon name="layers" /> 批量操作
+                </button>
+                <button
+                    class="device-list-action device-list-sync"
+                    :disabled="syncing"
+                    type="button"
+                    @click="$emit('sync')"
+                >
+                    <SvgIcon name="refresh" /> {{ syncing ? "同步中" : "同步设备" }}
+                </button>
                 <select
                     :value="sort"
-                    @change="$emit('update:sort', ($event.target as HTMLSelectElement).value as 'updated' | 'name' | 'status')"
+                    @change="
+                        $emit(
+                            'update:sort',
+                            ($event.target as HTMLSelectElement).value as
+                                'updated' | 'name' | 'status',
+                        )
+                    "
                 >
                     <option value="updated">按最后在线</option>
                     <option value="name">按名称</option>
                     <option value="status">按状态</option>
                 </select>
-                <button class="is-active" type="button" title="列表视图">
+                <button
+                    :class="{ 'is-active': viewMode === 'list' }"
+                    type="button"
+                    title="列表视图"
+                    @click="viewMode = 'list'"
+                >
                     <SvgIcon name="list" />
                 </button>
-                <button type="button" title="网格视图">
+                <button
+                    :class="{ 'is-active': viewMode === 'grid' }"
+                    type="button"
+                    title="网格视图"
+                    @click="viewMode = 'grid'"
+                >
                     <SvgIcon name="grid" />
                 </button>
             </div>
@@ -62,7 +123,7 @@ const pageSizeOptions = [10, 20, 50];
             </button>
         </div>
 
-        <div class="device-table-wrap">
+        <div v-if="viewMode === 'list'" class="device-table-wrap">
             <table>
                 <thead>
                     <tr>
@@ -94,6 +155,61 @@ const pageSizeOptions = [10, 20, 50];
             </div>
         </div>
 
+        <div v-else class="device-grid-wrap">
+            <div v-if="loading" class="device-empty">正在加载设备</div>
+            <div v-else-if="!devices.length" class="device-empty">
+                暂无设备数据
+            </div>
+            <div v-else class="device-grid">
+                <article
+                    v-for="device in devices"
+                    :key="device.id"
+                    class="device-grid-card"
+                    :class="{ 'is-selected': selectedId === device.id }"
+                    @click="$emit('select', device)"
+                >
+                    <header>
+                        <span class="device-grid-icon" aria-hidden="true">
+                            <SvgIcon :name="iconNameMap[device.type]" />
+                        </span>
+                        <span
+                            class="device-status-badge"
+                            :class="getStatusClasses(device.status)"
+                        >
+                            <i :class="`status-dot is-${device.status}`"></i>
+                            {{ deviceStatusLabelMap[device.status] }}
+                        </span>
+                    </header>
+                    <div class="device-grid-main">
+                        <strong>{{ device.name }}</strong>
+                        <small>{{ deviceTypeLabelMap[device.type] }}</small>
+                    </div>
+                    <dl>
+                        <div>
+                            <dt>房间</dt>
+                            <dd>{{ device.room }}</dd>
+                        </div>
+                        <div>
+                            <dt>品牌</dt>
+                            <dd>{{ device.brand }}</dd>
+                        </div>
+                        <div>
+                            <dt>最后在线</dt>
+                            <dd>{{ formatLastOnline(device.lastOnline) }}</dd>
+                        </div>
+                    </dl>
+                    <footer>
+                        <button type="button" @click.stop="$emit('edit', device)">
+                            编辑
+                        </button>
+                        <button type="button" @click.stop="$emit('remove', device)">
+                            删除
+                        </button>
+                    </footer>
+                </article>
+            </div>
+        </div>
+
         <footer class="device-pagination">
             <span>共 {{ total }} 条</span>
             <div class="device-page-actions">
@@ -115,9 +231,18 @@ const pageSizeOptions = [10, 20, 50];
             </div>
             <select
                 :value="pageSize"
-                @change="$emit('update:pageSize', Number(($event.target as HTMLSelectElement).value))"
+                @change="
+                    $emit(
+                        'update:pageSize',
+                        Number(($event.target as HTMLSelectElement).value),
+                    )
+                "
             >
-                <option v-for="item in pageSizeOptions" :key="item" :value="item">
+                <option
+                    v-for="item in pageSizeOptions"
+                    :key="item"
+                    :value="item"
+                >
                     {{ item }} 条/页
                 </option>
             </select>
@@ -129,7 +254,7 @@ const pageSizeOptions = [10, 20, 50];
 .device-list-panel {
     display: flex;
     min-height: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     flex-direction: column;
     border: 1px solid var(--color-border);
     border-radius: 14px;
@@ -149,9 +274,16 @@ const pageSizeOptions = [10, 20, 50];
 }
 
 .device-list-header {
+    display: flex;
+    min-width: 0;
     justify-content: space-between;
     gap: 16px;
+    flex-wrap: wrap;
     padding: 16px 18px 12px;
+}
+
+.device-list-header h2 {
+    min-width: 0;
 }
 
 .device-list-header h2 {
@@ -164,6 +296,46 @@ const pageSizeOptions = [10, 20, 50];
 .device-type-tabs,
 .device-page-actions {
     gap: 8px;
+}
+
+.device-list-tools {
+    min-width: 0;
+    width: auto;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.device-list-tools button {
+    flex: 0 0 auto;
+}
+
+.device-list-tools .device-list-primary,
+.device-list-tools .device-list-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.device-list-tools .device-list-primary {
+    border-color: var(--color-primary-600);
+    background: var(--color-primary-600);
+    color: var(--color-text-on-primary);
+    box-shadow: 0 6px 16px var(--color-focus-ring);
+}
+
+@media (max-width: 900px) {
+    .device-list-header h2 {
+        flex: 1 0 100%;
+    }
+
+    .device-list-tools {
+        width: 100%;
+    }
 }
 
 .device-list-tools select,
@@ -214,8 +386,7 @@ const pageSizeOptions = [10, 20, 50];
 }
 
 .device-list-tools .is-active,
-.device-type-tabs .is-active,
-.device-page-actions strong {
+.device-type-tabs .is-active {
     border-color: var(--color-primary-500);
     background: var(--color-primary-600);
     color: var(--color-text-on-primary);
@@ -223,10 +394,172 @@ const pageSizeOptions = [10, 20, 50];
 
 .device-table-wrap {
     min-height: 0;
-    flex: 0 1 auto;
-    max-height: min(44vh, 460px);
+    flex: 1 1 auto;
     overflow: auto;
     padding: 0 8px;
+}
+
+.device-grid-wrap {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 12px;
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.device-grid-card {
+    display: grid;
+    min-width: 0;
+    gap: 12px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    background: var(--color-panel-background);
+    padding: 14px;
+    cursor: pointer;
+    transition:
+        transform 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease);
+}
+
+.device-grid-card:hover,
+.device-grid-card.is-selected {
+    border-color: var(--color-primary-200);
+    background: var(--color-surface-hover);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+}
+
+.device-grid-card header,
+.device-grid-card footer,
+.device-status-badge {
+    display: flex;
+    align-items: center;
+}
+
+.device-grid-card header,
+.device-grid-card footer {
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.device-grid-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    color: var(--color-primary-700);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.device-grid-main {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.device-grid-main strong,
+.device-grid-main small,
+.device-grid-card dd {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-grid-main strong {
+    color: var(--color-text-primary);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.device-grid-main small {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.device-grid-card dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.device-grid-card dl div {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 10px;
+}
+
+.device-grid-card dt {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.device-grid-card dd {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 900;
+    text-align: right;
+}
+
+.device-grid-card footer {
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.device-grid-card footer button {
+    border: 0;
+    background: transparent;
+    color: var(--color-primary-600);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.device-grid-card footer button:hover {
+    color: var(--color-primary-800);
+}
+
+.device-status-badge {
+    gap: 6px;
+    border: 1px solid;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+}
+
+.status-dot.is-online {
+    background: var(--color-success);
+}
+
+.status-dot.is-offline {
+    background: var(--color-text-muted);
+}
+
+.status-dot.is-running {
+    background: var(--color-info);
+}
+
+.status-dot.is-warning {
+    background: var(--color-warning);
 }
 
 table {
@@ -253,8 +586,12 @@ th:nth-child(2) {
     width: 24%;
 }
 
+th:nth-child(7) {
+    width: 172px;
+}
+
 th:last-child {
-    width: 118px;
+    width: 96px;
 }
 
 .device-empty {
@@ -266,6 +603,7 @@ th:last-child {
 }
 
 .device-pagination {
+    flex: 0 0 auto;
     justify-content: space-between;
     gap: 14px;
     padding: 14px 18px;
@@ -274,6 +612,14 @@ th:last-child {
     color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 700;
+}
+
+.device-page-actions strong {
+    display: grid;
+    place-items: center;
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-text-primary);
 }
 
 button:not(:disabled):hover {

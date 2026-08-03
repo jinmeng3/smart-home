@@ -1,15 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
-import {
-    createDevice,
-    deleteDevice,
-    getDevice,
-    listDeviceLogs,
-    listDevices,
-    syncDevices,
-    updateDevice,
-} from "../api/device";
+import { onMounted, watch } from "vue";
+import BaseModal from "../components/common/BaseModal.vue";
+import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
 import DeviceEditorDialog from "../components/device/DeviceEditorDialog.vue";
 import DeviceList from "../components/device/DeviceList.vue";
@@ -17,268 +9,26 @@ import DeviceQuickActions from "../components/device/DeviceQuickActions.vue";
 import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
 import DeviceToolbar from "../components/device/DeviceToolbar.vue";
 import PlatformStatus from "../components/device/PlatformStatus.vue";
-import type {
-    Device,
-    DeviceCreatePayload,
-    DeviceDetail as DeviceDetailType,
-    DeviceFilters,
-    DeviceStatus,
-    DeviceType,
-} from "../types/device";
+import { useDeviceManagementController } from "../composables/useDeviceManagementController";
 
-const filters = reactive<DeviceFilters>({
-    page: 1,
-    pageSize: 10,
-    keyword: "",
-    type: "",
-    status: "",
-    room: "",
-});
-const devices = ref<Device[]>([]);
-const total = ref(0);
-const loading = ref(false);
-const syncing = ref(false);
-const saving = ref(false);
-const selectedId = ref<number | null>(null);
-const selectedDevice = ref<DeviceDetailType | null>(null);
-const editorOpen = ref(false);
-const editingDevice = ref<Device | null>(null);
-const sort = ref<"updated" | "name" | "status">("updated");
-
-const rooms = computed(() =>
-    Array.from(new Set(devices.value.map((device) => device.room))).filter(Boolean),
-);
-
-const sortedDevices = computed(() => {
-    const nextDevices = [...devices.value];
-
-    if (sort.value === "name") {
-        return nextDevices.sort((first, second) =>
-            first.name.localeCompare(second.name, "zh-CN"),
-        );
-    }
-
-    if (sort.value === "status") {
-        return nextDevices.sort((first, second) =>
-            first.status.localeCompare(second.status),
-        );
-    }
-
-    return nextDevices;
-});
-
-const stats = computed(() => ({
-    online: devices.value.filter((device) => device.status === "online").length,
-    offline: devices.value.filter((device) => device.status === "offline").length,
-    warning: devices.value.filter((device) => device.status === "warning").length,
-    monthlyNew: devices.value.length,
-}));
-
-const platforms = computed(() => {
-    const names = ["Home Assistant", "Matter", "Zigbee", "MQTT"];
-
-    return names.map((name) => {
-        const connected = devices.value.some((device) => device.connection === name);
-        return {
-            name,
-            connected,
-            status: connected ? "已连接" : "未连接",
-        };
-    });
-});
-
-const loadSelectedDevice = async () => {
-    if (selectedId.value === null) {
-        selectedDevice.value = null;
-        return;
-    }
-
-    try {
-        selectedDevice.value = await getDevice(selectedId.value);
-    } catch (error) {
-        selectedDevice.value = null;
-        ElMessage.error(error instanceof Error ? error.message : "设备详情加载失败");
-    }
-};
-
-const loadDevices = async () => {
-    loading.value = true;
-
-    try {
-        const response = await listDevices(filters);
-        devices.value = response.items;
-        total.value = response.total;
-
-        const selectedExists = response.items.some(
-            (device) => device.id === selectedId.value,
-        );
-        selectedId.value = selectedExists
-            ? selectedId.value
-            : (response.items[0]?.id ?? null);
-        await loadSelectedDevice();
-    } catch (error) {
-        devices.value = [];
-        total.value = 0;
-        ElMessage.error(
-            error instanceof Error ? error.message : "设备列表加载失败",
-        );
-    } finally {
-        loading.value = false;
-    }
-};
-
-const updateKeyword = (value: string) => {
-    filters.keyword = value;
-    filters.page = 1;
-};
-
-const updateRoom = (value: string) => {
-    filters.room = value;
-    filters.page = 1;
-};
-
-const updateType = (value: DeviceType | "") => {
-    filters.type = value;
-    filters.page = 1;
-};
-
-const updateStatus = (value: DeviceStatus | "") => {
-    filters.status = value;
-    filters.page = 1;
-};
-
-const updatePage = (value: number) => {
-    filters.page = value;
-};
-
-const updatePageSize = (value: number) => {
-    filters.pageSize = value;
-    filters.page = 1;
-};
-
-const selectDevice = (device: Device) => {
-    selectedId.value = device.id;
-    void loadSelectedDevice();
-};
-
-const addDevice = () => {
-    editingDevice.value = null;
-    editorOpen.value = true;
-};
-
-const editDevice = (device: Device) => {
-    selectedId.value = device.id;
-    editingDevice.value = device;
-    editorOpen.value = true;
-};
-
-const saveDevice = async (payload: DeviceCreatePayload) => {
-    saving.value = true;
-
-    try {
-        if (editingDevice.value) {
-            await updateDevice(editingDevice.value.id, payload);
-            ElMessage.success("设备已更新");
-        } else {
-            const created = await createDevice(payload);
-            selectedId.value = created.id;
-            ElMessage.success("设备已添加");
-        }
-
-        editorOpen.value = false;
-        await loadDevices();
-    } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "设备保存失败");
-    } finally {
-        saving.value = false;
-    }
-};
-
-const removeDevice = async (device: Device) => {
-    try {
-        await ElMessageBox.confirm(`确认删除 ${device.name}？`, "删除设备", {
-            confirmButtonText: "删除",
-            cancelButtonText: "取消",
-            type: "warning",
-        });
-    } catch {
-        return;
-    }
-
-    try {
-        await deleteDevice(device.id);
-        ElMessage.success("设备已删除");
-        await loadDevices();
-    } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "设备删除失败");
-    }
-};
-
-const runSync = async () => {
-    syncing.value = true;
-
-    try {
-        const response = await syncDevices("Home Assistant");
-        ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
-        await loadDevices();
-    } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "设备同步失败");
-    } finally {
-        syncing.value = false;
-    }
-};
-
-const runBatch = () => {
-    ElMessage.info("批量操作接口已预留");
-};
-
-const runQuickAction = (key: "scan" | "group" | "firmware" | "logs") => {
-    if (key === "logs") {
-        if (selectedId.value === null) {
-            ElMessage.warning("请先选择设备");
-            return;
-        }
-
-        void listDeviceLogs(selectedId.value)
-            .then((logs) => {
-                const latest = logs[0];
-                ElMessage.info(
-                    latest
-                        ? `共 ${logs.length} 条日志，最近：${latest.message}`
-                        : "该设备暂无日志",
-                );
-            })
-            .catch((error: unknown) => {
-                ElMessage.error(error instanceof Error ? error.message : "日志加载失败");
-            });
-        return;
-    }
-
-    const messageMap: Record<typeof key, string> = {
-        scan: "扫描新设备接口已预留",
-        group: "批量分组接口已预留",
-        firmware: "固件更新接口已预留",
-    };
-
-    ElMessage.info(messageMap[key]);
-};
+const controller = useDeviceManagementController();
 
 watch(
     () => [
-        filters.page,
-        filters.pageSize,
-        filters.keyword,
-        filters.type,
-        filters.status,
-        filters.room,
+        controller.filters.page,
+        controller.filters.pageSize,
+        controller.filters.keyword,
+        controller.filters.type,
+        controller.filters.status,
+        controller.filters.room,
     ],
     () => {
-        void loadDevices();
+        void controller.loadDevices();
     },
 );
 
 onMounted(() => {
-    void loadDevices();
+    void controller.loadDevices();
 });
 </script>
 
@@ -286,90 +36,173 @@ onMounted(() => {
     <div class="contents">
         <section class="device-management-page">
             <header class="device-page-header">
-                <div>
+                <div class="device-page-title">
                     <h1>设备管理</h1>
                     <p>统一管理家庭设备、状态、分组与接入平台</p>
                 </div>
-            </header>
 
-            <DeviceToolbar
-                :keyword="filters.keyword"
-                :room="filters.room"
-                :rooms="rooms"
-                :status="filters.status"
-                :syncing="syncing"
-                :type="filters.type"
-                @add="addDevice"
-                @batch="runBatch"
-                @sync="runSync"
-                @update:keyword="updateKeyword"
-                @update:room="updateRoom"
-                @update:status="updateStatus"
-                @update:type="updateType"
-            />
+                <DeviceToolbar
+                    :keyword="controller.filters.keyword"
+                    :room="controller.filters.room"
+                    :rooms="controller.rooms.value"
+                    :status="controller.filters.status"
+                    :type="controller.filters.type"
+                    @update:keyword="controller.updateKeyword"
+                    @update:room="controller.updateRoom"
+                    @update:status="controller.updateStatus"
+                    @update:type="controller.updateType"
+                />
+            </header>
 
             <div class="device-stats-grid">
                 <DeviceStatsCard
                     icon="online-device"
                     label="在线设备"
-                    :value="stats.online"
+                    :value="controller.stats.value.online"
                     tone="success"
                     :delay="0"
                 />
                 <DeviceStatsCard
                     icon="offline-device"
                     label="离线设备"
-                    :value="stats.offline"
+                    :value="controller.stats.value.offline"
                     tone="muted"
                     :delay="50"
                 />
                 <DeviceStatsCard
                     icon="warning"
                     label="告警设备"
-                    :value="stats.warning"
+                    :value="controller.stats.value.warning"
                     tone="warning"
                     :delay="100"
                 />
                 <DeviceStatsCard
                     icon="new-device"
                     label="本月新增"
-                    :value="stats.monthlyNew"
+                    :value="controller.stats.value.monthlyNew"
                     tone="primary"
                     :delay="150"
                 />
             </div>
 
             <DeviceList
-                :active-type="filters.type"
-                :devices="sortedDevices"
-                :loading="loading"
-                :page="filters.page"
-                :page-size="filters.pageSize"
-                :selected-id="selectedId"
-                :sort="sort"
-                :total="total"
-                @edit="editDevice"
-                @remove="removeDevice"
-                @select="selectDevice"
-                @update:active-type="updateType"
-                @update:page="updatePage"
-                @update:page-size="updatePageSize"
-                @update:sort="sort = $event"
+                :active-type="controller.filters.type"
+                :devices="controller.sortedDevices.value"
+                :loading="controller.loading.value"
+                :page="controller.filters.page"
+                :page-size="controller.filters.pageSize"
+                :selected-id="controller.selectedId.value"
+                :sort="controller.sort.value"
+                :syncing="controller.syncing.value"
+                :total="controller.total.value"
+                @add="controller.addDevice"
+                @batch="controller.runBatch"
+                @edit="controller.editDevice"
+                @remove="controller.removeDevice"
+                @select="controller.selectDevice"
+                @sync="controller.runSync"
+                @update:active-type="controller.updateType"
+                @update:page="controller.updatePage"
+                @update:page-size="controller.updatePageSize"
+                @update:sort="controller.sort.value = $event"
             />
         </section>
 
         <aside class="device-right-panel">
-            <DeviceDetail :device="selectedDevice" />
-            <DeviceQuickActions @action="runQuickAction" />
-            <PlatformStatus :platforms="platforms" />
+            <DeviceDetail :device="controller.selectedDevice.value" />
+            <DeviceQuickActions @action="controller.runQuickAction" />
+            <PlatformStatus :platforms="controller.platforms.value" />
         </aside>
 
         <DeviceEditorDialog
-            v-model="editorOpen"
-            :device="editingDevice"
-            :loading="saving"
-            @submit="saveDevice"
+            v-model="controller.editorOpen.value"
+            :device="controller.editingDevice.value"
+            :loading="controller.saving.value"
+            @submit="controller.saveDevice"
         />
+
+        <BaseModal
+            class="device-delete-dialog"
+            :closable="!controller.deleting.value"
+            :loading="controller.deleting.value"
+            :model-value="controller.deleteDialogOpen.value"
+            width="520px"
+            @update:model-value="
+                $event
+                    ? (controller.deleteDialogOpen.value = true)
+                    : controller.cancelRemoveDevice()
+            "
+        >
+            <template #header>
+                <header class="delete-dialog-header">
+                    <span class="delete-dialog-icon" aria-hidden="true">
+                        <SvgIcon name="warning" />
+                    </span>
+                    <div>
+                        <h2>删除设备</h2>
+                        <p>此操作会从设备管理中移除该设备。</p>
+                    </div>
+                    <button
+                        class="delete-dialog-close"
+                        :disabled="controller.deleting.value"
+                        type="button"
+                        aria-label="关闭"
+                        @click="controller.cancelRemoveDevice"
+                    >
+                        <SvgIcon name="close" size="sm" />
+                    </button>
+                </header>
+            </template>
+
+            <section
+                v-if="controller.deletingDevice.value"
+                class="delete-dialog-body"
+            >
+                <div class="delete-device-summary">
+                    <span class="delete-device-thumb" aria-hidden="true">
+                        <SvgIcon name="device-management" />
+                    </span>
+                    <div>
+                        <strong>{{ controller.deletingDevice.value.name }}</strong>
+                        <p>
+                            {{ controller.deletingDevice.value.room }} ·
+                            {{ controller.deletingDevice.value.brand }}
+                        </p>
+                    </div>
+                </div>
+                <p class="delete-dialog-warning">
+                    删除后将无法在设备列表、智能对话设备清单和快捷操作中继续管理该设备。
+                </p>
+            </section>
+
+            <template #footer>
+                <footer class="delete-dialog-footer">
+                    <span>确认后会立即调用后端删除接口。</span>
+                    <div>
+                        <button
+                            class="delete-cancel-button"
+                            :disabled="controller.deleting.value"
+                            type="button"
+                            @click="controller.cancelRemoveDevice"
+                        >
+                            取消
+                        </button>
+                        <button
+                            class="delete-confirm-button"
+                            :disabled="controller.deleting.value"
+                            type="button"
+                            @click="controller.confirmRemoveDevice"
+                        >
+                            <SvgIcon
+                                :name="controller.deleting.value ? 'refresh' : 'warning'"
+                                size="sm"
+                            />
+                            {{ controller.deleting.value ? "删除中" : "确认删除" }}
+                        </button>
+                    </div>
+                </footer>
+            </template>
+        </BaseModal>
     </div>
 </template>
 
@@ -389,24 +222,23 @@ onMounted(() => {
 }
 
 .device-page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 14px 18px;
-    border: 1px solid var(--color-primary-200);
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
 }
 
-.device-page-header h1 {
+.device-page-title h1 {
     margin: 0;
     font-size: 26px;
     font-weight: 900;
     color: var(--color-text-primary);
+    line-height: 1.15;
 }
 
-.device-page-header p {
-    margin: 5px 0 0;
+.device-page-title p {
+    margin: 8px 0 0;
     color: var(--color-text-tertiary);
     font-size: 14px;
     font-weight: 700;
@@ -430,7 +262,181 @@ onMounted(() => {
     padding: 0 4px 0 12px;
 }
 
+.delete-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--color-danger-border);
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-danger-soft));
+}
+
+.delete-dialog-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.delete-dialog-header h2,
+.delete-dialog-header p {
+    margin: 0;
+}
+
+.delete-dialog-header h2 {
+    color: var(--color-text-primary);
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.delete-dialog-header p {
+    margin-top: 4px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.delete-dialog-close {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+}
+
+.delete-dialog-close:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.delete-dialog-body {
+    display: grid;
+    gap: 14px;
+}
+
+.delete-device-summary {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 14px;
+}
+
+.delete-device-thumb {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--color-surface-subtle);
+    color: var(--color-primary-700);
+}
+
+.delete-device-summary strong,
+.delete-device-summary p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.delete-device-summary strong {
+    display: block;
+    color: var(--color-text-primary);
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.delete-device-summary p,
+.delete-dialog-warning,
+.delete-dialog-footer span {
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.delete-device-summary p {
+    margin: 4px 0 0;
+}
+
+.delete-dialog-warning {
+    margin: 0;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 10px;
+    background: var(--color-danger-soft);
+    padding: 12px 14px;
+    color: var(--color-danger);
+    line-height: 1.6;
+}
+
+.delete-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-workspace-background);
+}
+
+.delete-dialog-footer div {
+    display: flex;
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.delete-cancel-button,
+.delete-confirm-button {
+    display: inline-flex;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 9px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.delete-cancel-button {
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+}
+
+.delete-confirm-button {
+    border: 1px solid var(--color-danger);
+    background: var(--color-danger);
+    color: var(--color-text-on-primary);
+    box-shadow: 0 6px 16px var(--color-danger-soft);
+}
+
+.delete-confirm-button:disabled svg {
+    animation: delete-dialog-spin 900ms linear infinite;
+}
+
+button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+@keyframes delete-dialog-spin {
+    to { transform: rotate(360deg); }
+}
+
 @media (max-width: 1180px) {
+    .device-page-header {
+        grid-template-columns: 1fr;
+    }
+
     .device-stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -440,11 +446,6 @@ onMounted(() => {
     .device-management-page {
         padding: 12px;
     }
-
-    .device-page-header {
-        padding: 16px;
-    }
-
     .device-stats-grid {
         grid-template-columns: 1fr;
     }

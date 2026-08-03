@@ -9,7 +9,6 @@ defineProps<{
     type: DeviceType | "";
     status: DeviceStatus | "";
     rooms: string[];
-    syncing: boolean;
 }>();
 
 defineEmits<{
@@ -17,9 +16,6 @@ defineEmits<{
     "update:room": [value: string];
     "update:type": [value: DeviceType | ""];
     "update:status": [value: DeviceStatus | ""];
-    add: [];
-    batch: [];
-    sync: [];
 }>();
 </script>
 
@@ -67,45 +63,26 @@ defineEmits<{
                 {{ item.value ? item.label : "状态" }}
             </option>
         </select>
-        <div class="device-toolbar-actions">
-            <button class="device-primary-button" type="button" @click="$emit('add')">
-                <SvgIcon name="plus" /> 添加设备
-            </button>
-            <button class="device-secondary-button" type="button" @click="$emit('batch')">
-                <SvgIcon name="layers" /> 批量操作
-            </button>
-            <button
-                class="device-secondary-button device-sync-button"
-                :disabled="syncing"
-                type="button"
-                @click="$emit('sync')"
-            >
-                <SvgIcon name="refresh" /> {{ syncing ? "同步中" : "同步设备" }}
-            </button>
-        </div>
     </section>
 </template>
 
 <style scoped>
 .device-toolbar {
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) repeat(3, 88px) auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    grid-template-columns: minmax(190px, 1fr) repeat(3, 96px);
     gap: 8px;
     align-items: center;
-    padding: 14px;
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    background: var(--color-card-bg);
-    box-shadow: var(--shadow-card);
 }
 
 .device-toolbar-actions {
-    display: flex;
+    display: contents;
     width: auto;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 6px;
-    justify-self: end;
-    min-width: 0;
 }
 
 .device-search {
@@ -115,6 +92,7 @@ defineEmits<{
 
 .device-search input,
 select {
+    min-width: 0;
     width: 100%;
     height: 40px;
     border: 1px solid var(--color-border);
@@ -159,6 +137,7 @@ select:focus {
     gap: 7px;
     height: 40px;
     border-radius: 8px;
+    flex: 0 0 auto;
     min-width: 0;
     padding: 0 10px;
     font-size: 13px;
@@ -211,9 +190,9 @@ button:disabled {
     opacity: 0.55;
 }
 
-@media (max-width: 1280px) {
-    .device-toolbar {
-        grid-template-columns: minmax(160px, 1fr) repeat(3, 82px) auto;
+@media (max-width: 1600px) {
+    .device-toolbar-actions {
+        display: contents;
     }
 
     .device-primary-button,
