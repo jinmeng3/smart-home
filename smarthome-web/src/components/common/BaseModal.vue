@@ -87,7 +87,9 @@ const close = () => {
         <template #header>
             <slot name="header">
                 <header class="dialog-header">
-                    <span class="dialog-icon" aria-hidden="true">{{ icon }}</span>
+                    <span class="dialog-icon" aria-hidden="true">{{
+                        icon
+                    }}</span>
                     <div>
                         <h2>{{ title }}</h2>
                         <p v-if="description">{{ description }}</p>
@@ -99,7 +101,8 @@ const close = () => {
                         :disabled="loading"
                         text
                         @click="close"
-                    >×</ElButton>
+                        >×</ElButton
+                    >
                 </header>
             </slot>
         </template>
@@ -113,8 +116,14 @@ const close = () => {
                 <footer class="dialog-footer">
                     <span><slot name="footerHint" /></span>
                     <div>
-                        <ElButton :disabled="loading" @click="close">{{ cancelText }}</ElButton>
-                        <ElButton :loading="loading" type="primary" @click="emit('confirm')">
+                        <ElButton :disabled="loading" @click="close">{{
+                            cancelText
+                        }}</ElButton>
+                        <ElButton
+                            :loading="loading"
+                            type="primary"
+                            @click="emit('confirm')"
+                        >
                             {{ confirmText }}
                         </ElButton>
                     </div>
@@ -162,7 +171,11 @@ const close = () => {
     cursor: default;
     padding: 18px 22px;
     border-bottom: 1px solid var(--color-border-subtle);
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-page-bg));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-page-bg)
+    );
 }
 
 .el-dialog.orion-base-modal .dialog-icon,
@@ -232,7 +245,9 @@ const close = () => {
     background: var(--color-workspace-background);
 }
 
-.orion-base-modal .dialog-footer > div { gap: 12px; }
+.orion-base-modal .dialog-footer > div {
+    gap: 12px;
+}
 
 .orion-base-modal .el-button:not(.close-button) {
     min-width: 88px;
@@ -278,7 +293,9 @@ const close = () => {
 }
 
 .orion-base-modal input::placeholder,
-.orion-base-modal textarea::placeholder { color: var(--color-text-muted); }
+.orion-base-modal textarea::placeholder {
+    color: var(--color-text-muted);
+}
 
 .orion-base-modal label {
     color: var(--color-text-secondary);
@@ -307,10 +324,22 @@ const close = () => {
     font-weight: 700;
 }
 
-.orion-status-badge.is-online { color: var(--color-success); background: var(--color-success-soft); }
-.orion-status-badge.is-warning { color: var(--color-warning); background: var(--color-warning-soft); }
-.orion-status-badge.is-error { color: var(--color-danger); background: var(--color-danger-soft); }
-.orion-status-badge.is-processing { color: var(--color-info); background: var(--color-info-soft); }
+.orion-status-badge.is-online {
+    color: var(--color-success);
+    background: var(--color-success-soft);
+}
+.orion-status-badge.is-warning {
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
+}
+.orion-status-badge.is-error {
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
+}
+.orion-status-badge.is-processing {
+    color: var(--color-info);
+    background: var(--color-info-soft);
+}
 
 .orion-base-modal .active-status,
 .orion-base-modal .device-badge,
@@ -344,11 +373,27 @@ const close = () => {
     box-shadow: var(--shadow-card-hover);
 }
 
-.el-message-box__header { padding: 20px 24px 12px; }
-.el-message-box__title { font-size: 20px; font-weight: 700; }
-.el-message-box__content { padding: 12px 24px 24px; color: var(--color-text-secondary); }
-.el-message-box__btns { gap: 12px; padding: 16px 24px; border-top: 1px solid var(--color-border-subtle); }
-.el-message-box__btns .el-button { height: 40px; margin: 0; border-radius: 10px; }
+.el-message-box__header {
+    padding: 20px 24px 12px;
+}
+.el-message-box__title {
+    font-size: 20px;
+    font-weight: 700;
+}
+.el-message-box__content {
+    padding: 12px 24px 24px;
+    color: var(--color-text-secondary);
+}
+.el-message-box__btns {
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+.el-message-box__btns .el-button {
+    height: 40px;
+    margin: 0;
+    border-radius: 10px;
+}
 
 @media (max-width: 640px) {
     .orion-base-modal {

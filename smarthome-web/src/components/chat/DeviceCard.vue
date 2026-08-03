@@ -48,7 +48,10 @@ const statusLabel = (device: DashboardDevice) =>
                 当前设备
             </h2>
             <span class="text-xs font-bold text-[var(--color-text-tertiary)]">
-                {{ store.deviceSummary.online }}/{{ store.deviceSummary.total }} 在线
+                {{ store.deviceSummary.online }}/{{
+                    store.deviceSummary.total
+                }}
+                在线
             </span>
         </div>
 
@@ -72,7 +75,10 @@ const statusLabel = (device: DashboardDevice) =>
                 </span>
                 <div class="device-copy">
                     <strong>{{ device.name }}</strong>
-                    <small>{{ device.room }} · {{ formatUpdatedAt(device.updatedAt) }}</small>
+                    <small
+                        >{{ device.room }} ·
+                        {{ formatUpdatedAt(device.updatedAt) }}</small
+                    >
                 </div>
                 <span class="device-status">
                     {{ device.value ?? statusLabel(device) }}

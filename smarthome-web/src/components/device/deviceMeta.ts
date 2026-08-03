@@ -13,7 +13,10 @@ export const deviceTypeOptions: { label: string; value: DeviceType | "" }[] = [
   { label: "窗帘", value: "curtain" },
 ];
 
-export const deviceStatusOptions: { label: string; value: DeviceStatus | "" }[] = [
+export const deviceStatusOptions: {
+  label: string;
+  value: DeviceStatus | "";
+}[] = [
   { label: "全部", value: "" },
   { label: "在线", value: "online" },
   { label: "离线", value: "offline" },
@@ -41,9 +44,5 @@ export const deviceStatusLabelMap: Record<DeviceStatus, string> = {
 export const getStatusClasses = (status: DeviceStatus) => {
   const config = statusColorMap[status as SemanticStatus];
 
-  return [
-    config.textClass,
-    config.backgroundClass,
-    config.borderClass,
-  ];
+  return [config.textClass, config.backgroundClass, config.borderClass];
 };

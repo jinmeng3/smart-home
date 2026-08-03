@@ -47,17 +47,24 @@ const dialogRef = ref<HTMLElement | null>(null);
 const lastFocusedElement = ref<HTMLElement | null>(null);
 const titleId = `smart-modal-title-${Math.random().toString(16).slice(2)}`;
 const widthClass = computed(() =>
-    props.width === "small" || props.width === "medium" || props.width === "large"
+    props.width === "small" ||
+    props.width === "medium" ||
+    props.width === "large"
         ? `is-${props.width}`
         : "",
 );
 const widthStyle = computed(() => {
-    if (props.width === "small" || props.width === "medium" || props.width === "large") {
+    if (
+        props.width === "small" ||
+        props.width === "medium" ||
+        props.width === "large"
+    ) {
         return undefined;
     }
 
     return {
-        width: typeof props.width === "number" ? `${props.width}px` : props.width,
+        width:
+            typeof props.width === "number" ? `${props.width}px` : props.width,
     };
 });
 
@@ -141,7 +148,8 @@ watch(
     () => props.modelValue,
     (visible) => {
         if (visible) {
-            lastFocusedElement.value = document.activeElement as HTMLElement | null;
+            lastFocusedElement.value =
+                document.activeElement as HTMLElement | null;
             document.addEventListener("keydown", handleKeydown);
             void focusDialog();
             return;
@@ -178,9 +186,14 @@ onBeforeUnmount(() => {
                         tabindex="-1"
                     >
                         <slot name="header">
-                            <header class="smart-modal-header smart-modal-stagger-1">
+                            <header
+                                class="smart-modal-header smart-modal-stagger-1"
+                            >
                                 <slot name="icon">
-                                    <span class="smart-modal-icon" aria-hidden="true">
+                                    <span
+                                        class="smart-modal-icon"
+                                        aria-hidden="true"
+                                    >
                                         <SvgIcon :name="icon" size="lg" />
                                     </span>
                                 </slot>
@@ -202,27 +215,43 @@ onBeforeUnmount(() => {
                         </slot>
 
                         <main class="smart-modal-body">
-                            <div v-if="$slots.status" class="smart-modal-status smart-modal-stagger-2">
+                            <div
+                                v-if="$slots.status"
+                                class="smart-modal-status smart-modal-stagger-2"
+                            >
                                 <slot name="status" />
                             </div>
-                            <div class="smart-modal-content smart-modal-stagger-3">
+                            <div
+                                class="smart-modal-content smart-modal-stagger-3"
+                            >
                                 <slot />
                             </div>
-                            <div v-if="$slots.warning" class="smart-modal-warning smart-modal-stagger-4">
+                            <div
+                                v-if="$slots.warning"
+                                class="smart-modal-warning smart-modal-stagger-4"
+                            >
                                 <slot name="warning" />
                             </div>
-                            <div v-if="$slots.preview" class="smart-modal-preview smart-modal-stagger-5">
+                            <div
+                                v-if="$slots.preview"
+                                class="smart-modal-preview smart-modal-stagger-5"
+                            >
                                 <slot name="preview" />
                             </div>
                         </main>
 
                         <slot name="footer">
-                            <footer class="smart-modal-footer smart-modal-stagger-6">
+                            <footer
+                                class="smart-modal-footer smart-modal-stagger-6"
+                            >
                                 <span class="smart-modal-footer-note">
                                     <slot name="footerHint" />
                                 </span>
                                 <div class="smart-modal-actions">
-                                    <ElButton :disabled="loading" @click="close">
+                                    <ElButton
+                                        :disabled="loading"
+                                        @click="close"
+                                    >
                                         {{ cancelText }}
                                     </ElButton>
                                     <ElButton
@@ -275,9 +304,15 @@ onBeforeUnmount(() => {
     box-shadow: var(--shadow-card-hover);
 }
 
-.smart-modal.is-small { width: min(100%, 560px); }
-.smart-modal.is-medium { width: min(100%, 760px); }
-.smart-modal.is-large { width: min(100%, 980px); }
+.smart-modal.is-small {
+    width: min(100%, 560px);
+}
+.smart-modal.is-medium {
+    width: min(100%, 760px);
+}
+.smart-modal.is-large {
+    width: min(100%, 980px);
+}
 
 .smart-modal-header {
     display: flex;
@@ -285,7 +320,11 @@ onBeforeUnmount(() => {
     gap: 16px;
     padding: 22px 28px;
     border-bottom: 1px solid var(--color-border);
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .smart-modal-icon {
@@ -296,7 +335,11 @@ onBeforeUnmount(() => {
     place-items: center;
     border-radius: 16px;
     color: var(--color-text-on-primary);
-    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-600),
+        var(--color-primary-500)
+    );
     box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 
@@ -415,7 +458,11 @@ onBeforeUnmount(() => {
 
 .smart-modal-actions :deep(.smart-modal-primary:hover) {
     border-color: var(--color-primary-700);
-    background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-700),
+        var(--color-primary-600)
+    );
     box-shadow: 0 8px 18px var(--color-focus-ring);
 }
 
@@ -443,7 +490,11 @@ onBeforeUnmount(() => {
     gap: 16px;
     padding: 22px 28px !important;
     border-bottom: 1px solid var(--color-border) !important;
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50)) !important;
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    ) !important;
 }
 
 .smart-modal :deep(.dialog-icon),
@@ -455,7 +506,11 @@ onBeforeUnmount(() => {
     place-items: center;
     border-radius: 14px;
     color: var(--color-text-on-primary) !important;
-    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-600),
+        var(--color-primary-500)
+    ) !important;
     box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 
@@ -516,19 +571,31 @@ onBeforeUnmount(() => {
     margin: 0 !important;
     padding: 16px 18px !important;
     border-color: var(--color-primary-200);
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .smart-modal :deep(.device-summary),
 .smart-modal :deep(.password-summary),
 .smart-modal :deep(.backup-summary) {
     border-color: var(--color-primary-200);
-    background: linear-gradient(160deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        160deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
 }
 
 .smart-modal :deep(.model-config-status) {
     border-color: var(--color-teal-500);
-    background: linear-gradient(145deg, var(--color-card-bg), var(--color-teal-soft));
+    background: linear-gradient(
+        145deg,
+        var(--color-card-bg),
+        var(--color-teal-soft)
+    );
 }
 
 .smart-modal :deep(.member-toolbar) {
@@ -646,15 +713,28 @@ onBeforeUnmount(() => {
 .smart-modal-stagger-4,
 .smart-modal-stagger-5,
 .smart-modal-stagger-6 {
-    animation: smart-modal-content-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: smart-modal-content-enter 220ms cubic-bezier(0.16, 1, 0.3, 1)
+        both;
 }
 
-.smart-modal-stagger-1 { animation-delay: 35ms; }
-.smart-modal-stagger-2 { animation-delay: 75ms; }
-.smart-modal-stagger-3 { animation-delay: 115ms; }
-.smart-modal-stagger-4 { animation-delay: 155ms; }
-.smart-modal-stagger-5 { animation-delay: 195ms; }
-.smart-modal-stagger-6 { animation-delay: 235ms; }
+.smart-modal-stagger-1 {
+    animation-delay: 35ms;
+}
+.smart-modal-stagger-2 {
+    animation-delay: 75ms;
+}
+.smart-modal-stagger-3 {
+    animation-delay: 115ms;
+}
+.smart-modal-stagger-4 {
+    animation-delay: 155ms;
+}
+.smart-modal-stagger-5 {
+    animation-delay: 195ms;
+}
+.smart-modal-stagger-6 {
+    animation-delay: 235ms;
+}
 
 @keyframes smart-modal-content-enter {
     from {

@@ -34,7 +34,9 @@ const iconNameMap: Record<Device["type"], string> = {
                 </div>
                 <div class="device-title">
                     <strong>{{ device.name }}</strong>
-                    <span class="device-type">{{ deviceTypeLabelMap[device.type] }}</span>
+                    <span class="device-type">{{
+                        deviceTypeLabelMap[device.type]
+                    }}</span>
                     <span class="device-status">
                         <i :class="`status-dot is-${device.status}`"></i>
                         {{ deviceStatusLabelMap[device.status] }}
@@ -65,9 +67,7 @@ const iconNameMap: Record<Device["type"], string> = {
             </dl>
         </div>
 
-        <div v-else class="device-detail-empty">
-            选择设备后查看详情
-        </div>
+        <div v-else class="device-detail-empty">选择设备后查看详情</div>
     </section>
 </template>
 
@@ -111,7 +111,11 @@ h2 {
     height: 76px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
     overflow: hidden;
 }
 
@@ -212,19 +216,43 @@ dl div:last-child {
     border-radius: 999px;
 }
 
-.status-dot.is-online { background: var(--color-success); animation: pulse 1800ms var(--motion-ease) infinite; }
-.status-dot.is-offline { background: var(--color-text-muted); }
-.status-dot.is-running { background: var(--color-info); animation: pulse 1500ms var(--motion-ease) infinite; }
-.status-dot.is-warning { background: var(--color-warning); animation: pulse 1100ms var(--motion-ease) infinite; }
+.status-dot.is-online {
+    background: var(--color-success);
+    animation: pulse 1800ms var(--motion-ease) infinite;
+}
+.status-dot.is-offline {
+    background: var(--color-text-muted);
+}
+.status-dot.is-running {
+    background: var(--color-info);
+    animation: pulse 1500ms var(--motion-ease) infinite;
+}
+.status-dot.is-warning {
+    background: var(--color-warning);
+    animation: pulse 1100ms var(--motion-ease) infinite;
+}
 
 @keyframes side-card-enter {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.7; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.45); }
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.45);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

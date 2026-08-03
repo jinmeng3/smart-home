@@ -62,13 +62,21 @@ const readBackupFile = (event: Event) => {
     <SettingsSectionCard id="backup" icon="backup" title="备份恢复">
         <div class="settings-field">
             <span>导出配置</span>
-            <button class="secondary-button" type="button" @click="emit('export')">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="emit('export')"
+            >
                 导出
             </button>
         </div>
         <div class="settings-field">
             <span>导入备份</span>
-            <button class="secondary-button" type="button" @click="selectBackupFile">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="selectBackupFile"
+            >
                 导入
             </button>
             <input
@@ -85,17 +93,27 @@ const readBackupFile = (event: Event) => {
         </div>
         <div class="settings-field">
             <span>最近备份时间</span>
-            <strong class="text-sm font-semibold text-[var(--color-text-secondary)]">
+            <strong
+                class="text-sm font-semibold text-[var(--color-text-secondary)]"
+            >
                 {{ backup.lastBackupTime }}
             </strong>
         </div>
         <div class="settings-field">
             <span>备份历史</span>
             <div class="flex gap-2">
-                <button class="secondary-button" type="button" @click="runBackup('manual')">
+                <button
+                    class="secondary-button"
+                    type="button"
+                    @click="runBackup('manual')"
+                >
                     立即备份
                 </button>
-                <button class="secondary-button" type="button" @click="historyVisible = true">
+                <button
+                    class="secondary-button"
+                    type="button"
+                    @click="historyVisible = true"
+                >
                     查看
                 </button>
             </div>
@@ -139,7 +157,11 @@ const readBackupFile = (event: Event) => {
                         <span>本地执行</span>
                     </div>
                     <div class="backup-action-list">
-                        <button class="backup-action" type="button" @click="runBackup('manual')">
+                        <button
+                            class="backup-action"
+                            type="button"
+                            @click="runBackup('manual')"
+                        >
                             <strong>立即备份</strong>
                             <span>创建一条手动记录</span>
                         </button>
@@ -151,7 +173,11 @@ const readBackupFile = (event: Event) => {
                             <strong>模拟自动备份</strong>
                             <span>按自动备份状态写入记录</span>
                         </button>
-                        <button class="backup-action" type="button" @click="selectBackupFile">
+                        <button
+                            class="backup-action"
+                            type="button"
+                            @click="selectBackupFile"
+                        >
                             <strong>导入备份</strong>
                             <span>从本地 JSON 恢复配置</span>
                         </button>
@@ -161,7 +187,9 @@ const readBackupFile = (event: Event) => {
                 <aside class="backup-summary">
                     <div class="backup-summary-item">
                         <span>自动备份</span>
-                        <strong>{{ backup.autoBackup ? "已开启" : "已关闭" }}</strong>
+                        <strong>{{
+                            backup.autoBackup ? "已开启" : "已关闭"
+                        }}</strong>
                     </div>
                     <div class="backup-summary-item">
                         <span>最近备份</span>
@@ -169,7 +197,9 @@ const readBackupFile = (event: Event) => {
                     </div>
                     <div class="backup-summary-item">
                         <span>历史条数</span>
-                        <strong>{{ settingsStore.backupHistory.length }} 条</strong>
+                        <strong
+                            >{{ settingsStore.backupHistory.length }} 条</strong
+                        >
                     </div>
                 </aside>
             </div>
@@ -194,12 +224,13 @@ const readBackupFile = (event: Event) => {
                 <footer class="dialog-footer">
                     <span>立即备份会刷新最近备份时间</span>
                     <div>
-                        <ElButton type="primary" @click="historyVisible = false">关闭</ElButton>
+                        <ElButton type="primary" @click="historyVisible = false"
+                            >关闭</ElButton
+                        >
                     </div>
                 </footer>
             </template>
         </BaseSmartModal>
-
     </SettingsSectionCard>
 </template>
 

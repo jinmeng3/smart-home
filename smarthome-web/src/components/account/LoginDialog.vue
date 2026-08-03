@@ -32,19 +32,19 @@ const title = computed(() =>
     outcome.value
         ? "操作已完成"
         : authStore.isAuthenticated
-        ? "账户已登录"
-        : mode.value === "login"
-          ? "登录 Orion Home"
-          : "注册 Orion Home",
+          ? "账户已登录"
+          : mode.value === "login"
+            ? "登录 Orion Home"
+            : "注册 Orion Home",
 );
 const description = computed(() =>
     outcome.value
         ? "Orion Home 已安全更新你的账户状态"
         : authStore.isAuthenticated
-        ? "你可以继续使用当前账户，或切换到其他 Orion Home 账户"
-        : mode.value === "login"
-        ? "登录后同步家庭、会话和智能助手配置"
-        : "创建账户，开始管理你的智能家庭",
+          ? "你可以继续使用当前账户，或切换到其他 Orion Home 账户"
+          : mode.value === "login"
+            ? "登录后同步家庭、会话和智能助手配置"
+            : "创建账户，开始管理你的智能家庭",
 );
 const footerHint = computed(() =>
     authStore.isAuthenticated
@@ -60,9 +60,18 @@ const avatarUrl = computed(() => settingsStore.settings.account.avatarUrl);
 const accountInitial = computed(() => username.value.slice(0, 1).toUpperCase());
 const outcomeContent = computed(() => {
     const content = {
-        login: { title: "欢迎回来", message: "登录成功，正在同步家庭设备与智能助手配置" },
-        register: { title: "账户创建成功", message: "你的 Orion Home 空间已经准备就绪" },
-        logout: { title: "已安全登出", message: "本机登录凭证已清除，期待与你再次见面" },
+        login: {
+            title: "欢迎回来",
+            message: "登录成功，正在同步家庭设备与智能助手配置",
+        },
+        register: {
+            title: "账户创建成功",
+            message: "你的 Orion Home 空间已经准备就绪",
+        },
+        logout: {
+            title: "已安全登出",
+            message: "本机登录凭证已清除，期待与你再次见面",
+        },
     };
     return outcome.value ? content[outcome.value] : null;
 });
@@ -79,7 +88,8 @@ const selectMode = (nextMode: AuthMode) => {
 
 const validateRegisterForm = (): string | null => {
     if (!registerForm.username.trim()) return "请输入用户名";
-    if (!emailPattern.test(registerForm.email.trim())) return "请输入有效的邮箱地址";
+    if (!emailPattern.test(registerForm.email.trim()))
+        return "请输入有效的邮箱地址";
     if (registerForm.password.length < 6) return "密码至少需要 6 位字符";
     if (registerForm.password !== registerForm.confirmPassword)
         return "两次输入的密码不一致";
@@ -96,7 +106,8 @@ const showFeedback = (type: FeedbackType, message: string, shake = false) => {
     }
 };
 
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const wait = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const submit = async () => {
     feedback.value = null;
@@ -183,7 +194,11 @@ const logout = async () => {
         await wait(1200);
         authStore.loginVisible = false;
     } catch (error) {
-        showFeedback("error", error instanceof Error ? error.message : "登出失败", true);
+        showFeedback(
+            "error",
+            error instanceof Error ? error.message : "登出失败",
+            true,
+        );
     } finally {
         submitting.value = false;
     }
@@ -202,14 +217,18 @@ const logout = async () => {
                 <span class="dialog-icon" aria-hidden="true">
                     <SvgIcon name="account" size="sm" />
                 </span>
-                <div><h2>{{ title }}</h2><p>{{ description }}</p></div>
+                <div>
+                    <h2>{{ title }}</h2>
+                    <p>{{ description }}</p>
+                </div>
                 <ElButton
                     aria-label="关闭"
                     class="close-button"
                     :disabled="submitting"
                     text
                     @click="authStore.loginVisible = false"
-                >×</ElButton>
+                    >×</ElButton
+                >
             </header>
         </template>
 
@@ -226,12 +245,21 @@ const logout = async () => {
             role="alert"
         >
             <span class="feedback-icon" aria-hidden="true">
-                {{ feedback.type === "error" ? "!" : feedback.type === "success" ? "✓" : "⚠" }}
+                {{
+                    feedback.type === "error"
+                        ? "!"
+                        : feedback.type === "success"
+                          ? "✓"
+                          : "⚠"
+                }}
             </span>
             <p>{{ feedback.message }}</p>
         </div>
 
-        <section v-if="!outcome && authStore.isAuthenticated" class="current-account">
+        <section
+            v-if="!outcome && authStore.isAuthenticated"
+            class="current-account"
+        >
             <img
                 v-if="avatarUrl"
                 class="account-avatar"
@@ -254,27 +282,84 @@ const logout = async () => {
                 <p>安全连接已启用，账户凭据仅用于 Orion Home 身份认证</p>
             </div>
             <nav class="auth-tabs" aria-label="账户操作">
-                <button :class="{ active: mode === 'login' }" type="button" @click="selectMode('login')">登录</button>
-                <button :class="{ active: mode === 'register' }" type="button" @click="selectMode('register')">注册</button>
+                <button
+                    :class="{ active: mode === 'login' }"
+                    type="button"
+                    @click="selectMode('login')"
+                >
+                    登录
+                </button>
+                <button
+                    :class="{ active: mode === 'register' }"
+                    type="button"
+                    @click="selectMode('register')"
+                >
+                    注册
+                </button>
             </nav>
 
-            <form class="login-form" :class="{ shake: shaking }" @submit.prevent="submit">
+            <form
+                class="login-form"
+                :class="{ shake: shaking }"
+                @submit.prevent="submit"
+            >
                 <template v-if="mode === 'login'">
                     <label class="login-field">
                         <span>邮箱</span>
-                        <ElInput ref="accountInput" v-model="loginForm.account" autocomplete="username" placeholder="name@example.com" type="email" />
+                        <ElInput
+                            ref="accountInput"
+                            v-model="loginForm.account"
+                            autocomplete="username"
+                            placeholder="name@example.com"
+                            type="email"
+                        />
                     </label>
                     <label class="login-field">
                         <span>密码</span>
-                        <ElInput v-model="loginForm.password" autocomplete="current-password" placeholder="请输入密码" show-password type="password" />
+                        <ElInput
+                            v-model="loginForm.password"
+                            autocomplete="current-password"
+                            placeholder="请输入密码"
+                            show-password
+                            type="password"
+                        />
                     </label>
                 </template>
                 <template v-else>
-                    <label class="login-field"><span>用户名</span><ElInput v-model="registerForm.username" autocomplete="username" placeholder="请输入用户名" /></label>
-                    <label class="login-field"><span>邮箱</span><ElInput v-model="registerForm.email" autocomplete="email" placeholder="name@example.com" type="email" /></label>
+                    <label class="login-field"
+                        ><span>用户名</span
+                        ><ElInput
+                            v-model="registerForm.username"
+                            autocomplete="username"
+                            placeholder="请输入用户名"
+                    /></label>
+                    <label class="login-field"
+                        ><span>邮箱</span
+                        ><ElInput
+                            v-model="registerForm.email"
+                            autocomplete="email"
+                            placeholder="name@example.com"
+                            type="email"
+                    /></label>
                     <div class="password-grid">
-                        <label class="login-field"><span>密码</span><ElInput v-model="registerForm.password" autocomplete="new-password" placeholder="至少 6 位字符" show-password type="password" /></label>
-                        <label class="login-field"><span>确认密码</span><ElInput v-model="registerForm.confirmPassword" autocomplete="new-password" placeholder="再次输入密码" show-password type="password" /></label>
+                        <label class="login-field"
+                            ><span>密码</span
+                            ><ElInput
+                                v-model="registerForm.password"
+                                autocomplete="new-password"
+                                placeholder="至少 6 位字符"
+                                show-password
+                                type="password"
+                        /></label>
+                        <label class="login-field"
+                            ><span>确认密码</span
+                            ><ElInput
+                                v-model="registerForm.confirmPassword"
+                                autocomplete="new-password"
+                                placeholder="再次输入密码"
+                                show-password
+                                type="password"
+                        /></label>
                     </div>
                 </template>
             </form>
@@ -284,9 +369,25 @@ const logout = async () => {
             <footer v-if="!outcome" class="dialog-footer">
                 <span>{{ footerHint }}</span>
                 <div>
-                    <ElButton :disabled="submitting" @click="authStore.loginVisible = false">取消</ElButton>
-                    <ElButton v-if="authStore.isAuthenticated" :loading="submitting" type="primary" @click="logout">登出</ElButton>
-                    <ElButton v-if="!authStore.isAuthenticated" :loading="submitting" type="primary" @click="submit">{{ mode === "login" ? "登录" : "创建账户" }}</ElButton>
+                    <ElButton
+                        :disabled="submitting"
+                        @click="authStore.loginVisible = false"
+                        >取消</ElButton
+                    >
+                    <ElButton
+                        v-if="authStore.isAuthenticated"
+                        :loading="submitting"
+                        type="primary"
+                        @click="logout"
+                        >登出</ElButton
+                    >
+                    <ElButton
+                        v-if="!authStore.isAuthenticated"
+                        :loading="submitting"
+                        type="primary"
+                        @click="submit"
+                        >{{ mode === "login" ? "登录" : "创建账户" }}</ElButton
+                    >
                 </div>
             </footer>
         </template>
@@ -299,11 +400,20 @@ const logout = async () => {
     min-height: 238px;
     place-items: center;
     align-content: center;
-    border: 1px solid color-mix(in srgb, var(--color-success-border) 74%, transparent);
+    border: 1px solid
+        color-mix(in srgb, var(--color-success-border) 74%, transparent);
     border-radius: 18px;
     background:
-        radial-gradient(circle at 50% 15%, var(--color-success-soft), transparent 48%),
-        linear-gradient(180deg, var(--color-card-bg), var(--color-surface-subtle));
+        radial-gradient(
+            circle at 50% 15%,
+            var(--color-success-soft),
+            transparent 48%
+        ),
+        linear-gradient(
+            180deg,
+            var(--color-card-bg),
+            var(--color-surface-subtle)
+        );
     padding: 28px;
     text-align: center;
     animation: auth-result-in 360ms var(--motion-ease) both;
@@ -316,8 +426,13 @@ const logout = async () => {
     margin-bottom: 16px;
     place-items: center;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-success), var(--color-teal-600));
-    box-shadow: 0 12px 30px color-mix(in srgb, var(--color-success) 24%, transparent);
+    background: linear-gradient(
+        135deg,
+        var(--color-success),
+        var(--color-teal-600)
+    );
+    box-shadow: 0 12px 30px
+        color-mix(in srgb, var(--color-success) 24%, transparent);
     color: var(--color-text-on-primary);
     font-size: 30px;
     font-weight: 900;
@@ -344,8 +459,14 @@ const logout = async () => {
 }
 
 @keyframes auth-result-in {
-    from { opacity: 0; transform: translateY(8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .auth-tabs {
@@ -356,7 +477,11 @@ const logout = async () => {
     padding: 5px;
     border: 1px solid var(--color-border-subtle);
     border-radius: 14px;
-    background: color-mix(in srgb, var(--color-surface-subtle) 72%, transparent);
+    background: color-mix(
+        in srgb,
+        var(--color-surface-subtle) 72%,
+        transparent
+    );
 }
 
 .auth-content {
@@ -369,7 +494,8 @@ const logout = async () => {
     align-items: center;
     gap: 9px;
     margin-bottom: 14px;
-    border: 1px solid color-mix(in srgb, var(--color-teal-border) 58%, transparent);
+    border: 1px solid
+        color-mix(in srgb, var(--color-teal-border) 58%, transparent);
     border-radius: 12px;
     background: color-mix(in srgb, var(--color-teal-soft) 68%, transparent);
     padding: 10px 13px;
@@ -383,7 +509,11 @@ const logout = async () => {
     flex: 0 0 20px;
     place-items: center;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--color-teal-600) 82%, var(--color-primary-500));
+    background: color-mix(
+        in srgb,
+        var(--color-teal-600) 82%,
+        var(--color-primary-500)
+    );
     color: var(--color-text-on-primary);
     font-size: 12px;
     font-weight: 900;
@@ -416,9 +546,14 @@ const logout = async () => {
 
 .auth-tabs button.active {
     color: var(--color-primary-700);
-    background: color-mix(in srgb, var(--color-card-bg) 82%, var(--color-primary-50));
+    background: color-mix(
+        in srgb,
+        var(--color-card-bg) 82%,
+        var(--color-primary-50)
+    );
     box-shadow:
-        inset 0 0 0 1px color-mix(in srgb, var(--color-primary-200) 70%, transparent),
+        inset 0 0 0 1px
+            color-mix(in srgb, var(--color-primary-200) 70%, transparent),
         0 6px 18px rgb(15 23 42 / 6%);
 }
 
@@ -449,7 +584,11 @@ const logout = async () => {
     padding: 16px;
     border: 1px solid var(--color-teal-border);
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-teal-soft));
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-teal-soft)
+    );
 }
 
 .current-account strong {
@@ -482,13 +621,18 @@ const logout = async () => {
     color: var(--color-text-on-primary);
     font-size: 14px;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--color-primary-200), var(--color-primary-600));
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-200),
+        var(--color-primary-600)
+    );
 }
 
 .login-form {
     display: grid;
     gap: 16px;
-    border: 1px solid color-mix(in srgb, var(--color-border-subtle) 64%, transparent);
+    border: 1px solid
+        color-mix(in srgb, var(--color-border-subtle) 64%, transparent);
     border-radius: 16px;
     background: linear-gradient(
         180deg,
@@ -573,20 +717,33 @@ const logout = async () => {
     }
 }
 
-.login-field { display: grid; gap: 8px; margin: 0 !important; }
+.login-field {
+    display: grid;
+    gap: 8px;
+    margin: 0 !important;
+}
 .login-field > span {
     color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 800;
 }
-.password-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.password-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
 
 :deep(.login-field .el-input__wrapper) {
     min-height: 44px;
     border-radius: 12px;
     padding: 0 14px;
-    border: 1px solid color-mix(in srgb, var(--color-border-default) 76%, transparent);
-    background: color-mix(in srgb, var(--color-card-bg) 84%, var(--color-surface-subtle));
+    border: 1px solid
+        color-mix(in srgb, var(--color-border-default) 76%, transparent);
+    background: color-mix(
+        in srgb,
+        var(--color-card-bg) 84%,
+        var(--color-surface-subtle)
+    );
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
     transition:
         border-color 160ms var(--motion-ease),
@@ -595,8 +752,16 @@ const logout = async () => {
 }
 
 :deep(.login-field .el-input__wrapper:hover) {
-    border-color: color-mix(in srgb, var(--color-border-strong) 86%, transparent);
-    background: color-mix(in srgb, var(--color-card-bg) 78%, var(--color-primary-50));
+    border-color: color-mix(
+        in srgb,
+        var(--color-border-strong) 86%,
+        transparent
+    );
+    background: color-mix(
+        in srgb,
+        var(--color-card-bg) 78%,
+        var(--color-primary-50)
+    );
 }
 
 :deep(.login-field .el-input__wrapper.is-focus) {
@@ -634,16 +799,23 @@ const logout = async () => {
         var(--color-primary-600),
         color-mix(in srgb, var(--color-primary-500) 70%, var(--color-teal-600))
     ) !important;
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-focus-ring) 72%, transparent);
+    box-shadow: 0 8px 20px
+        color-mix(in srgb, var(--color-focus-ring) 72%, transparent);
 }
 
 .dialog-footer :deep(.el-button--primary) {
     border-color: var(--color-primary-600) !important;
-    background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)) !important;
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-600),
+        var(--color-primary-500)
+    ) !important;
     color: var(--color-text-on-primary) !important;
 }
 
 @media (max-width: 640px) {
-    .password-grid { grid-template-columns: 1fr; }
+    .password-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

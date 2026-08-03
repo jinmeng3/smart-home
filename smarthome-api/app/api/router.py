@@ -8,6 +8,7 @@ from app.api.routes import (
     device,
     households,
     members,
+    rooms,
     scenes,
 )
 
@@ -21,5 +22,6 @@ api_router.include_router(chat.codex_router)
 api_router.include_router(device.router)
 api_router.include_router(households.router)
 api_router.include_router(members.router)
+api_router.include_router(rooms.router)
 api_router.include_router(scenes.router)
 api_router.include_router(auth.router)

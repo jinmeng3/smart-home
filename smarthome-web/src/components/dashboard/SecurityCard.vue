@@ -18,7 +18,9 @@ const knowledgeItems = [
         style="animation-delay: 420ms"
     >
         <div class="mb-3 flex items-center justify-between">
-            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+            <h2
+                class="flex items-center gap-2 text-sm font-extrabold text-slate-800"
+            >
                 <SvgIcon name="security" size="sm" />
                 安防与知识库
             </h2>
@@ -46,7 +48,9 @@ const knowledgeItems = [
                 "
             >
                 <SvgIcon
-                    :name="store.securityAlertHandled ? 'check-circle' : 'warning'"
+                    :name="
+                        store.securityAlertHandled ? 'check-circle' : 'warning'
+                    "
                     size="sm"
                 />
             </span>

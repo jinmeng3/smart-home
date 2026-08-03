@@ -25,7 +25,11 @@ defineEmits<{
                 <button type="button" @click="$emit('edit')">
                     <SvgIcon name="edit" /> 编辑流程
                 </button>
-                <button :disabled="running || !scene" type="button" @click="$emit('preview')">
+                <button
+                    :disabled="running || !scene"
+                    type="button"
+                    @click="$emit('preview')"
+                >
                     <SvgIcon name="power" /> 预览执行
                 </button>
             </div>
@@ -34,14 +38,19 @@ defineEmits<{
         <Transition name="scene-crossfade" mode="out-in">
             <div v-if="scene" :key="scene.id" class="scene-flow-body">
                 <div class="scene-flow-summary">
-                    <span class="scene-flow-icon" :style="{ color: scene.color }">
+                    <span
+                        class="scene-flow-icon"
+                        :style="{ color: scene.color }"
+                    >
                         <SvgIcon :name="scene.icon" />
                     </span>
                     <div>
                         <strong>{{ scene.name }}</strong>
                         <p>{{ scene.description }}</p>
                     </div>
-                    <span class="scene-flow-badge">{{ scene.triggerType === "manual" ? "手动" : "自动化" }}</span>
+                    <span class="scene-flow-badge">{{
+                        scene.triggerType === "manual" ? "手动" : "自动化"
+                    }}</span>
                 </div>
 
                 <ol>
@@ -51,13 +60,24 @@ defineEmits<{
                         :class="`is-${stepStatuses[step.id] ?? 'pending'}`"
                     >
                         <span class="scene-step-icon">
-                            <SvgIcon :name="stepStatuses[step.id] === 'completed' ? 'check-circle' : stepStatuses[step.id] === 'running' ? 'refresh' : 'device-management'" />
+                            <SvgIcon
+                                :name="
+                                    stepStatuses[step.id] === 'completed'
+                                        ? 'check-circle'
+                                        : stepStatuses[step.id] === 'running'
+                                          ? 'refresh'
+                                          : 'device-management'
+                                "
+                            />
                         </span>
                         <div>
                             <strong>{{ step.name }}</strong>
                             <p>{{ step.description }}</p>
                         </div>
-                        <i v-if="index < scene.steps.length - 1" aria-hidden="true" />
+                        <i
+                            v-if="index < scene.steps.length - 1"
+                            aria-hidden="true"
+                        />
                     </li>
                 </ol>
                 <small>共 {{ scene.steps.length }} 步操作</small>
@@ -323,7 +343,9 @@ li i::after {
 }
 
 @keyframes scene-flow-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 980px) {

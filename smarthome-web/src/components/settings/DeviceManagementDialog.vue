@@ -36,11 +36,15 @@ const revokeDevice = async (deviceId: number) => {
     }
 
     try {
-        await ElMessageBox.confirm(`确认移除 ${device.name}？`, "移除登录设备", {
-            confirmButtonText: "移除",
-            cancelButtonText: "取消",
-            type: "warning",
-        });
+        await ElMessageBox.confirm(
+            `确认移除 ${device.name}？`,
+            "移除登录设备",
+            {
+                confirmButtonText: "移除",
+                cancelButtonText: "取消",
+                type: "warning",
+            },
+        );
         settingsStore.revokeSecurityDevice(deviceId);
         ElMessage.success("设备已移除");
     } catch {
@@ -72,7 +76,12 @@ const revokeDevice = async (deviceId: number) => {
                     <h2>登录设备管理</h2>
                     <p>管理当前账户已记录的登录设备</p>
                 </div>
-                <ElButton aria-label="关闭" class="close-button" text @click="closeDialog">
+                <ElButton
+                    aria-label="关闭"
+                    class="close-button"
+                    text
+                    @click="closeDialog"
+                >
                     ×
                 </ElButton>
             </header>
@@ -88,7 +97,11 @@ const revokeDevice = async (deviceId: number) => {
                 </div>
 
                 <div class="device-list">
-                    <article v-for="device in devices" :key="device.id" class="device-item">
+                    <article
+                        v-for="device in devices"
+                        :key="device.id"
+                        class="device-item"
+                    >
                         <div class="device-main">
                             <div>
                                 <strong>{{ device.name }}</strong>
@@ -119,9 +132,16 @@ const revokeDevice = async (deviceId: number) => {
                                 <button
                                     class="secondary-button"
                                     type="button"
-                                    @click="toggleDeviceTrust(device.id, !device.trusted)"
+                                    @click="
+                                        toggleDeviceTrust(
+                                            device.id,
+                                            !device.trusted,
+                                        )
+                                    "
                                 >
-                                    {{ device.trusted ? "取消信任" : "设为信任" }}
+                                    {{
+                                        device.trusted ? "取消信任" : "设为信任"
+                                    }}
                                 </button>
                                 <ElButton
                                     :disabled="device.current"
@@ -154,7 +174,9 @@ const revokeDevice = async (deviceId: number) => {
             <footer class="dialog-footer">
                 <span>设备信任状态只在本地更新</span>
                 <div>
-                    <ElButton type="primary" @click="closeDialog">关闭</ElButton>
+                    <ElButton type="primary" @click="closeDialog"
+                        >关闭</ElButton
+                    >
                 </div>
             </footer>
         </template>
@@ -190,7 +212,11 @@ const revokeDevice = async (deviceId: number) => {
     gap: 12px;
     padding: 17px 20px 14px;
     border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(135deg, var(--color-dialog-header-start), var(--color-dialog-header-end));
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-header-start),
+        var(--color-dialog-header-end)
+    );
 }
 
 .dialog-icon {
@@ -201,7 +227,11 @@ const revokeDevice = async (deviceId: number) => {
     place-items: center;
     border-radius: 11px;
     color: white;
-    background: linear-gradient(135deg, var(--color-dialog-icon-start), var(--color-dialog-icon-end));
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-icon-start),
+        var(--color-dialog-icon-end)
+    );
 }
 
 .dialog-header h2 {

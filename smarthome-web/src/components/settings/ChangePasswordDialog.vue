@@ -30,7 +30,9 @@ const passwordUpdatedAt = computed(
     () => settingsStore.securityMeta.passwordUpdatedAt ?? "尚未更新",
 );
 const trustedDeviceCount = computed(
-    () => settingsStore.securityMeta.devices.filter((device) => device.trusted).length,
+    () =>
+        settingsStore.securityMeta.devices.filter((device) => device.trusted)
+            .length,
 );
 const strength = computed(() => {
     const value = form.newPassword;
@@ -54,7 +56,9 @@ const strength = computed(() => {
     return { label: "强", percent: 100, tone: "strong" as const };
 });
 const hasChanges = computed(
-    () => form.newPassword.trim().length > 0 || form.confirmPassword.trim().length > 0,
+    () =>
+        form.newPassword.trim().length > 0 ||
+        form.confirmPassword.trim().length > 0,
 );
 const canSave = computed(
     () =>
@@ -68,7 +72,10 @@ const passwordError = computed(() => {
     if (form.newPassword.length > 0 && form.newPassword.length < 6) {
         return "密码至少 6 位字符";
     }
-    if (form.confirmPassword.length > 0 && form.newPassword !== form.confirmPassword) {
+    if (
+        form.confirmPassword.length > 0 &&
+        form.newPassword !== form.confirmPassword
+    ) {
         return "两次输入的密码不一致";
     }
     return "";
@@ -176,7 +183,12 @@ const savePassword = async () => {
                     <h2>修改密码</h2>
                     <p>更新当前账户的本地安全记录</p>
                 </div>
-                <ElButton aria-label="关闭" class="close-button" text @click="requestClose">
+                <ElButton
+                    aria-label="关闭"
+                    class="close-button"
+                    text
+                    @click="requestClose"
+                >
                     ×
                 </ElButton>
             </header>
@@ -189,7 +201,10 @@ const savePassword = async () => {
                         <strong>密码设置</strong>
                         <span>最少 6 位字符</span>
                     </div>
-                    <span class="password-strength-label" :data-tone="strength.tone">
+                    <span
+                        class="password-strength-label"
+                        :data-tone="strength.tone"
+                    >
                         {{ strength.label }}
                     </span>
                 </div>
@@ -203,9 +218,13 @@ const savePassword = async () => {
                             class="settings-input password-input"
                             placeholder="输入新密码"
                         />
-                    <button class="password-toggle" type="button" @click="showPassword = !showPassword">
-                        {{ showPassword ? "隐藏" : "显示" }}
-                    </button>
+                        <button
+                            class="password-toggle"
+                            type="button"
+                            @click="showPassword = !showPassword"
+                        >
+                            {{ showPassword ? "隐藏" : "显示" }}
+                        </button>
                     </div>
                 </label>
 
@@ -220,7 +239,13 @@ const savePassword = async () => {
                 </label>
 
                 <div class="password-meter" aria-hidden="true">
-                    <span :class="['password-meter-bar', `password-meter-${strength.tone}`]" :style="{ width: `${strength.percent}%` }" />
+                    <span
+                        :class="[
+                            'password-meter-bar',
+                            `password-meter-${strength.tone}`,
+                        ]"
+                        :style="{ width: `${strength.percent}%` }"
+                    />
                 </div>
 
                 <p v-if="passwordError" class="password-error">
@@ -256,7 +281,11 @@ const savePassword = async () => {
                 <span>修改结果只会保存在本地</span>
                 <div>
                     <ElButton @click="requestClose">关闭</ElButton>
-                    <ElButton :disabled="!canSave" type="primary" @click="savePassword">
+                    <ElButton
+                        :disabled="!canSave"
+                        type="primary"
+                        @click="savePassword"
+                    >
                         保存
                     </ElButton>
                 </div>

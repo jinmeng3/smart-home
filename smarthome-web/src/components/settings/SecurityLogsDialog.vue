@@ -44,7 +44,12 @@ const closeDialog = () => {
                     <h2>操作日志</h2>
                     <p>查看最近的本地安全变更</p>
                 </div>
-                <ElButton aria-label="关闭" class="close-button" text @click="closeDialog">
+                <ElButton
+                    aria-label="关闭"
+                    class="close-button"
+                    text
+                    @click="closeDialog"
+                >
                     ×
                 </ElButton>
             </header>
@@ -81,7 +86,9 @@ const closeDialog = () => {
             <footer class="dialog-footer">
                 <span>日志仅保留最近 8 条</span>
                 <div>
-                    <ElButton type="primary" @click="closeDialog">关闭</ElButton>
+                    <ElButton type="primary" @click="closeDialog"
+                        >关闭</ElButton
+                    >
                 </div>
             </footer>
         </template>
@@ -117,7 +124,11 @@ const closeDialog = () => {
     gap: 12px;
     padding: 17px 20px 14px;
     border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(135deg, var(--color-dialog-header-start), var(--color-dialog-header-end));
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-header-start),
+        var(--color-dialog-header-end)
+    );
 }
 
 .dialog-icon {
@@ -128,7 +139,11 @@ const closeDialog = () => {
     place-items: center;
     border-radius: 11px;
     color: white;
-    background: linear-gradient(135deg, var(--color-dialog-icon-start), var(--color-dialog-icon-end));
+    background: linear-gradient(
+        135deg,
+        var(--color-dialog-icon-start),
+        var(--color-dialog-icon-end)
+    );
 }
 
 .dialog-header h2 {

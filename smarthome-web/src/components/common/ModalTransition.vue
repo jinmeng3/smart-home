@@ -14,7 +14,11 @@ withDefaults(
 </script>
 
 <template>
-    <Transition :appear="appear" :mode="mode === 'default' ? undefined : mode" :name="name">
+    <Transition
+        :appear="appear"
+        :mode="mode === 'default' ? undefined : mode"
+        :name="name"
+    >
         <slot />
     </Transition>
 </template>
@@ -95,11 +99,17 @@ withDefaults(
     animation: orion-dialog-content 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.dialog-fade-enter-active .orion-base-modal .orion-modal-content > :nth-child(1) {
+.dialog-fade-enter-active
+    .orion-base-modal
+    .orion-modal-content
+    > :nth-child(1) {
     animation-delay: 70ms;
 }
 
-.dialog-fade-enter-active .orion-base-modal .orion-modal-content > :nth-child(2) {
+.dialog-fade-enter-active
+    .orion-base-modal
+    .orion-modal-content
+    > :nth-child(2) {
     animation-delay: 110ms;
 }
 
@@ -114,10 +124,18 @@ withDefaults(
     animation: orion-dialog-content 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.dialog-fade-enter-active .el-dialog__header { animation-delay: 40ms; }
-.dialog-fade-enter-active .el-dialog__body > :first-child { animation-delay: 90ms; }
-.dialog-fade-enter-active .el-dialog__body > :nth-child(2) { animation-delay: 140ms; }
-.dialog-fade-enter-active .el-dialog__footer { animation-delay: 190ms; }
+.dialog-fade-enter-active .el-dialog__header {
+    animation-delay: 40ms;
+}
+.dialog-fade-enter-active .el-dialog__body > :first-child {
+    animation-delay: 90ms;
+}
+.dialog-fade-enter-active .el-dialog__body > :nth-child(2) {
+    animation-delay: 140ms;
+}
+.dialog-fade-enter-active .el-dialog__footer {
+    animation-delay: 190ms;
+}
 
 .el-dialog button:not(:disabled) {
     transition:
@@ -128,8 +146,12 @@ withDefaults(
         transform 140ms ease !important;
 }
 
-.el-dialog button:not(:disabled):hover { transform: translateY(-1px); }
-.el-dialog button:not(:disabled):active { transform: scale(0.98); }
+.el-dialog button:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+.el-dialog button:not(:disabled):active {
+    transform: scale(0.98);
+}
 
 .el-dialog input:not(.el-input__inner),
 .el-dialog textarea,
@@ -206,22 +228,42 @@ withDefaults(
 }
 
 @keyframes orion-dialog-enter {
-    from { opacity: 0; transform: translateY(20px) scale(0.96); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes orion-dialog-leave {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to { opacity: 0; transform: translateY(12px) scale(0.97); }
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+    }
 }
 
 @keyframes orion-dialog-content {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes orion-loading-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

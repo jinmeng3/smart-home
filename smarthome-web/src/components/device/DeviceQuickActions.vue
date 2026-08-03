@@ -78,9 +78,15 @@ button span {
     border-radius: 8px;
 }
 
-.is-primary span { background: var(--color-primary-100); }
-.is-success span { background: var(--color-success-soft); }
-.is-warning span { background: var(--color-warning-soft); }
+.is-primary span {
+    background: var(--color-primary-100);
+}
+.is-success span {
+    background: var(--color-success-soft);
+}
+.is-warning span {
+    background: var(--color-warning-soft);
+}
 
 button:hover {
     border-color: var(--color-primary-300);

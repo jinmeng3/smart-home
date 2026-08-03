@@ -163,7 +163,9 @@ onMounted(() => {
                         <SvgIcon name="device-management" />
                     </span>
                     <div>
-                        <strong>{{ controller.deletingDevice.value.name }}</strong>
+                        <strong>{{
+                            controller.deletingDevice.value.name
+                        }}</strong>
                         <p>
                             {{ controller.deletingDevice.value.room }} ·
                             {{ controller.deletingDevice.value.brand }}
@@ -194,10 +196,18 @@ onMounted(() => {
                             @click="controller.confirmRemoveDevice"
                         >
                             <SvgIcon
-                                :name="controller.deleting.value ? 'refresh' : 'warning'"
+                                :name="
+                                    controller.deleting.value
+                                        ? 'refresh'
+                                        : 'warning'
+                                "
                                 size="sm"
                             />
-                            {{ controller.deleting.value ? "删除中" : "确认删除" }}
+                            {{
+                                controller.deleting.value
+                                    ? "删除中"
+                                    : "确认删除"
+                            }}
                         </button>
                     </div>
                 </footer>
@@ -268,7 +278,11 @@ onMounted(() => {
     gap: 14px;
     padding: 18px 22px;
     border-bottom: 1px solid var(--color-danger-border);
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-danger-soft));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-danger-soft)
+    );
 }
 
 .delete-dialog-icon {
@@ -429,7 +443,9 @@ button:disabled {
 }
 
 @keyframes delete-dialog-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 1180px) {

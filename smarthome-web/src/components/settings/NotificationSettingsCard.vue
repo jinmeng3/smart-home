@@ -6,7 +6,6 @@ import BaseSwitch from "../BaseSwitch.vue";
 defineProps<{
     notifications: NotificationSettings;
 }>();
-
 </script>
 
 <template>

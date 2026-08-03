@@ -95,7 +95,9 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
                 <span>位管理员</span>
             </div>
             <span class="role-badge">
-                当前权限：{{ currentMember?.role === "admin" ? "管理员" : "成员" }}
+                当前权限：{{
+                    currentMember?.role === "admin" ? "管理员" : "成员"
+                }}
             </span>
         </div>
 
@@ -195,7 +197,11 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
         <template #footer>
             <footer class="dialog-footer">
                 <span>
-                    {{ canManage ? "管理员可调整角色或移除普通成员" : readonlyMessage }}
+                    {{
+                        canManage
+                            ? "管理员可调整角色或移除普通成员"
+                            : readonlyMessage
+                    }}
                 </span>
                 <ElButton @click="dialogVisible = false">完成</ElButton>
             </footer>

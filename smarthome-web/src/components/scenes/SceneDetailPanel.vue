@@ -23,8 +23,18 @@ const templates = [
 ];
 
 const actions = [
-    { key: "batch", label: "批量启用", note: "启用多个场景", icon: "check-circle" },
-    { key: "schedule", label: "定时设置", note: "统一定时管理", icon: "calendar" },
+    {
+        key: "batch",
+        label: "批量启用",
+        note: "启用多个场景",
+        icon: "check-circle",
+    },
+    {
+        key: "schedule",
+        label: "定时设置",
+        note: "统一定时管理",
+        icon: "calendar",
+    },
     { key: "sort", label: "场景排序", note: "自定义排序", icon: "layers" },
     { key: "logs", label: "查看日志", note: "执行记录与日志", icon: "log" },
 ] as const;
@@ -36,11 +46,15 @@ const actions = [
             <section v-if="scene" :key="scene.id" class="scene-panel-card">
                 <header class="scene-panel-title">
                     <h2><SvgIcon name="device-management" /> 场景详情</h2>
-                    <button type="button" title="刷新详情"><SvgIcon name="refresh" /></button>
+                    <button type="button" title="刷新详情">
+                        <SvgIcon name="refresh" />
+                    </button>
                 </header>
 
                 <div class="scene-detail-head">
-                    <span :style="{ color: scene.color }"><SvgIcon :name="scene.icon" /></span>
+                    <span :style="{ color: scene.color }"
+                        ><SvgIcon :name="scene.icon"
+                    /></span>
                     <div>
                         <h3>{{ scene.name }}</h3>
                         <p>{{ scene.description }}</p>
@@ -49,16 +63,45 @@ const actions = [
                 </div>
 
                 <dl>
-                    <div><dt>触发条件</dt><dd>{{ scene.triggerLabel }}</dd></div>
-                    <div><dt>执行方式</dt><dd>{{ scene.triggerType === "manual" ? "手动执行" : "自动执行" }}</dd></div>
-                    <div><dt>关联房间</dt><dd>玄关、客厅、餐厅、主卧</dd></div>
-                    <div><dt>关联设备</dt><dd>{{ scene.deviceCount }} 个设备</dd></div>
-                    <div><dt>创建时间</dt><dd>{{ scene.createdAt }}</dd></div>
-                    <div><dt>更新时间</dt><dd>{{ scene.updatedAt }}</dd></div>
+                    <div>
+                        <dt>触发条件</dt>
+                        <dd>{{ scene.triggerLabel }}</dd>
+                    </div>
+                    <div>
+                        <dt>执行方式</dt>
+                        <dd>
+                            {{
+                                scene.triggerType === "manual"
+                                    ? "手动执行"
+                                    : "自动执行"
+                            }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>关联房间</dt>
+                        <dd>玄关、客厅、餐厅、主卧</dd>
+                    </div>
+                    <div>
+                        <dt>关联设备</dt>
+                        <dd>{{ scene.deviceCount }} 个设备</dd>
+                    </div>
+                    <div>
+                        <dt>创建时间</dt>
+                        <dd>{{ scene.createdAt }}</dd>
+                    </div>
+                    <div>
+                        <dt>更新时间</dt>
+                        <dd>{{ scene.updatedAt }}</dd>
+                    </div>
                 </dl>
 
                 <div class="scene-detail-actions">
-                    <button class="is-primary" :disabled="running" type="button" @click="$emit('run', scene)">
+                    <button
+                        class="is-primary"
+                        :disabled="running"
+                        type="button"
+                        @click="$emit('run', scene)"
+                    >
                         <SvgIcon name="power" /> 执行
                     </button>
                     <button type="button" @click="$emit('edit', scene)">
@@ -97,7 +140,9 @@ const actions = [
         <section class="scene-panel-card">
             <header class="scene-panel-title">
                 <h2><SvgIcon name="device-management" /> 推荐模板</h2>
-                <button type="button" title="更多模板">更多 <SvgIcon name="chevron-right" /></button>
+                <button type="button" title="更多模板">
+                    更多 <SvgIcon name="chevron-right" />
+                </button>
             </header>
             <div class="scene-template-list">
                 <button
@@ -106,7 +151,9 @@ const actions = [
                     type="button"
                     @click="$emit('template', item.name)"
                 >
-                    <span class="scene-template-icon"><SvgIcon :name="item.icon" /></span>
+                    <span class="scene-template-icon"
+                        ><SvgIcon :name="item.icon"
+                    /></span>
                     <span>
                         <strong>{{ item.name }}</strong>
                         <small>{{ item.count }} 个设备</small>

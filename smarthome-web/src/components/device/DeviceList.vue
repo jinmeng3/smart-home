@@ -64,10 +64,18 @@ const iconNameMap: Record<Device["type"], string> = {
         <header class="device-list-header">
             <h2>设备列表</h2>
             <div class="device-list-tools">
-                <button class="device-list-primary" type="button" @click="$emit('add')">
+                <button
+                    class="device-list-primary"
+                    type="button"
+                    @click="$emit('add')"
+                >
                     <SvgIcon name="plus" /> 添加设备
                 </button>
-                <button class="device-list-action" type="button" @click="$emit('batch')">
+                <button
+                    class="device-list-action"
+                    type="button"
+                    @click="$emit('batch')"
+                >
                     <SvgIcon name="layers" /> 批量操作
                 </button>
                 <button
@@ -76,7 +84,8 @@ const iconNameMap: Record<Device["type"], string> = {
                     type="button"
                     @click="$emit('sync')"
                 >
-                    <SvgIcon name="refresh" /> {{ syncing ? "同步中" : "同步设备" }}
+                    <SvgIcon name="refresh" />
+                    {{ syncing ? "同步中" : "同步设备" }}
                 </button>
                 <select
                     :value="sort"
@@ -199,10 +208,16 @@ const iconNameMap: Record<Device["type"], string> = {
                         </div>
                     </dl>
                     <footer>
-                        <button type="button" @click.stop="$emit('edit', device)">
+                        <button
+                            type="button"
+                            @click.stop="$emit('edit', device)"
+                        >
                             编辑
                         </button>
-                        <button type="button" @click.stop="$emit('remove', device)">
+                        <button
+                            type="button"
+                            @click.stop="$emit('remove', device)"
+                        >
                             删除
                         </button>
                     </footer>
@@ -455,7 +470,11 @@ const iconNameMap: Record<Device["type"], string> = {
     height: 38px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
     color: var(--color-primary-700);
     box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 }

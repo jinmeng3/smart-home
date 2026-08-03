@@ -25,13 +25,24 @@ defineEmits<{
                 :value="keyword"
                 placeholder="搜索场景名称或描述"
                 type="search"
-                @input="$emit('update:keyword', ($event.target as HTMLInputElement).value)"
+                @input="
+                    $emit(
+                        'update:keyword',
+                        ($event.target as HTMLInputElement).value,
+                    )
+                "
             />
         </label>
         <select
             :value="triggerType"
             title="触发方式"
-            @change="$emit('update:triggerType', ($event.target as HTMLSelectElement).value as SceneTriggerType | '')"
+            @change="
+                $emit(
+                    'update:triggerType',
+                    ($event.target as HTMLSelectElement).value as
+                        SceneTriggerType | '',
+                )
+            "
         >
             <option value="">全部触发</option>
             <option value="manual">手动</option>
@@ -42,16 +53,30 @@ defineEmits<{
         <select
             :value="enabled"
             title="启用状态"
-            @change="$emit('update:enabled', ($event.target as HTMLSelectElement).value as 'all' | 'enabled' | 'disabled')"
+            @change="
+                $emit(
+                    'update:enabled',
+                    ($event.target as HTMLSelectElement).value as
+                        'all' | 'enabled' | 'disabled',
+                )
+            "
         >
             <option value="all">全部状态</option>
             <option value="enabled">已启用</option>
             <option value="disabled">已停用</option>
         </select>
-        <button class="scene-primary-button" type="button" @click="$emit('create')">
+        <button
+            class="scene-primary-button"
+            type="button"
+            @click="$emit('create')"
+        >
             <SvgIcon name="plus" /> 创建场景
         </button>
-        <button class="scene-secondary-button" type="button" @click="$emit('import')">
+        <button
+            class="scene-secondary-button"
+            type="button"
+            @click="$emit('import')"
+        >
             <SvgIcon name="layers" /> 导入模板
         </button>
     </section>

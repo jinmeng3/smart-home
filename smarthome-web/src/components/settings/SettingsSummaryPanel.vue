@@ -33,7 +33,9 @@ defineProps<{
             </div>
             <div class="flex justify-between">
                 <span class="text-[var(--color-text-tertiary)]">平台接入</span
-                ><span class="inline-flex items-center gap-1 font-semibold text-[var(--color-success)]">
+                ><span
+                    class="inline-flex items-center gap-1 font-semibold text-[var(--color-success)]"
+                >
                     <SvgIcon name="check-circle" size="sm" />
                     在线
                 </span>

@@ -23,7 +23,9 @@ defineProps<{
             <p class="text-sm font-semibold text-[var(--color-text-tertiary)]">
                 {{ label }}
             </p>
-            <strong class="mt-1 block text-2xl font-extrabold">{{ value }}</strong>
+            <strong class="mt-1 block text-2xl font-extrabold">{{
+                value
+            }}</strong>
         </div>
     </article>
 </template>
@@ -57,9 +59,15 @@ defineProps<{
     transform: translateY(-50%);
 }
 
-.is-success::before { background: var(--color-success); }
-.is-warning::before { background: var(--color-warning); }
-.is-primary::before { background: var(--color-primary-600); }
+.is-success::before {
+    background: var(--color-success);
+}
+.is-warning::before {
+    background: var(--color-warning);
+}
+.is-primary::before {
+    background: var(--color-primary-600);
+}
 
 .device-stats-card:hover {
     box-shadow: var(--shadow-card-hover);
@@ -83,18 +91,42 @@ defineProps<{
     line-height: 1.1;
 }
 
-.is-success .device-stats-icon { background: var(--color-success-soft); }
-.is-muted .device-stats-icon { background: var(--color-surface-subtle); }
-.is-warning .device-stats-icon { background: var(--color-warning-soft); }
-.is-primary .device-stats-icon { background: var(--color-primary-100); }
-.is-success .device-stats-icon { color: var(--color-success); }
-.is-muted .device-stats-icon { color: var(--color-text-muted); }
-.is-warning .device-stats-icon { color: var(--color-warning); }
-.is-primary .device-stats-icon { color: var(--color-primary-600); }
-.is-success strong { color: var(--color-success); }
-.is-muted strong { color: var(--color-text-secondary); }
-.is-warning strong { color: var(--color-warning); }
-.is-primary strong { color: var(--color-primary-600); }
+.is-success .device-stats-icon {
+    background: var(--color-success-soft);
+}
+.is-muted .device-stats-icon {
+    background: var(--color-surface-subtle);
+}
+.is-warning .device-stats-icon {
+    background: var(--color-warning-soft);
+}
+.is-primary .device-stats-icon {
+    background: var(--color-primary-100);
+}
+.is-success .device-stats-icon {
+    color: var(--color-success);
+}
+.is-muted .device-stats-icon {
+    color: var(--color-text-muted);
+}
+.is-warning .device-stats-icon {
+    color: var(--color-warning);
+}
+.is-primary .device-stats-icon {
+    color: var(--color-primary-600);
+}
+.is-success strong {
+    color: var(--color-success);
+}
+.is-muted strong {
+    color: var(--color-text-secondary);
+}
+.is-warning strong {
+    color: var(--color-warning);
+}
+.is-primary strong {
+    color: var(--color-primary-600);
+}
 
 @keyframes device-card-enter {
     from {

@@ -100,7 +100,9 @@ onBeforeUnmount(() => {
         style="animation-delay: 260ms"
     >
         <div class="mb-2 flex items-center justify-between">
-            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+            <h2
+                class="flex items-center gap-2 text-sm font-extrabold text-slate-800"
+            >
                 <SvgIcon name="device-management" size="sm" />
                 设备清单
             </h2>
@@ -177,7 +179,11 @@ onBeforeUnmount(() => {
             <template #header>
                 <header class="device-modal-header">
                     <h2>设备详情</h2>
-                    <button type="button" aria-label="关闭" @click="closeDrawer">
+                    <button
+                        type="button"
+                        aria-label="关闭"
+                        @click="closeDrawer"
+                    >
                         <SvgIcon name="close" size="sm" />
                     </button>
                 </header>
@@ -206,11 +212,30 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
                 <dl>
-                    <div><dt>房间</dt><dd>{{ store.selectedDevice.room }}</dd></div>
-                    <div><dt>品牌</dt><dd>{{ store.selectedDevice.brand ?? "暂无" }}</dd></div>
-                    <div><dt>连接方式</dt><dd>{{ store.selectedDevice.connection ?? "暂无" }}</dd></div>
-                    <div><dt>固件版本</dt><dd>{{ store.selectedDevice.firmware ?? "暂无" }}</dd></div>
-                    <div><dt>最后同步</dt><dd>{{ formatUpdatedAt(store.selectedDevice.updatedAt) }}</dd></div>
+                    <div>
+                        <dt>房间</dt>
+                        <dd>{{ store.selectedDevice.room }}</dd>
+                    </div>
+                    <div>
+                        <dt>品牌</dt>
+                        <dd>{{ store.selectedDevice.brand ?? "暂无" }}</dd>
+                    </div>
+                    <div>
+                        <dt>连接方式</dt>
+                        <dd>{{ store.selectedDevice.connection ?? "暂无" }}</dd>
+                    </div>
+                    <div>
+                        <dt>固件版本</dt>
+                        <dd>{{ store.selectedDevice.firmware ?? "暂无" }}</dd>
+                    </div>
+                    <div>
+                        <dt>最后同步</dt>
+                        <dd>
+                            {{
+                                formatUpdatedAt(store.selectedDevice.updatedAt)
+                            }}
+                        </dd>
+                    </div>
                 </dl>
             </section>
             <template #footer></template>
@@ -279,7 +304,11 @@ onBeforeUnmount(() => {
     place-items: center;
     overflow: hidden;
     border-radius: 10px;
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
     color: var(--color-primary-700);
 }
 
@@ -331,10 +360,18 @@ onBeforeUnmount(() => {
     border-radius: 999px;
 }
 
-.device-detail-title i.is-online { background: var(--color-success); }
-.device-detail-title i.is-running { background: var(--color-info); }
-.device-detail-title i.is-warning { background: var(--color-warning); }
-.device-detail-title i.is-offline { background: var(--color-text-muted); }
+.device-detail-title i.is-online {
+    background: var(--color-success);
+}
+.device-detail-title i.is-running {
+    background: var(--color-info);
+}
+.device-detail-title i.is-warning {
+    background: var(--color-warning);
+}
+.device-detail-title i.is-offline {
+    background: var(--color-text-muted);
+}
 
 .device-detail-card dl {
     display: grid;

@@ -29,7 +29,15 @@ const form = reactive<{
     rooms: ["玄关", "客厅", "主卧"],
 });
 
-const iconOptions = ["home", "eye", "group", "clock", "energy", "room", "automation"];
+const iconOptions = [
+    "home",
+    "eye",
+    "group",
+    "clock",
+    "energy",
+    "room",
+    "automation",
+];
 const colorOptions = [
     "var(--color-primary-600)",
     "var(--color-success)",
@@ -39,15 +47,41 @@ const colorOptions = [
     "var(--color-teal-600)",
 ];
 const actions = [
-    { id: "entry-light", icon: "light", name: "打开玄关灯", target: "玄关灯 · 开" },
-    { id: "living-light", icon: "light", name: "客厅灯亮度", target: "客厅灯 · 60%" },
-    { id: "ac", icon: "air-conditioner", name: "空调设置", target: "客厅空调 · 26℃ 制冷" },
-    { id: "curtain", icon: "curtain", name: "窗帘打开", target: "客厅窗帘 · 50%" },
-    { id: "camera", icon: "camera", name: "摄像头切换在家模式", target: "摄像头 · 在家模式" },
+    {
+        id: "entry-light",
+        icon: "light",
+        name: "打开玄关灯",
+        target: "玄关灯 · 开",
+    },
+    {
+        id: "living-light",
+        icon: "light",
+        name: "客厅灯亮度",
+        target: "客厅灯 · 60%",
+    },
+    {
+        id: "ac",
+        icon: "air-conditioner",
+        name: "空调设置",
+        target: "客厅空调 · 26℃ 制冷",
+    },
+    {
+        id: "curtain",
+        icon: "curtain",
+        name: "窗帘打开",
+        target: "客厅窗帘 · 50%",
+    },
+    {
+        id: "camera",
+        icon: "camera",
+        name: "摄像头切换在家模式",
+        target: "摄像头 · 在家模式",
+    },
 ];
 
 const triggerLabel = computed(() => {
-    if (form.triggerType === "location") return `位置触发（${form.triggerLabel}）`;
+    if (form.triggerType === "location")
+        return `位置触发（${form.triggerLabel}）`;
     if (form.triggerType === "schedule") return "定时触发";
     if (form.triggerType === "device") return "设备触发";
     return "手动执行";
@@ -147,13 +181,25 @@ const saveDraft = () => {
                 <section class="form-block">
                     <h3>2. 触发条件</h3>
                     <div class="trigger-tabs">
-                        <button :class="{ active: form.triggerType === 'schedule' }" type="button" @click="form.triggerType = 'schedule'">
+                        <button
+                            :class="{ active: form.triggerType === 'schedule' }"
+                            type="button"
+                            @click="form.triggerType = 'schedule'"
+                        >
                             <SvgIcon name="calendar" /> 定时触发
                         </button>
-                        <button :class="{ active: form.triggerType === 'location' }" type="button" @click="form.triggerType = 'location'">
+                        <button
+                            :class="{ active: form.triggerType === 'location' }"
+                            type="button"
+                            @click="form.triggerType = 'location'"
+                        >
                             <SvgIcon name="home" /> 位置触发
                         </button>
-                        <button :class="{ active: form.triggerType === 'device' }" type="button" @click="form.triggerType = 'device'">
+                        <button
+                            :class="{ active: form.triggerType === 'device' }"
+                            type="button"
+                            @click="form.triggerType = 'device'"
+                        >
                             <SvgIcon name="device-management" /> 设备触发
                         </button>
                     </div>
@@ -169,7 +215,9 @@ const saveDraft = () => {
                         <label>
                             <span>关联房间</span>
                             <div class="chips">
-                                <em v-for="room in form.rooms" :key="room">{{ room }}</em>
+                                <em v-for="room in form.rooms" :key="room">{{
+                                    room
+                                }}</em>
                             </div>
                         </label>
                         <label>
@@ -194,14 +242,18 @@ const saveDraft = () => {
                             </button>
                         </li>
                     </ol>
-                    <button class="add-action" type="button">+ 添加执行动作</button>
+                    <button class="add-action" type="button">
+                        + 添加执行动作
+                    </button>
                 </section>
             </section>
 
             <aside class="create-preview">
                 <h3>场景预览</h3>
                 <article class="preview-card">
-                    <span :style="{ color: form.color }"><SvgIcon :name="form.icon" /></span>
+                    <span :style="{ color: form.color }"
+                        ><SvgIcon :name="form.icon"
+                    /></span>
                     <div>
                         <strong>{{ form.name }}</strong>
                         <p>{{ form.description }}</p>
@@ -209,9 +261,18 @@ const saveDraft = () => {
                     <i />
                 </article>
                 <dl>
-                    <div><dt>关联房间</dt><dd>{{ form.rooms.length }} 个</dd></div>
-                    <div><dt>关联设备</dt><dd>8 个</dd></div>
-                    <div><dt>触发方式</dt><dd>{{ triggerLabel }}</dd></div>
+                    <div>
+                        <dt>关联房间</dt>
+                        <dd>{{ form.rooms.length }} 个</dd>
+                    </div>
+                    <div>
+                        <dt>关联设备</dt>
+                        <dd>8 个</dd>
+                    </div>
+                    <div>
+                        <dt>触发方式</dt>
+                        <dd>{{ triggerLabel }}</dd>
+                    </div>
                 </dl>
                 <h4>执行流程预览</h4>
                 <ol>

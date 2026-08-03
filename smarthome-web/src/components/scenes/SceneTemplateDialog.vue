@@ -26,17 +26,21 @@ const filteredTemplates = computed(() => {
     return sceneTemplates.value.filter((template) => {
         const matchesKeyword =
             !normalizedKeyword ||
-            [template.name, template.description].join(" ").includes(normalizedKeyword);
+            [template.name, template.description]
+                .join(" ")
+                .includes(normalizedKeyword);
         const matchesCategory =
-            activeCategory.value === "全部" || template.category === activeCategory.value;
+            activeCategory.value === "全部" ||
+            template.category === activeCategory.value;
 
         return matchesKeyword && matchesCategory;
     });
 });
 const selectedTemplate = computed(
     () =>
-        sceneTemplates.value.find((template) => template.id === selectedId.value) ??
-        sceneTemplates.value[0],
+        sceneTemplates.value.find(
+            (template) => template.id === selectedId.value,
+        ) ?? sceneTemplates.value[0],
 );
 
 const loadTemplates = async () => {
@@ -46,7 +50,8 @@ const loadTemplates = async () => {
         sceneTemplates.value = await listSceneTemplates();
         selectedId.value = sceneTemplates.value[0]?.id ?? "";
     } catch (error) {
-        loadError.value = error instanceof Error ? error.message : "模板加载失败";
+        loadError.value =
+            error instanceof Error ? error.message : "模板加载失败";
     } finally {
         loading.value = false;
     }
@@ -85,7 +90,11 @@ const importSelectedTemplate = () => {
                 <div class="template-filters">
                     <label>
                         <SvgIcon name="search" />
-                        <input v-model="keyword" placeholder="搜索模板名称或描述" type="search" />
+                        <input
+                            v-model="keyword"
+                            placeholder="搜索模板名称或描述"
+                            type="search"
+                        />
                     </label>
                     <button
                         v-for="item in categories"
@@ -122,13 +131,22 @@ const importSelectedTemplate = () => {
                 </div>
 
                 <p v-if="loading" class="template-state">正在加载推荐模板…</p>
-                <p v-else-if="loadError" class="template-state is-error">{{ loadError }}</p>
-                <p v-else-if="filteredTemplates.length === 0" class="template-state">暂无匹配模板</p>
+                <p v-else-if="loadError" class="template-state is-error">
+                    {{ loadError }}
+                </p>
+                <p
+                    v-else-if="filteredTemplates.length === 0"
+                    class="template-state"
+                >
+                    暂无匹配模板
+                </p>
                 <div v-else class="template-grid">
                     <article
                         v-for="template in filteredTemplates"
                         :key="template.id"
-                        :class="{ selected: selectedTemplate?.id === template.id }"
+                        :class="{
+                            selected: selectedTemplate?.id === template.id,
+                        }"
                         class="template-card"
                         role="button"
                         tabindex="0"
@@ -141,10 +159,16 @@ const importSelectedTemplate = () => {
                         <div>
                             <h3>{{ template.name }}</h3>
                             <p>{{ template.description }}</p>
-                            <small>关联设备 {{ template.deviceCount }} 个</small>
+                            <small
+                                >关联设备 {{ template.deviceCount }} 个</small
+                            >
                         </div>
                         <button type="button">
-                            {{ selectedTemplate?.id === template.id ? "已选择" : "使用模板" }}
+                            {{
+                                selectedTemplate?.id === template.id
+                                    ? "已选择"
+                                    : "使用模板"
+                            }}
                         </button>
                     </article>
                 </div>
@@ -160,14 +184,29 @@ const importSelectedTemplate = () => {
                         <strong>{{ selectedTemplate.name }}</strong>
                         <p>{{ selectedTemplate.description }}</p>
                     </div>
-                    <em>{{ selectedTemplate.triggerType === "manual" ? "手动" : "自动化" }}</em>
+                    <em>{{
+                        selectedTemplate.triggerType === "manual"
+                            ? "手动"
+                            : "自动化"
+                    }}</em>
                 </div>
                 <dl>
-                    <div><dt>适用房间</dt><dd>{{ selectedTemplate.roomLabels.join("、") }}</dd></div>
-                    <div><dt>关联设备</dt><dd>{{ selectedTemplate.deviceCount }} 个</dd></div>
-                    <div><dt>触发方式</dt><dd>{{ selectedTemplate.triggerLabel }}</dd></div>
+                    <div>
+                        <dt>适用房间</dt>
+                        <dd>{{ selectedTemplate.roomLabels.join("、") }}</dd>
+                    </div>
+                    <div>
+                        <dt>关联设备</dt>
+                        <dd>{{ selectedTemplate.deviceCount }} 个</dd>
+                    </div>
+                    <div>
+                        <dt>触发方式</dt>
+                        <dd>{{ selectedTemplate.triggerLabel }}</dd>
+                    </div>
                 </dl>
-                <h4>执行动作预览（共 {{ selectedTemplate.steps.length }} 步）</h4>
+                <h4>
+                    执行动作预览（共 {{ selectedTemplate.steps.length }} 步）
+                </h4>
                 <ol>
                     <li v-for="step in selectedTemplate.steps" :key="step.id">
                         <span>{{ step.order }}</span>
@@ -180,7 +219,9 @@ const importSelectedTemplate = () => {
                 <ul>
                     <li>场景信息（名称、描述、图标、标签等）</li>
                     <li>触发条件（{{ selectedTemplate.triggerLabel }}）</li>
-                    <li>执行动作（{{ selectedTemplate.steps.length }} 步操作）</li>
+                    <li>
+                        执行动作（{{ selectedTemplate.steps.length }} 步操作）
+                    </li>
                     <li>设备映射（根据您的设备自动匹配）</li>
                 </ul>
             </aside>

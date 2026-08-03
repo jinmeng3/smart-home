@@ -20,7 +20,11 @@ const logsDialogVisible = ref(false);
     <SettingsSectionCard id="security" icon="security" title="安全">
         <div class="settings-field">
             <span>修改密码</span>
-            <button class="secondary-button" type="button" @click="passwordDialogVisible = true">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="passwordDialogVisible = true"
+            >
                 修改
             </button>
         </div>
@@ -30,13 +34,21 @@ const logsDialogVisible = ref(false);
         </div>
         <div class="settings-field">
             <span>登录设备管理</span>
-            <button class="secondary-button" type="button" @click="devicesDialogVisible = true">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="devicesDialogVisible = true"
+            >
                 管理
             </button>
         </div>
         <div class="settings-field">
             <span>操作日志</span>
-            <button class="secondary-button" type="button" @click="logsDialogVisible = true">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="logsDialogVisible = true"
+            >
                 查看
             </button>
         </div>

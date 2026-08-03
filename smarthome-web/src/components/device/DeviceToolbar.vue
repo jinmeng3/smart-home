@@ -26,13 +26,20 @@ defineEmits<{
                 :value="keyword"
                 placeholder="搜索设备、房间、品牌或类型"
                 type="search"
-                @input="$emit('update:keyword', ($event.target as HTMLInputElement).value)"
+                @input="
+                    $emit(
+                        'update:keyword',
+                        ($event.target as HTMLInputElement).value,
+                    )
+                "
             />
             <span><SvgIcon name="search" /></span>
         </label>
         <select
             :value="room"
-            @change="$emit('update:room', ($event.target as HTMLSelectElement).value)"
+            @change="
+                $emit('update:room', ($event.target as HTMLSelectElement).value)
+            "
         >
             <option value="">房间</option>
             <option v-for="item in rooms" :key="item" :value="item">
@@ -41,7 +48,13 @@ defineEmits<{
         </select>
         <select
             :value="type"
-            @change="$emit('update:type', ($event.target as HTMLSelectElement).value as DeviceType | '')"
+            @change="
+                $emit(
+                    'update:type',
+                    ($event.target as HTMLSelectElement).value as
+                        DeviceType | '',
+                )
+            "
         >
             <option
                 v-for="item in deviceTypeOptions"
@@ -53,7 +66,13 @@ defineEmits<{
         </select>
         <select
             :value="status"
-            @change="$emit('update:status', ($event.target as HTMLSelectElement).value as DeviceStatus | '')"
+            @change="
+                $emit(
+                    'update:status',
+                    ($event.target as HTMLSelectElement).value as
+                        DeviceStatus | '',
+                )
+            "
         >
             <option
                 v-for="item in deviceStatusOptions"
@@ -235,7 +254,9 @@ button:disabled {
 }
 
 @keyframes device-sync-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

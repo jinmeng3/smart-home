@@ -32,10 +32,12 @@ const timezones = [
     "UTC",
 ];
 
-const visibleAvatarUrl = computed(
-    () => (avatarLoadError.value ? null : previewUrl.value ?? props.form.avatarUrl),
+const visibleAvatarUrl = computed(() =>
+    avatarLoadError.value ? null : (previewUrl.value ?? props.form.avatarUrl),
 );
-const accountInitial = computed(() => props.form.name.trim().slice(0, 1) || "用");
+const accountInitial = computed(
+    () => props.form.name.trim().slice(0, 1) || "用",
+);
 const householdSummary = computed(
     () =>
         [props.form.householdName, props.form.address]
@@ -113,10 +115,7 @@ const deleteAvatar = async () => {
                 :alt="form.name"
                 @error="avatarLoadError = true"
             />
-            <span
-                v-else
-                class="account-avatar account-avatar-large"
-            >
+            <span v-else class="account-avatar account-avatar-large">
                 {{ accountInitial }}
             </span>
             <div class="min-w-0">
@@ -128,7 +127,9 @@ const deleteAvatar = async () => {
                     class="block truncate text-sm text-[var(--color-text-tertiary)]"
                     >{{ form.email || "未设置邮箱" }}</span
                 >
-                <span class="mt-1 block truncate text-xs text-[var(--color-text-tertiary)]">
+                <span
+                    class="mt-1 block truncate text-xs text-[var(--color-text-tertiary)]"
+                >
                     {{ householdSummary }}
                 </span>
             </div>
@@ -189,7 +190,11 @@ const deleteAvatar = async () => {
                 <p>{{ form.email || "未设置邮箱" }}</p>
             </div>
             <div class="avatar-actions">
-                <ElButton :disabled="loading" size="small" @click="selectAvatar">
+                <ElButton
+                    :disabled="loading"
+                    size="small"
+                    @click="selectAvatar"
+                >
                     上传头像
                 </ElButton>
                 <ElButton
@@ -285,7 +290,10 @@ const deleteAvatar = async () => {
             <footer class="dialog-footer">
                 <span>{{ dirty ? "有尚未保存的修改" : "账户信息已同步" }}</span>
                 <div>
-                    <ElButton :disabled="loading" @click="dialogVisible = false">
+                    <ElButton
+                        :disabled="loading"
+                        @click="dialogVisible = false"
+                    >
                         关闭
                     </ElButton>
                     <ElButton
@@ -409,7 +417,11 @@ const deleteAvatar = async () => {
     font-weight: 800;
     line-height: 1;
     white-space: nowrap;
-    background: linear-gradient(135deg, var(--color-primary-300), var(--color-primary-600));
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-300),
+        var(--color-primary-600)
+    );
 }
 
 .account-avatar-large {

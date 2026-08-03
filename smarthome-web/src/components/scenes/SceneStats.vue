@@ -9,10 +9,34 @@ defineProps<{
 }>();
 
 const items = [
-    { key: "enabled", label: "已启用场景", note: "占比 66.7%", icon: "check-circle", tone: "primary" },
-    { key: "automation", label: "自动化场景", note: "占比 50%", icon: "automation", tone: "success" },
-    { key: "manual", label: "手动场景", note: "占比 50%", icon: "power", tone: "warning" },
-    { key: "monthlyExecutions", label: "本月执行次数", note: "较上月 ↑ 18%", icon: "log", tone: "info" },
+    {
+        key: "enabled",
+        label: "已启用场景",
+        note: "占比 66.7%",
+        icon: "check-circle",
+        tone: "primary",
+    },
+    {
+        key: "automation",
+        label: "自动化场景",
+        note: "占比 50%",
+        icon: "automation",
+        tone: "success",
+    },
+    {
+        key: "manual",
+        label: "手动场景",
+        note: "占比 50%",
+        icon: "power",
+        tone: "warning",
+    },
+    {
+        key: "monthlyExecutions",
+        label: "本月执行次数",
+        note: "较上月 ↑ 18%",
+        icon: "log",
+        tone: "info",
+    },
 ] as const;
 </script>
 
@@ -89,15 +113,35 @@ strong {
     line-height: 1;
 }
 
-.is-primary .scene-stat-icon { color: var(--color-primary-600); background: var(--color-primary-100); }
-.is-success .scene-stat-icon { color: var(--color-success); background: var(--color-success-soft); }
-.is-warning .scene-stat-icon { color: var(--color-warning); background: var(--color-warning-soft); }
-.is-info .scene-stat-icon { color: var(--color-info); background: var(--color-info-soft); }
-.is-info small { color: var(--color-success); }
+.is-primary .scene-stat-icon {
+    color: var(--color-primary-600);
+    background: var(--color-primary-100);
+}
+.is-success .scene-stat-icon {
+    color: var(--color-success);
+    background: var(--color-success-soft);
+}
+.is-warning .scene-stat-icon {
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
+}
+.is-info .scene-stat-icon {
+    color: var(--color-info);
+    background: var(--color-info-soft);
+}
+.is-info small {
+    color: var(--color-success);
+}
 
 @keyframes scene-card-enter {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 1180px) {

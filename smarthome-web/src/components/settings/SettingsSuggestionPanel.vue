@@ -45,7 +45,11 @@ const emit = defineEmits<{
                         >{{ item.description }}</span
                     >
                 </span>
-                <SvgIcon class="text-[var(--color-text-tertiary)]" name="chevron-right" size="sm" />
+                <SvgIcon
+                    class="text-[var(--color-text-tertiary)]"
+                    name="chevron-right"
+                    size="sm"
+                />
             </button>
         </div>
     </section>

@@ -9,6 +9,11 @@ export const router = createRouter({
       component: () => import("../views/HomeAssistant.vue"),
     },
     {
+      path: "/rooms",
+      name: "room-control",
+      component: () => import("../views/RoomControlView.vue"),
+    },
+    {
       path: "/settings",
       name: "settings-center",
       component: () => import("../views/SettingsCenter.vue"),
@@ -22,6 +27,16 @@ export const router = createRouter({
       path: "/scenes",
       name: "scene-mode",
       component: () => import("../views/SceneModeView.vue"),
+    },
+    {
+      path: "/overview",
+      name: "whole-home-overview",
+      component: () => import("../views/WholeHomeOverview.vue"),
+    },
+    {
+      path: "/automations",
+      name: "automation-center",
+      component: () => import("../views/AutomationCenter.vue"),
     },
   ],
 });

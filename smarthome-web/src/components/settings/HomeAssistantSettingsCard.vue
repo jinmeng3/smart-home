@@ -24,7 +24,8 @@ const showApiKey = ref(false);
 const dialogVisible = ref(false);
 const parametersDraft = ref("{}");
 const provider = computed({
-    get: () => props.ai.model.split(" · ")[1] ?? props.ai.model.split(" ")[0] ?? "",
+    get: () =>
+        props.ai.model.split(" · ")[1] ?? props.ai.model.split(" ")[0] ?? "",
     set: (value) => {
         const name = props.ai.model.split(" · ")[0] || "自定义模型";
         props.ai.model = value.trim() ? `${name} · ${value.trim()}` : name;
@@ -91,7 +92,11 @@ const applyParameters = () => {
             />
         </label>
         <div class="mt-3 flex justify-center">
-            <button class="secondary-button" type="button" @click="openParametersDialog">
+            <button
+                class="secondary-button"
+                type="button"
+                @click="openParametersDialog"
+            >
                 模型配置
             </button>
         </div>
@@ -111,7 +116,12 @@ const applyParameters = () => {
                     <h2>模型配置</h2>
                     <p>状态、连接测试和厂商扩展参数</p>
                 </div>
-                <ElButton class="close-button" text @click="dialogVisible = false">×</ElButton>
+                <ElButton
+                    class="close-button"
+                    text
+                    @click="dialogVisible = false"
+                    >×</ElButton
+                >
             </header>
         </template>
 
@@ -164,7 +174,9 @@ const applyParameters = () => {
                 </div>
                 <div class="model-config-status">
                     <span>API 地址</span>
-                    <strong>{{ homeAssistant.serviceUrl || "尚未填写" }}</strong>
+                    <strong>{{
+                        homeAssistant.serviceUrl || "尚未填写"
+                    }}</strong>
                 </div>
                 <div class="action-stack">
                     <ElButton :disabled="!connected" @click="emit('sync')">
@@ -187,9 +199,18 @@ const applyParameters = () => {
 </template>
 
 <style scoped>
-.integration-field { gap: 16px; }
-.integration-label { flex: 0 0 96px; white-space: nowrap; }
-.integration-control { width: auto; min-width: 0; flex: 1; }
+.integration-field {
+    gap: 16px;
+}
+.integration-label {
+    flex: 0 0 96px;
+    white-space: nowrap;
+}
+.integration-control {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+}
 
 .model-config-layout {
     display: grid;
@@ -263,7 +284,9 @@ const applyParameters = () => {
         gap: 6px;
     }
 
-    .integration-label { flex-basis: auto; }
+    .integration-label {
+        flex-basis: auto;
+    }
 
     .model-config-layout {
         grid-template-columns: 1fr;

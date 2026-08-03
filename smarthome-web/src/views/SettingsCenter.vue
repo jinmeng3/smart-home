@@ -137,11 +137,16 @@ onMounted(() => {
         return;
     }
 
-    void settingsStore.loadAccountHome().then(syncAccountForm).catch((error: unknown) => {
-        ElMessage.error(
-            error instanceof Error ? error.message : "账户与家庭信息加载失败",
-        );
-    });
+    void settingsStore
+        .loadAccountHome()
+        .then(syncAccountForm)
+        .catch((error: unknown) => {
+            ElMessage.error(
+                error instanceof Error
+                    ? error.message
+                    : "账户与家庭信息加载失败",
+            );
+        });
     void settingsStore
         .loadAIModel()
         .then(syncIntegrationSnapshot)
@@ -230,9 +235,7 @@ const saveAllSettings = async () => {
         syncIntegrationSnapshot();
     } catch (error) {
         ElMessage.error(
-            error instanceof Error
-                ? error.message
-                : "AI 助手配置保存失败",
+            error instanceof Error ? error.message : "AI 助手配置保存失败",
         );
     }
 };
@@ -398,7 +401,9 @@ const removeMember = async (membershipId: number) => {
                 @select="selectSection"
             />
 
-            <div class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+            <div
+                class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+            >
                 <div class="settings-card-grid grid grid-cols-2 gap-4">
                     <AccountFamilyCard
                         :dirty="accountDirty"
@@ -498,14 +503,30 @@ const removeMember = async (membershipId: number) => {
     animation: settings-card-enter 360ms var(--motion-ease) both;
 }
 
-.settings-card-grid > :nth-child(1) { animation-delay: 40ms; }
-.settings-card-grid > :nth-child(2) { animation-delay: 90ms; }
-.settings-card-grid > :nth-child(3) { animation-delay: 140ms; }
-.settings-card-grid > :nth-child(4) { animation-delay: 190ms; }
-.settings-card-grid > :nth-child(5) { animation-delay: 240ms; }
-.settings-card-grid > :nth-child(6) { animation-delay: 290ms; }
-.settings-card-grid > :nth-child(7) { animation-delay: 340ms; }
-.settings-card-grid > :nth-child(8) { animation-delay: 390ms; }
+.settings-card-grid > :nth-child(1) {
+    animation-delay: 40ms;
+}
+.settings-card-grid > :nth-child(2) {
+    animation-delay: 90ms;
+}
+.settings-card-grid > :nth-child(3) {
+    animation-delay: 140ms;
+}
+.settings-card-grid > :nth-child(4) {
+    animation-delay: 190ms;
+}
+.settings-card-grid > :nth-child(5) {
+    animation-delay: 240ms;
+}
+.settings-card-grid > :nth-child(6) {
+    animation-delay: 290ms;
+}
+.settings-card-grid > :nth-child(7) {
+    animation-delay: 340ms;
+}
+.settings-card-grid > :nth-child(8) {
+    animation-delay: 390ms;
+}
 
 @keyframes settings-card-enter {
     from {

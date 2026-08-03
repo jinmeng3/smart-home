@@ -23,7 +23,12 @@ const emit = defineEmits<{
     submit: [payload: DeviceCreatePayload];
 }>();
 
-const platforms: DevicePlatform[] = ["Home Assistant", "Matter", "Zigbee", "MQTT"];
+const platforms: DevicePlatform[] = [
+    "Home Assistant",
+    "Matter",
+    "Zigbee",
+    "MQTT",
+];
 const form = reactive<DeviceCreatePayload>({
     name: "",
     room: "",
@@ -150,7 +155,9 @@ onBeforeUnmount(releasePreviewUrl);
 <template>
     <BaseModal
         :confirm-text="device ? '保存修改' : '添加设备'"
-        :description="device ? '更新设备属性和接入信息' : '填写设备基础信息并接入家庭'"
+        :description="
+            device ? '更新设备属性和接入信息' : '填写设备基础信息并接入家庭'
+        "
         :loading="loading"
         :model-value="modelValue"
         show-footer
@@ -166,7 +173,13 @@ onBeforeUnmount(releasePreviewUrl);
                 </span>
                 <div>
                     <h2>{{ device ? "编辑设备" : "添加设备" }}</h2>
-                    <p>{{ device ? "更新设备属性和接入信息" : "填写设备信息并上传设备图片" }}</p>
+                    <p>
+                        {{
+                            device
+                                ? "更新设备属性和接入信息"
+                                : "填写设备信息并上传设备图片"
+                        }}
+                    </p>
                 </div>
                 <button
                     class="device-dialog-close"
@@ -189,7 +202,10 @@ onBeforeUnmount(releasePreviewUrl);
                 <div class="device-editor-summary">
                     <span>{{ device ? "正在编辑" : "新建设备" }}</span>
                     <strong>{{ form.name || "未命名设备" }}</strong>
-                    <p>{{ form.room || "未设置房间" }} · {{ selectedTypeMeta?.label ?? "设备" }}</p>
+                    <p>
+                        {{ form.room || "未设置房间" }} ·
+                        {{ selectedTypeMeta?.label ?? "设备" }}
+                    </p>
                     <div class="device-upload-actions">
                         <label class="device-upload-button">
                             <SvgIcon name="plus" />
@@ -209,7 +225,10 @@ onBeforeUnmount(releasePreviewUrl);
                             移除
                         </button>
                     </div>
-                    <small>{{ imageFileName || "支持 PNG、JPG、WEBP，保存后关联设备图片" }}</small>
+                    <small>{{
+                        imageFileName ||
+                        "支持 PNG、JPG、WEBP，保存后关联设备图片"
+                    }}</small>
                 </div>
             </section>
 
@@ -221,17 +240,27 @@ onBeforeUnmount(releasePreviewUrl);
                 <div class="device-form-grid">
                     <label>
                         <span>设备名称 <em>*</em></span>
-                        <input v-model="form.name" maxlength="80" placeholder="例如：客厅主灯" />
+                        <input
+                            v-model="form.name"
+                            maxlength="80"
+                            placeholder="例如：客厅主灯"
+                        />
                     </label>
                     <label>
                         <span>所在房间 <em>*</em></span>
-                        <input v-model="form.room" maxlength="80" placeholder="例如：客厅" />
+                        <input
+                            v-model="form.room"
+                            maxlength="80"
+                            placeholder="例如：客厅"
+                        />
                     </label>
                     <label>
                         <span>设备类型</span>
                         <select v-model="form.type">
                             <option
-                                v-for="item in deviceTypeOptions.filter((item) => item.value)"
+                                v-for="item in deviceTypeOptions.filter(
+                                    (item) => item.value,
+                                )"
                                 :key="item.value"
                                 :value="item.value as DeviceType"
                             >
@@ -241,7 +270,11 @@ onBeforeUnmount(releasePreviewUrl);
                     </label>
                     <label>
                         <span>品牌 <em>*</em></span>
-                        <input v-model="form.brand" maxlength="64" placeholder="例如：Aqara" />
+                        <input
+                            v-model="form.brand"
+                            maxlength="64"
+                            placeholder="例如：Aqara"
+                        />
                     </label>
                 </div>
             </section>
@@ -255,14 +288,22 @@ onBeforeUnmount(releasePreviewUrl);
                     <label>
                         <span>接入平台</span>
                         <select v-model="form.connection">
-                            <option v-for="platform in platforms" :key="platform" :value="platform">
+                            <option
+                                v-for="platform in platforms"
+                                :key="platform"
+                                :value="platform"
+                            >
                                 {{ platform }}
                             </option>
                         </select>
                     </label>
                     <label>
                         <span>固件版本</span>
-                        <input v-model="form.firmware" maxlength="64" placeholder="1.0.0" />
+                        <input
+                            v-model="form.firmware"
+                            maxlength="64"
+                            placeholder="1.0.0"
+                        />
                     </label>
                 </div>
             </section>
@@ -270,7 +311,11 @@ onBeforeUnmount(releasePreviewUrl);
 
         <template #footer>
             <footer class="device-dialog-footer">
-                <span>{{ form.imageUrl ? "图片将在保存设备时关联" : "未上传图片时使用设备类型 SVG 图标" }}</span>
+                <span>{{
+                    form.imageUrl
+                        ? "图片将在保存设备时关联"
+                        : "未上传图片时使用设备类型 SVG 图标"
+                }}</span>
                 <div>
                     <button
                         class="device-cancel-button"
@@ -287,7 +332,13 @@ onBeforeUnmount(releasePreviewUrl);
                         @click="submit"
                     >
                         <SvgIcon :name="loading ? 'refresh' : 'check-circle'" />
-                        {{ loading ? "保存中" : device ? "保存修改" : "添加设备" }}
+                        {{
+                            loading
+                                ? "保存中"
+                                : device
+                                  ? "保存修改"
+                                  : "添加设备"
+                        }}
                     </button>
                 </div>
             </footer>
@@ -302,7 +353,11 @@ onBeforeUnmount(releasePreviewUrl);
     gap: 14px;
     padding: 18px 22px;
     border-bottom: 1px solid var(--color-border-subtle);
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-page-bg));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-page-bg)
+    );
 }
 
 .device-dialog-icon {
@@ -365,7 +420,11 @@ onBeforeUnmount(releasePreviewUrl);
     gap: 16px;
     border: 1px solid var(--color-border);
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
     padding: 16px;
 }
 
@@ -595,7 +654,9 @@ button:disabled {
 }
 
 @keyframes device-dialog-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 640px) {

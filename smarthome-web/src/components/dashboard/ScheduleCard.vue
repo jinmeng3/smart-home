@@ -14,7 +14,9 @@ const expandedId = ref<string | null>("arrive-home");
         style="animation-delay: 180ms"
     >
         <div class="mb-3 flex items-center justify-between">
-            <h2 class="flex items-center gap-2 text-sm font-extrabold text-slate-800">
+            <h2
+                class="flex items-center gap-2 text-sm font-extrabold text-slate-800"
+            >
                 <SvgIcon name="calendar" size="sm" />
                 家庭日程 / 自动化计划
             </h2>
@@ -24,13 +26,21 @@ const expandedId = ref<string | null>("arrive-home");
         </div>
 
         <div class="mb-3 flex items-center justify-between text-sm">
-                <button class="motion-button text-slate-400" type="button" aria-label="上一个日期">
-                    <SvgIcon name="chevron-left" size="sm" />
-                </button>
-                <strong>2025年5月20日 星期二</strong>
-                <button class="motion-button text-slate-400" type="button" aria-label="下一个日期">
-                    <SvgIcon name="chevron-right" size="sm" />
-                </button>
+            <button
+                class="motion-button text-slate-400"
+                type="button"
+                aria-label="上一个日期"
+            >
+                <SvgIcon name="chevron-left" size="sm" />
+            </button>
+            <strong>2025年5月20日 星期二</strong>
+            <button
+                class="motion-button text-slate-400"
+                type="button"
+                aria-label="下一个日期"
+            >
+                <SvgIcon name="chevron-right" size="sm" />
+            </button>
         </div>
 
         <div

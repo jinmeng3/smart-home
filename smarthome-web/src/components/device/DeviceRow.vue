@@ -64,7 +64,10 @@ const iconNameMap: Record<Device["type"], string> = {
         <td>{{ deviceTypeLabelMap[device.type] }}</td>
         <td>{{ device.brand }}</td>
         <td>
-            <span class="device-status-badge" :class="getStatusClasses(device.status)">
+            <span
+                class="device-status-badge"
+                :class="getStatusClasses(device.status)"
+            >
                 <i :class="`status-dot is-${device.status}`"></i>
                 {{ deviceStatusLabelMap[device.status] }}
             </span>
@@ -72,8 +75,12 @@ const iconNameMap: Record<Device["type"], string> = {
         <td>{{ formatLastOnline(device.lastOnline) }}</td>
         <td>
             <div class="device-row-actions">
-                <button type="button" @click.stop="$emit('edit', device)">编辑</button>
-                <button type="button" @click.stop="$emit('remove', device)">删除</button>
+                <button type="button" @click.stop="$emit('edit', device)">
+                    编辑
+                </button>
+                <button type="button" @click.stop="$emit('remove', device)">
+                    删除
+                </button>
             </div>
         </td>
     </tr>
@@ -127,7 +134,11 @@ const iconNameMap: Record<Device["type"], string> = {
     height: 28px;
     place-items: center;
     border-radius: 7px;
-    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
     color: var(--color-primary-700);
     font-size: 12px;
     font-weight: 900;
@@ -211,18 +222,39 @@ const iconNameMap: Record<Device["type"], string> = {
 }
 
 @keyframes device-status-breathe {
-    0%, 100% { opacity: 0.65; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.45); }
+    0%,
+    100% {
+        opacity: 0.65;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.45);
+    }
 }
 
 @keyframes device-status-blink {
-    0%, 100% { opacity: 0.55; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.25); }
+    0%,
+    100% {
+        opacity: 0.55;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.25);
+    }
 }
 
 @keyframes device-status-alert {
-    0%, 100% { opacity: 0.7; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.5); }
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.5);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

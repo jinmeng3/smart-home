@@ -38,12 +38,18 @@ const loadScenes = async () => {
         await store.loadScenes();
     } catch (error) {
         if (error instanceof ApiError && error.status === 401) return;
-        ElMessage.error(error instanceof Error ? error.message : "场景数据加载失败");
+        ElMessage.error(
+            error instanceof Error ? error.message : "场景数据加载失败",
+        );
     }
 };
 
 watch(
-    () => [filters.value.keyword, filters.value.triggerType, filters.value.enabled],
+    () => [
+        filters.value.keyword,
+        filters.value.triggerType,
+        filters.value.enabled,
+    ],
     () => {
         void loadScenes();
     },
@@ -166,8 +172,14 @@ onMounted(() => {
 }
 
 @keyframes scene-page-enter {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 1180px) {

@@ -21,17 +21,21 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
     { icon: "chat", label: "智能对话", path: "/" },
-    { icon: "home", label: "全屋总览" },
-    { icon: "room", label: "房间控制" },
+    { icon: "home", label: "全屋总览", path: "/overview" },
+    { icon: "room", label: "房间控制", path: "/rooms" },
     { icon: "device-management", label: "设备管理", path: "/devices" },
     { icon: "scene", label: "场景模式", path: "/scenes" },
-    { icon: "automation", label: "自动化" },
+    { icon: "automation", label: "自动化", path: "/automations" },
     { icon: "energy", label: "能耗分析" },
     { icon: "security", label: "安防中心" },
     { icon: "settings", label: "设置", path: "/settings" },
 ];
 
 const activeLabel = computed(() => {
+    if (route.path === "/rooms") {
+        return "房间控制";
+    }
+
     if (route.path === "/settings") {
         return "设置";
     }
@@ -42,6 +46,14 @@ const activeLabel = computed(() => {
 
     if (route.path === "/scenes") {
         return "场景模式";
+    }
+
+    if (route.path === "/overview") {
+        return "全屋总览";
+    }
+
+    if (route.path === "/automations") {
+        return "自动化";
     }
 
     return "智能对话";
@@ -121,10 +133,14 @@ const openConversation = async (sessionId: string) => {
                 />
             </button>
             <div v-show="!store.sidebarCollapsed" class="min-w-0">
-                <strong class="block truncate text-xl font-extrabold text-blue-700">
+                <strong
+                    class="block truncate text-xl font-extrabold text-blue-700"
+                >
                     Orion
                 </strong>
-                <span class="block truncate text-xs font-semibold text-slate-500">
+                <span
+                    class="block truncate text-xs font-semibold text-slate-500"
+                >
                     Home Assistant
                 </span>
             </div>
@@ -148,7 +164,9 @@ const openConversation = async (sessionId: string) => {
                     activeLabel === item.label
                         ? 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] shadow-sm'
                         : '',
-                    store.sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3',
+                    store.sidebarCollapsed
+                        ? 'justify-center px-0'
+                        : 'gap-3 px-3',
                 ]"
                 type="button"
                 :title="item.label"
@@ -176,7 +194,10 @@ const openConversation = async (sessionId: string) => {
                     新建
                 </button>
             </div>
-            <div v-if="store.recentConversations.length" class="conversation-list">
+            <div
+                v-if="store.recentConversations.length"
+                class="conversation-list"
+            >
                 <button
                     v-for="conversation in store.recentConversations"
                     :key="conversation.id"
@@ -202,7 +223,11 @@ const openConversation = async (sessionId: string) => {
             @click="authStore.openLogin"
         >
             <img
-                v-if="authStore.isAuthenticated && account.avatarUrl && !avatarLoadError"
+                v-if="
+                    authStore.isAuthenticated &&
+                    account.avatarUrl &&
+                    !avatarLoadError
+                "
                 class="h-10 w-10 shrink-0 rounded-full object-cover"
                 :src="account.avatarUrl"
                 alt=""
@@ -216,13 +241,24 @@ const openConversation = async (sessionId: string) => {
             </div>
             <div v-show="!store.sidebarCollapsed" class="min-w-0">
                 <strong class="block truncate text-sm">
-                    {{ authStore.isAuthenticated ? account.username : "访客用户" }}
+                    {{
+                        authStore.isAuthenticated
+                            ? account.username
+                            : "访客用户"
+                    }}
                 </strong>
                 <span class="block truncate text-xs text-slate-500">
-                    {{ authStore.isAuthenticated ? account.email : "登录后同步个人信息" }}
+                    {{
+                        authStore.isAuthenticated
+                            ? account.email
+                            : "登录后同步个人信息"
+                    }}
                 </span>
             </div>
-            <span v-show="!store.sidebarCollapsed" class="ml-auto text-slate-400">
+            <span
+                v-show="!store.sidebarCollapsed"
+                class="ml-auto text-slate-400"
+            >
                 ˅
             </span>
         </button>

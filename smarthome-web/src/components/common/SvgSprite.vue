@@ -4,57 +4,805 @@
         style="position: absolute; width: 0; height: 0; overflow: hidden"
         aria-hidden="true"
     >
-        <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
-        <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7 9.5 5 5 5-5"/></symbol>
-        <symbol id="icon-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></symbol>
-        <symbol id="icon-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></symbol>
-        <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-        <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
-        <symbol id="icon-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></symbol>
-        <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"/><path d="M4.7 9a8 8 0 0 1 13-3l2.3 2"/><path d="M4 17v-5h5"/><path d="M19.3 15a8 8 0 0 1-13 3L4 16"/></symbol>
-        <symbol id="icon-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
-        <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
-        <symbol id="icon-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></symbol>
-        <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20H5a1 1 0 0 1-1-1v-7"/><path d="m14.5 5.5 4 4"/><path d="m6.5 17.5 1-4 9-9a1.5 1.5 0 0 1 2.1 0l.9.9a1.5 1.5 0 0 1 0 2.1l-9 9-4 1Z"/></symbol>
-        <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
-        <symbol id="icon-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M7.2 5.8a8 8 0 1 0 9.6 0"/></symbol>
-        <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></symbol>
-        <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v4M17 3v4M4 9h16"/><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 13h3M8 17h6"/></symbol>
-        <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.6 2.6L16.5 9"/></symbol>
-        <symbol id="icon-online-device" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M10 6h4M11 18h2"/><path d="m9.5 12 1.7 1.7 3.5-4"/></symbol>
-        <symbol id="icon-offline-device" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M10 6h4M11 18h2"/><path d="m9.5 10 5 5M14.5 10l-5 5"/></symbol>
-        <symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3 2.8 17.2A1.9 1.9 0 0 0 4.4 20h15.2a1.9 1.9 0 0 0 1.6-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><circle cx="12" cy="16.5" r=".8" fill="currentColor" stroke="none"/></symbol>
-        <symbol id="icon-new-device" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></symbol>
-        <symbol id="icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 15.5A6 6 0 1 1 15.5 15.5c-.9.7-1.2 1.3-1.3 2.1H9.8c-.1-.8-.4-1.4-1.3-2.1Z"/><path d="M9.5 20h5M10.5 17.5h3"/></symbol>
-        <symbol id="icon-air-conditioner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4.2 6.5l15.6 11M19.8 6.5l-15.6 11"/><path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2"/><path d="m5 9 3-.5-.3-3M19 15l-3 .5.3 3"/><path d="m19 9-3-.5.3-3M5 15l3 .5-.3 3"/></symbol>
-        <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/><path d="M12 16v2"/></symbol>
-        <symbol id="icon-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6.5" width="18" height="13" rx="2"/><path d="m8 6.5 1.4-2h5.2l1.4 2"/><circle cx="12" cy="13" r="3.2"/></symbol>
-        <symbol id="icon-sensor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
-        <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9v2M15 9v2"/><path d="M9 14h6"/></symbol>
-        <symbol id="icon-curtain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18M5 4v16M19 4v16"/><path d="M5 5c4 2 4 11 0 14M19 5c-4 2-4 11 0 14"/><path d="M12 5v14"/></symbol>
-        <symbol id="icon-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M7 12h10"/></symbol>
-        <symbol id="icon-group" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14h1.5a3.5 3.5 0 0 1 3.5 3.5V19"/></symbol>
-        <symbol id="icon-firmware" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18H5.5A3.5 3.5 0 0 1 5 11a6.5 6.5 0 0 1 12.6-1.7A4.5 4.5 0 0 1 18.5 18H17"/><path d="M12 19V10"/><path d="m8.5 13.5 3.5-3.5 3.5 3.5"/></symbol>
-        <symbol id="icon-log" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5"/><path d="M8 12h7M8 16h7"/></symbol>
-        <symbol id="icon-home-assistant" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5.5 9.5V21h13V9.5"/><circle cx="12" cy="10" r="1.3"/><circle cx="9" cy="16" r="1.3"/><circle cx="15" cy="16" r="1.3"/><path d="m12 11.3-3 3.4M12 11.3l3 3.4M10.3 16h3.4"/></symbol>
-        <symbol id="icon-matter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v18M3 12h18"/><path d="m5.5 5.5 13 13M18.5 5.5l-13 13"/><circle cx="12" cy="12" r="3"/></symbol>
-        <symbol id="icon-zigbee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 8h9l-10 8h9"/></symbol>
-        <symbol id="icon-mqtt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19a2 2 0 1 1 0-4"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 6a14 14 0 0 1 14 14"/><path d="M4 2a18 18 0 0 1 18 18"/></symbol>
-        <symbol id="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 1-8.5 8 8.8 8.8 0 0 1-3.4-.8L4 20l1.3-3.6A8 8 0 1 1 20 11.5Z"/><circle cx="8.5" cy="11.5" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="11.5" r=".8" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11.5" r=".8" fill="currentColor" stroke="none"/></symbol>
-        <symbol id="icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></symbol>
-        <symbol id="icon-room" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15.5" cy="12" r=".8" fill="currentColor" stroke="none"/></symbol>
-        <symbol id="icon-device-management" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="12" height="16" rx="2"/><path d="M7 8h4"/><circle cx="9" cy="16" r="1.5"/><circle cx="18" cy="9" r="3"/><path d="M18 7.5V9l1 1"/></symbol>
-        <symbol id="icon-scene" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.9-5.4 2.9 1-6-4.3-4.2 6-.9L12 3Z"/></symbol>
-        <symbol id="icon-automation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M12 6v5M6.5 16.5 10.5 12M17.5 16.5 13.5 12"/></symbol>
-        <symbol id="icon-energy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V12M8 20V7M12 20V10M16 20V4M20 20V14"/><path d="M3 20h18"/></symbol>
-        <symbol id="icon-security" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
-        <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 13.5a7 7 0 0 0 0-3l2-1.5-2-3.4-2.5 1a8 8 0 0 0-2.5-1.5L13.7 2h-4L9.3 5.1a8 8 0 0 0-2.5 1.5l-2.5-1-2 3.4 2 1.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.5-1a8 8 0 0 0 2.5 1.5l.4 3.1h4l.4-3.1a8 8 0 0 0 2.5-1.5l2.5 1 2-3.4-2.1-1.5Z"/></symbol>
-        <symbol id="icon-account" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-        <symbol id="icon-members" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><path d="M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-        <symbol id="icon-appearance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8l-4 4V5Z"/><path d="M8 7h8M8 11h5"/></symbol>
-        <symbol id="icon-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z"/><path d="M5 14l.8 1.8L8 16.5l-2.2.7L5 19l-.8-1.8-2.2-.7 2.2-.7L5 14Z"/></symbol>
-        <symbol id="icon-platform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93"/><path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19.07"/></symbol>
-        <symbol id="icon-notification" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
-        <symbol id="icon-backup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 8.2 12.7"/><path d="M20 9V4h-5"/><path d="M20 4l-5.5 5.5"/><path d="M12 8v5l3 2"/></symbol>
+        <symbol
+            id="icon-search"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+        </symbol>
+        <symbol
+            id="icon-chevron-down"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m7 9.5 5 5 5-5" />
+        </symbol>
+        <symbol
+            id="icon-chevron-left"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m14.5 6-6 6 6 6" />
+        </symbol>
+        <symbol
+            id="icon-chevron-right"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m9.5 6 6 6-6 6" />
+        </symbol>
+        <symbol
+            id="icon-close"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+        >
+            <path d="M6 6l12 12M18 6 6 18" />
+        </symbol>
+        <symbol
+            id="icon-plus"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+        >
+            <path d="M12 5v14M5 12h14" />
+        </symbol>
+        <symbol
+            id="icon-layers"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+            <path d="m3 12 9 5 9-5" />
+            <path d="m3 16 9 5 9-5" />
+        </symbol>
+        <symbol
+            id="icon-refresh"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M20 7v5h-5" />
+            <path d="M4.7 9a8 8 0 0 1 13-3l2.3 2" />
+            <path d="M4 17v-5h5" />
+            <path d="M19.3 15a8 8 0 0 1-13 3L4 16" />
+        </symbol>
+        <symbol
+            id="icon-list"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <path d="M9 6h11M9 12h11M9 18h11" />
+            <circle cx="4.5" cy="6" r="1" />
+            <circle cx="4.5" cy="12" r="1" />
+            <circle cx="4.5" cy="18" r="1" />
+        </symbol>
+        <symbol
+            id="icon-grid"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linejoin="round"
+        >
+            <rect x="4" y="4" width="6" height="6" rx="1" />
+            <rect x="14" y="4" width="6" height="6" rx="1" />
+            <rect x="4" y="14" width="6" height="6" rx="1" />
+            <rect x="14" y="14" width="6" height="6" rx="1" />
+        </symbol>
+        <symbol id="icon-more" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="1.6" />
+            <circle cx="12" cy="12" r="1.6" />
+            <circle cx="19" cy="12" r="1.6" />
+        </symbol>
+        <symbol
+            id="icon-edit"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 20H5a1 1 0 0 1-1-1v-7" />
+            <path d="m14.5 5.5 4 4" />
+            <path
+                d="m6.5 17.5 1-4 9-9a1.5 1.5 0 0 1 2.1 0l.9.9a1.5 1.5 0 0 1 0 2.1l-9 9-4 1Z"
+            />
+        </symbol>
+        <symbol
+            id="icon-eye"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+            />
+            <circle cx="12" cy="12" r="2.5" />
+        </symbol>
+        <symbol
+            id="icon-power"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <path d="M12 3v8" />
+            <path d="M7.2 5.8a8 8 0 1 0 9.6 0" />
+        </symbol>
+        <symbol
+            id="icon-clock"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="M12 7v5l3 2" />
+        </symbol>
+        <symbol
+            id="icon-calendar"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M7 3v4M17 3v4M4 9h16" />
+            <rect x="4" y="5" width="16" height="16" rx="2" />
+            <path d="M8 13h3M8 17h6" />
+        </symbol>
+        <symbol
+            id="icon-check-circle"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="9" />
+            <path d="m8 12.5 2.6 2.6L16.5 9" />
+        </symbol>
+        <symbol
+            id="icon-online-device"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="7" y="3" width="10" height="18" rx="2.5" />
+            <path d="M10 6h4M11 18h2" />
+            <path d="m9.5 12 1.7 1.7 3.5-4" />
+        </symbol>
+        <symbol
+            id="icon-offline-device"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="7" y="3" width="10" height="18" rx="2.5" />
+            <path d="M10 6h4M11 18h2" />
+            <path d="m9.5 10 5 5M14.5 10l-5 5" />
+        </symbol>
+        <symbol
+            id="icon-warning"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M10.3 4.3 2.8 17.2A1.9 1.9 0 0 0 4.4 20h15.2a1.9 1.9 0 0 0 1.6-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"
+            />
+            <path d="M12 9v4" />
+            <circle
+                cx="12"
+                cy="16.5"
+                r=".8"
+                fill="currentColor"
+                stroke="none"
+            />
+        </symbol>
+        <symbol
+            id="icon-new-device"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v10M7 12h10" />
+        </symbol>
+        <symbol
+            id="icon-light"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M8.5 15.5A6 6 0 1 1 15.5 15.5c-.9.7-1.2 1.3-1.3 2.1H9.8c-.1-.8-.4-1.4-1.3-2.1Z"
+            />
+            <path d="M9.5 20h5M10.5 17.5h3" />
+        </symbol>
+        <symbol
+            id="icon-air-conditioner"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 2v20M4.2 6.5l15.6 11M19.8 6.5l-15.6 11" />
+            <path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2" />
+            <path d="m5 9 3-.5-.3-3M19 15l-3 .5.3 3" />
+            <path d="m19 9-3-.5.3-3M5 15l3 .5-.3 3" />
+        </symbol>
+        <symbol
+            id="icon-lock"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="5" y="10" width="14" height="11" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+            <circle cx="12" cy="15" r="1" />
+            <path d="M12 16v2" />
+        </symbol>
+        <symbol
+            id="icon-camera"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="3" y="6.5" width="18" height="13" rx="2" />
+            <path d="m8 6.5 1.4-2h5.2l1.4 2" />
+            <circle cx="12" cy="13" r="3.2" />
+        </symbol>
+        <symbol
+            id="icon-sensor"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+        >
+            <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+            <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7" />
+            <path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" />
+        </symbol>
+        <symbol
+            id="icon-plug"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <path d="M9 9v2M15 9v2" />
+            <path d="M9 14h6" />
+        </symbol>
+        <symbol
+            id="icon-curtain"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M3 4h18M5 4v16M19 4v16" />
+            <path d="M5 5c4 2 4 11 0 14M19 5c-4 2-4 11 0 14" />
+            <path d="M12 5v14" />
+        </symbol>
+        <symbol
+            id="icon-temperature"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M10 14.8V5a2 2 0 0 1 4 0v9.8a4 4 0 1 1-4 0Z" />
+            <path d="M12 8v8" />
+        </symbol>
+        <symbol
+            id="icon-humidity"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M12 3S5.5 10.2 5.5 15a6.5 6.5 0 0 0 13 0C18.5 10.2 12 3 12 3Z"
+            />
+            <path d="M9 16.5a3.2 3.2 0 0 0 3 1.7" />
+        </symbol>
+        <symbol
+            id="icon-air-quality"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M12 21c-5-3.5-7-7.8-5.8-13.5C12 7 16.5 4.8 19 2.8c.8 8.5-1.8 14.2-7 18.2Z"
+            />
+            <path d="M8.5 17c2-2.2 4.3-4.2 7.5-7" />
+        </symbol>
+        <symbol
+            id="icon-illumination"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <circle cx="12" cy="12" r="4" />
+            <path
+                d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+            />
+        </symbol>
+        <symbol
+            id="icon-noise"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M5 9v6h4l5 4V5L9 9H5Z" />
+            <path d="M17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11" />
+        </symbol>
+        <symbol
+            id="icon-comfort"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+            <path d="M8 14.5c1 1.5 2.3 2.2 4 2.2s3-.7 4-2.2" />
+        </symbol>
+        <symbol
+            id="icon-scan"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+        >
+            <path
+                d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3M7 12h10"
+            />
+        </symbol>
+        <symbol
+            id="icon-group"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="9" cy="8" r="3" />
+            <path
+                d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19"
+            />
+            <circle cx="17" cy="9" r="2.5" />
+            <path d="M16 14h1.5a3.5 3.5 0 0 1 3.5 3.5V19" />
+        </symbol>
+        <symbol
+            id="icon-firmware"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M7 18H5.5A3.5 3.5 0 0 1 5 11a6.5 6.5 0 0 1 12.6-1.7A4.5 4.5 0 0 1 18.5 18H17"
+            />
+            <path d="M12 19V10" />
+            <path d="m8.5 13.5 3.5-3.5 3.5 3.5" />
+        </symbol>
+        <symbol
+            id="icon-log"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+            <path d="M14 3v5h5" />
+            <path d="M8 12h7M8 16h7" />
+        </symbol>
+        <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4" />
+            <path d="m7.5 8.5 4.5-4.5 4.5 4.5" />
+            <path d="M5 14v5a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-5" />
+        </symbol>
+        <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v6" />
+            <circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none" />
+        </symbol>
+        <symbol id="icon-location" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 5.5-8 11-8 11S4 15.5 4 10a8 8 0 1 1 16 0Z" />
+            <circle cx="12" cy="10" r="2.5" />
+        </symbol>
+        <symbol
+            id="icon-home-assistant"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m3 11 9-8 9 8" />
+            <path d="M5.5 9.5V21h13V9.5" />
+            <circle cx="12" cy="10" r="1.3" />
+            <circle cx="9" cy="16" r="1.3" />
+            <circle cx="15" cy="16" r="1.3" />
+            <path d="m12 11.3-3 3.4M12 11.3l3 3.4M10.3 16h3.4" />
+        </symbol>
+        <symbol
+            id="icon-matter"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+        >
+            <path d="M12 3v18M3 12h18" />
+            <path d="m5.5 5.5 13 13M18.5 5.5l-13 13" />
+            <circle cx="12" cy="12" r="3" />
+        </symbol>
+        <symbol
+            id="icon-zigbee"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 8h9l-10 8h9" />
+        </symbol>
+        <symbol
+            id="icon-mqtt"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+        >
+            <path d="M5 19a2 2 0 1 1 0-4" />
+            <path d="M4 11a9 9 0 0 1 9 9" />
+            <path d="M4 6a14 14 0 0 1 14 14" />
+            <path d="M4 2a18 18 0 0 1 18 18" />
+        </symbol>
+        <symbol
+            id="icon-chat"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M20 11.5a8 8 0 0 1-8.5 8 8.8 8.8 0 0 1-3.4-.8L4 20l1.3-3.6A8 8 0 1 1 20 11.5Z"
+            />
+            <circle
+                cx="8.5"
+                cy="11.5"
+                r=".8"
+                fill="currentColor"
+                stroke="none"
+            />
+            <circle
+                cx="12"
+                cy="11.5"
+                r=".8"
+                fill="currentColor"
+                stroke="none"
+            />
+            <circle
+                cx="15.5"
+                cy="11.5"
+                r=".8"
+                fill="currentColor"
+                stroke="none"
+            />
+        </symbol>
+        <symbol
+            id="icon-home"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="m3 11 9-8 9 8" />
+            <path d="M5 9.5V21h14V9.5" />
+            <path d="M9 21v-6h6v6" />
+        </symbol>
+        <symbol
+            id="icon-room"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17" />
+            <path d="M3 21h18" />
+            <circle
+                cx="15.5"
+                cy="12"
+                r=".8"
+                fill="currentColor"
+                stroke="none"
+            />
+        </symbol>
+        <symbol
+            id="icon-device-management"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <rect x="3" y="4" width="12" height="16" rx="2" />
+            <path d="M7 8h4" />
+            <circle cx="9" cy="16" r="1.5" />
+            <circle cx="18" cy="9" r="3" />
+            <path d="M18 7.5V9l1 1" />
+        </symbol>
+        <symbol
+            id="icon-scene"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="m12 3 2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.9-5.4 2.9 1-6-4.3-4.2 6-.9L12 3Z"
+            />
+        </symbol>
+        <symbol
+            id="icon-automation"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="4" r="2" />
+            <circle cx="5" cy="18" r="2" />
+            <circle cx="19" cy="18" r="2" />
+            <path d="M12 6v5M6.5 16.5 10.5 12M17.5 16.5 13.5 12" />
+        </symbol>
+        <symbol
+            id="icon-energy"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M4 20V12M8 20V7M12 20V10M16 20V4M20 20V14" />
+            <path d="M3 20h18" />
+        </symbol>
+        <symbol
+            id="icon-security"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z" />
+            <path d="m8.5 12 2.2 2.2 4.8-5" />
+        </symbol>
+        <symbol
+            id="icon-settings"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="3" />
+            <path
+                d="M19 13.5a7 7 0 0 0 0-3l2-1.5-2-3.4-2.5 1a8 8 0 0 0-2.5-1.5L13.7 2h-4L9.3 5.1a8 8 0 0 0-2.5 1.5l-2.5-1-2 3.4 2 1.5a7 7 0 0 0 0 3l-2 1.5 2 3.4 2.5-1a8 8 0 0 0 2.5 1.5l.4 3.1h4l.4-3.1a8 8 0 0 0 2.5-1.5l2.5 1 2-3.4-2.1-1.5Z"
+            />
+        </symbol>
+        <symbol
+            id="icon-account"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+        </symbol>
+        <symbol
+            id="icon-members"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+            <path d="M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </symbol>
+        <symbol
+            id="icon-appearance"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8l-4 4V5Z"
+            />
+            <path d="M8 7h8M8 11h5" />
+        </symbol>
+        <symbol
+            id="icon-ai"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"
+            />
+            <path
+                d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z"
+            />
+            <path
+                d="M5 14l.8 1.8L8 16.5l-2.2.7L5 19l-.8-1.8-2.2-.7 2.2-.7L5 14Z"
+            />
+        </symbol>
+        <symbol
+            id="icon-platform"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path
+                d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93"
+            />
+            <path
+                d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19.07"
+            />
+        </symbol>
+        <symbol
+            id="icon-notification"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+            <path d="M10 21h4" />
+        </symbol>
+        <symbol
+            id="icon-backup"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M12 3a9 9 0 1 0 8.2 12.7" />
+            <path d="M20 9V4h-5" />
+            <path d="M20 4l-5.5 5.5" />
+            <path d="M12 8v5l3 2" />
+        </symbol>
     </svg>
 </template>

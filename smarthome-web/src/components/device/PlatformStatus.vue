@@ -23,7 +23,10 @@ const iconMap: Record<string, string> = {
         <div class="platform-list">
             <article v-for="platform in platforms" :key="platform.name">
                 <span class="platform-icon">
-                    <SvgIcon :name="iconMap[platform.name] ?? 'layers'" size="sm" />
+                    <SvgIcon
+                        :name="iconMap[platform.name] ?? 'layers'"
+                        size="sm"
+                    />
                 </span>
                 <strong>{{ platform.name }}</strong>
                 <em>{{ platform.status }}</em>
