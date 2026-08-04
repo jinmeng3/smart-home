@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
+import { platformIconMap } from "./deviceMeta";
 
 defineProps<{
     platforms: {
@@ -8,13 +9,6 @@ defineProps<{
         connected: boolean;
     }[];
 }>();
-
-const iconMap: Record<string, string> = {
-    "Home Assistant": "home-assistant",
-    Matter: "matter",
-    Zigbee: "zigbee",
-    MQTT: "mqtt",
-};
 </script>
 
 <template>
@@ -24,7 +18,7 @@ const iconMap: Record<string, string> = {
             <article v-for="platform in platforms" :key="platform.name">
                 <span class="platform-icon">
                     <SvgIcon
-                        :name="iconMap[platform.name] ?? 'layers'"
+                        :name="platformIconMap[platform.name] ?? 'layers'"
                         size="sm"
                     />
                 </span>

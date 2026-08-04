@@ -5,9 +5,9 @@ interface AutoScrollOptions {
   bottomThreshold?: number;
 }
 
-export const useAutoScroll = (
+export const useAutoScroll = <T = number>(
   container: Ref<HTMLElement | null>,
-  dependency: Ref<number>,
+  dependency: Ref<T>,
   options: AutoScrollOptions = {},
 ) => {
   const { prefersReducedMotion } = useReducedMotion();

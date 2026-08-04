@@ -2,12 +2,24 @@ import { statusColorMap } from "../../constants/status-colors";
 import type { DevicePlatform, DeviceStatus, DeviceType } from "../../types/device";
 import type { SemanticStatus } from "../../types/theme";
 
+export interface PlatformMeta {
+  name: DevicePlatform;
+  icon: string;
+}
+
 export const devicePlatformOptions: DevicePlatform[] = [
   "Home Assistant",
   "Matter",
   "Zigbee",
   "MQTT",
 ];
+
+export const platformIconMap: Record<string, string> = {
+  "Home Assistant": "home-assistant",
+  Matter: "matter",
+  Zigbee: "zigbee",
+  MQTT: "mqtt",
+};
 
 export const deviceTypeOptions: { label: string; value: DeviceType | "" }[] = [
   { label: "全部", value: "" },
