@@ -215,7 +215,7 @@ const selectCategory = (name: string) => {
     min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 12px 14px 14px;
+    padding: 10px 14px 12px;
     background: var(--color-page-bg);
 }
 
@@ -223,13 +223,13 @@ const selectCategory = (name: string) => {
     display: grid;
     grid-template-columns: 1.25fr repeat(6, minmax(0, 1fr));
     gap: 9px;
-    padding-bottom: 9px;
+    padding-bottom: 7px;
 }
 
 .category-bar button {
     display: inline-flex;
     min-width: 0;
-    height: 36px;
+    height: 32px;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
@@ -262,7 +262,7 @@ const selectCategory = (name: string) => {
 }
 
 .control-section h2 {
-    margin: 1px 5px 7px;
+    margin: 0 5px 6px;
     color: var(--color-text-secondary);
     font-size: 11px;
     font-weight: 900;
@@ -285,8 +285,8 @@ const selectCategory = (name: string) => {
 }
 
 .device-card {
-    min-height: 88px;
-    padding: 10px;
+    min-height: 76px;
+    padding: 8px 10px;
     transition: 160ms var(--motion-ease);
 }
 
@@ -377,7 +377,7 @@ const selectCategory = (name: string) => {
 .temperature-row,
 .purifier-row {
     display: flex;
-    min-height: 27px;
+    min-height: 24px;
     align-items: flex-end;
     gap: 6px;
     color: var(--color-text-tertiary);
@@ -453,14 +453,14 @@ const selectCategory = (name: string) => {
 }
 
 .environment-section {
-    margin-top: 9px;
+    margin-top: 7px;
 }
 
 .environment-grid article {
     position: relative;
-    min-height: 58px;
+    min-height: 50px;
     overflow: hidden;
-    padding: 9px 11px;
+    padding: 7px 10px;
 }
 
 .environment-grid small,
@@ -477,7 +477,7 @@ const selectCategory = (name: string) => {
 }
 
 .environment-grid strong {
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--color-text-primary);
     font-size: 13px;
     font-weight: 900;

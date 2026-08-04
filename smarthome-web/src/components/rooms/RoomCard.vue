@@ -22,19 +22,19 @@ defineEmits<{
     >
         <header>
             <span class="room-avatar">{{ room.name.slice(0, 1) }}</span>
-            <div>
-                <h2>
-                    {{ room.name }}
+            <div class="room-title">
+                <h2>{{ room.name }}</h2>
+                <p class="room-status">
                     <small>{{ room.comfort >= 84 ? "舒适" : "良好" }}</small>
-                </h2>
-                <p><b></b>{{ room.onlineCount }} 个设备在线</p>
+                    <b></b>{{ room.onlineCount }} 个设备在线
+                </p>
+            </div>
+            <div class="room-metrics">
+                <span><SvgIcon name="temperature" size="sm" />{{ room.temperature }}°C</span>
+                <span><SvgIcon name="humidity" size="sm" />{{ room.humidity }}%</span>
+                <span class="quality"><SvgIcon name="air-quality" size="sm" />优 {{ room.pm25 }}</span>
             </div>
         </header>
-        <div class="room-metrics">
-            <span><SvgIcon name="temperature" size="sm" />{{ room.temperature }}°C</span>
-            <span><SvgIcon name="humidity" size="sm" />{{ room.humidity }}%</span>
-            <span class="quality"><SvgIcon name="air-quality" size="sm" />优 {{ room.pm25 }}</span>
-        </div>
         <div class="room-devices">
             <button
                 v-for="device in devices.slice(0, 4)"
@@ -70,7 +70,11 @@ defineEmits<{
 .room-card > header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+.room-title {
+    min-width: 0;
+    flex: 1;
 }
 .room-avatar {
     display: grid;
@@ -83,44 +87,52 @@ defineEmits<{
     font-weight: 900;
 }
 .room-card h2 {
+    overflow: hidden;
     margin: 0;
     font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.room-card h2 small {
-    border-radius: 999px;
-    background: var(--color-success-soft);
-    padding: 2px 6px;
-    color: var(--color-success);
-    font-size: 9px;
-}
-.room-card header p {
+.room-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     margin: 4px 0 0;
     color: var(--color-text-tertiary);
     font-size: 10px;
 }
-.room-card header p b {
+.room-status small {
+    border-radius: 999px;
+    background: var(--color-success-soft);
+    padding: 1px 6px;
+    color: var(--color-success);
+    font-size: 9px;
+    line-height: 1.4;
+}
+.room-status b {
     display: inline-block;
     width: 6px;
     height: 6px;
-    margin-right: 4px;
     border-radius: 50%;
     background: var(--color-success);
 }
 .room-metrics {
     display: flex;
-    gap: 8px;
-    margin: 12px 0;
+    flex-shrink: 0;
+    gap: 4px;
+    margin: 0 0 0 auto;
 }
 .room-metrics span {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    border-radius: 7px;
+    border-radius: 6px;
     background: var(--color-surface-subtle);
-    padding: 5px 7px;
+    padding: 4px 6px;
     color: var(--color-text-secondary);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
+    white-space: nowrap;
 }
 .room-metrics .quality {
     background: var(--color-success-soft);
@@ -130,6 +142,7 @@ defineEmits<{
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
+    margin-top: 10px;
 }
 .room-devices button {
     display: grid;

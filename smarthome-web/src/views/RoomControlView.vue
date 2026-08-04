@@ -221,8 +221,8 @@ onMounted(() => void load());
     background: var(--color-page-bg);
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 18px;
+    gap: 12px;
+    padding: 16px;
 }
 .page-tools { display: flex; align-items: center; gap: 8px; }
 .page-tools label { display: flex; min-width: 220px; height: 38px; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); padding: 0 11px; color: var(--color-text-tertiary); }

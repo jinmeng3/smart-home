@@ -53,18 +53,18 @@ defineProps<{
     align-items: center;
     gap: 12px;
     border: 1px solid var(--color-border);
-    border-radius: 13px;
+    border-radius: 14px;
     background: var(--color-card-bg);
-    padding: 14px;
+    padding: 14px 16px;
     box-shadow: var(--shadow-card);
 }
 .stats-grid i {
     display: grid;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
     place-items: center;
-    border-radius: 11px;
+    border-radius: 12px;
     font-style: normal;
 }
 .stats-grid i.blue {
@@ -86,23 +86,26 @@ defineProps<{
 .stats-grid span {
     min-width: 0;
     color: var(--color-text-tertiary);
-    font-size: 11px;
-    font-weight: 750;
+    font-size: 13px;
+    font-weight: 700;
 }
 .stats-grid strong {
     display: block;
-    margin-top: 3px;
+    margin-top: 1px;
     color: var(--color-text-primary);
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.01em;
 }
 .stats-grid strong small {
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 700;
 }
 .stats-grid em {
     display: block;
-    margin-top: 2px;
+    margin-top: 1px;
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 12px;
     font-style: normal;
 }
 @media (max-width: 1450px) {
