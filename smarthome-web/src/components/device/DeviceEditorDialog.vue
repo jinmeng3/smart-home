@@ -221,6 +221,31 @@ onBeforeUnmount(releasePreviewUrl);
                     <h3>基础信息</h3>
                     <span>用于设备清单、筛选和详情展示</span>
                 </header>
+                <div class="device-type-picker">
+                    <span class="device-type-label">设备类型 <em>*</em></span>
+                    <div class="device-type-grid">
+                        <button
+                            v-for="item in deviceTypeOptions.filter(
+                                (item) => item.value,
+                            )"
+                            :key="item.value"
+                            :class="{ active: form.type === item.value }"
+                            type="button"
+                            @click="form.type = item.value as DeviceType"
+                        >
+                            <i>
+                                <SvgIcon
+                                    :name="
+                                        deviceTypeIconMap[
+                                            item.value as DeviceType
+                                        ]
+                                    "
+                                />
+                            </i>
+                            <b>{{ item.label }}</b>
+                        </button>
+                    </div>
+                </div>
                 <div class="device-form-grid">
                     <label>
                         <span>设备名称 <em>*</em></span>
@@ -237,20 +262,6 @@ onBeforeUnmount(releasePreviewUrl);
                             maxlength="80"
                             placeholder="例如：客厅"
                         />
-                    </label>
-                    <label>
-                        <span>设备类型</span>
-                        <select v-model="form.type">
-                            <option
-                                v-for="item in deviceTypeOptions.filter(
-                                    (item) => item.value,
-                                )"
-                                :key="item.value"
-                                :value="item.value as DeviceType"
-                            >
-                                {{ item.label }}
-                            </option>
-                        </select>
                     </label>
                     <label>
                         <span>品牌 <em>*</em></span>
@@ -512,6 +523,67 @@ onBeforeUnmount(releasePreviewUrl);
     text-align: right;
 }
 
+.device-type-picker {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.device-type-label {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.device-type-label em {
+    color: var(--color-danger);
+    font-style: normal;
+}
+
+.device-type-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.device-type-grid button {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    background: var(--color-surface-subtle);
+    padding: 10px 4px 8px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 800;
+    transition: 160ms var(--motion-ease);
+}
+
+.device-type-grid button:hover {
+    border-color: var(--color-primary-300);
+    transform: translateY(-1px);
+}
+
+.device-type-grid button.active {
+    border-color: var(--color-primary-600);
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-50),
+        var(--color-primary-100)
+    );
+    color: var(--color-primary-700);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.device-type-grid i {
+    font-style: normal;
+}
+
+.device-type-grid b {
+    font-weight: 800;
+}
+
 .device-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -647,6 +719,10 @@ button:disabled {
     .device-editor-hero,
     .device-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .device-type-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .device-upload-preview {

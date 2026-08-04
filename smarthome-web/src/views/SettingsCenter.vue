@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import {
     computed,
+    nextTick,
     onBeforeUnmount,
     onMounted,
     reactive,
     ref,
     watch,
+    watchEffect,
 } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -22,10 +24,12 @@ import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPa
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
 import SettingsTabs from "../components/settings/SettingsTabs.vue";
 import { useSettingsStore } from "../stores/settings";
+import { useHomeStore } from "../stores/home";
 import { useAuthStore } from "../stores/auth";
 import type { AccountForm, FamilyMember, MemberRole } from "../types/account";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
+const store = useHomeStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const activeSection = ref<SettingsSectionId>("account");
@@ -34,6 +38,57 @@ const addingMember = ref(false);
 const loadingMemberId = ref<number | null>(null);
 const initialAccountSnapshot = ref("");
 const initialIntegrationSnapshot = ref("");
+
+// 滚动监听
+const scrollContainer = ref<HTMLElement | null>(null);
+const sectionObservers = new Map<string, IntersectionObserver>();
+
+const setupScrollObserver = () => {
+    if (!scrollContainer.value) return;
+
+    const sections = [
+        "account",
+        "appearance",
+        "ai",
+        "homeAssistant",
+        "notifications",
+        "security",
+        "backup",
+    ];
+
+    sections.forEach((sectionId) => {
+        const sectionElement = document.getElementById(sectionId);
+        if (!sectionElement) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        activeSection.value = sectionId as SettingsSectionId;
+                    }
+                });
+            },
+            {
+                root: scrollContainer.value,
+                rootMargin: "-50% 0px -50% 0px",
+                threshold: 0,
+            }
+        );
+
+        observer.observe(sectionElement);
+        sectionObservers.set(sectionId, observer);
+    });
+};
+
+const cleanupScrollObserver = () => {
+    sectionObservers.forEach((observer, sectionId) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            observer.unobserve(element);
+        }
+    });
+    sectionObservers.clear();
+};
 
 const settings = computed(() => settingsStore.settings);
 const accountForm = reactive<AccountForm>({
@@ -156,10 +211,15 @@ onMounted(() => {
             );
         });
     window.addEventListener("beforeunload", handleBeforeUnload);
+
+    void nextTick(() => {
+        setupScrollObserver();
+    });
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener("beforeunload", handleBeforeUnload);
+    cleanupScrollObserver();
 });
 
 watch(
@@ -388,12 +448,28 @@ const removeMember = async (membershipId: number) => {
             <header
                 class="mb-4 shrink-0 border-b border-[var(--color-divider)] pb-4"
             >
-                <h1 class="text-2xl font-extrabold">设置中心</h1>
-                <p
-                    class="mt-1 text-sm font-medium text-[var(--color-text-tertiary)]"
-                >
-                    管理账户、界面、AI 助手与平台接入配置
-                </p>
+                <div class="flex items-center gap-3">
+                    <span
+                        class="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-ai)] text-white shadow-sm"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </span>
+                    <div>
+                        <h1
+                            class="bg-gradient-to-r from-[var(--color-primary-700)] to-[var(--color-ai)] bg-clip-text text-2xl font-extrabold text-transparent"
+                        >
+                            设置中心
+                        </h1>
+                        <p
+                            class="mt-1 text-sm font-medium text-[var(--color-text-tertiary)]"
+                        >
+                            管理账户、界面、AI 助手与平台接入配置
+                        </p>
+                    </div>
+                </div>
             </header>
 
             <SettingsTabs
@@ -402,6 +478,7 @@ const removeMember = async (membershipId: number) => {
             />
 
             <div
+                ref="scrollContainer"
                 class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
             >
                 <div class="settings-card-grid card-grid-enter grid grid-cols-2 gap-4">

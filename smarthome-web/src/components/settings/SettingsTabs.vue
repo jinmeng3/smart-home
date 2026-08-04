@@ -22,23 +22,20 @@ const tabs: Array<{ id: SettingsSectionId; label: string }> = [
 
 <template>
     <nav
-        class="flex h-12 shrink-0 items-center gap-6 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] px-5"
+        class="flex h-12 shrink-0 items-center gap-1.5 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-1.5"
     >
         <button
             v-for="tab in tabs"
             :key="tab.id"
-            class="motion-button relative h-full text-sm font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-primary-700)]"
+            class="motion-button relative grid flex-1 place-items-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-primary-700)]"
             :class="{
-                'text-[var(--color-primary-700)]': activeSection === tab.id,
+                'bg-gradient-to-b from-[var(--color-primary-50)] to-[var(--color-primary-100)] text-[var(--color-primary-700)] shadow-sm':
+                    activeSection === tab.id,
             }"
             type="button"
             @click="emit('select', tab.id)"
         >
             {{ tab.label }}
-            <span
-                v-if="activeSection === tab.id"
-                class="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[var(--color-primary-600)]"
-            ></span>
         </button>
     </nav>
 </template>
