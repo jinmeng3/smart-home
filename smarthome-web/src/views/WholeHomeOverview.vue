@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, shallowRef } from "vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
 
-const rooms = [
+const rooms = shallowRef([
     {
         name: "客厅",
         icon: "room",
@@ -60,7 +60,7 @@ const rooms = [
         extra: "温湿度 28°C 60%",
         tone: "orange",
     },
-];
+]);
 const selectedTab = ref("常用设备");
 const refreshed = ref("5 分钟前");
 const activeDialog = ref<OverviewDialog>(null);
@@ -74,15 +74,18 @@ const handleSynced = () => {
 };
 
 const handleRoomCreated = (name: string) => {
-    rooms.push({
-        name,
-        icon: "room",
-        count: 0,
-        light: "0/0 开",
-        air: "暂无设备",
-        extra: "等待绑定",
-        tone: "blue",
-    });
+    rooms.value = [
+        ...rooms.value,
+        {
+            name,
+            icon: "room",
+            count: 0,
+            light: "0/0 开",
+            air: "暂无设备",
+            extra: "等待绑定",
+            tone: "blue",
+        },
+    ];
 };
 </script>
 
