@@ -2,7 +2,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { ElButton, ElMessage, ElMessageBox } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
 
@@ -164,28 +163,11 @@ const savePassword = async () => {
         :model-value="modelValue"
         :before-close="confirmBeforeClose"
         width="680px"
+        title="修改密码"
+        description="更新当前账户的本地安全记录"
+        icon="lock"
         @update:model-value="emit('update:modelValue', $event)"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">
-                    <SvgIcon name="lock" size="sm" />
-                </span>
-                <div>
-                    <h2>修改密码</h2>
-                    <p>更新当前账户的本地安全记录</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    text
-                    @click="requestClose"
-                >
-                    ×
-                </ElButton>
-            </header>
-        </template>
-
         <div class="password-dialog-body">
             <section class="password-card">
                 <div class="password-card-header">
@@ -287,54 +269,6 @@ const savePassword = async () => {
 </template>
 
 <style scoped>
-.dialog-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 17px 20px 14px;
-    border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-header-start),
-        var(--color-dialog-header-end)
-    );
-}
-
-.dialog-icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    place-items: center;
-    border-radius: 11px;
-    color: white;
-    font-size: 18px;
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-icon-start),
-        var(--color-dialog-icon-end)
-    );
-    box-shadow: 0 8px 20px var(--color-focus-ring);
-}
-
-.dialog-header h2 {
-    color: var(--color-text-primary);
-    font-size: 17px;
-    font-weight: 800;
-}
-
-.dialog-header p {
-    margin-top: 2px;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-}
-
-.close-button {
-    margin: -4px -6px 0 auto;
-    color: var(--color-text-tertiary);
-    font-size: 22px;
-}
-
 .password-dialog-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 240px;
@@ -506,38 +440,9 @@ const savePassword = async () => {
     line-height: 1.5;
 }
 
-.dialog-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-workspace-background);
-}
-
-.dialog-footer > span {
-    color: var(--color-text-tertiary);
-    font-size: 11px;
-}
-
-.dialog-footer > div {
-    display: flex;
-    gap: 8px;
-}
-
 @media (max-width: 640px) {
     .password-dialog-body {
         grid-template-columns: 1fr;
-    }
-
-    .dialog-footer {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .dialog-footer > div {
-        justify-content: flex-end;
     }
 }
 </style>
