@@ -113,6 +113,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     <BaseSmartModal
         v-model="dialogVisible"
         width="720px"
+        :close-on-overlay="!submitting && loadingMemberId === null"
     >
         <template #header>
             <header class="dialog-header">
