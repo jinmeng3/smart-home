@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { roomService } from "../services/room";
 import SvgIcon from "../components/common/SvgIcon.vue";
+import PageHeader from "../components/common/PageHeader.vue";
 import RoomControlDialogs, {
     type RoomDialog,
 } from "../components/rooms/RoomControlDialogs.vue";
@@ -146,11 +147,7 @@ onMounted(() => void load());
 <template>
     <div class="contents">
         <main class="workspace">
-            <header class="page-header">
-                <div>
-                    <h1>房间控制</h1>
-                    <p>按房间查看设备状态、环境数据与快捷控制</p>
-                </div>
+            <PageHeader title="房间控制" description="按房间查看设备状态、环境数据与快捷控制">
                 <div class="page-tools">
                     <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间、设备或场景" /></label>
                     <select v-model="floor" @change="load">
@@ -161,7 +158,7 @@ onMounted(() => void load());
                     </select>
                     <button class="primary" type="button" @click="activeDialog = 'create'"><SvgIcon name="plus" size="sm" />添加房间</button>
                 </div>
-            </header>
+            </PageHeader>
 
             <RoomStatsGrid
                 :room-count="rooms.length"
@@ -227,16 +224,6 @@ onMounted(() => void load());
     gap: 14px;
     padding: 18px;
 }
-
-.page-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-}
-
-.page-header h1 { margin: 0; font-size: 24px; font-weight: 900; }
-.page-header p { margin: 7px 0 0; color: var(--color-text-tertiary); font-size: 13px; font-weight: 700; }
 .page-tools { display: flex; align-items: center; gap: 8px; }
 .page-tools label { display: flex; min-width: 220px; height: 38px; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); padding: 0 11px; color: var(--color-text-tertiary); }
 .page-tools input { min-width: 0; flex: 1; border: 0; outline: 0; }

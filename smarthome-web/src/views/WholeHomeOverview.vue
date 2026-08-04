@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, shallowRef } from "vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
+import PageHeader from "../components/common/PageHeader.vue";
+import StatsCard from "../components/common/StatsCard.vue";
 import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
@@ -91,63 +93,43 @@ const handleRoomCreated = (name: string) => {
 
 <template>
     <div class="contents">
-        <main class="overview page-shell">
-            <header class="page-header">
-                <div>
-                    <h1>全屋总览</h1>
-                    <p>查看家庭运行状态、房间分布与设备总览</p>
-                </div>
+        <main class="overview page-shell page-enter">
+            <PageHeader title="全屋总览" description="查看家庭运行状态、房间分布与设备总览">
                 <label class="search"
                     ><SvgIcon name="search" size="sm" /><input
                         placeholder="搜索设备、场景或房间"
                 /></label>
-            </header>
+            </PageHeader>
             <section class="stats">
-                <article
-                    v-for="item in [
-                        [
-                            'online-device',
-                            '在线设备总数',
-                            '28',
-                            '/ 36',
-                            '在线率 77.8%',
-                            'blue',
-                        ],
-                        [
-                            'automation',
-                            '自动化运行中',
-                            '8',
-                            '',
-                            '较昨日 +2',
-                            'green',
-                        ],
-                        [
-                            'notification',
-                            '今日告警',
-                            '2',
-                            '',
-                            '较昨日 -1 ↓',
-                            'orange',
-                        ],
-                        [
-                            'air-quality',
-                            '本月节能概况',
-                            '32.6',
-                            ' kWh',
-                            '节能 12% ↑',
-                            'purple',
-                        ],
-                    ]"
-                    :key="item[1]"
-                >
-                    <i :class="item[5]"><SvgIcon :name="item[0]" /></i
-                    ><span
-                        >{{ item[1]
-                        }}<strong
-                            >{{ item[2] }}<small>{{ item[3] }}</small></strong
-                        ><em>{{ item[4] }}</em></span
-                    >
-                </article>
+                <StatsCard
+                    icon="online-device"
+                    label="在线设备总数"
+                    value="28"
+                    detail="在线率 77.8%"
+                    tone="blue"
+                />
+                <StatsCard
+                    icon="automation"
+                    label="自动化运行中"
+                    value="8"
+                    detail="较昨日 +2"
+                    tone="green"
+                />
+                <StatsCard
+                    icon="notification"
+                    label="今日告警"
+                    value="2"
+                    detail="较昨日 -1 ↓"
+                    tone="orange"
+                />
+                <StatsCard
+                    icon="air-quality"
+                    label="本月节能概况"
+                    value="32.6"
+                    unit="kWh"
+                    detail="节能 12% ↑"
+                    tone="purple"
+                />
             </section>
             <section class="panel home-status">
                 <h2>家庭概况</h2>
@@ -431,19 +413,6 @@ const handleRoomCreated = (name: string) => {
     gap: 12px;
     padding: 18px;
 }
-.page-header {
-    display: flex;
-    justify-content: space-between;
-}
-.page-header h1 {
-    font-size: 24px;
-    font-weight: 900;
-}
-.page-header p {
-    margin-top: 4px;
-    color: #738198;
-    font-size: 13px;
-}
 .search {
     display: flex;
     width: 240px;
@@ -466,18 +435,6 @@ const handleRoomCreated = (name: string) => {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
-.stats article {
-    display: flex;
-    min-height: 86px;
-    align-items: center;
-    gap: 13px;
-    border: 1px solid #e1e8f1;
-    border-radius: 14px;
-    background: #fff;
-    padding: 14px;
-    box-shadow: var(--shadow-card);
-}
-.stats i,
 .status-row i,
 .room-title i {
     display: grid;
@@ -507,21 +464,7 @@ const handleRoomCreated = (name: string) => {
     background: #edf1f6;
     color: #64748b;
 }
-.stats span {
-    color: #64748b;
-    font-size: 12px;
-}
-.stats strong {
-    display: block;
-    color: #18243a;
-    font-size: 22px;
-}
-.stats small {
-    font-size: 12px;
-}
-.stats em {
-    font-style: normal;
-}
+
 .panel {
     border: 1px solid #e2e9f2;
     border-radius: 14px;

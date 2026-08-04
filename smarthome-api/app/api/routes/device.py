@@ -31,7 +31,9 @@ from app.services.device import (
     upload_device_image,
 )
 
-router = APIRouter(prefix="/devices", tags=["devices"], dependencies=[CURRENT_USER_DEPENDENCY])
+router = APIRouter(
+    prefix="/devices", tags=["devices"], dependencies=[CURRENT_USER_DEPENDENCY]
+)
 # FastAPI 参数对象在模块加载时创建，避免在函数默认值中执行调用。
 DEVICE_ID_QUERY = Query(default=None)
 LOG_PAGE_QUERY = Query(default=1, ge=1)

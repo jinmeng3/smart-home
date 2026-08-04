@@ -4,6 +4,8 @@ import { ElMessage } from "element-plus";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
 import type { AutomationDialog } from "../components/automation/AutomationDialogs.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
+import PageHeader from "../components/common/PageHeader.vue";
+import StatsCard from "../components/common/StatsCard.vue";
 import "element-plus/theme-chalk/el-message.css";
 
 interface AutomationRule {
@@ -122,17 +124,13 @@ const batchEnable = (ids: number[]) => {
 
 <template>
     <div class="contents">
-        <main class="automation page-shell">
-            <header class="page-header">
-                <div>
-                    <h1>自动化</h1>
-                    <p>管理家庭自动化规则、触发条件与执行状态</p>
-                </div>
+        <main class="automation page-shell page-enter">
+            <PageHeader title="自动化" description="管理家庭自动化规则、触发条件与执行状态">
                 <label
                     ><SvgIcon name="search" size="sm" /><input
                         placeholder="搜索设备、场景或房间"
                 /></label>
-            </header>
+            </PageHeader>
             <div class="filters">
                 <label
                     ><SvgIcon name="search" size="sm" /><input
@@ -156,33 +154,34 @@ const batchEnable = (ids: number[]) => {
                 </button>
             </div>
             <section class="stats">
-                <article
-                    v-for="item in [
-                        [
-                            'check-circle',
-                            '已启用规则',
-                            '18',
-                            '共 24 条规则',
-                            'blue',
-                        ],
-                        ['power', '运行中', '5', '正在执行', 'green'],
-                        [
-                            'calendar',
-                            '今日执行次数',
-                            '36 次',
-                            '较昨日 ↑ 15%',
-                            'orange',
-                        ],
-                        ['warning', '异常规则', '1', '需要处理', 'red'],
-                    ]"
-                    :key="item[1]"
-                >
-                    <i :class="item[4]"><SvgIcon :name="item[0]" /></i
-                    ><span
-                        >{{ item[1] }}<b>{{ item[2] }}</b
-                        ><small>{{ item[3] }}</small></span
-                    >
-                </article>
+                <StatsCard
+                    icon="check-circle"
+                    label="已启用规则"
+                    value="18"
+                    detail="共 24 条规则"
+                    tone="blue"
+                />
+                <StatsCard
+                    icon="power"
+                    label="运行中"
+                    value="5"
+                    detail="正在执行"
+                    tone="green"
+                />
+                <StatsCard
+                    icon="calendar"
+                    label="今日执行次数"
+                    value="36 次"
+                    detail="较昨日 ↑ 15%"
+                    tone="orange"
+                />
+                <StatsCard
+                    icon="warning"
+                    label="异常规则"
+                    value="1"
+                    detail="需要处理"
+                    tone="red"
+                />
             </section>
             <section class="cards">
                 <article
@@ -405,20 +404,6 @@ const batchEnable = (ids: number[]) => {
     gap: 14px;
     padding: 20px;
 }
-.page-header {
-    display: flex;
-    justify-content: space-between;
-}
-.page-header h1 {
-    font-size: 27px;
-    font-weight: 900;
-}
-.page-header p {
-    margin-top: 4px;
-    color: #74839a;
-    font-size: 15px;
-}
-.page-header label,
 .filters label {
     display: flex;
     align-items: center;
@@ -429,11 +414,6 @@ const batchEnable = (ids: number[]) => {
     padding: 0 11px;
     color: #8ca0b5;
 }
-.page-header label {
-    width: 280px;
-    height: 42px;
-}
-.page-header input,
 .filters input {
     min-width: 0;
     outline: 0;
@@ -476,17 +456,6 @@ const batchEnable = (ids: number[]) => {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
-.stats article {
-    display: flex;
-    min-height: 92px;
-    align-items: center;
-    gap: 13px;
-    border: 1px solid #e1e8f1;
-    border-radius: 14px;
-    background: #fff;
-    padding: 16px;
-}
-.stats i,
 .cards header > i,
 .detail-title > i,
 .templates p > i {
@@ -517,19 +486,7 @@ const batchEnable = (ids: number[]) => {
     background: #ffe5e5;
     color: #ef4149;
 }
-.stats span {
-    display: flex;
-    flex-direction: column;
-    color: #63748c;
-    font-size: 13px;
-}
-.stats b {
-    color: #1a273b;
-    font-size: 24px;
-}
-.stats small {
-    font-size: 12px;
-}
+
 .cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

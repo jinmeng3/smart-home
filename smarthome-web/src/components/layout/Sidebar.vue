@@ -26,8 +26,8 @@ const menuItems: MenuItem[] = [
     { icon: "device-management", label: "设备管理", path: "/devices" },
     { icon: "scene", label: "场景模式", path: "/scenes" },
     { icon: "automation", label: "自动化", path: "/automations" },
-    { icon: "energy", label: "能耗分析" },
-    { icon: "security", label: "安防中心" },
+    // { icon: "energy", label: "能耗分析" },
+    // { icon: "security", label: "安防中心" },
     { icon: "settings", label: "设置", path: "/settings" },
 ];
 

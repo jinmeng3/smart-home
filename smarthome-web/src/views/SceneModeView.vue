@@ -69,7 +69,7 @@ onMounted(() => {
 
 <template>
     <div class="contents">
-        <section class="scene-mode-page">
+        <section class="scene-mode-page page-enter">
             <header class="scene-page-header">
                 <div class="scene-page-title">
                     <h1>场景模式</h1>
@@ -146,7 +146,6 @@ onMounted(() => {
     border-radius: 18px;
     background: var(--color-page-bg);
     padding: 18px;
-    animation: scene-page-enter 240ms var(--motion-ease) both;
 }
 
 .scene-page-header {
@@ -169,17 +168,6 @@ onMounted(() => {
     color: var(--color-text-tertiary);
     font-size: 14px;
     font-weight: 750;
-}
-
-@keyframes scene-page-enter {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 @media (max-width: 1180px) {

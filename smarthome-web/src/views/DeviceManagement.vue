@@ -34,7 +34,7 @@ onMounted(() => {
 
 <template>
     <div class="contents">
-        <section class="device-management-page">
+        <section class="device-management-page page-enter">
             <header class="device-page-header">
                 <div class="device-page-title">
                     <h1>设备管理</h1>
@@ -228,7 +228,6 @@ onMounted(() => {
     border-radius: 18px;
     background: var(--color-page-bg);
     padding: 14px;
-    animation: device-page-enter 240ms var(--motion-ease) both;
 }
 
 .device-page-header {
@@ -464,17 +463,6 @@ button:disabled {
     }
     .device-stats-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-@keyframes device-page-enter {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
     }
 }
 
