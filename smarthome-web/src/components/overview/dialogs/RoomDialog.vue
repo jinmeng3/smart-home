@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
 import { sleep } from "../../../utils/async";
+import { toggleValue } from "../../../utils/array";
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -36,12 +37,6 @@ const colors = [
     "#ff8a1f",
     "#f05252",
 ];
-
-const toggle = (list: string[], value: string) => {
-    const index = list.indexOf(value);
-    if (index >= 0) list.splice(index, 1);
-    else list.push(value);
-};
 
 const confirm = async () => {
     if (!roomName.value.trim()) {
@@ -137,7 +132,7 @@ watch(
                         :key="device"
                         type="button"
                         :class="{ active: roomDevices.includes(device) }"
-                        @click="toggle(roomDevices, device)"
+                        @click="toggleValue(roomDevices, device)"
                     >
                         <SvgIcon
                             :name="
