@@ -21,3 +21,10 @@ export interface RoomListResponse {
   items: Room[];
   total: number;
 }
+
+export interface RoomDeviceCard {
+  key: string;
+  icon: string;
+  name: string;
+  detail: string;
+}
