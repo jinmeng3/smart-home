@@ -2,6 +2,7 @@
 import { reactive, ref, watch } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import { toggleValue } from "../../../utils/array";
 
 export interface AutomationRule {
     id: number;
@@ -67,11 +68,6 @@ watch(
 );
 
 const close = () => emit("update:modelValue", false);
-const toggleValue = <T,>(items: T[], value: T) => {
-    const index = items.indexOf(value);
-    if (index >= 0) items.splice(index, 1);
-    else items.push(value);
-};
 
 const submitForm = () => {
     if (!form.name.trim()) return;

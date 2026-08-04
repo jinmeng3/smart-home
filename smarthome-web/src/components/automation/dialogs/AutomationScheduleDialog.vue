@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import { toggleValue } from "../../../utils/array";
 import type { AutomationRule } from "./AutomationFormDialog.vue";
 
 defineProps<{
@@ -21,11 +22,6 @@ const scheduleTime = ref("07:30");
 const scheduleRuleIds = ref<number[]>([2, 3]);
 
 const close = () => emit("update:modelValue", false);
-const toggleValue = <T,>(items: T[], value: T) => {
-    const index = items.indexOf(value);
-    if (index >= 0) items.splice(index, 1);
-    else items.push(value);
-};
 
 const confirm = () => {
     emit("scheduled", {
