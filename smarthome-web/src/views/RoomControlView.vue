@@ -146,7 +146,7 @@ onMounted(() => void load());
 
 <template>
     <div class="contents">
-        <main class="workspace">
+        <main class="workspace page-enter">
             <PageHeader title="房间控制" description="按房间查看设备状态、环境数据与快捷控制">
                 <div class="page-tools">
                     <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间、设备或场景" /></label>

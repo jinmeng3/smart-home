@@ -383,7 +383,7 @@ const removeMember = async (membershipId: number) => {
         :disabled="!authStore.isAuthenticated"
     >
         <section
-            class="route-panel-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
+            class="page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
             <header
                 class="mb-4 shrink-0 border-b border-[var(--color-divider)] pb-4"
@@ -474,7 +474,7 @@ const removeMember = async (membershipId: number) => {
         </section>
 
         <aside
-            class="route-panel-enter flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
+            class="page-enter flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
             style="animation-delay: 70ms"
         >
             <SettingsSummaryPanel :summary="settings.summary" />

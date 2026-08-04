@@ -35,7 +35,7 @@ watch(
 <template>
     <div class="contents">
         <section
-            class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] shadow-soft"
+            class="page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] shadow-soft"
         >
             <Header />
             <ChatWindow />
