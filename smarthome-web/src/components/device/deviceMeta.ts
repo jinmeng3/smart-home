@@ -1,11 +1,6 @@
 import { statusColorMap } from "../../constants/status-colors";
 import type { DevicePlatform, DeviceStatus, DeviceType } from "../../types/device";
-import type { SemanticStatus } from "../../types/theme";
-
-export interface PlatformMeta {
-  name: DevicePlatform;
-  icon: string;
-}
+import type { SemanticStatus } from "../../constants/status-colors";
 
 export const devicePlatformOptions: DevicePlatform[] = [
   "Home Assistant",

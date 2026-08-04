@@ -69,7 +69,7 @@ onMounted(() => {
 
 <template>
     <div class="contents">
-        <section class="scene-mode-page page-enter">
+        <section class="scene-mode-page page-shell page-enter">
             <header class="scene-page-header">
                 <div class="scene-page-title">
                     <h1>场景模式</h1>
@@ -142,9 +142,6 @@ onMounted(() => {
     flex-direction: column;
     gap: 14px;
     overflow-y: auto;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
     padding: 18px;
 }
 

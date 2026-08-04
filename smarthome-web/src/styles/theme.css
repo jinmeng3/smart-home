@@ -3,6 +3,15 @@ body {
     background: var(--color-page-background);
 }
 
+/* Native select dropdown — tell the browser which color scheme to use
+   so the popup background matches the app theme instead of the OS default. */
+:root select {
+    color-scheme: light;
+}
+:root[data-theme="dark"] select {
+    color-scheme: dark;
+}
+
 .text-slate-900,
 .text-slate-800 {
     color: var(--color-text-primary) !important;

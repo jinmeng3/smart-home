@@ -253,7 +253,7 @@ h3 {
     align-items: center;
     gap: 8px;
     margin: 0 0 14px;
-    color: #17243a;
+    color: var(--color-text-primary);
     font-size: 15px;
 }
 h3 > svg {
@@ -261,22 +261,22 @@ h3 > svg {
     height: 19px;
     padding: 3px;
     border-radius: 6px;
-    color: #1769ff;
-    background: #edf4ff;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    border: 1px solid #e2e8f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 14px;
-    background: #fff;
+    background: var(--color-card-bg);
 }
 .form-column + .form-column {
-    border-left: 1px solid #e6ebf2;
+    border-left: 1px solid var(--color-border-subtle);
 }
 .form-column section {
     padding: 18px;
-    border-bottom: 1px solid #e8edf4;
+    border-bottom: 1px solid var(--color-border-subtle);
 }
 .form-column section:last-child {
     border-bottom: 0;
@@ -287,23 +287,28 @@ label {
     gap: 7px;
     flex-direction: column;
     margin: 12px 0;
-    color: #40516a;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
 label b {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 input,
 select,
 textarea {
     width: 100%;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 10px;
-    color: #26364d;
+    color: var(--color-text-primary);
     outline: 0;
+}
+
+select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 textarea {
     min-height: 58px;
@@ -313,7 +318,7 @@ label > small {
     position: absolute;
     right: 9px;
     bottom: 8px;
-    color: #8493a8;
+    color: var(--color-text-muted);
     font-weight: 400;
 }
 .inline {
@@ -323,16 +328,16 @@ label > small {
 }
 .outline {
     margin-top: 8px;
-    border: 1px solid #cbdaf1;
+    border: 1px solid var(--color-border-default);
     border-radius: 7px;
     padding: 8px 12px;
-    color: #1769ff;
-    background: #fff;
+    color: var(--color-primary-600);
+    background: var(--color-card-bg);
     font-weight: 700;
 }
 .label {
     margin: 10px 0 7px;
-    color: #40516a;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
@@ -342,23 +347,23 @@ label > small {
     gap: 7px;
 }
 .chips button {
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 7px;
     padding: 7px 10px;
-    color: #52637a;
-    background: #fff;
+    color: var(--color-text-secondary);
+    background: var(--color-card-bg);
 }
 .chips button.active {
-    border-color: #1769ff;
-    color: #1769ff;
-    background: #edf4ff;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .action-row {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 8px;
-    border: 1px solid #dde6f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
     padding: 9px;
 }
@@ -367,13 +372,13 @@ label > small {
     width: 21px;
     height: 21px;
     place-items: center;
-    border: 1px solid #dbe4f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 50%;
     font-size: 11px;
     font-style: normal;
 }
 .action-row > svg {
-    color: #1769ff;
+    color: var(--color-primary-600);
 }
 .action-row > span {
     display: flex;
@@ -381,7 +386,7 @@ label > small {
     flex-direction: column;
 }
 .action-row small {
-    color: #718198;
+    color: var(--color-text-tertiary);
 }
 .suffix {
     display: flex;
@@ -393,7 +398,7 @@ label > small {
     display: grid;
     width: 48px;
     place-items: center;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-left: 0;
     border-radius: 0 8px 8px 0;
 }

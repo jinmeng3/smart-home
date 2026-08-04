@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import type { SuggestionStatus } from "../../types/animation";
+import type { SuggestionStatus } from "../../types/chat";
 import AnimatedList from "../animation/AnimatedList.vue";
 
 const emit = defineEmits<{

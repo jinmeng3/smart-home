@@ -5,7 +5,6 @@ import { useHomeStore } from "../../stores/home";
 import AgentExecutionSteps from "../animation/AgentExecutionSteps.vue";
 import AIThinking from "../animation/AIThinking.vue";
 import AnimatedList from "../animation/AnimatedList.vue";
-import StatusPulse from "../animation/StatusPulse.vue";
 import ChatMessage from "./ChatMessage.vue";
 import { useAuthStore } from "../../stores/auth";
 
@@ -25,12 +24,6 @@ const sendDisabled = computed(
         !authStore.isAuthenticated ||
         (!generating.value && !inputValue.value.trim()),
 );
-const statusToneClass = computed(() =>
-    store.hasWarning
-        ? "border-[var(--color-warning-border)] bg-[var(--color-warning-soft)] text-[var(--color-text-primary)]"
-        : "border-[var(--color-success-border)] bg-[var(--color-success-soft)] text-[var(--color-text-primary)]",
-);
-
 const { scrollToBottom, updateStickiness } = useAutoScroll(
     chatScrollRef,
     messageCount,
@@ -72,39 +65,6 @@ const starterPrompts = [
 
 <template>
     <div class="flex min-h-0 flex-1 flex-col px-6 pb-5">
-        <button
-            v-if="false"
-            class="motion-card page-enter-stagger my-3 flex h-12 shrink-0 items-center justify-between rounded-lg border px-5 text-left shadow-sm"
-            :class="statusToneClass"
-            style="animation-delay: 120ms"
-            type="button"
-        >
-            <span class="flex items-center gap-3">
-                <StatusPulse v-if="!store.hasWarning" />
-                <span
-                    v-else
-                    class="warning-shake grid h-8 w-8 place-items-center rounded-lg bg-[var(--color-warning)] text-white"
-                    >!</span
-                >
-                <strong class="flex items-center gap-1">
-                    <span>全屋在线 ·</span>
-                    <Transition name="status-crossfade" mode="out-in">
-                        <span :key="store.deviceSummary.total">{{
-                            store.deviceSummary.total
-                        }}</span>
-                    </Transition>
-                    <span>台设备 ·</span>
-                    <Transition name="status-crossfade" mode="out-in">
-                        <span :key="store.enabledAutomationCount">{{
-                            store.enabledAutomationCount
-                        }}</span>
-                    </Transition>
-                    <span>个自动化运行中</span>
-                </strong>
-            </span>
-            <span class="text-xl text-slate-400">›</span>
-        </button>
-
         <section
             ref="chatScrollRef"
             class="page-enter-stagger min-h-0 flex-1 overflow-y-auto pr-2"

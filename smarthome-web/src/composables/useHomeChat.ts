@@ -1,6 +1,12 @@
 import { onScopeDispose, ref } from "vue";
-import { chatService } from "../services/chat";
-import type { AgentExecutionStep, AgentStatus } from "../types/animation";
+import {
+  createChatSession as apiCreateChatSession,
+  listChatMessages as apiListChatMessages,
+  listChatSessions as apiListChatSessions,
+  streamChatCompletion as apiStreamChatCompletion,
+  type ChatCompletionMessage,
+} from "../api/chat";
+import type { AgentExecutionStep, AgentStatus } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
 const maxMessages = 100;
@@ -8,12 +14,13 @@ const maxMessages = 100;
 const createMessageId = () =>
   `message-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const currentTime = () =>
-  new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date());
+const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const currentTime = () => timeFormatter.format(new Date());
 
 const createWelcomeMessage = (): ChatMessage => ({
   id: createMessageId(),
@@ -75,10 +82,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   };
 
   const finishAiReply = () => {
-    executionSteps.value = executionSteps.value.map((step) => ({
-      ...step,
-      status: "completed",
-    }));
+    executionSteps.value = Array.from(executionSteps.value, (step) => ({ ...step, status: "completed" }));
     agentStatus.value = "success";
     replyTimerIds.push(
       window.setTimeout(() => {
@@ -90,7 +94,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
   const refreshRecentConversations = async () => {
     try {
-      recentConversations.value = await chatService.listRecentConversations();
+      recentConversations.value = await apiListChatSessions();
     } catch {
       recentConversations.value = [];
     }
@@ -102,7 +106,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeSessionId.value = null;
 
     try {
-      const conversation = await chatService.createSession();
+      const conversation = await apiCreateChatSession();
       activeSessionId.value = conversation.id;
       recentConversations.value = [
         conversation,
@@ -120,7 +124,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeSessionId.value = sessionId;
 
     try {
-      messages.value = await chatService.loadMessages(sessionId);
+      messages.value = await apiListChatMessages(sessionId);
     } catch {
       messages.value = [];
     }
@@ -171,14 +175,18 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     };
 
     try {
-      await chatService.streamCompletion(
-        messages.value
-          .filter((message) => message.content.trim())
-          .slice(-12)
-          .map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+      const allMessages = messages.value;
+      const contextMessages: ChatCompletionMessage[] = [];
+      for (let i = allMessages.length - 1, count = 0; i >= 0 && count < 12; i--) {
+        const msg = allMessages[i];
+        if (msg && msg.content.trim()) {
+          contextMessages.unshift({ role: msg.role, content: msg.content });
+          count++;
+        }
+      }
+
+      await apiStreamChatCompletion(
+        contextMessages,
         activeSessionId.value,
         (delta) => {
           queueContent(delta);

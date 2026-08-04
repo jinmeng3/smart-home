@@ -1,4 +1,12 @@
-import type { SemanticStatus, StatusColorConfig } from "../types/theme";
+export type SemanticStatus =
+  "online" | "offline" | "running" | "warning" | "error" | "success";
+
+export interface StatusColorConfig {
+  textClass: string;
+  backgroundClass: string;
+  borderClass: string;
+  dotClass: string;
+}
 
 export const statusColorMap: Record<SemanticStatus, StatusColorConfig> = {
   online: {

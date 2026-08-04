@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { roomService } from "../services/room";
+import {
+  fetchRooms,
+  runRoomQuickAction,
+  updateRoomDevice,
+} from "../api/room";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import RoomControlDialogs, {
@@ -15,6 +19,7 @@ import type {
     RoomDeviceCard,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
+import { commonDevices as mockCommonDevices } from "../mock/rooms";
 
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
@@ -46,13 +51,7 @@ const comfort = computed(() =>
         : 0,
 );
 
-const commonDevices: RoomDeviceCard[] = [
-    { key: "light", icon: "light", name: "吸顶灯", detail: "亮度 80%" },
-    { key: "television", icon: "device-management", name: "电视", detail: "音量 30%" },
-    { key: "airConditioner", icon: "air-conditioner", name: "空调", detail: "24°C" },
-    { key: "airPurifier", icon: "sensor", name: "空气净化器", detail: "风速 自动" },
-    { key: "socket", icon: "plug", name: "智能插座", detail: "" },
-];
+const commonDevices: RoomDeviceCard[] = mockCommonDevices;
 
 const environment = computed<RoomEnvironmentItem[]>(() => {
     const room = selected.value;
@@ -72,7 +71,7 @@ const load = async () => {
     loading.value = true;
 
     try {
-        const result = await roomService.list(floor.value, roomType.value);
+        const result = await fetchRooms(floor.value, roomType.value);
         rooms.value = result.items;
         selectedId.value = result.items[0]?.id;
         temperature.value = Math.round(result.items[0]?.temperature ?? 24);
@@ -84,7 +83,7 @@ const load = async () => {
 const quick = async (action: string) => {
     if (!selected.value) return;
 
-    replaceRoom(await roomService.runQuickAction(selected.value.id, action));
+    replaceRoom(await runRoomQuickAction(selected.value.id, action));
 };
 
 const selectRoom = (room: Room) => {
@@ -102,7 +101,7 @@ const toggleDevice = async (device: RoomDeviceCard) => {
     if (!selected.value) return;
 
     replaceRoom(
-        await roomService.updateDevice(
+        await updateRoomDevice(
             selected.value.id,
             device.key,
             !selected.value.deviceStates[device.key],
@@ -146,7 +145,7 @@ onMounted(() => void load());
 
 <template>
     <div class="contents">
-        <main class="workspace page-enter">
+        <main class="workspace page-shell page-enter">
             <PageHeader title="房间控制" description="按房间查看设备状态、环境数据与快捷控制">
                 <div class="page-tools">
                     <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间、设备或场景" /></label>
@@ -167,18 +166,15 @@ onMounted(() => void load());
             />
 
             <section class="room-grid card-grid-enter">
-                <div class="room-scroll" v-if="visibleRooms.length">
-                    <RoomCard
-                        v-for="room in visibleRooms"
-                        :key="room.id"
-                        :room="room"
-                        :selected="selected?.id === room.id"
-                        :devices="commonDevices"
-                        @select="selectRoom"
-                        @toggle="toggleDevice"
-                    />
-                </div>
-                <p v-else class="room-empty">暂无匹配的房间</p>
+                <RoomCard
+                    v-for="room in visibleRooms"
+                    :key="room.id"
+                    :room="room"
+                    :selected="selected?.id === room.id"
+                    :devices="commonDevices"
+                    @select="selectRoom"
+                    @toggle="toggleDevice"
+                />
             </section>
 
             <RoomControlPanel
@@ -216,12 +212,8 @@ onMounted(() => void load());
 
 <style scoped>
 .workspace {
-    min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -230,57 +222,23 @@ onMounted(() => void load());
 .page-tools { display: flex; align-items: center; gap: 8px; }
 .page-tools label { display: flex; min-width: 220px; height: 38px; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); padding: 0 11px; color: var(--color-text-tertiary); }
 .page-tools input { min-width: 0; flex: 1; border: 0; outline: 0; }
-.page-tools select { height: 38px; padding-left: 10px; }
+.page-tools select { height: 38px; padding-left: 10px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); color: var(--color-text-primary); }
+
+.page-tools select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
+}
 .primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--color-primary-600) !important; color: white !important; }
 .page-tools .primary { height: 38px; padding: 0 14px; font-size: 12px; font-weight: 800; }
 
-.room-grid {
-    position: relative;
-}
-.room-scroll {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-}
-.room-scroll::-webkit-scrollbar {
-    height: 4px;
-}
-.room-scroll::-webkit-scrollbar-track {
-    border-radius: 2px;
-    background: var(--color-surface-subtle);
-}
-.room-scroll::-webkit-scrollbar-thumb {
-    border-radius: 2px;
-    background: var(--color-border-strong);
-}
-.room-scroll > * {
-    min-width: calc(33.333% - 8px);
-    scroll-snap-align: start;
-}
-.room-empty {
-    display: grid;
-    min-height: 120px;
-    place-items: center;
-    border: 1px dashed var(--color-border-strong);
-    border-radius: 14px;
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-weight: 800;
-}
+.room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 
 @media (max-width: 1450px) {
     .page-header { display: grid; }
-    .room-scroll > * {
-        min-width: calc(50% - 6px);
-    }
+    .room-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
-    .room-scroll > * {
-        min-width: calc(100% - 0px);
-    }
+    .room-grid { grid-template-columns: 1fr; }
 }
 </style>

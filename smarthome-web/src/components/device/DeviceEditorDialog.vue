@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import BaseModal from "../common/BaseModal.vue";
+import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { devicePlatformOptions, deviceTypeIconMap, deviceTypeOptions } from "./deviceMeta";
-import { deviceService } from "../../services/device";
+import { uploadDeviceImage } from "../../api/device";
 import type {
     Device,
     DeviceCreatePayload,
@@ -106,7 +106,7 @@ const submit = async () => {
 
     if (pendingImageFile.value) {
         try {
-            form.imageUrl = await deviceService.uploadImage(pendingImageFile.value);
+            form.imageUrl = await uploadDeviceImage(pendingImageFile.value);
         } catch (error) {
             ElMessage.error(
                 error instanceof Error ? error.message : "图片上传失败",
@@ -137,14 +137,13 @@ onBeforeUnmount(releasePreviewUrl);
 </script>
 
 <template>
-    <BaseModal
+    <BaseSmartModal
         :confirm-text="device ? '保存修改' : '添加设备'"
         :description="
             device ? '更新设备属性和接入信息' : '填写设备基础信息并接入家庭'
         "
         :loading="loading"
         :model-value="modelValue"
-        show-footer
         :title="device ? '编辑设备' : '添加设备'"
         width="720px"
         @confirm="submit"
@@ -338,7 +337,7 @@ onBeforeUnmount(releasePreviewUrl);
                 </div>
             </footer>
         </template>
-    </BaseModal>
+    </BaseSmartModal>
 </template>
 
 <style scoped>
@@ -619,6 +618,11 @@ onBeforeUnmount(releasePreviewUrl);
     transition:
         border-color 160ms var(--motion-ease),
         box-shadow 160ms var(--motion-ease);
+}
+
+.device-form-grid select option {
+    background: var(--color-panel-background);
+    color: var(--color-text-primary);
 }
 
 .device-form-grid input:focus,

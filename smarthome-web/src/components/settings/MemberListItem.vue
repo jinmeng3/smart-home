@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FamilyMember, MemberRole } from "../../types/account";
+import type { FamilyMember, HouseholdRole } from "../../types/settings";
 
 defineProps<{
     canEdit: boolean;
@@ -11,7 +11,7 @@ defineProps<{
 
 const emit = defineEmits<{
     remove: [id: number];
-    updateRole: [id: number, role: MemberRole];
+    updateRole: [id: number, role: HouseholdRole];
 }>();
 </script>
 
@@ -49,7 +49,7 @@ const emit = defineEmits<{
                 emit(
                     'updateRole',
                     member.id,
-                    ($event.target as HTMLSelectElement).value as MemberRole,
+                    ($event.target as HTMLSelectElement).value as HouseholdRole,
                 )
             "
         >

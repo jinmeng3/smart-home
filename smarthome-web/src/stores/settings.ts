@@ -1,8 +1,25 @@
 import { onScopeDispose, ref } from "vue";
 import { defineStore } from "pinia";
-import { accountService } from "../services/account";
-import { aiModelService } from "../services/aiModel";
-import type { AIModelRead } from "../api/aiModel";
+import {
+  getAccount,
+  listHouseholds,
+  listMembers,
+  updateAccount as apiUpdateAccount,
+  updateHousehold as apiUpdateHousehold,
+  addMember as apiAddMember,
+  updateMemberRole as apiUpdateMemberRole,
+  deleteMember as apiDeleteMember,
+  uploadAvatar as apiUploadAvatar,
+  deleteAvatar as apiDeleteAvatar,
+} from "../api/account";
+import {
+  listAIModels as apiListAIModels,
+  getAIModel as apiGetAIModel,
+  updateAIModel as apiUpdateAIModel,
+  createAIModel as apiCreateAIModel,
+  activateAIModel as apiActivateAIModel,
+  type AIModelRead,
+} from "../api/aiModel";
 import { ApiError } from "../api/client";
 import {
   cloneSettings,
@@ -72,14 +89,11 @@ export const useSettingsStore = defineStore("settings", () => {
   let accountHomePromise: Promise<void> | null = null;
   let saveStatusTimer = 0;
 
-  persistSettings(settings.value);
-  persistSecurityMeta(securityMeta.value);
-  persistBackupHistory(backupHistory.value);
-
   const saveSettings = () => {
-    persistSettings(settings.value);
     if (settings.value.backup.autoBackup) {
       recordBackup("auto", "设置已保存时执行自动备份");
+    } else {
+      persistSettings(settings.value);
     }
     savedAt.value = new Intl.DateTimeFormat("zh-CN", {
       hour: "2-digit",
@@ -105,13 +119,13 @@ export const useSettingsStore = defineStore("settings", () => {
     loading.value = true;
     accountHomePromise = (async () => {
       const [account, households] = await Promise.all([
-        accountService.getMe(),
-        accountService.listHouseholds(),
+        getAccount(),
+        listHouseholds(),
       ]);
       const householdEntries = await Promise.all(
         households.map(async (household) => ({
           household,
-          members: await accountService.listMembers(household.id),
+          members: await listMembers(household.id),
         })),
       );
       const householdEntry =
@@ -148,11 +162,11 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const loadAIModel = async () => {
     try {
-      aiModels.value = await aiModelService.list();
+      aiModels.value = await apiListAIModels();
       const model =
         aiModels.value.find((item) => item.is_active) ??
         aiModels.value[0] ??
-        (await aiModelService.getCurrent());
+        (await apiGetAIModel());
 
       settings.value.aiAssistant = {
         ...settings.value.aiAssistant,
@@ -183,12 +197,12 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const saveAccountHome = async () => {
     const householdId = settings.value.account.householdId;
-    const accountRequest = accountService.updateMe({
+    const accountRequest = apiUpdateAccount({
       name: settings.value.account.username,
       email: settings.value.account.email,
     });
     const householdRequest = householdId
-      ? accountService.updateHousehold(householdId, {
+      ? apiUpdateHousehold(householdId, {
           name: settings.value.account.familyName,
           address: settings.value.account.householdAddress,
           timezone: settings.value.account.householdTimezone,
@@ -247,12 +261,12 @@ export const useSettingsStore = defineStore("settings", () => {
     let response;
 
     try {
-      response = await aiModelService.update(payload);
+      response = await apiUpdateAIModel(payload);
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 404) {
         throw error;
       }
-      response = await aiModelService.create(payload);
+      response = await apiCreateAIModel(payload);
     }
 
     settings.value.aiAssistant = {
@@ -281,7 +295,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const selected = aiModels.value.find((model) => model.name === name);
     if (!selected) return;
 
-    const activeModel = await aiModelService.activate(selected.id);
+    const activeModel = await apiActivateAIModel(selected.id);
     aiModels.value = aiModels.value.map((model) => ({
       ...model,
       is_active: model.id === activeModel.id,
@@ -304,12 +318,12 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const uploadAccountAvatar = async (file: File) => {
-    const response = await accountService.uploadAvatar(file);
+    const response = await apiUploadAvatar(file);
     settings.value.account.avatarUrl = response.avatar_url;
   };
 
   const deleteAccountAvatar = async () => {
-    const response = await accountService.deleteAvatar();
+    const response = await apiDeleteAvatar();
     settings.value.account.avatarUrl = response.avatar_url;
   };
 
@@ -317,7 +331,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    const member = await accountService.addMember(householdId, { email, role });
+    const member = await apiAddMember(householdId, { email, role });
     settings.value.account.members = [
       ...(settings.value.account.members ?? []),
       member,
@@ -331,7 +345,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    const updatedMember = await accountService.updateMemberRole(
+    const updatedMember = await apiUpdateMemberRole(
       householdId,
       membershipId,
       role,
@@ -346,7 +360,7 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdId = settings.value.account.householdId;
     if (!householdId) return;
 
-    await accountService.deleteMember(householdId, membershipId);
+    await apiDeleteMember(householdId, membershipId);
     settings.value.account.members = (
       settings.value.account.members ?? []
     ).filter((member) => member.membershipId !== membershipId);

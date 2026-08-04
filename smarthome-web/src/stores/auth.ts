@@ -1,10 +1,12 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { authService } from "../services/auth";
-import type {
-  LoginPayload,
-  LoginResult,
-  RegisterPayload,
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  register as apiRegister,
+  type LoginPayload,
+  type LoginResult,
+  type RegisterPayload,
 } from "../api/auth";
 import { authExpiredEvent, tokenKey } from "../api/client";
 
@@ -36,17 +38,17 @@ export const useAuthStore = defineStore("auth", () => {
   window.addEventListener(authExpiredEvent, handleAuthExpired);
 
   const login = async (payload: LoginPayload, closeDialog = true) => {
-    const result = await authService.login(payload);
+    const result = await apiLogin(payload);
     saveSession(result, closeDialog);
   };
 
   const register = async (payload: RegisterPayload, closeDialog = true) => {
-    saveSession(await authService.register(payload), closeDialog);
+    saveSession(await apiRegister(payload), closeDialog);
   };
 
   const logout = async (closeDialog = true) => {
     try {
-      await authService.logout().catch(() => undefined);
+      await apiLogout().catch(() => undefined);
     } finally {
       clearSession();
       if (closeDialog) loginVisible.value = false;

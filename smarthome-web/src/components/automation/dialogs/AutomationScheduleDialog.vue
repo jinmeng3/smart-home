@@ -118,7 +118,7 @@ h3 {
     align-items: center;
     gap: 8px;
     margin: 0 0 14px;
-    color: #17243a;
+    color: var(--color-text-primary);
     font-size: 15px;
 }
 h3 > svg {
@@ -126,18 +126,18 @@ h3 > svg {
     height: 19px;
     padding: 3px;
     border-radius: 6px;
-    color: #1769ff;
-    background: #edf4ff;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .schedule {
     overflow: hidden;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 12px;
-    background: #fff;
+    background: var(--color-card-bg);
 }
 .schedule section {
     padding: 18px;
-    border-bottom: 1px solid #e8edf4;
+    border-bottom: 1px solid var(--color-border-subtle);
 }
 .schedule section:last-child {
     border-bottom: 0;
@@ -148,19 +148,24 @@ label {
     gap: 7px;
     flex-direction: column;
     margin: 12px 0;
-    color: #40516a;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
 input,
 select {
     width: 100%;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 10px;
-    color: #26364d;
+    color: var(--color-text-primary);
     outline: 0;
+}
+
+select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 .weekdays {
     display: flex;
@@ -169,18 +174,18 @@ select {
 .weekdays button {
     width: 42px;
     height: 35px;
-    border: 1px solid #dbe4ef;
+    border: 1px solid var(--color-border-default);
     border-radius: 20px;
-    background: #fff;
+    background: var(--color-card-bg);
 }
 .weekdays button.active {
-    border-color: #1769ff;
-    color: #1769ff;
-    background: #edf4ff;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .schedule p {
     margin-top: 8px;
-    color: #718198;
+    color: var(--color-text-tertiary);
     font-size: 12px;
 }
 .date-types {
@@ -192,19 +197,19 @@ select {
     display: flex;
     gap: 4px;
     flex-direction: column;
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
     padding: 12px;
     text-align: left;
-    background: #fff;
+    background: var(--color-card-bg);
 }
 .date-types button.active {
-    border-color: #1769ff;
-    color: #1769ff;
-    background: #edf4ff;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .date-types small {
-    color: #7a899d;
+    color: var(--color-text-tertiary);
 }
 .two-cols {
     display: grid;
@@ -216,7 +221,7 @@ select {
     grid-template-columns: auto auto 1fr auto;
     align-items: center;
     padding: 9px;
-    border: 1px solid #e2e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
 }
 .scheduled-rule input {
@@ -227,7 +232,7 @@ select {
     flex-direction: column;
 }
 .scheduled-rule em {
-    color: #19a45d;
+    color: var(--color-success);
     font-style: normal;
 }
 @media (max-width: 760px) {

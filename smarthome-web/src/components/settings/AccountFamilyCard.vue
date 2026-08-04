@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { ElButton, ElMessageBox } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import type { AccountForm } from "../../types/account";
+import type { AccountForm } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import "element-plus/theme-chalk/el-message-box.css";
 

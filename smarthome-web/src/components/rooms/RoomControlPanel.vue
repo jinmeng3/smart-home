@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Room, RoomDeviceCard } from "../../types/room";
 import type { RoomEnvironmentItem } from "./RoomDetailPanel.vue";
 
-defineProps<{
+const props = defineProps<{
     rooms: Room[];
     selected: Room | undefined;
     loading: boolean;
@@ -20,6 +21,8 @@ const emit = defineEmits<{
     "update:activeCategory": [value: string];
     open: [dialog: "scene" | "devices" | "environment"];
 }>();
+
+const sidebarRooms = computed(() => props.rooms.slice(0, 3));
 
 const categories = [
     { name: "全部设备", icon: "chevron-down" },
@@ -44,7 +47,7 @@ const selectCategory = (name: string) => {
             <h1>房间快捷控制</h1>
             <nav aria-label="房间列表">
                 <button
-                    v-for="room in rooms"
+                    v-for="room in sidebarRooms"
                     :key="room.id"
                     :class="{ active: selected?.id === room.id }"
                     type="button"

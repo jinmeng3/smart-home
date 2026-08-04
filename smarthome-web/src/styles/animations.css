@@ -8,10 +8,14 @@
         border-color 220ms var(--motion-ease),
         background-color 220ms var(--motion-ease),
         opacity 220ms var(--motion-ease);
+    background-color: var(--color-card-bg);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-card);
 }
 
 .motion-card:hover {
     transform: translateY(-1px);
+    border-color: var(--color-border-strong);
 }
 
 .motion-button {
@@ -76,19 +80,6 @@
 
 .thinking-dots i:nth-child(3) {
     animation-delay: 240ms;
-}
-
-.status-dot-running {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info) 16%, transparent);
-}
-
-.line-draw::before {
-    transform-origin: top;
-    animation: timeline-draw 520ms var(--motion-ease) both;
-}
-
-.alert-once {
-    animation: alert-once 640ms var(--motion-ease) both;
 }
 
 .page-enter {
@@ -183,18 +174,6 @@
     }
 }
 
-@keyframes status-dot-pulse {
-    0%,
-    100% {
-        opacity: 0.7;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.45);
-    }
-}
-
 @keyframes warning-shake {
     20% {
         transform: translateX(-2px);
@@ -226,39 +205,6 @@
     40% {
         transform: translateY(-4px);
         opacity: 1;
-    }
-}
-
-@keyframes timeline-draw {
-    from {
-        transform: scaleY(0);
-    }
-    to {
-        transform: scaleY(1);
-    }
-}
-
-@keyframes alert-once {
-    0% {
-        border-color: color-mix(
-            in srgb,
-            var(--color-warning-border) 50%,
-            transparent
-        );
-        transform: translateX(10px);
-        opacity: 0;
-    }
-    60% {
-        border-color: var(--color-warning-border);
-        opacity: 1;
-    }
-    100% {
-        border-color: color-mix(
-            in srgb,
-            var(--color-warning-border) 65%,
-            transparent
-        );
-        transform: translateX(0);
     }
 }
 

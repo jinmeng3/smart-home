@@ -1,12 +1,16 @@
 from datetime import datetime
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RoomSchema(BaseModel):
-    model_config = ConfigDict(alias_generator=lambda value: value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:]), populate_by_name=True)
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+    )
 
 
 class RoomRead(RoomSchema):
@@ -55,7 +59,10 @@ class RoomWrite(RoomSchema):
     name: str = Field(min_length=1, max_length=80)
     floor: str = Field(default="1F", min_length=1, max_length=40)
     room_type: str = Field(default="living", min_length=1, max_length=32)
-    icon: str = Field(default="room", pattern="^(room|home|bed|kitchen|study|balcony|bathroom|plug|humidity|illumination)$")
+    icon: str = Field(
+        default="room",
+        pattern="^(room|home|bed|kitchen|study|balcony|bathroom|plug|humidity|illumination)$",
+    )
     theme_color: str = Field(default="#3478f6", pattern=r"^#[0-9A-Fa-f]{6}$")
     device_ids: list[int] = Field(default_factory=list)
     preferences: RoomPreferencesWrite = Field(default_factory=RoomPreferencesWrite)

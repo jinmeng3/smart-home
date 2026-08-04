@@ -1,18 +1,30 @@
 import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
-import { deviceService } from "../services/device";
+import {
+  createDevice as apiCreateDevice,
+  deleteDevice as apiDeleteDevice,
+  getDevice as apiGetDevice,
+  listDeviceLogs as apiListDeviceLogs,
+  listDevices as apiListDevices,
+  syncDevices as apiSyncDevices,
+  updateDevice as apiUpdateDevice,
+} from "../api/device";
 import { devicePlatformOptions } from "../components/device/deviceMeta";
 import type {
   Device,
   DeviceCreatePayload,
   DeviceDetail,
   DeviceFilters,
-  DeviceStatus,
-  DeviceType,
 } from "../types/device";
 
 export type DeviceSortKey = "updated" | "name" | "status";
 export type DeviceQuickActionKey = "scan" | "group" | "firmware" | "logs";
+
+const quickActionMessages: Record<Exclude<DeviceQuickActionKey, "logs">, string> = {
+  scan: "扫描新设备接口已预留",
+  group: "批量分组接口已预留",
+  firmware: "固件更新接口已预留",
+};
 
 const createDefaultFilters = (): DeviceFilters => ({
   page: 1,
@@ -61,14 +73,20 @@ export const useDeviceManagementController = () => {
     return devices.value;
   });
 
-  const stats = computed(() => ({
-    online: devices.value.filter((device) => device.status === "online").length,
-    offline: devices.value.filter((device) => device.status === "offline")
-      .length,
-    warning: devices.value.filter((device) => device.status === "warning")
-      .length,
-    monthlyNew: devices.value.length,
-  }));
+  const stats = computed(() => {
+    let online = 0;
+    let offline = 0;
+    let warning = 0;
+    const items = devices.value;
+    for (let i = 0; i < items.length; i++) {
+      const device = items[i];
+      if (!device) continue;
+      if (device.status === "online") online++;
+      else if (device.status === "offline") offline++;
+      else if (device.status === "warning") warning++;
+    }
+    return { online, offline, warning, monthlyNew: items.length };
+  });
 
   const platforms = computed(() =>
     devicePlatformOptions.map((name) => {
@@ -91,7 +109,7 @@ export const useDeviceManagementController = () => {
     }
 
     try {
-      selectedDevice.value = await deviceService.get(selectedId.value);
+      selectedDevice.value = await apiGetDevice(selectedId.value);
     } catch (error) {
       selectedDevice.value = null;
       ElMessage.error(
@@ -104,7 +122,7 @@ export const useDeviceManagementController = () => {
     loading.value = true;
 
     try {
-      const response = await deviceService.list(filters);
+      const response = await apiListDevices(filters);
       devices.value = response.items;
       total.value = response.total;
 
@@ -126,24 +144,14 @@ export const useDeviceManagementController = () => {
     }
   };
 
-  const updateKeyword = (value: string) => {
-    filters.keyword = value;
-    filters.page = 1;
-  };
-
-  const updateRoom = (value: string) => {
-    filters.room = value;
-    filters.page = 1;
-  };
-
-  const updateType = (value: DeviceType | "") => {
-    filters.type = value;
-    filters.page = 1;
-  };
-
-  const updateStatus = (value: DeviceStatus | "") => {
-    filters.status = value;
-    filters.page = 1;
+  const updateFilter = <K extends keyof DeviceFilters>(
+    key: K,
+    value: DeviceFilters[K],
+  ) => {
+    filters[key] = value;
+    if (key !== "page") {
+      filters.page = 1;
+    }
   };
 
   const updatePage = (value: number) => {
@@ -176,10 +184,10 @@ export const useDeviceManagementController = () => {
 
     try {
       if (editingDevice.value) {
-        await deviceService.update(editingDevice.value.id, payload);
+        await apiUpdateDevice(editingDevice.value.id, payload);
         ElMessage.success("设备已更新");
       } else {
-        const created = await deviceService.create(payload);
+        const created = await apiCreateDevice(payload);
         selectedId.value = created.id;
         ElMessage.success("设备已添加");
       }
@@ -216,7 +224,7 @@ export const useDeviceManagementController = () => {
     deleting.value = true;
 
     try {
-      await deviceService.remove(device.id);
+      await apiDeleteDevice(device.id);
       ElMessage.success("设备已删除");
       deleteDialogOpen.value = false;
       deletingDevice.value = null;
@@ -232,7 +240,7 @@ export const useDeviceManagementController = () => {
     syncing.value = true;
 
     try {
-      const response = await deviceService.sync("Home Assistant");
+      const response = await apiSyncDevices("Home Assistant");
       ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
       await loadDevices();
     } catch (error) {
@@ -253,7 +261,7 @@ export const useDeviceManagementController = () => {
         return;
       }
 
-      void deviceService.listLogs(selectedId.value)
+      void apiListDeviceLogs(selectedId.value)
         .then((logs) => {
           const latest = logs[0];
           ElMessage.info(
@@ -270,13 +278,7 @@ export const useDeviceManagementController = () => {
       return;
     }
 
-    const messageMap: Record<Exclude<DeviceQuickActionKey, "logs">, string> = {
-      scan: "扫描新设备接口已预留",
-      group: "批量分组接口已预留",
-      firmware: "固件更新接口已预留",
-    };
-
-    ElMessage.info(messageMap[key]);
+    ElMessage.info(quickActionMessages[key]);
   };
 
   return {
@@ -307,12 +309,9 @@ export const useDeviceManagementController = () => {
     stats,
     syncing,
     total,
-    updateKeyword,
+    updateFilter,
     updatePage,
     updatePageSize,
-    updateRoom,
-    updateStatus,
-    updateType,
     editDevice,
     loadDevices,
   };

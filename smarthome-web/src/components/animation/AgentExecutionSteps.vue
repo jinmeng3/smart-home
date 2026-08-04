@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AgentExecutionStep } from "../../types/animation";
+import type { AgentExecutionStep } from "../../types/chat";
 
 defineProps<{
     steps: AgentExecutionStep[];

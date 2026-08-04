@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
-import { formatDeviceTimestamp } from "../../utils/date";
+import { formatDeviceTimestamp } from "../../utils/device";
 import type { Device } from "../../types/device";
 import {
     deviceStatusLabelMap,

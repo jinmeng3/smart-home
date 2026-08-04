@@ -143,6 +143,21 @@
             />
         </symbol>
         <symbol
+            id="icon-delete"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M3 6h18" />
+            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+            <path d="M19 6l-.9 13.5a2 2 0 0 1-2 1.5H7.9a2 2 0 0 1-2-1.5L5 6" />
+            <path d="M10 10v6" />
+            <path d="M14 10v6" />
+        </symbol>
+        <symbol
             id="icon-eye"
             viewBox="0 0 24 24"
             fill="none"

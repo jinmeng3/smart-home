@@ -1,5 +1,4 @@
-import type { DeviceStatus } from "../types/animation";
-import type { DashboardDevice, Device, DeviceType } from "../types/device";
+import type { DashboardDevice, Device, DeviceType, DeviceStatus } from "../types/device";
 
 /**
  * 设备展示层工具（SRP：模型转换与状态解析，不含请求与业务编排）。
@@ -57,4 +56,34 @@ export const getDeviceRuntimeStatus = (
 
   const strategy = deviceTypeStatusStrategies[device.type] ?? onlineStrategy;
   return strategy(device);
+};
+
+/**
+ * 格式化设备时间戳，包含中文友好的显示方式。
+ */
+export const formatDeviceTimestamp = (
+  timestamp: string,
+  fallback = "暂无",
+) => {
+  if (!timestamp || timestamp === "暂无") return fallback;
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return "刚刚";
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} 小时前`;
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 };

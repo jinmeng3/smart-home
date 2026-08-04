@@ -26,7 +26,7 @@ import SettingsTabs from "../components/settings/SettingsTabs.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useHomeStore } from "../stores/home";
 import { useAuthStore } from "../stores/auth";
-import type { AccountForm, FamilyMember, MemberRole } from "../types/account";
+import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
 const store = useHomeStore();
@@ -345,7 +345,7 @@ const deleteAvatar = async () => {
     }
 };
 
-const addMember = async (email: string, role: MemberRole) => {
+const addMember = async (email: string, role: HouseholdRole) => {
     if (!canManageMembers.value) {
         ElMessage.warning("普通成员只能查看成员列表");
         return;
@@ -365,7 +365,7 @@ const addMember = async (email: string, role: MemberRole) => {
     }
 };
 
-const updateMemberRole = async (membershipId: number, role: MemberRole) => {
+const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
     const member = householdMembers.value.find(
         (item) => item.membershipId === membershipId,
     );

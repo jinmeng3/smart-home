@@ -30,7 +30,7 @@ class AIModel(Base):
     api_endpoint: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="API 地址"
     )
-    api_key: Mapped[str | None] = mapped_column(Text, nullable=True, comment="API 密钥")
+    api_key: Mapped[str] = mapped_column(Text, nullable=True, comment="API 密钥")
     parameters: Mapped[dict] = mapped_column(JSON, default=dict, comment="模型参数")
     temperature: Mapped[float] = mapped_column(
         Float,

@@ -1,6 +1,6 @@
 import json
-from datetime import datetime, timezone
 from collections.abc import Iterator
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 

@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from "vue";
+import { computed, shallowRef, ref } from "vue";
 import { defineStore } from "pinia";
 import { useSettingsStore } from "./settings";
 import {
@@ -6,15 +6,22 @@ import {
   type DeviceUpdate,
 } from "../composables/useBatchedDeviceUpdates";
 import { useHomeChat } from "../composables/useHomeChat";
-import { deviceService } from "../services/device";
+import { listDevices as apiListDevices } from "../api/device";
 import { mapDashboardDevice } from "../utils/device";
 import {
   automations as mockAutomations,
   devices as mockDevices,
   messages as mockMessages,
 } from "../mock/home";
-import type { Automation } from "../types/automation";
-import type { DashboardDevice } from "../types/device";
+import type { Automation, DashboardDevice } from "../types/device";
+
+const buildDeviceMap = (devices: DashboardDevice[]) => ({
+  ids: devices.map((device) => device.id),
+  byId: devices.reduce<Record<string, DashboardDevice>>((record, device) => {
+    record[device.id] = device;
+    return record;
+  }, {}),
+});
 
 export const useHomeStore = defineStore("home", () => {
   const activeMenu = ref("智能对话");
@@ -24,44 +31,65 @@ export const useHomeStore = defineStore("home", () => {
   );
   const selectedDeviceId = ref<string | null>(null);
   const deviceDrawerOpen = ref(false);
-  const deviceIds = shallowRef(mockDevices.map((device) => device.id));
-  const devicesById = shallowRef<Record<string, DashboardDevice>>(
-    mockDevices.reduce<Record<string, DashboardDevice>>((record, device) => {
-      record[device.id] = device;
-      return record;
-    }, {}),
-  );
-  const automations = ref<Automation[]>(mockAutomations);
+  const { ids: initialIds, byId: initialById } = buildDeviceMap(mockDevices);
+  const deviceIds = shallowRef(initialIds);
+  const devicesById = shallowRef<Record<string, DashboardDevice>>(initialById);
+  const automations = shallowRef<Automation[]>(mockAutomations);
   const energyToday = ref(18.62);
   const devicesLoading = ref(false);
   const securityAlertHandled = ref(false);
   const chat = useHomeChat(mockMessages);
 
-  const devices = computed(() =>
-    deviceIds.value
-      .map((id) => devicesById.value[id])
-      .filter((device): device is DashboardDevice => Boolean(device)),
-  );
+  const devices = computed(() => {
+    const ids = deviceIds.value;
+    const byId = devicesById.value;
+    const result: DashboardDevice[] = [];
+
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      if (id) {
+        const device = byId[id];
+        if (device) {
+          result.push(device);
+        }
+      }
+    }
+
+    return result;
+  });
   const selectedDevice = computed(() =>
     selectedDeviceId.value
       ? (devicesById.value[selectedDeviceId.value] ?? null)
       : null,
   );
   const deviceSummary = computed(() => {
-    const online = devices.value.filter((device) => device.online).length;
+    const ids = deviceIds.value;
+    const byId = devicesById.value;
+    let online = 0;
+
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      if (id && byId[id]?.online) online++;
+    }
 
     return {
       online,
-      offline: devices.value.length - online,
-      total: devices.value.length,
+      offline: ids.length - online,
+      total: ids.length,
     };
   });
   const hasWarning = computed(
     () => deviceSummary.value.offline > 0 || !securityAlertHandled.value,
   );
-  const enabledAutomationCount = computed(
-    () => automations.value.filter((automation) => automation.enabled).length,
-  );
+  const enabledAutomationCount = computed(() => {
+    const items = automations.value;
+    let count = 0;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item?.enabled) count++;
+    }
+    return count;
+  });
   const alertCount = computed(() => (securityAlertHandled.value ? 0 : 1));
 
   const setActiveMenu = (menu: string) => {
@@ -77,7 +105,7 @@ export const useHomeStore = defineStore("home", () => {
     devicesLoading.value = true;
 
     try {
-      const response = await deviceService.list({
+      const response = await apiListDevices({
         page: 1,
         pageSize: 20,
         keyword: "",
@@ -86,24 +114,14 @@ export const useHomeStore = defineStore("home", () => {
         room: "",
       });
       const nextDevices = response.items.map(mapDashboardDevice);
+      const { ids: nextIds, byId: nextById } = buildDeviceMap(nextDevices);
 
-      deviceIds.value = nextDevices.map((device) => device.id);
-      devicesById.value = nextDevices.reduce<Record<string, DashboardDevice>>(
-        (record, device) => {
-          record[device.id] = device;
-          return record;
-        },
-        {},
-      );
+      deviceIds.value = nextIds;
+      devicesById.value = nextById;
     } catch {
-      deviceIds.value = mockDevices.map((device) => device.id);
-      devicesById.value = mockDevices.reduce<Record<string, DashboardDevice>>(
-        (record, device) => {
-          record[device.id] = device;
-          return record;
-        },
-        {},
-      );
+      const { ids: fallbackIds, byId: fallbackById } = buildDeviceMap(mockDevices);
+      deviceIds.value = fallbackIds;
+      devicesById.value = fallbackById;
     } finally {
       devicesLoading.value = false;
     }
@@ -119,10 +137,15 @@ export const useHomeStore = defineStore("home", () => {
   };
 
   const toggleAutomation = (id: string) => {
-    const automation = automations.value.find((item) => item.id === id);
+    const index = automations.value.findIndex((item) => item.id === id);
 
-    if (automation) {
-      automation.enabled = !automation.enabled;
+    if (index !== -1) {
+      const next = automations.value.slice();
+      const item = next[index];
+      if (item) {
+        next[index] = { ...item, enabled: !item.enabled };
+        automations.value = next;
+      }
     }
   };
 

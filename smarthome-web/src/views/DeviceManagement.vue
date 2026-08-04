@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from "vue";
-import BaseModal from "../components/common/BaseModal.vue";
+import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
 import DeviceEditorDialog from "../components/device/DeviceEditorDialog.vue";
@@ -34,7 +34,7 @@ onMounted(() => {
 
 <template>
     <div class="contents">
-        <section class="device-management-page page-enter">
+        <section class="device-management-page page-shell page-enter">
             <header class="device-page-header">
                 <div class="device-page-title">
                     <h1>设备管理</h1>
@@ -47,10 +47,10 @@ onMounted(() => {
                     :rooms="controller.rooms.value"
                     :status="controller.filters.status"
                     :type="controller.filters.type"
-                    @update:keyword="controller.updateKeyword"
-                    @update:room="controller.updateRoom"
-                    @update:status="controller.updateStatus"
-                    @update:type="controller.updateType"
+                    @update:keyword="(value) => controller.updateFilter('keyword', value)"
+                    @update:room="(value) => controller.updateFilter('room', value)"
+                    @update:status="(value) => controller.updateFilter('status', value)"
+                    @update:type="(value) => controller.updateFilter('type', value)"
                 />
             </header>
 
@@ -61,27 +61,31 @@ onMounted(() => {
                     :value="controller.stats.value.online"
                     tone="success"
                     :delay="0"
+                    style="animation-delay: 0ms"
                 />
                 <DeviceStatsCard
                     icon="offline-device"
                     label="离线设备"
                     :value="controller.stats.value.offline"
                     tone="muted"
-                    :delay="50"
+                    :delay="60"
+                    style="animation-delay: 60ms"
                 />
                 <DeviceStatsCard
                     icon="warning"
                     label="告警设备"
                     :value="controller.stats.value.warning"
                     tone="warning"
-                    :delay="100"
+                    :delay="120"
+                    style="animation-delay: 120ms"
                 />
                 <DeviceStatsCard
                     icon="new-device"
                     label="本月新增"
                     :value="controller.stats.value.monthlyNew"
                     tone="primary"
-                    :delay="150"
+                    :delay="180"
+                    style="animation-delay: 180ms"
                 />
             </div>
 
@@ -101,7 +105,7 @@ onMounted(() => {
                 @remove="controller.removeDevice"
                 @select="controller.selectDevice"
                 @sync="controller.runSync"
-                @update:active-type="controller.updateType"
+                @update:active-type="(value) => controller.updateFilter('type', value)"
                 @update:page="controller.updatePage"
                 @update:page-size="controller.updatePageSize"
                 @update:sort="controller.sort.value = $event"
@@ -121,8 +125,7 @@ onMounted(() => {
             @submit="controller.saveDevice"
         />
 
-        <BaseModal
-            class="device-delete-dialog"
+        <BaseSmartModal
             :closable="!controller.deleting.value"
             :loading="controller.deleting.value"
             :model-value="controller.deleteDialogOpen.value"
@@ -212,7 +215,7 @@ onMounted(() => {
                     </div>
                 </footer>
             </template>
-        </BaseModal>
+        </BaseSmartModal>
     </div>
 </template>
 
@@ -224,18 +227,29 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     overflow: hidden;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
     padding: 14px;
 }
 
 .device-page-header {
     display: grid;
     min-width: 0;
-    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
+}
+
+.device-page-title {
+    position: relative;
+}
+
+.device-page-title::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: var(--color-border-subtle);
 }
 
 .device-page-title h1 {
@@ -268,7 +282,26 @@ onMounted(() => {
     overflow-y: auto;
     border-left: 1px solid var(--color-border);
     background: var(--color-sidebar-bg);
-    padding: 0 4px 0 12px;
+    padding: 0 4px 0 14px;
+}
+
+.device-right-panel > * {
+    animation: panel-enter 300ms var(--motion-ease) both;
+}
+
+.device-right-panel > *:nth-child(1) { animation-delay: 80ms; }
+.device-right-panel > *:nth-child(2) { animation-delay: 160ms; }
+.device-right-panel > *:nth-child(3) { animation-delay: 240ms; }
+
+@keyframes panel-enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .delete-dialog-header {
@@ -450,6 +483,10 @@ button:disabled {
 @media (max-width: 1180px) {
     .device-page-header {
         grid-template-columns: 1fr;
+    }
+
+    .device-page-title::after {
+        display: none;
     }
 
     .device-stats-grid {

@@ -2,9 +2,9 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     account,
-    automations,
     ai_model,
     auth,
+    automations,
     chat,
     device,
     households,

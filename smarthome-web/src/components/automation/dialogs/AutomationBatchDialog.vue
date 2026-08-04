@@ -107,11 +107,11 @@ const confirm = () => {
 input,
 select {
     width: 100%;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 10px;
-    color: #26364d;
+    color: var(--color-text-primary);
     outline: 0;
 }
 .search {
@@ -123,20 +123,20 @@ select {
     margin: 12px 0;
 }
 .tabs button {
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 7px;
     padding: 7px 10px;
-    color: #52637a;
-    background: #fff;
+    color: var(--color-text-secondary);
+    background: var(--color-card-bg);
 }
 .tabs button.active {
-    border-color: #1769ff;
-    color: #1769ff;
-    background: #edf4ff;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .batch-table {
     overflow: hidden;
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 10px;
 }
 .batch-table header,
@@ -147,11 +147,11 @@ select {
     gap: 10px;
     margin: 0;
     padding: 10px 12px;
-    border-bottom: 1px solid #e5ebf2;
+    border-bottom: 1px solid var(--color-border-subtle);
 }
 .batch-table header {
-    color: #718198;
-    background: #f8fafd;
+    color: var(--color-text-tertiary);
+    background: var(--color-surface-subtle);
     font-size: 12px;
 }
 .batch-table input {
@@ -167,14 +167,14 @@ select {
     flex-direction: column;
 }
 .rule-name small {
-    color: #7d8c9f;
+    color: var(--color-text-tertiary);
 }
 .batch-table em {
     width: max-content;
     border-radius: 5px;
     padding: 3px 7px;
-    color: #19a45d;
-    background: #e7f8ed;
+    color: var(--color-success);
+    background: var(--color-success-soft);
     font-style: normal;
 }
 .batch-settings {
@@ -182,7 +182,7 @@ select {
     align-items: center;
     gap: 16px;
     margin-top: 14px;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
     padding: 14px;
 }

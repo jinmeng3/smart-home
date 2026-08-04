@@ -3,12 +3,19 @@ import { ElMessage } from "element-plus";
 import {
   confirmHighRiskScene,
   isHighRiskScene,
-} from "../services/sceneRiskPolicy";
+} from "../utils/sceneRiskPolicy";
 import type { useScenesStore } from "../stores/scenes";
 import type { Scene, SceneInput, SceneTemplate } from "../types/scene";
 
 type ScenesStore = ReturnType<typeof useScenesStore>;
 type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
+
+const quickActionMessages: Record<QuickActionKey, string> = {
+  batch: "批量启用入口已预留",
+  schedule: "定时设置入口已预留",
+  sort: "场景排序入口已预留",
+  logs: "场景日志入口已预留",
+};
 
 export const useSceneModeController = (store: ScenesStore) => {
     const createDialogOpen = ref(false);
@@ -87,14 +94,7 @@ export const useSceneModeController = (store: ScenesStore) => {
     };
 
     const runAction = (key: QuickActionKey) => {
-        const messages: Record<QuickActionKey, string> = {
-            batch: "批量启用入口已预留",
-            schedule: "定时设置入口已预留",
-            sort: "场景排序入口已预留",
-            logs: "场景日志入口已预留",
-        };
-
-        ElMessage.info(messages[key]);
+        ElMessage.info(quickActionMessages[key]);
     };
 
     return {

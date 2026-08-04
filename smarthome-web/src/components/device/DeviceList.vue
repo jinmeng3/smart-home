@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { formatDeviceTimestamp } from "../../utils/date";
+import { formatDeviceTimestamp } from "../../utils/device";
 import type { Device, DeviceType } from "../../types/device";
 import DeviceRow from "./DeviceRow.vue";
 import {
@@ -347,6 +347,12 @@ const viewMode = ref<"list" | "grid">("list");
     background: var(--color-panel-background);
     color: var(--color-text-secondary);
     font-weight: 700;
+}
+
+.device-list-tools select option,
+.device-pagination select option {
+    background: var(--color-panel-background);
+    color: var(--color-text-primary);
 }
 
 .device-list-tools select {

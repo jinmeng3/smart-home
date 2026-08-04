@@ -109,12 +109,17 @@ const close = () => emit("update:modelValue", false);
 input,
 select {
     width: 100%;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 10px;
-    color: #26364d;
+    color: var(--color-text-primary);
     outline: 0;
+}
+
+select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 .log-filters {
     display: grid;
@@ -126,11 +131,11 @@ select {
     border-radius: 8px;
     padding: 0 18px;
     color: #fff;
-    background: #1769ff;
+    background: var(--color-primary-600);
 }
 .log-table {
     overflow: hidden;
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 10px;
 }
 .log-table header,
@@ -144,22 +149,22 @@ select {
     text-align: left;
 }
 .log-table header {
-    color: #677890;
-    background: #f7f9fc;
+    color: var(--color-text-tertiary);
+    background: var(--color-surface-subtle);
     font-size: 12px;
     font-weight: 700;
 }
 .log-row {
-    border-top: 1px solid #e5eaf1;
-    background: #fff;
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-card-bg);
     font-size: 12px;
 }
 .log-row em {
-    color: #19a45d;
+    color: var(--color-success);
     font-style: normal;
 }
 .log-row em.fail {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 .log-detail {
     display: grid;
@@ -167,14 +172,14 @@ select {
     gap: 20px;
     margin: 0 10px 10px;
     padding: 16px;
-    border: 1px solid #b8d0ff;
+    border: 1px solid var(--color-primary-200);
     border-radius: 9px;
-    background: #fbfdff;
+    background: var(--color-primary-50);
     font-size: 12px;
 }
 .log-detail p {
     margin: 8px 0;
-    color: #61718a;
+    color: var(--color-text-tertiary);
 }
 @media (max-width: 760px) {
     .log-detail {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useHomeStore } from "../../stores/home";
 import BaseSwitch from "../BaseSwitch.vue";
 import ScheduleDialog from "../overview/dialogs/ScheduleDialog.vue";
@@ -7,6 +7,12 @@ import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
 const dialogVisible = ref(false);
+
+const todayLabel = computed(() => {
+    const now = new Date();
+    const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    return `${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
+});
 
 const automationTone = (id: string): string => {
     const map: Record<string, string> = {
@@ -47,7 +53,7 @@ const automationTone = (id: string): string => {
                 <SvgIcon name="chevron-left" size="sm" />
             </button>
             <div class="date-info">
-                <strong>5月20日 星期二</strong>
+                <strong>{{ todayLabel }}</strong>
                 <span class="today-badge"><i></i>今天</span>
             </div>
             <button class="date-arrow" type="button" aria-label="下一个日期">

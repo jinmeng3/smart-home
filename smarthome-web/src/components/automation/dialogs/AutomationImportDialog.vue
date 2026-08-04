@@ -91,18 +91,23 @@ label {
     gap: 7px;
     flex-direction: column;
     margin: 12px 0;
-    color: #40516a;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
 select {
     width: 100%;
-    border: 1px solid #d9e3f0;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 10px;
-    color: #26364d;
+    color: var(--color-text-primary);
     outline: 0;
+}
+
+select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 .two-cols {
     display: grid;
@@ -117,13 +122,13 @@ select {
     justify-content: center;
     gap: 7px;
     flex-direction: column;
-    border: 1px dashed #8eb7ff;
+    border: 1px dashed var(--color-primary-200);
     border-radius: 10px;
-    color: #1769ff;
-    background: #f9fbff;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .upload span {
-    color: #718198;
+    color: var(--color-text-tertiary);
     font-size: 12px;
 }
 .format-row {
@@ -131,24 +136,24 @@ select {
     align-items: center;
     gap: 10px;
     padding: 13px 0;
-    border-bottom: 1px solid #e4eaf2;
+    border-bottom: 1px solid var(--color-border-subtle);
     font-size: 12px;
 }
 .format-row b {
     border-radius: 5px;
     padding: 4px 10px;
-    color: #1769ff;
-    background: #eef4ff;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
 }
 .format-row a {
     margin-left: auto;
-    color: #1769ff;
+    color: var(--color-primary-600);
 }
 .check-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     margin: 14px 0;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
     padding: 12px;
 }
@@ -161,12 +166,12 @@ select {
 }
 h3 {
     margin: 0 0 10px;
-    color: #17243a;
+    color: var(--color-text-primary);
     font-size: 14px;
 }
 .import-list {
     overflow: hidden;
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 10px;
 }
 .import-list > div {
@@ -174,7 +179,7 @@ h3 {
     align-items: center;
     gap: 12px;
     padding: 9px 13px;
-    border-bottom: 1px solid #e7ecf3;
+    border-bottom: 1px solid var(--color-border-subtle);
 }
 .import-list span {
     display: flex;
@@ -182,13 +187,13 @@ h3 {
     flex-direction: column;
 }
 .import-list small {
-    color: #7b899c;
+    color: var(--color-text-tertiary);
 }
 .import-list em {
     border-radius: 6px;
     padding: 4px 9px;
-    color: #19a55d;
-    background: #e9f8ef;
+    color: var(--color-success);
+    background: var(--color-success-soft);
     font-style: normal;
 }
 @media (max-width: 760px) {

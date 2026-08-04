@@ -1,96 +1,32 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from "vue";
+import { RouterLink } from "vue-router";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
 import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
+import type { HouseholdSchedule } from "../api/overview";
+import {
+  overviewRooms,
+  overviewActivities,
+  overviewDevices,
+  overviewScheduleItems,
+  type ActivityItem,
+  type OverviewDevice,
+} from "../mock/overview";
 
-const rooms = shallowRef([
-    {
-        name: "客厅",
-        icon: "room",
-        count: 6,
-        light: "2/2 开",
-        air: "26°C 制冷",
-        extra: "窗帘 已关闭",
-        tone: "blue",
-    },
-    {
-        name: "主卧",
-        icon: "room",
-        count: 5,
-        light: "1/2 开",
-        air: "26°C 制冷",
-        extra: "窗帘 已关闭",
-        tone: "blue",
-    },
-    {
-        name: "次卧",
-        icon: "room",
-        count: 4,
-        light: "0/1 开",
-        air: "27°C 制冷",
-        extra: "窗帘 已关闭",
-        tone: "blue",
-    },
-    {
-        name: "厨房",
-        icon: "plug",
-        count: 5,
-        light: "1/1 开",
-        air: "烟机 关闭",
-        extra: "燃气 正常",
-        tone: "orange",
-    },
-    {
-        name: "卫生间",
-        icon: "humidity",
-        count: 4,
-        light: "1/1 开",
-        air: "排风机 开启",
-        extra: "水浸 正常",
-        tone: "green",
-    },
-    {
-        name: "阳台",
-        icon: "illumination",
-        count: 4,
-        light: "0/1 开",
-        air: "洗衣机 待机",
-        extra: "温湿度 28°C 60%",
-        tone: "orange",
-    },
-]);
+const rooms = shallowRef(overviewRooms);
 const selectedTab = ref("常用设备");
 const searchKeyword = ref("");
 const refreshed = ref("5 分钟前");
 const activeDialog = ref<OverviewDialog>(null);
 
-interface OverviewDevice {
-    id: number;
-    name: string;
-    room: string;
-    status: "在线" | "离线";
-    detail: string;
-    updatedAt: string;
-    icon: string;
-    tone: string;
-    frequent: boolean;
-    favorite: boolean;
-}
+const activities = ref<ActivityItem[]>(overviewActivities);
+const scheduleItems = ref(overviewScheduleItems);
 
-const devices = ref<OverviewDevice[]>([
-    { id: 1, name: "客厅吸顶灯", room: "客厅", status: "在线", detail: "亮度 80%", updatedAt: "10:15", icon: "light", tone: "orange", frequent: true, favorite: true },
-    { id: 2, name: "客厅空调", room: "客厅", status: "在线", detail: "26°C 制冷", updatedAt: "10:15", icon: "air-conditioner", tone: "blue", frequent: true, favorite: true },
-    { id: 3, name: "主卧空调", room: "主卧", status: "在线", detail: "26°C 制冷", updatedAt: "10:14", icon: "air-conditioner", tone: "blue", frequent: true, favorite: false },
-    { id: 4, name: "智能门锁", room: "玄关", status: "在线", detail: "已上锁", updatedAt: "10:13", icon: "lock", tone: "purple", frequent: true, favorite: true },
-    { id: 5, name: "空气净化器", room: "客厅", status: "在线", detail: "自动模式", updatedAt: "10:12", icon: "sensor", tone: "green", frequent: true, favorite: false },
-    { id: 6, name: "厨房烟感", room: "厨房", status: "在线", detail: "电量 18% · 告警", updatedAt: "10:10", icon: "notification", tone: "orange", frequent: false, favorite: false },
-    { id: 7, name: "阳台门磁", room: "阳台", status: "在线", detail: "已关闭", updatedAt: "10:09", icon: "security", tone: "green", frequent: false, favorite: false },
-    { id: 8, name: "客厅摄像头", room: "客厅", status: "离线", detail: "连接中断", updatedAt: "09:58", icon: "camera", tone: "purple", frequent: false, favorite: false },
-]);
+const devices = ref<OverviewDevice[]>(overviewDevices);
 
 const visibleDevices = computed(() => {
     const keyword = searchKeyword.value.trim().toLocaleLowerCase();
@@ -139,6 +75,9 @@ const handleRoomCreated = (name: string) => {
             tone: "blue",
         },
     ];
+};
+const handleScheduleSaved = (schedule: HouseholdSchedule) => {
+    scheduleItems.value = schedule.items;
 };
 </script>
 
@@ -226,10 +165,10 @@ const handleRoomCreated = (name: string) => {
             <section class="panel rooms">
                 <header>
                     <h2>房间概览</h2>
-                    <a>查看房间分布 ›</a>
+                    <a role="button" tabindex="0" @click="openDialog('distribution')">查看房间分布 ›</a>
                 </header>
                 <div class="room-grid card-grid-enter">
-                    <article v-for="room in rooms" :key="room.name">
+                    <article v-for="room in rooms.slice(0, 3)" :key="room.name">
                         <div class="room-title">
                             <i :class="room.tone"
                                 ><SvgIcon :name="room.icon" /></i
@@ -245,12 +184,8 @@ const handleRoomCreated = (name: string) => {
                             ><span
                                 >❄️ <small>设备</small
                                 ><b>{{ room.air }}</b></span
-                            ><span
-                                >▥ <small>状态</small
-                                ><b>{{ room.extra }}</b></span
                             >
                         </div>
-                        <button>进入控制</button>
                     </article>
                 </div>
             </section>
@@ -307,67 +242,15 @@ const handleRoomCreated = (name: string) => {
                             </tr>
                         </tbody>
                     </table>
-                    <button class="view-all" type="button" @click="openDialog('devices')">
-                        查看全部设备（{{ devices.length }}）⌄
-                    </button>
-                </section>
-                <section class="panel activity">
-                    <header>
-                        <h2>今日活动 / 动态</h2>
-                        <a>查看全部 ›</a>
-                    </header>
-                    <p
-                        v-for="item in [
-                            [
-                                '10:15',
-                                'lock',
-                                '门锁开启',
-                                '张晓明通过指纹打开了玄关门锁',
-                                'purple',
-                            ],
-                            [
-                                '10:10',
-                                'air-conditioner',
-                                '空调运行',
-                                '客厅空调已开启，设定 26°C 制冷模式',
-                                'blue',
-                            ],
-                            [
-                                '10:05',
-                                'curtain',
-                                '窗帘关闭',
-                                '主卧窗帘已自动关闭',
-                                'teal',
-                            ],
-                            [
-                                '09:58',
-                                'automation',
-                                '自动化执行',
-                                '“离家模式”自动执行完成',
-                                'green',
-                            ],
-                            [
-                                '09:45',
-                                'light',
-                                '灯光开启',
-                                '卫生间灯光已开启',
-                                'orange',
-                            ],
-                        ]"
-                        :key="item[0]"
-                    >
-                        <time>{{ item[0] }}</time
-                        ><i :class="item[4]"
-                            ><SvgIcon :name="item[1]" size="sm" /></i
-                        ><span
-                            ><b>{{ item[2] }}</b
-                            ><small>{{ item[3] }}</small></span
-                        >
-                    </p>
+                    <RouterLink class="view-all" to="/devices">
+                        查看全部设备（{{ devices.length }}）→
+                    </RouterLink>
                 </section>
             </div>
         </main>
-        <aside class="right page-shell">
+        <div
+            class="sidebar"
+        >
             <section class="panel">
                 <header>
                     <h2 class="schedule-title">
@@ -393,51 +276,28 @@ const handleRoomCreated = (name: string) => {
                 </div>
                 <div class="schedule-list">
                     <article
-                        v-for="item in [
-                            [
-                                '07:00',
-                                '起床模式',
-                                '窗帘打开 · 卧室灯亮 · 空调制热 24°C',
-                                'orange',
-                            ],
-                            [
-                                '19:00',
-                                '回家模式',
-                                '玄关灯亮 · 空调制冷 26°C · 新风开启',
-                                'blue',
-                            ],
-                            [
-                                '22:00',
-                                '离家模式',
-                                '关闭灯光 · 安防布防 · 监控夜视',
-                                'purple',
-                            ],
-                            [
-                                '23:00',
-                                '睡眠模式',
-                                '灯光渐暗 · 窗帘关闭 · 安防设防',
-                                'teal',
-                            ],
-                        ]"
-                        :key="item[0]"
-                        :class="`is-${item[3]}`"
+                        v-for="item in scheduleItems.filter((entry) => entry.enabled).slice(0, 2)"
+                        :key="`${item.time}-${item.name}`"
+                        class="is-blue"
+                        :style="{ '--schedule-color': item.color }"
                     >
-                        <time class="schedule-time">{{ item[0] }}</time>
+                        <time class="schedule-time">{{ item.time }}</time>
                         <span class="timeline-node" aria-hidden="true"></span>
                         <div class="schedule-body">
-                            <b>{{ item[1] }}</b>
-                            <small>{{ item[2] }}</small>
+                            <b>{{ item.name }}</b>
+                            <small>{{ item.detail }}</small>
                         </div>
                     </article>
                 </div>
-                <p class="schedule-summary">
-                    今日计划 <b>4</b> 个 · 已开启 <b>3</b> 个
-                </p>
+                <button class="schedule-summary" type="button" @click="openDialog('schedule')">
+                    查看全部 {{ scheduleItems.length }} 个计划
+                    <SvgIcon name="chevron-right" size="sm" />
+                </button>
             </section>
             <section class="panel">
                 <header>
                     <h2>设备状态</h2>
-                    <a role="button" tabindex="0" @click="openDialog('devices')">更多</a>
+                    <RouterLink class="more-link" to="/devices">更多</RouterLink>
                 </header>
                 <div class="device-count">
                     <span>总设备<b>36</b></span
@@ -482,24 +342,61 @@ const handleRoomCreated = (name: string) => {
                 </div>
                 <footer>最近同步：{{ refreshed }} <a>⟳ 刷新</a></footer>
             </section>
-        </aside>
+            <section class="panel activity">
+                <header>
+                    <h2>今日活动 / 动态</h2>
+                    <a role="button" tabindex="0" @click="openDialog('activity')">查看全部 ›</a>
+                </header>
+                <p
+                    v-for="item in activities.slice(0, 5)"
+                    :key="item.time + item.title"
+                >
+                    <time>{{ item.time }}</time
+                    ><i :class="item.tone"
+                        ><SvgIcon :name="item.icon" size="sm" /></i
+                    ><span
+                        ><b>{{ item.title }}</b
+                        ><small>{{ item.description }}</small></span
+                    >
+                </p>
+            </section>
+        </div>
         <OverviewDialogs
             v-model="activeDialog"
+            :rooms="rooms"
+            :activities="activities"
             @synced="handleSynced"
             @room-created="handleRoomCreated"
+            @schedule-saved="handleScheduleSaved"
         />
     </div>
 </template>
 
 <style scoped>
 .page-shell {
-    min-width: 0;
     height: 100%;
     overflow: hidden;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
-    box-shadow: var(--shadow-soft);
+}
+.contents {
+    display: grid;
+    grid-column: span 2 / span 2;
+    grid-template-columns: 1fr 330px;
+    gap: 14px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+.contents > .overview {
+    min-width: 0;
+    overflow: hidden;
+}
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
 }
 .overview {
     display: flex;
@@ -513,11 +410,11 @@ const handleRoomCreated = (name: string) => {
     height: 38px;
     align-items: center;
     gap: 8px;
-    border: 1px solid #dce5f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 0 12px;
-    color: #8ca0bb;
+    color: var(--color-text-muted);
 }
 .search input {
     min-width: 0;
@@ -539,30 +436,30 @@ const handleRoomCreated = (name: string) => {
     border-radius: 50%;
 }
 .blue {
-    background: #e9f2ff;
-    color: #2871f5;
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
 }
 .green {
-    background: #e7f9ee;
-    color: #20b86a;
+    background: var(--tone-success-soft);
+    color: var(--color-success);
 }
 .orange {
     background: var(--tone-orange-soft);
     color: var(--tone-orange);
 }
 .purple {
-    background: #eee9ff;
-    color: #7651ee;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
 }
 .gray {
-    background: #edf1f6;
-    color: #64748b;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
 }
 
 .panel {
-    border: 1px solid #e2e9f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 14px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 13px;
     box-shadow: var(--shadow-card);
 }
@@ -576,7 +473,7 @@ const handleRoomCreated = (name: string) => {
     justify-content: space-between;
 }
 .panel a {
-    color: #246df2;
+    color: var(--tone-primary);
     font-size: 11px;
     font-weight: 800;
 }
@@ -595,11 +492,11 @@ const handleRoomCreated = (name: string) => {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    color: #77869b;
+    color: var(--color-text-tertiary);
     font-size: 10px;
 }
 .status-row b {
-    color: #26354c;
+    color: var(--color-text-primary);
     font-size: 13px;
 }
 .status-row small {
@@ -607,7 +504,7 @@ const handleRoomCreated = (name: string) => {
 }
 .ok,
 .online {
-    color: #17ad62 !important;
+    color: var(--color-success) !important;
 }
 .offline {
     color: var(--color-danger) !important;
@@ -639,7 +536,7 @@ const handleRoomCreated = (name: string) => {
     padding: 0 12px 12px;
 }
 .room-grid article {
-    border: 1px solid #e2e9f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 10px;
     padding: 10px;
 }
@@ -658,7 +555,7 @@ const handleRoomCreated = (name: string) => {
     flex-direction: column;
 }
 .room-title small {
-    color: #77869b;
+    color: var(--color-text-tertiary);
     font-size: 10px;
 }
 .room-devices {
@@ -666,7 +563,7 @@ const handleRoomCreated = (name: string) => {
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
     margin: 8px 0;
-    color: #64748b;
+    color: var(--color-text-tertiary);
 }
 .room-devices span {
     font-size: 10px;
@@ -685,15 +582,15 @@ const handleRoomCreated = (name: string) => {
 .view-all {
     width: 100%;
     height: 23px;
-    border: 1px solid #dce6f4;
+    border: 1px solid var(--color-border-default);
     border-radius: 5px;
-    color: #2a6ff0;
+    color: var(--tone-primary);
     font-size: 10px;
     font-weight: 800;
 }
 .bottom-grid {
     display: grid;
-    grid-template-columns: 1.05fr 1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
 }
 .device-list nav {
@@ -710,8 +607,8 @@ const handleRoomCreated = (name: string) => {
     font-size: 10px;
 }
 .device-list nav .active {
-    background: #eaf2ff;
-    color: #1769ff;
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
 }
 .device-list table {
     width: 100%;
@@ -723,8 +620,8 @@ const handleRoomCreated = (name: string) => {
 .device-list td {
     padding: 5px;
     text-align: left;
-    border-bottom: 1px solid #edf1f6;
-    color: #63738b;
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-tertiary);
 }
 .device-cell {
     display: flex;
@@ -740,24 +637,24 @@ const handleRoomCreated = (name: string) => {
     border-radius: 7px;
 }
 .device-cell i.blue {
-    background: #e9f2ff;
-    color: #2871f5;
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
 }
 .device-cell i.green {
-    background: #e7f9ee;
-    color: #20b86a;
+    background: var(--tone-success-soft);
+    color: var(--color-success);
 }
 .device-cell i.orange {
     background: var(--tone-orange-soft);
     color: var(--tone-orange);
 }
 .device-cell i.purple {
-    background: #eee9ff;
-    color: #7651ee;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
 }
 .device-cell i.teal {
-    background: #e0f5f6;
-    color: #0d9488;
+    background: var(--tone-teal-soft);
+    color: var(--tone-teal);
 }
 .view-all {
     margin-top: 4px;
@@ -770,8 +667,8 @@ const handleRoomCreated = (name: string) => {
     margin-top: 6px;
 }
 .activity time {
-    color: #738198;
-    font-size: 10px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
 }
 .activity i {
     display: grid;
@@ -779,45 +676,36 @@ const handleRoomCreated = (name: string) => {
     height: 24px;
     place-items: center;
     border-radius: 50%;
-    background: #edf4ff;
-    color: #3276f4;
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
 }
 .activity i.blue {
-    background: #e9f2ff;
-    color: #2871f5;
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
 }
 .activity i.green {
-    background: #e7f9ee;
-    color: #20b86a;
+    background: var(--tone-success-soft);
+    color: var(--color-success);
 }
 .activity i.orange {
     background: var(--tone-orange-soft);
     color: var(--tone-orange);
 }
 .activity i.purple {
-    background: #eee9ff;
-    color: #7651ee;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
 }
 .activity i.teal {
-    background: #e0f5f6;
-    color: #0d9488;
+    background: var(--tone-teal-soft);
+    color: var(--tone-teal);
 }
 .activity span {
     display: flex;
     flex-direction: column;
-    font-size: 10px;
+    font-size: 12px;
 }
 .activity small {
-    color: #7d8ca1;
-}
-.right {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 12px;
-}
-.right .panel {
-    padding: 14px;
+    color: var(--color-text-muted);
 }
 .schedule-title {
     display: flex;
@@ -826,7 +714,7 @@ const handleRoomCreated = (name: string) => {
     font-size: 14px;
 }
 .schedule-title small {
-    color: #7e8da3;
+    color: var(--color-text-tertiary);
     font-size: 10px;
     font-weight: 400;
 }
@@ -851,17 +739,17 @@ const handleRoomCreated = (name: string) => {
     place-items: center;
     width: 24px;
     height: 24px;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 7px;
-    background: #fff;
-    color: #41516a;
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 .date-arrow:hover {
     border-color: var(--tone-primary);
     color: var(--tone-primary);
-    background: #edf4ff;
+    background: var(--tone-primary-soft);
 }
 .date-info {
     display: flex;
@@ -869,7 +757,7 @@ const handleRoomCreated = (name: string) => {
     gap: 8px;
 }
 .date-info strong {
-    color: #1c2a40;
+    color: var(--color-text-primary);
     font-size: 12px;
 }
 .today-badge {
@@ -877,9 +765,9 @@ const handleRoomCreated = (name: string) => {
     align-items: center;
     gap: 4px;
     border-radius: 999px;
-    background: #e7f9ee;
+    background: var(--tone-success-soft);
     padding: 2px 8px;
-    color: #20b86a;
+    color: var(--color-success);
     font-size: 10px;
     font-weight: 700;
 }
@@ -887,7 +775,7 @@ const handleRoomCreated = (name: string) => {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #20b86a;
+    background: var(--color-success);
 }
 .schedule-list {
     position: relative;
@@ -900,7 +788,7 @@ const handleRoomCreated = (name: string) => {
     bottom: 10px;
     left: calc(52px + 8px + 5px);
     width: 2px;
-    background: #e2e9f2;
+    background: var(--color-border-default);
 }
 .schedule-list article {
     position: relative;
@@ -913,13 +801,20 @@ const handleRoomCreated = (name: string) => {
     transition: background 0.2s ease;
 }
 .schedule-list article:hover {
-    background: #f7fafd;
+    background: var(--color-surface-hover);
 }
 .schedule-time {
     padding-top: 2px;
     font-size: 12px;
     font-weight: 900;
     text-align: right;
+}
+.schedule-list article[style] .schedule-time {
+    color: var(--schedule-color);
+}
+.schedule-list article[style] .timeline-node {
+    background: var(--schedule-color);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px color-mix(in srgb, var(--schedule-color) 18%, transparent);
 }
 .timeline-node {
     position: relative;
@@ -928,8 +823,8 @@ const handleRoomCreated = (name: string) => {
     height: 10px;
     margin-top: 4px;
     border-radius: 50%;
-    background: #2875f4;
-    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e9f2ff;
+    background: var(--tone-primary);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px var(--tone-primary-soft);
 }
 .schedule-body {
     display: flex;
@@ -938,11 +833,11 @@ const handleRoomCreated = (name: string) => {
     padding-top: 1px;
 }
 .schedule-body b {
-    color: #26354c;
+    color: var(--color-text-primary);
     font-size: 12px;
 }
 .schedule-body small {
-    color: #7e8da3;
+    color: var(--color-text-tertiary);
     font-size: 10px;
     line-height: 1.4;
 }
@@ -951,68 +846,68 @@ const handleRoomCreated = (name: string) => {
 }
 .schedule-list article.is-orange .timeline-node {
     background: var(--tone-orange);
-    box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--tone-orange-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px var(--tone-orange-soft);
 }
 .schedule-list article.is-blue .schedule-time {
-    color: #2871f5;
+    color: var(--tone-primary);
 }
 .schedule-list article.is-blue .timeline-node {
-    background: #2871f5;
-    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e9f2ff;
+    background: var(--tone-primary);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px var(--tone-primary-soft);
 }
 .schedule-list article.is-purple .schedule-time {
-    color: #7651ee;
+    color: var(--tone-purple);
 }
 .schedule-list article.is-purple .timeline-node {
-    background: #7651ee;
-    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #eee9ff;
+    background: var(--tone-purple);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px var(--tone-purple-soft);
 }
 .schedule-list article.is-teal .schedule-time {
-    color: #0d9488;
+    color: var(--tone-teal);
 }
 .schedule-list article.is-teal .timeline-node {
-    background: #0d9488;
-    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e0f5f6;
+    background: var(--tone-teal);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 6px var(--tone-teal-soft);
 }
 .schedule-summary {
     display: flex;
     justify-content: center;
     gap: 4px;
     margin-top: 6px;
-    border-top: 1px dashed #e2e9f2;
+    border-top: 1px dashed var(--color-border-default);
     padding-top: 8px;
-    color: #7e8da3;
+    color: var(--color-text-tertiary);
     font-size: 10px;
 }
 .schedule-summary b {
     color: var(--tone-primary);
 }
 .schedule-summary em {
-    color: #20b86a;
+    color: var(--color-success);
     font-style: normal;
 }
 .device-count {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     margin: 11px 0;
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
     padding: 9px;
 }
 .device-count span {
     text-align: center;
-    color: #74839a;
+    color: var(--color-text-tertiary);
     font-size: 10px;
 }
 .device-count b {
     display: block;
-    color: #1c2a40;
+    color: var(--color-text-primary);
     font-size: 17px;
 }
 .warn {
-    color: #f07821 !important;
+    color: var(--tone-warning) !important;
 }
-.right h3 {
+.panel h3 {
     margin: 10px 0 4px;
     font-size: 12px;
     font-weight: 900;
@@ -1021,14 +916,14 @@ const handleRoomCreated = (name: string) => {
     display: flex;
     justify-content: space-between;
     padding: 6px 0;
-    color: #41516a;
+    color: var(--color-text-secondary);
     font-size: 10px;
 }
 .alert em {
     border-radius: 6px;
-    background: #edf4ff;
+    background: var(--tone-primary-soft);
     padding: 2px 6px;
-    color: #2b70ef;
+    color: var(--tone-primary);
     font-style: normal;
 }
 .quick {
@@ -1042,39 +937,39 @@ const handleRoomCreated = (name: string) => {
     grid-template-columns: 30px 1fr;
     align-items: center;
     text-align: left;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
     padding: 9px;
-    color: #26364e;
+    color: var(--color-text-primary);
     font-size: 11px;
     font-weight: 900;
 }
 .quick button svg {
     grid-row: span 2;
-    color: #2873f5;
+    color: var(--tone-primary);
 }
 .quick button.tone-purple svg {
-    color: #7651ee;
+    color: var(--tone-purple);
 }
 .quick button.tone-blue svg {
-    color: #2873f5;
+    color: var(--tone-primary);
 }
 .quick button.tone-green svg {
-    color: #17ad62;
+    color: var(--color-success);
 }
 .quick button.tone-orange svg {
     color: var(--tone-orange);
 }
 .quick small {
-    color: #8593a8;
+    color: var(--color-text-muted);
     font-size: 9px;
     font-weight: 500;
 }
-.right footer {
+.panel footer {
     display: flex;
     justify-content: space-between;
     margin-top: 15px;
-    color: #8a98aa;
+    color: var(--color-text-muted);
     font-size: 10px;
 }
 @media (max-width: 1200px) {
@@ -1189,13 +1084,13 @@ const handleRoomCreated = (name: string) => {
 }
 .activity time,
 .activity span {
-    font-size: 12px;
+    font-size: 13px;
 }
 .activity small {
-    font-size: 11px;
+    font-size: 12px;
 }
 .date,
-.right h3 {
+.panel h3 {
     font-size: 14px;
 }
 .schedule time,
@@ -1217,7 +1112,7 @@ const handleRoomCreated = (name: string) => {
     font-size: 13px;
 }
 .quick small,
-.right footer {
+.panel footer {
     font-size: 11px;
 }
 @media (max-width: 1200px) {
@@ -1276,6 +1171,9 @@ const handleRoomCreated = (name: string) => {
     vertical-align: middle;
 }
 .device-list .view-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 34px;
     font-size: 13px;
 }
@@ -1303,7 +1201,8 @@ const handleRoomCreated = (name: string) => {
     }
 }
 
-/* Keep the dashboard inside the application viewport without page scrolling. */
+@media not all {
+/* Legacy layout experiments retained temporarily but disabled. */
 .overview {
     display: grid;
     grid-template-rows: auto auto auto auto minmax(0, 1fr);
@@ -1356,26 +1255,11 @@ const handleRoomCreated = (name: string) => {
     display: inline;
 }
 .bottom-grid {
-    min-height: 0;
-    overflow: hidden;
+    grid-template-columns: 1fr;
 }
 .bottom-grid > .panel {
     min-height: 0;
     overflow: hidden;
-}
-.right {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto auto;
-    height: 100%;
-    min-height: 0;
-    gap: 8px;
-    overflow: hidden;
-    padding: 10px;
-}
-.right .panel {
-    min-height: 0;
-    overflow: hidden;
-    padding: 10px;
 }
 .schedule-list article {
     padding: 5px 0;
@@ -1388,7 +1272,7 @@ const handleRoomCreated = (name: string) => {
     min-height: 48px;
     padding: 6px;
 }
-.right footer {
+.panel footer {
     margin-top: 8px;
 }
 
@@ -1410,6 +1294,749 @@ const handleRoomCreated = (name: string) => {
     }
     .panel {
         padding: 8px;
+    }
+}
+
+/* Medium desktop layout (the application keeps a fixed 330px right rail). */
+@media (max-width: 1380px) {
+    .overview {
+        grid-template-rows: auto auto auto minmax(122px, 0.58fr) minmax(178px, 1fr);
+        gap: 7px;
+        padding: 8px;
+    }
+    .overview .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .overview .stats article {
+        min-height: 66px;
+        padding: 8px 12px;
+    }
+    .overview .stats i {
+        width: 38px;
+        height: 38px;
+    }
+    .overview .stats span,
+    .overview .stats small {
+        white-space: nowrap;
+    }
+    .overview .stats strong {
+        font-size: 20px;
+    }
+    .home-status {
+        padding: 7px 9px;
+    }
+    .home-status .status-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px 7px;
+    }
+    .home-status .status-row > div,
+    .home-status .status-row > div:nth-child(n + 5) {
+        display: flex;
+        min-height: 43px;
+        padding: 5px 7px;
+    }
+    .home-status .status-row i {
+        width: 30px;
+        height: 30px;
+    }
+    .home-status .status-row span,
+    .home-status .status-row b,
+    .home-status .status-row small {
+        word-break: keep-all;
+        white-space: nowrap;
+    }
+    .room-grid {
+        grid-template-rows: minmax(76px, 1fr);
+        gap: 7px;
+        padding: 0 8px 8px;
+    }
+    .room-grid article {
+        min-height: 76px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        gap: 3px;
+        padding: 6px 8px;
+    }
+    .room-title i {
+        width: 30px;
+        height: 30px;
+    }
+    .room-devices {
+        display: flex;
+        align-items: center;
+        align-self: end;
+        justify-content: space-between;
+        gap: 5px;
+        margin: 0;
+        border-left: 0;
+        padding-left: 0;
+    }
+    .room-devices span {
+        display: flex;
+        min-width: 0;
+        min-height: 18px;
+        align-items: center;
+        gap: 3px;
+        white-space: nowrap;
+    }
+    .room-devices small {
+        display: none;
+    }
+    .bottom-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .bottom-grid .activity {
+        display: none;
+    }
+    .device-list nav {
+        flex-wrap: nowrap;
+    }
+    .device-list nav h2 {
+        width: auto;
+        white-space: nowrap;
+    }
+    .right {
+        gap: 7px;
+        padding: 8px;
+    }
+    .right .panel {
+        padding: 9px;
+    }
+    .quick button {
+        min-height: 46px;
+        padding: 6px;
+    }
+}
+
+/* Prevent fixed-height cards from sharing or crossing visual boundaries. */
+.room-grid article {
+    overflow: hidden;
+}
+.room-devices {
+    align-self: end;
+    gap: 5px;
+    margin-top: 8px;
+}
+.room-devices span {
+    min-height: 18px;
+}
+/* Prevent fixed-height cards from sharing or crossing visual boundaries. */
+/* Final overview composition: one clear vertical reading flow. */
+.overview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) minmax(190px, 0.82fr);
+    grid-template-areas:
+        "header"
+        "stats"
+        "home"
+        "rooms"
+        "bottom";
+    gap: 10px;
+    padding: 12px;
+}
+.overview .stats article {
+    min-height: 78px;
+}
+.home-status {
+    padding: 10px 12px;
+}
+.home-status h2 {
+    display: none;
+}
+.home-status .status-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 0;
+}
+.home-status .status-row > div {
+    border: 0;
+    background: var(--color-surface-subtle);
+    padding: 7px 9px;
+}
+.home-status .status-row i {
+    width: 34px;
+    height: 34px;
+}
+.rooms {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+}
+.rooms header {
+    flex: none;
+    padding: 10px 14px;
+}
+.room-grid {
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: 8px;
+    padding: 0 12px 12px;
+}
+.room-grid article {
+    grid-template-rows: auto 1fr;
+    padding: 9px 10px;
+}
+.room-title i {
+    width: 30px;
+    height: 30px;
+}
+.room-devices {
+    align-content: center;
+    margin: 4px 0 0;
+}
+.bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+.bottom-grid > .panel {
+    padding: 10px 12px;
+}
+.schedule-list {
+    min-height: 0;
+    margin: 5px 0;
+}
+.schedule-list article {
+    grid-template-columns: 46px 18px minmax(0, 1fr);
+    gap: 6px;
+    padding: 5px 0;
+}
+.schedule-list::before {
+    left: 57px;
+}
+.schedule-body small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.schedule-summary {
+    display: flex;
+    width: 100%;
+    height: 32px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-top: auto;
+    border: 0;
+    border-radius: 8px;
+    padding: 0;
+    color: var(--tone-primary);
+    background: var(--tone-primary-soft);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@media (max-width: 1380px) {
+    .home-status .status-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .home-status .status-row > div:nth-child(n) {
+        display: flex;
+    }
+}
+
+@media (max-height: 820px) {
+    .overview {
+        grid-template-rows: auto auto auto minmax(0, 1fr) minmax(170px, 0.68fr);
+        gap: 7px;
+        padding: 8px;
+    }
+    .home-status .status-row {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .home-status .status-row > div:nth-child(n) {
+        display: flex;
+    }
+    .home-status .status-row small {
+        display: none;
+    }
+    .room-title small {
+        font-size: 10px;
+    }
+}
+
+/* Spacious dashboard layout: overview and rooms form the visual center. */
+.overview {
+    grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.72fr);
+    grid-template-rows: auto auto minmax(0, 1.15fr) minmax(0, 0.9fr);
+    grid-template-areas:
+        "header header"
+        "stats stats"
+        "home rooms"
+        "bottom bottom";
+    gap: 12px;
+    padding: 14px;
+}
+.overview > :deep(.page-header) {
+    grid-area: header;
+}
+.overview > .stats {
+    grid-area: stats;
+}
+.overview > .home-status {
+    grid-area: home;
+}
+.overview > .rooms {
+    grid-area: rooms;
+}
+.overview > .bottom-grid {
+    grid-area: bottom;
+}
+.overview .stats {
+    gap: 12px;
+}
+.overview .stats article {
+    min-height: 82px;
+    padding: 12px 14px;
+}
+.home-status,
+.rooms,
+.bottom-grid > .panel {
+    min-height: 0;
+}
+.home-status {
+    padding: 14px;
+}
+.home-status .status-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 13px 10px;
+    margin-top: 14px;
+}
+.home-status .status-row > div {
+    min-width: 0;
+    border-radius: 10px;
+    background: var(--color-surface-subtle);
+    padding: 8px;
+}
+.home-status .status-row i {
+    width: 36px;
+    height: 36px;
+}
+.room-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    gap: 10px;
+    padding: 0 12px 12px;
+}
+.rooms header {
+    padding: 12px 14px;
+}
+.room-grid article {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto 1fr auto;
+    border-color: var(--color-border-default);
+    padding: 10px;
+    background: linear-gradient(145deg, var(--color-card-bg), var(--color-surface-subtle));
+}
+.room-devices {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3px;
+    margin: 7px 0;
+}
+.room-devices span {
+    grid-template-columns: 18px 36px minmax(0, 1fr);
+}
+.bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+.bottom-grid > .panel {
+    padding: 12px;
+}
+.activity p {
+    margin-top: 5px;
+}
+
+@media (max-width: 1380px) {
+    .overview {
+        grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.8fr);
+    }
+    .home-status .status-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    .home-status .status-row > div:nth-child(n + 5) {
+        display: none;
+    }
+}
+
+@media (max-height: 820px) {
+    .overview {
+        grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 0.72fr);
+        gap: 8px;
+        padding: 9px;
+    }
+    .home-status .status-row {
+        gap: 5px;
+        margin-top: 7px;
+    }
+    .home-status .status-row > div {
+        padding: 5px 7px;
+    }
+    .room-grid {
+        gap: 7px;
+        padding: 0 8px 8px;
+    }
+    .room-grid article {
+        padding: 7px;
+    }
+}
+/* Authoritative layout overrides must remain last in this scoped stylesheet. */
+.overview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(132px, 0.58fr) minmax(200px, 1fr);
+    grid-template-areas: "header" "stats" "home" "rooms" "bottom";
+}
+.home-status {
+    padding: 9px 12px;
+}
+.home-status h2 {
+    display: none;
+}
+.home-status .status-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 0;
+}
+.home-status .status-row > div,
+.home-status .status-row > div:nth-child(n + 5) {
+    display: flex;
+    padding: 7px 9px;
+}
+.rooms {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+}
+.room-grid {
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: minmax(72px, 1fr);
+    align-content: stretch;
+    align-items: stretch;
+    gap: 8px;
+    padding: 0 10px 8px;
+}
+.room-grid article {
+    min-height: 72px;
+    overflow: hidden;
+    grid-template-columns: minmax(105px, 0.72fr) minmax(0, 1.28fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+}
+.rooms header {
+    padding: 7px 12px;
+}
+.room-title i {
+    width: 36px;
+    height: 36px;
+}
+.room-title {
+    min-width: 0;
+}
+.room-title b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.room-title small {
+    line-height: 1.1;
+}
+.room-devices {
+    align-self: center;
+    gap: 6px;
+    margin: 0;
+    border-left: 1px solid var(--color-border-subtle);
+    padding-left: 12px;
+}
+.room-devices span {
+    grid-template-columns: 18px 38px minmax(0, 1fr);
+    min-height: 22px;
+    align-items: center;
+}
+.bottom-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (max-height: 820px) {
+    .overview {
+        grid-template-rows: auto auto auto minmax(124px, 0.5fr) minmax(174px, 1fr);
+    }
+    .home-status .status-row {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .home-status .status-row small {
+        display: none;
+    }
+}
+@media (max-width: 1380px) {
+    .overview {
+        grid-template-rows: auto auto auto minmax(122px, 0.58fr) minmax(178px, 1fr);
+        gap: 7px;
+        padding: 8px;
+    }
+    .overview .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .overview .stats article {
+        min-height: 66px;
+        padding: 8px 12px;
+    }
+    .overview .stats span,
+    .overview .stats small {
+        word-break: keep-all;
+        white-space: nowrap;
+    }
+    .home-status .status-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px 7px;
+    }
+    .home-status .status-row > div,
+    .home-status .status-row > div:nth-child(n + 5) {
+        display: flex;
+        min-height: 43px;
+        padding: 5px 7px;
+    }
+    .home-status .status-row span,
+    .home-status .status-row b,
+    .home-status .status-row small {
+        word-break: keep-all;
+        white-space: nowrap;
+    }
+    .room-grid {
+        grid-template-rows: minmax(76px, 1fr);
+    }
+    .room-grid article {
+        min-height: 76px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        gap: 3px;
+        padding: 6px 8px;
+    }
+    .room-devices {
+        display: flex;
+        align-items: center;
+        align-self: end;
+        justify-content: space-between;
+        gap: 5px;
+        margin: 0;
+        border-left: 0;
+        padding-left: 0;
+    }
+    .room-devices span {
+        display: flex;
+        min-width: 0;
+        min-height: 18px;
+        gap: 3px;
+        white-space: nowrap;
+    }
+    .room-devices small {
+        display: none;
+    }
+    .bottom-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .bottom-grid .activity {
+        display: none;
+    }
+}
+}
+
+/* Single authoritative dashboard layout. */
+.overview {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto auto auto 132px minmax(180px, 1fr);
+    gap: 8px;
+    overflow: hidden;
+    padding: 10px;
+}
+.overview .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.overview .stats article {
+    min-width: 0;
+    min-height: 76px;
+    padding: 10px;
+}
+.overview .stats span,
+.overview .stats small {
+    word-break: keep-all;
+}
+.home-status {
+    padding: 8px 10px;
+}
+.home-status h2 {
+    display: none;
+}
+.home-status .status-row {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+}
+.home-status .status-row > div {
+    min-width: 0;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    padding: 6px;
+}
+.home-status .status-row span,
+.home-status .status-row b,
+.home-status .status-row small {
+    word-break: keep-all;
+}
+.rooms {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+.rooms header {
+    flex: none;
+    padding: 8px 12px;
+}
+.room-grid {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    overflow: hidden;
+    padding: 0 10px 9px;
+}
+.room-grid article {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    padding: 8px;
+}
+.room-title {
+    min-width: 0;
+}
+.room-title i {
+    width: 32px;
+    height: 32px;
+}
+.room-devices {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    margin: 0;
+    border-left: 1px solid var(--color-border-subtle);
+    padding-left: 9px;
+}
+.room-devices span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.bottom-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    overflow: hidden;
+}
+.bottom-grid .device-list {
+    grid-column: 1 / -1;
+}
+.bottom-grid .activity {
+    display: none;
+}
+.bottom-grid > .panel {
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px;
+}
+.right {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    overflow: hidden;
+    padding: 9px;
+}
+.right .panel {
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px;
+}
+.right > .panel:first-child {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) 32px;
+}
+.right .schedule-list {
+    min-height: 0;
+    overflow: hidden;
+}
+.right .schedule-summary {
+    margin: 0;
+}
+
+@media (max-width: 1380px) {
+    .overview {
+        grid-template-rows: auto auto auto 126px minmax(170px, 1fr);
+    }
+    .overview .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .overview .stats article {
+        min-height: 62px;
+        padding: 7px 10px;
+    }
+    .overview .stats span,
+    .overview .stats small,
+    .home-status span,
+    .home-status b,
+    .home-status small {
+        white-space: nowrap;
+    }
+    .home-status .status-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .home-status .status-row > div {
+        min-height: 40px;
+        padding: 4px 7px;
+    }
+    .room-grid article {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        gap: 3px;
+        padding: 6px 8px;
+    }
+    .room-devices {
+        display: flex;
+        justify-content: space-between;
+        border-left: 0;
+        padding-left: 0;
+    }
+    .room-devices small {
+        display: none;
+    }
+    .bottom-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .bottom-grid .activity {
+        display: none;
     }
 }
 </style>

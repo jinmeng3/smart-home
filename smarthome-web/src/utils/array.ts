@@ -1,10 +1,13 @@
 /**
- * Toggle a value in an array. If the value exists, remove it; otherwise, add it.
- * @param items The array to mutate.
- * @param value The value to toggle.
+ * 在数组中切换某个值的存在状态：存在则移除，不存在则添加。
+ * @param arr 目标数组
+ * @param value 要切换的值
  */
-export const toggleValue = <T,>(items: T[], value: T): void => {
-    const index = items.indexOf(value);
-    if (index >= 0) items.splice(index, 1);
-    else items.push(value);
+export const toggleValue = <T>(arr: T[], value: T) => {
+  const index = arr.indexOf(value);
+  if (index >= 0) {
+    arr.splice(index, 1);
+  } else {
+    arr.push(value);
+  }
 };

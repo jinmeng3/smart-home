@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, ref, watchEffect } from "vue";
 import Sidebar from "./components/layout/Sidebar.vue";
 import LoginDialog from "./components/account/LoginDialog.vue";
 import ModalTransition from "./components/common/ModalTransition.vue";
@@ -11,10 +11,10 @@ import { useSettingsStore } from "./stores/settings";
 const store = useHomeStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
-let systemThemeQuery: MediaQueryList | null = null;
-const updateSystemTheme = () => {
-    document.documentElement.dataset.theme = activeTheme.value;
-};
+
+const systemDark = ref(
+    window.matchMedia("(prefers-color-scheme: dark)").matches,
+);
 
 const activeTheme = computed(() => {
     const themeMode = settingsStore.settings.appearance.themeMode;
@@ -23,9 +23,7 @@ const activeTheme = computed(() => {
         return themeMode;
     }
 
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+    return systemDark.value ? "dark" : "light";
 });
 
 watchEffect(() => {
@@ -38,9 +36,15 @@ watchEffect(() => {
         : "off";
 });
 
+const systemThemeHandler = () => {
+    systemDark.value = window.matchMedia("(prefers-color-scheme: dark)").matches;
+};
+
+let systemThemeQuery: MediaQueryList | null = null;
+
 onMounted(() => {
     systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    systemThemeQuery.addEventListener("change", updateSystemTheme);
+    systemThemeQuery.addEventListener("change", systemThemeHandler);
 
     if (authStore.isAuthenticated) {
         void settingsStore.loadAccountHome().catch(() => undefined);
@@ -48,7 +52,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    systemThemeQuery?.removeEventListener("change", updateSystemTheme);
+    systemThemeQuery?.removeEventListener("change", systemThemeHandler);
     systemThemeQuery = null;
 });
 </script>

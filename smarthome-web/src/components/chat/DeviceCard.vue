@@ -7,7 +7,7 @@ import {
     deviceTypeIconMap,
     getDeviceStatusLabel,
 } from "../device/deviceMeta";
-import { formatDeviceTimestamp } from "../../utils/date";
+import { formatDeviceTimestamp } from "../../utils/device";
 
 const store = useHomeStore();
 

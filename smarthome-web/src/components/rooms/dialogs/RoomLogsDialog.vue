@@ -125,6 +125,12 @@ const close = () => emit("update:modelValue", false);
     border-radius: 8px;
     background: var(--color-card-bg);
     padding: 0 10px;
+    color: var(--color-text-primary);
+}
+
+.dialog-filters select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 .data-table {
     overflow: hidden;

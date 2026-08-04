@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef } from "vue";
 import { useHomeStore } from "../../stores/home";
 import { statusColorMap } from "../../constants/status-colors";
 import type { DashboardDevice } from "../../types/device";
-import type { SemanticStatus } from "../../types/theme";
+import type { SemanticStatus } from "../../constants/status-colors";
 import { getDeviceRuntimeStatus } from "../../utils/device";
-import { deviceTypeIconMap, getDeviceStatusLabel } from "../device/deviceMeta";
-import { formatDeviceTimestamp } from "../../utils/date";
+import { deviceTypeIconMap, deviceTypeLabelMap, getDeviceStatusLabel } from "../device/deviceMeta";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
-const lastFocusedElement = ref<HTMLElement | null>(null);
+const lastFocusedElement = shallowRef<HTMLElement | null>(null);
+
+const MAX_DISPLAY_DEVICES = 4;
+const displayDevices = computed(() => store.devices.slice(0, MAX_DISPLAY_DEVICES));
+
+const platformToneMap: Record<string, string> = {
+    "Home Assistant": "orange",
+    Matter: "blue",
+    Zigbee: "green",
+    MQTT: "purple",
+};
 
 const statusClass = (device: DashboardDevice) => {
     const status = getDeviceRuntimeStatus(device) as SemanticStatus;
@@ -28,6 +37,27 @@ const statusClass = (device: DashboardDevice) => {
     ];
 };
 
+const formattedUpdatedAt = computed(() => {
+    const value = store.selectedDevice?.updatedAt;
+    if (!value) return "暂无";
+    const time = new Date(value);
+    if (Number.isNaN(time.getTime())) return value;
+    const now = new Date();
+    const diffMin = Math.floor((now.getTime() - time.getTime()) / 60000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    if (diffMin < 1) return "刚刚";
+    if (diffMin < 60) return `${diffMin} 分钟前`;
+    const clock = `${pad(time.getHours())}:${pad(time.getMinutes())}`;
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (time.toDateString() === now.toDateString()) return `今天 ${clock}`;
+    if (time.toDateString() === yesterday.toDateString()) return `昨天 ${clock}`;
+    if (time.getFullYear() === now.getFullYear()) {
+        return `${pad(time.getMonth() + 1)}-${pad(time.getDate())} ${clock}`;
+    }
+    return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} ${clock}`;
+});
+
 const detailText = computed(() => {
     const device = store.selectedDevice;
 
@@ -35,7 +65,7 @@ const detailText = computed(() => {
         return "点击设备查看详情";
     }
 
-    return `${device.room} · ${device.status}${device.value ? ` · ${device.value}` : ""} · ${device.updatedAt}`;
+    return `${device.room} · ${device.status}${device.value ? ` · ${device.value}` : ""} · ${formattedUpdatedAt.value}`;
 });
 
 const statusLabel = (device: DashboardDevice) =>
@@ -98,7 +128,7 @@ onBeforeUnmount(() => {
 
         <AnimatedList tag="div" name="recent-list" class="grid gap-2">
             <button
-                v-for="device in store.devices"
+                v-for="device in displayDevices"
                 :key="device.id"
                 v-memo="[
                     device.id,
@@ -177,37 +207,50 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="device-detail-title">
                         <strong>{{ store.selectedDevice.name }}</strong>
-                        <span>{{ store.selectedDevice.type }}</span>
-                        <em>
-                            <i :class="`is-${store.selectedDevice.status}`"></i>
-                            {{ statusLabel(store.selectedDevice) }}
-                        </em>
+                        <span class="device-type-badge">{{
+                            deviceTypeLabelMap[store.selectedDevice.type]
+                        }}</span>
+                        <span
+                            class="device-status-badge"
+                            :class="statusClass(store.selectedDevice)"
+                        >
+                            <AnimatedStatus
+                                :status="getDeviceRuntimeStatus(store.selectedDevice)"
+                                :label="store.selectedDevice.value ?? statusLabel(store.selectedDevice)"
+                            />
+                        </span>
                     </div>
                 </div>
                 <dl>
                     <div>
-                        <dt>房间</dt>
-                        <dd>{{ store.selectedDevice.room }}</dd>
+                        <dt><SvgIcon name="room" size="sm" />房间</dt>
+                        <dd class="is-room">{{ store.selectedDevice.room }}</dd>
                     </div>
                     <div>
-                        <dt>品牌</dt>
+                        <dt><SvgIcon name="layers" size="sm" />品牌</dt>
                         <dd>{{ store.selectedDevice.brand ?? "暂无" }}</dd>
                     </div>
                     <div>
-                        <dt>连接方式</dt>
-                        <dd>{{ store.selectedDevice.connection ?? "暂无" }}</dd>
-                    </div>
-                    <div>
-                        <dt>固件版本</dt>
-                        <dd>{{ store.selectedDevice.firmware ?? "暂无" }}</dd>
-                    </div>
-                    <div>
-                        <dt>最后同步</dt>
+                        <dt><SvgIcon name="plug" size="sm" />连接方式</dt>
                         <dd>
-                            {{
-                                formatDeviceTimestamp(store.selectedDevice.updatedAt)
-                            }}
+                            <em
+                                v-if="store.selectedDevice.connection"
+                                class="platform-tone"
+                                :class="`is-${platformToneMap[store.selectedDevice.connection] ?? 'blue'}`"
+                                >{{ store.selectedDevice.connection }}</em
+                            >
+                            <span v-else>暂无</span>
                         </dd>
+                    </div>
+                    <div>
+                        <dt><SvgIcon name="refresh" size="sm" />固件版本</dt>
+                        <dd class="is-firmware">{{
+                            store.selectedDevice.firmware ?? "暂无"
+                        }}</dd>
+                    </div>
+                    <div>
+                        <dt><SvgIcon name="clock" size="sm" />最后同步</dt>
+                        <dd class="is-sync">{{ formattedUpdatedAt }}</dd>
                     </div>
                 </dl>
             </section>
@@ -254,34 +297,36 @@ onBeforeUnmount(() => {
     background: var(--color-surface-hover);
 }
 
+/* ── 设备详情卡片 ── */
+
 .device-detail-card {
     display: grid;
-    gap: 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    background: var(--color-card-bg);
-    padding: 18px;
+    gap: 18px;
+    padding: 20px;
 }
 
 .device-detail-summary {
     display: grid;
-    grid-template-columns: 104px minmax(0, 1fr);
+    grid-template-columns: 80px minmax(0, 1fr);
     align-items: center;
-    gap: 16px;
+    gap: 14px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .device-detail-icon {
     display: grid;
-    width: 104px;
-    height: 104px;
+    width: 80px;
+    height: 80px;
     place-items: center;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: 14px;
     background: linear-gradient(
-        180deg,
-        var(--color-card-bg),
+        135deg,
+        var(--color-primary-100),
         var(--color-primary-50)
     );
+    box-shadow: 0 4px 12px var(--color-focus-ring);
     color: var(--color-primary-700);
 }
 
@@ -294,7 +339,7 @@ onBeforeUnmount(() => {
 .device-detail-title {
     display: grid;
     min-width: 0;
-    gap: 7px;
+    gap: 6px;
 }
 
 .device-detail-title strong {
@@ -306,80 +351,143 @@ onBeforeUnmount(() => {
     white-space: nowrap;
 }
 
-.device-detail-title span {
-    color: var(--color-text-tertiary);
-    font-size: 14px;
-    font-weight: 700;
+.device-type-badge {
+    width: fit-content;
+    border-radius: 999px;
+    background: var(--color-primary-50);
+    padding: 2px 10px;
+    color: var(--color-primary-700);
+    font-size: 12px;
+    font-weight: 800;
 }
 
-.device-detail-title em {
+.device-status-badge {
     display: inline-flex;
     width: fit-content;
     align-items: center;
-    gap: 6px;
-    border: 1px solid var(--color-border-default);
+    gap: 4px;
     border-radius: 999px;
-    background: var(--color-surface-subtle);
-    padding: 5px 10px;
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    font-style: normal;
-    font-weight: 900;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
 }
 
-.device-detail-title i {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-}
-
-.device-detail-title i.is-online {
-    background: var(--color-success);
-}
-.device-detail-title i.is-running {
-    background: var(--color-info);
-}
-.device-detail-title i.is-warning {
-    background: var(--color-warning);
-}
-.device-detail-title i.is-offline {
-    background: var(--color-text-muted);
-}
+/* ── 详情字段列表 ── */
 
 .device-detail-card dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 0;
     margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 12px;
+    background: var(--color-surface-subtle);
 }
 
 .device-detail-card dl > div {
+    display: flex;
     min-width: 0;
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 8px;
-    background: var(--color-panel-secondary);
-    padding: 12px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    transition: background 160ms var(--motion-ease);
 }
 
-.device-detail-card dl > div:last-child {
-    grid-column: 1 / -1;
+.device-detail-card dl > div + div {
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.device-detail-card dl > div:hover {
+    background: var(--color-card-bg);
 }
 
 .device-detail-card dt {
-    margin-bottom: 7px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
     color: var(--color-text-tertiary);
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 750;
+}
+
+.device-detail-card dt svg {
+    flex: 0 0 auto;
+}
+
+.device-detail-card dl > div:nth-child(1) dt svg {
+    color: var(--color-primary-600);
+}
+
+.device-detail-card dl > div:nth-child(2) dt svg {
+    color: var(--color-success);
+}
+
+.device-detail-card dl > div:nth-child(3) dt svg {
+    color: var(--color-warning);
+}
+
+.device-detail-card dl > div:nth-child(4) dt svg {
+    color: var(--tone-purple);
+}
+
+.device-detail-card dl > div:nth-child(5) dt svg {
+    color: var(--color-info);
 }
 
 .device-detail-card dd {
     overflow: hidden;
     margin: 0;
-    color: var(--color-text-primary);
-    font-size: 15px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
     font-weight: 900;
+    text-align: right;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.device-detail-card dd.is-room {
+    color: var(--color-primary-700);
+}
+
+.device-detail-card dd.is-firmware {
+    color: var(--tone-purple);
+}
+
+.device-detail-card dd.is-sync {
+    color: var(--color-info);
+}
+
+.platform-tone {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.platform-tone.is-orange {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+
+.platform-tone.is-blue {
+    background: var(--color-info-soft);
+    color: var(--color-info);
+}
+
+.platform-tone.is-green {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.platform-tone.is-purple {
+    background: var(--color-focus-ring);
+    color: var(--tone-purple);
 }
 
 @keyframes device-highlight {

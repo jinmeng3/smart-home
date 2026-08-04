@@ -2,7 +2,10 @@
 import { onMounted, watch } from "vue";
 import ChatWindow from "../components/chat/ChatWindow.vue";
 import Header from "../components/layout/Header.vue";
-import RightPanel from "../components/layout/RightPanel.vue";
+import DeviceListCard from "../components/dashboard/DeviceListCard.vue";
+import EnergyCard from "../components/dashboard/EnergyCard.vue";
+import ScheduleCard from "../components/dashboard/ScheduleCard.vue";
+import SecurityCard from "../components/dashboard/SecurityCard.vue";
 import { useAuthStore } from "../stores/auth";
 import { useHomeStore } from "../stores/home";
 
@@ -40,6 +43,17 @@ watch(
             <Header />
             <ChatWindow />
         </section>
-        <RightPanel />
+        <div
+            :inert="!authStore.isAuthenticated"
+            :aria-disabled="!authStore.isAuthenticated"
+            class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto"
+        >
+            <ScheduleCard />
+            <DeviceListCard />
+            <div class="grid min-h-0 flex-1 grid-cols-2 gap-3">
+                <EnergyCard />
+                <SecurityCard />
+            </div>
+        </div>
     </div>
 </template>

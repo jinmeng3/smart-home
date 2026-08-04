@@ -1,4 +1,4 @@
-import type { Automation } from "../types/automation";
+import type { Automation } from "../types/device";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 import type { DashboardDevice } from "../types/device";
 

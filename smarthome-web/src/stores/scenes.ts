@@ -3,13 +3,13 @@ import { defineStore } from "pinia";
 import {
     copyScene as apiCopyScene,
     createScene as apiCreateScene,
-    executeScene,
-    getSceneSummary,
-    listScenes,
-    saveSceneDraft,
-    useSceneTemplate,
-    updateSceneEnabled,
-} from "../services/scenes";
+    executeScene as apiExecuteScene,
+    fetchSceneSummary,
+    fetchScenes,
+    saveSceneDraft as apiSaveSceneDraft,
+    useSceneTemplate as apiUseSceneTemplate,
+    updateSceneEnabled as apiUpdateSceneEnabled,
+} from "../api/scenes";
 import { sleep } from "../utils/async";
 import type {
     Scene,
@@ -51,8 +51,8 @@ export const useScenesStore = defineStore("scenes", () => {
 
         try {
             const [sceneItems, sceneSummary] = await Promise.all([
-                listScenes(filters),
-                getSceneSummary(),
+                fetchScenes(filters),
+                fetchSceneSummary(),
             ]);
             scenes.value = sceneItems;
             summary.value = sceneSummary;
@@ -86,11 +86,16 @@ export const useScenesStore = defineStore("scenes", () => {
     const setSceneEnabled = async (sceneId: string, enabled: boolean) => {
         const scene = scenes.value.find((item) => item.id === sceneId);
         if (!scene) throw new Error("场景不存在");
-        const updated = await updateSceneEnabled(scene, enabled);
+        const updated = await apiUpdateSceneEnabled(sceneId, enabled);
         scenes.value = scenes.value.map((item) =>
             item.id === sceneId ? { ...item, ...updated } : item,
         );
-        summary.value = await getSceneSummary();
+        if (summary.value) {
+            summary.value = {
+                ...summary.value,
+                enabled: summary.value.enabled + (enabled ? 1 : -1),
+            };
+        }
     };
 
     const runScene = async (scene: Scene, confirmHighRisk: boolean) => {
@@ -99,25 +104,23 @@ export const useScenesStore = defineStore("scenes", () => {
         resetStepStatuses();
 
         try {
+            const nextStatuses = { ...stepStatuses.value };
+
             for (const step of scene.steps) {
-                stepStatuses.value = {
-                    ...stepStatuses.value,
-                    [step.id]: "running",
-                };
+                nextStatuses[step.id] = "running";
+                stepStatuses.value = nextStatuses;
                 await sleep(180);
-                stepStatuses.value = {
-                    ...stepStatuses.value,
-                    [step.id]: "completed",
-                };
+                nextStatuses[step.id] = "completed";
+                stepStatuses.value = nextStatuses;
             }
 
-            const execution = await executeScene(scene.id, confirmHighRisk);
+            const execution = await apiExecuteScene(scene.id, confirmHighRisk);
             scenes.value = scenes.value.map((item) =>
                 item.id === scene.id
                     ? { ...item, updatedAt: execution.finishedAt ?? execution.startedAt }
                     : item,
             );
-            summary.value = await getSceneSummary();
+            summary.value = await fetchSceneSummary();
         } finally {
             runningSceneId.value = null;
         }
@@ -131,10 +134,10 @@ export const useScenesStore = defineStore("scenes", () => {
         return scene;
     };
 
-    const saveDraft = (payload: SceneInput) => saveSceneDraft(payload);
+    const saveDraft = (payload: SceneInput) => apiSaveSceneDraft(payload);
 
     const importTemplate = async (template: SceneTemplate) => {
-        const scene = await useSceneTemplate(template.id, {
+        const scene = await apiUseSceneTemplate(template.id, {
             name: template.name,
             enabled: true,
         });

@@ -9,9 +9,9 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
+from app.models.room import Room
 from app.models.scene import SceneTemplate
 from app.models.user import User
-from app.models.room import Room
 
 
 def create_tables() -> None:
@@ -32,7 +32,9 @@ def migrate_room_columns() -> None:
     with engine.begin() as connection:
         for name, definition in definitions.items():
             if name not in columns:
-                connection.execute(text(f"ALTER TABLE rooms ADD COLUMN {name} {definition}"))
+                connection.execute(
+                    text(f"ALTER TABLE rooms ADD COLUMN {name} {definition}")
+                )
 
 
 def migrate_ai_model_settings() -> None:
@@ -167,14 +169,42 @@ def seed_rooms(db: Session, household_id: int) -> None:
         ("书房", "study", 15.2, 5, 24, 50, 22, 80),
         ("阳台", "balcony", 9.8, 4, 28, 65, 30, 88),
     ]
-    for index, (name, room_type, area, count, temp, humidity, pm25, comfort) in enumerate(rooms):
-        db.add(Room(
-            household_id=household_id, name=name, floor="1F", room_type=room_type,
-            area=area, comfort=comfort, temperature=temp, humidity=humidity,
-            pm25=pm25, illuminance=320 + index * 25, noise=42 - index,
-            device_count=count, online_count=count,
-            device_states=json.dumps({"light": index in (0, 2, 3), "airConditioner": index in (0, 1, 4), "curtain": index != 1, "socket": index < 4}, ensure_ascii=False),
-        ))
+    for index, (
+        name,
+        room_type,
+        area,
+        count,
+        temp,
+        humidity,
+        pm25,
+        comfort,
+    ) in enumerate(rooms):
+        db.add(
+            Room(
+                household_id=household_id,
+                name=name,
+                floor="1F",
+                room_type=room_type,
+                area=area,
+                comfort=comfort,
+                temperature=temp,
+                humidity=humidity,
+                pm25=pm25,
+                illuminance=320 + index * 25,
+                noise=42 - index,
+                device_count=count,
+                online_count=count,
+                device_states=json.dumps(
+                    {
+                        "light": index in (0, 2, 3),
+                        "airConditioner": index in (0, 1, 4),
+                        "curtain": index != 1,
+                        "socket": index < 4,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+        )
 
 
 def seed_scene_templates(db: Session) -> None:

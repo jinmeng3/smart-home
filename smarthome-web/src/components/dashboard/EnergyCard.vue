@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
+import { energyTrend } from "../../mock/dashboard";
 import AnimatedNumber from "../animation/AnimatedNumber.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
-const energyTrend = [3, 8, 6, 10, 14, 7, 13, 11];
 const chartWidth = 300;
 const chartHeight = 88;
 const chartPadding = 4;

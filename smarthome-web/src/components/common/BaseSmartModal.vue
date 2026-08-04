@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from "vue";
 import { ElButton } from "element-plus";
 import SvgIcon from "./SvgIcon.vue";
 import "element-plus/theme-chalk/el-button.css";
@@ -23,6 +23,15 @@ interface SmartModalProps {
     closeButtonDisabled?: boolean;
 }
 
+const focusableSelector = [
+    "a[href]",
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 const props = withDefaults(defineProps<SmartModalProps>(), {
     description: "",
     icon: "ai",
@@ -45,22 +54,20 @@ const emit = defineEmits<{
     "save-draft": [];
 }>();
 
-const dialogRef = ref<HTMLElement | null>(null);
-const lastFocusedElement = ref<HTMLElement | null>(null);
+const dialogRef = shallowRef<HTMLElement | null>(null);
+const lastFocusedElement = shallowRef<HTMLElement | null>(null);
 const titleId = `smart-modal-title-${Math.random().toString(16).slice(2)}`;
-const widthClass = computed(() =>
-    props.width === "small" ||
-    props.width === "medium" ||
-    props.width === "large"
-        ? `is-${props.width}`
-        : "",
-);
-const widthStyle = computed(() => {
-    if (
+const isPresetWidth = computed(
+    () =>
         props.width === "small" ||
         props.width === "medium" ||
-        props.width === "large"
-    ) {
+        props.width === "large",
+);
+const widthClass = computed(() =>
+    isPresetWidth.value ? `is-${props.width}` : "",
+);
+const widthStyle = computed(() => {
+    if (isPresetWidth.value) {
         return undefined;
     }
 
@@ -69,15 +76,6 @@ const widthStyle = computed(() => {
             typeof props.width === "number" ? `${props.width}px` : props.width,
     };
 });
-
-const focusableSelector = [
-    "a[href]",
-    "button:not([disabled])",
-    "input:not([disabled])",
-    "select:not([disabled])",
-    "textarea:not([disabled])",
-    "[tabindex]:not([tabindex='-1'])",
-].join(",");
 
 const close = async () => {
     if (!props.closable || props.loading) return;
@@ -118,9 +116,15 @@ const handleKeydown = (event: KeyboardEvent) => {
     const dialog = dialogRef.value;
     if (!dialog) return;
 
-    const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(focusableSelector),
-    ).filter((element) => element.offsetParent !== null);
+    const focusable: HTMLElement[] = [];
+    const nodes = dialog.querySelectorAll<HTMLElement>(focusableSelector);
+
+    for (let i = 0; i < nodes.length; i++) {
+        const element = nodes[i];
+        if (element && element.offsetParent !== null) {
+            focusable.push(element);
+        }
+    }
 
     if (!focusable.length) {
         event.preventDefault();

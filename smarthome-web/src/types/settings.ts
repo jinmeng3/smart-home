@@ -90,6 +90,26 @@ export interface SettingsState {
 
 export type HouseholdRole = 'admin' | 'member'
 
+// ── 表单与展示类型 (原 types/account.ts) ─────────────────────────────────────
+
+export interface AccountForm {
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  householdName: string;
+  address: string;
+  timezone: string;
+}
+
+/** 成员列表展示用的轻量类型，与 HouseholdMember 字段对应 */
+export interface FamilyMember {
+  id: number;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  role: HouseholdRole;
+}
+
 export interface HouseholdMember {
   membershipId: number
   userId: number

@@ -2,7 +2,7 @@
 import { computed, ref } from "vue";
 import { ElButton, ElMessage } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import type { FamilyMember, MemberRole } from "../../types/account";
+import type { FamilyMember, HouseholdRole } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import MemberListItem from "./MemberListItem.vue";
 
@@ -16,13 +16,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    addMember: [email: string, role: MemberRole];
+    addMember: [email: string, role: HouseholdRole];
     removeMember: [id: number];
-    updateMemberRole: [id: number, role: MemberRole];
+    updateMemberRole: [id: number, role: HouseholdRole];
 }>();
 
 const memberEmail = ref("");
-const memberRole = ref<MemberRole>("member");
+const memberRole = ref<HouseholdRole>("member");
 const dialogVisible = ref(false);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -67,7 +67,7 @@ const canRemove = (member: FamilyMember) => {
     return member.role === "member";
 };
 
-const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
+const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
     if (!props.canManage) {
         ElMessage.warning(readonlyMessage.value);
         return;

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { listSceneTemplates } from "../../services/scenes";
+import { fetchSceneTemplates } from "../../api/scenes";
 import type { SceneTemplate } from "../../types/scene";
 
 const model = defineModel<boolean>({ required: true });
@@ -47,7 +47,7 @@ const loadTemplates = async () => {
     loading.value = true;
     loadError.value = "";
     try {
-        sceneTemplates.value = await listSceneTemplates();
+        sceneTemplates.value = await fetchSceneTemplates(keyword.value, activeCategory.value);
         selectedId.value = sceneTemplates.value[0]?.id ?? "";
     } catch (error) {
         loadError.value =

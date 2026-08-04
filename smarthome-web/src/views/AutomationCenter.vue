@@ -6,71 +6,9 @@ import type { AutomationDialog } from "../components/automation/AutomationDialog
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
-import "element-plus/theme-chalk/el-message.css";
+import { automationRules, type AutomationRule } from "../mock/automations";
 
-interface AutomationRule {
-    id: number;
-    name: string;
-    description: string;
-    trigger: string;
-    devices: number;
-    icon: string;
-    tone: string;
-    enabled: boolean;
-}
-
-const automations = ref<AutomationRule[]>([
-    {
-        id: 1,
-        name: "回家联动",
-        description: "位置触发 · 到达家半径 100m 内",
-        trigger: "位置触发",
-        devices: 6,
-        icon: "home",
-        tone: "blue",
-        enabled: true,
-    },
-    {
-        id: 2,
-        name: "睡眠模式自动化",
-        description: "时间触发 · 22:30 每天",
-        trigger: "时间触发",
-        devices: 5,
-        icon: "clock",
-        tone: "purple",
-        enabled: true,
-    },
-    {
-        id: 3,
-        name: "离家安防联动",
-        description: "位置触发 · 离开家 200m 外",
-        trigger: "位置触发",
-        devices: 7,
-        icon: "security",
-        tone: "green",
-        enabled: true,
-    },
-    {
-        id: 4,
-        name: "空调节能联动",
-        description: "设备状态 · 温度高于 28°C",
-        trigger: "设备状态",
-        devices: 4,
-        icon: "air-conditioner",
-        tone: "blue",
-        enabled: false,
-    },
-    {
-        id: 5,
-        name: "晨间唤醒联动",
-        description: "时间触发 · 07:00 工作日",
-        trigger: "时间触发",
-        devices: 6,
-        icon: "illumination",
-        tone: "orange",
-        enabled: false,
-    },
-]);
+const automations = ref<AutomationRule[]>(automationRules);
 const selectedId = ref(1);
 const query = ref("");
 const triggerFilter = ref("");
@@ -408,12 +346,7 @@ const batchEnable = (ids: number[]) => {
 
 <style scoped>
 .page-shell {
-    min-width: 0;
     overflow: auto;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
-    box-shadow: var(--shadow-soft);
 }
 .automation {
     display: flex;
@@ -425,11 +358,11 @@ const batchEnable = (ids: number[]) => {
     display: flex;
     align-items: center;
     gap: 7px;
-    border: 1px solid #dce5f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 9px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 0 11px;
-    color: #8ca0b5;
+    color: var(--color-text-tertiary);
 }
 .filters input {
     min-width: 0;
@@ -452,20 +385,25 @@ const batchEnable = (ids: number[]) => {
 .filters select,
 .filters button {
     height: 42px;
-    border: 1px solid #dce5f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 0 12px;
     font-size: 13px;
     font-weight: 800;
+}
+
+.filters select option {
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
 }
 .filters select {
     width: 112px;
 }
 .filters .primary,
 .primary {
-    border-color: #1769ff;
-    background: #1769ff;
+    border-color: var(--color-primary-600);
+    background: var(--color-primary-600);
     color: #fff;
 }
 .stats {
@@ -484,24 +422,24 @@ const batchEnable = (ids: number[]) => {
     border-radius: 50%;
 }
 .blue {
-    background: #e7f1ff;
-    color: #2270f5;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 .green {
-    background: #e6f8ed;
-    color: #1db267;
+    background: var(--color-success-soft);
+    color: var(--color-success);
 }
 .purple {
-    background: #eee8ff;
-    color: #7451ed;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
 }
 .orange {
-    background: #fff0d9;
-    color: #ff8b12;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .red {
-    background: #ffe5e5;
-    color: #ef4149;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .cards {
@@ -511,15 +449,15 @@ const batchEnable = (ids: number[]) => {
 }
 .cards article {
     min-width: 0;
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 13px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 13px;
     cursor: pointer;
 }
 .cards article.selected {
-    border: 1.5px solid #2a70ff;
-    box-shadow: 0 6px 18px #216cff15;
+    border: 1.5px solid var(--color-primary-600);
+    box-shadow: 0 0 0 1px var(--color-primary-200);
 }
 .cards header {
     display: flex;
@@ -546,16 +484,16 @@ const batchEnable = (ids: number[]) => {
 .cards header em {
     width: max-content;
     border-radius: 5px;
-    background: #e7f9ee;
+    background: var(--color-success-soft);
     padding: 3px 7px;
-    color: #18a85f;
+    color: var(--color-success);
     font-size: 11px;
     font-style: normal;
 }
 .cards header small {
     grid-column: span 2;
     overflow: hidden;
-    color: #7d8ca2;
+    color: var(--color-text-tertiary);
     font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -572,37 +510,33 @@ const batchEnable = (ids: number[]) => {
     height: 30px;
     place-items: center;
     border-radius: 6px;
-    background: #edf4ff;
-    color: #2873f3;
-}
-.devices i.dev-light {
-    background: var(--tone-orange-soft);
-    color: var(--tone-orange);
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 .devices i.dev-curtain {
-    background: #e0f5f6;
-    color: #0d9488;
+    background: var(--tone-teal-soft);
+    color: var(--tone-teal);
 }
 .devices i.dev-temp {
-    background: #e9f2ff;
-    color: #2871f5;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 .devices span {
-    color: #74839a;
+    color: var(--color-text-tertiary);
     font-size: 12px;
 }
 .cards footer {
     display: flex;
     gap: 8px;
-    border-top: 1px solid #edf1f6;
+    border-top: 1px solid var(--color-border-subtle);
     padding-top: 10px;
 }
 .cards footer > button {
     height: 34px;
-    border: 1px solid #dce5f2;
+    border: 1px solid var(--color-border-default);
     border-radius: 6px;
     padding: 0 10px;
-    color: #2569e9;
+    color: var(--color-primary-600);
     font-size: 13px;
     font-weight: 900;
 }
@@ -617,7 +551,7 @@ const batchEnable = (ids: number[]) => {
     width: 40px;
     height: 23px;
     border-radius: 20px;
-    background: #cad4e2;
+    background: var(--color-border-strong);
     padding: 2px;
 }
 .switch span:after {
@@ -630,15 +564,15 @@ const batchEnable = (ids: number[]) => {
     transition: 0.2s;
 }
 .switch input:checked + span {
-    background: #1769ff;
+    background: var(--color-primary-600);
 }
 .switch input:checked + span:after {
     transform: translateX(17px);
 }
 .panel {
-    border: 1px solid #e1e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 14px;
-    background: #fff;
+    background: var(--color-card-bg);
     padding: 14px;
 }
 .panel h2 {
@@ -651,7 +585,7 @@ const batchEnable = (ids: number[]) => {
 }
 .panel a,
 .link {
-    color: #246cf0 !important;
+    color: var(--color-primary-600) !important;
     font-size: 12px;
     font-weight: 800;
     cursor: pointer;
@@ -680,31 +614,31 @@ const batchEnable = (ids: number[]) => {
     height: 42px;
     place-items: center;
     border-radius: 14px;
-    background: #edf4ff;
-    color: #2872f2;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 .steps i.is-blue {
-    background: #e9f2ff;
-    color: #2871f5;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 .steps i.is-orange {
     background: var(--tone-orange-soft);
     color: var(--tone-orange);
 }
 .steps i.is-teal {
-    background: #e0f5f6;
-    color: #0d9488;
+    background: var(--tone-teal-soft);
+    color: var(--tone-teal);
 }
 .steps i.is-purple {
-    background: #eee9ff;
-    color: #7651ee;
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
 }
 .steps b {
     margin-top: 8px;
     font-size: 12px;
 }
 .steps small {
-    color: #7f8da1;
+    color: var(--color-text-tertiary);
     font-size: 11px;
     white-space: nowrap;
 }
@@ -712,12 +646,12 @@ const batchEnable = (ids: number[]) => {
     position: absolute;
     top: 13px;
     right: -5px;
-    color: #3c79ee;
+    color: var(--color-primary-600);
     font-size: 22px;
     font-style: normal;
 }
 .records {
-    border-left: 1px solid #e6ebf2;
+    border-left: 1px solid var(--color-border-subtle);
     padding-left: 14px;
 }
 .records h3 {
@@ -728,16 +662,16 @@ const batchEnable = (ids: number[]) => {
     grid-template-columns: 82px 1fr 52px 34px;
     gap: 5px;
     padding: 7px 0;
-    border-bottom: 1px solid #edf1f6;
+    border-bottom: 1px solid var(--color-border-subtle);
     font-size: 11px;
 }
 .records time,
 .records em {
-    color: #738198;
+    color: var(--color-text-tertiary);
     font-style: normal;
 }
 .records b {
-    color: #19a860;
+    color: var(--color-success);
 }
 .right {
     display: flex;
@@ -763,15 +697,15 @@ const batchEnable = (ids: number[]) => {
     width: max-content;
     margin-left: 8px;
     border-radius: 5px;
-    background: #e6f8ed;
+    background: var(--color-success-soft);
     padding: 2px 6px;
-    color: #19aa61;
+    color: var(--color-success);
     font-size: 12px;
     font-style: normal;
 }
 .detail-title p {
     grid-column: span 2;
-    color: #7c8aa0;
+    color: var(--color-text-tertiary);
     font-size: 12px;
 }
 .detail dl div {
@@ -781,10 +715,10 @@ const batchEnable = (ids: number[]) => {
     font-size: 12px;
 }
 .detail dt {
-    color: #7d8ba0;
+    color: var(--color-text-tertiary);
 }
 .detail dd {
-    color: #53657e;
+    color: var(--color-text-secondary);
 }
 .detail footer {
     display: grid;
@@ -794,7 +728,7 @@ const batchEnable = (ids: number[]) => {
 }
 .detail footer button {
     height: 40px;
-    border: 1px solid #dce5f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 7px;
     font-size: 13px;
     font-weight: 900;
@@ -810,7 +744,7 @@ const batchEnable = (ids: number[]) => {
     min-height: 62px;
     grid-template-columns: 28px 1fr;
     align-items: center;
-    border: 1px solid #e2e8f1;
+    border: 1px solid var(--color-border-default);
     border-radius: 8px;
     padding: 10px;
     text-align: left;
@@ -819,22 +753,22 @@ const batchEnable = (ids: number[]) => {
 }
 .quick svg {
     grid-row: span 2;
-    color: #3075ef;
+    color: var(--color-primary-600);
 }
 .quick button.tone-blue svg {
-    color: #2873f5;
+    color: var(--color-primary-600);
 }
 .quick button.tone-purple svg {
-    color: #7651ee;
+    color: var(--tone-purple);
 }
 .quick button.tone-teal svg {
-    color: #0d9488;
+    color: var(--tone-teal);
 }
 .quick button.tone-orange svg {
     color: var(--tone-orange);
 }
 .quick small {
-    color: #8492a6;
+    color: var(--color-text-tertiary);
     font-size: 11px;
     font-weight: 500;
 }
@@ -857,16 +791,16 @@ const batchEnable = (ids: number[]) => {
 }
 .templates p small {
     overflow: hidden;
-    color: #8492a7;
+    color: var(--color-text-tertiary);
     font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .templates p button {
-    border: 1px solid #d5e2f8;
+    border: 1px solid var(--color-border-default);
     border-radius: 6px;
     padding: 5px 10px;
-    color: #226be9;
+    color: var(--color-primary-600);
     font-size: 12px;
     font-weight: 900;
 }
@@ -890,7 +824,7 @@ const batchEnable = (ids: number[]) => {
     }
     .records {
         border: 0;
-        border-top: 1px solid #e6ebf2;
+        border-top: 1px solid var(--color-border-subtle);
         padding: 10px 0 0;
     }
 }

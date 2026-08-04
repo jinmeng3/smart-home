@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
-import type { Automation } from "../../types/automation";
+import type { Automation } from "../../types/device";
 import BaseSwitch from "../BaseSwitch.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 

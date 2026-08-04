@@ -91,6 +91,19 @@ export interface DashboardDevice {
   image?: string;
 }
 
+// ── 自动化相关 ────────────────────────────────────────────────────────────────
+
+/** 自动化规则（用于仪表盘展示） */
+export interface Automation {
+  id: string;
+  name: string;
+  trigger: string;
+  actions: string[];
+  enabled: boolean;
+  time: string;
+  description: string;
+}
+
 export interface DeviceSummary {
   online: number;
   offline: number;

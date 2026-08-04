@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { statusColorMap } from "../../constants/status-colors";
-import type { DeviceStatus } from "../../types/animation";
-import type { SemanticStatus } from "../../types/theme";
+import type { DeviceStatus } from "../../types/device";
+import type { SemanticStatus } from "../../constants/status-colors";
 
 const props = defineProps<{
     status: DeviceStatus;

@@ -1,4 +1,5 @@
-import type { DeviceCategory } from "../types/theme";
+export type DeviceCategory =
+  "light" | "climate" | "lock" | "camera" | "energy" | "air";
 
 export const deviceColorMap: Record<DeviceCategory, string> = {
   light: "text-[var(--color-device-light)]",
