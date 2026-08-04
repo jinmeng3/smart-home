@@ -404,7 +404,7 @@ const removeMember = async (membershipId: number) => {
             <div
                 class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
             >
-                <div class="settings-card-grid grid grid-cols-2 gap-4">
+                <div class="settings-card-grid card-grid-enter grid grid-cols-2 gap-4">
                     <AccountFamilyCard
                         :dirty="accountDirty"
                         :form="accountForm"
@@ -497,45 +497,5 @@ const removeMember = async (membershipId: number) => {
     overscroll-behavior: contain;
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
-}
-
-.settings-card-grid > * {
-    animation: settings-card-enter 360ms var(--motion-ease) both;
-}
-
-.settings-card-grid > :nth-child(1) {
-    animation-delay: 40ms;
-}
-.settings-card-grid > :nth-child(2) {
-    animation-delay: 90ms;
-}
-.settings-card-grid > :nth-child(3) {
-    animation-delay: 140ms;
-}
-.settings-card-grid > :nth-child(4) {
-    animation-delay: 190ms;
-}
-.settings-card-grid > :nth-child(5) {
-    animation-delay: 240ms;
-}
-.settings-card-grid > :nth-child(6) {
-    animation-delay: 290ms;
-}
-.settings-card-grid > :nth-child(7) {
-    animation-delay: 340ms;
-}
-.settings-card-grid > :nth-child(8) {
-    animation-delay: 390ms;
-}
-
-@keyframes settings-card-enter {
-    from {
-        opacity: 0;
-        transform: translateY(14px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 </style>

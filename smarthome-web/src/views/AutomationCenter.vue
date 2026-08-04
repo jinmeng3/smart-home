@@ -153,7 +153,7 @@ const batchEnable = (ids: number[]) => {
                     <SvgIcon name="upload" size="sm" />导入规则
                 </button>
             </div>
-            <section class="stats">
+            <section class="stats card-grid-enter">
                 <StatsCard
                     icon="check-circle"
                     label="已启用规则"
@@ -183,7 +183,7 @@ const batchEnable = (ids: number[]) => {
                     tone="red"
                 />
             </section>
-            <section class="cards">
+            <section class="cards card-grid-enter">
                 <article
                     v-for="item in visible"
                     :key="item.id"

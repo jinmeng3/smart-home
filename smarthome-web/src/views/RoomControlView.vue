@@ -166,7 +166,7 @@ onMounted(() => void load());
                 :comfort-score="comfort"
             />
 
-            <section class="room-grid">
+            <section class="room-grid card-grid-enter">
                 <RoomCard
                     v-for="room in visibleRooms"
                     :key="room.id"

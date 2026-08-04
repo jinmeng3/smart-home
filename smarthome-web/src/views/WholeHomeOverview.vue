@@ -100,7 +100,7 @@ const handleRoomCreated = (name: string) => {
                         placeholder="搜索设备、场景或房间"
                 /></label>
             </PageHeader>
-            <section class="stats">
+            <section class="stats card-grid-enter">
                 <StatsCard
                     icon="online-device"
                     label="在线设备总数"
@@ -176,7 +176,7 @@ const handleRoomCreated = (name: string) => {
                     <h2>房间概览</h2>
                     <a>查看房间分布 ›</a>
                 </header>
-                <div class="room-grid">
+                <div class="room-grid card-grid-enter">
                     <article v-for="room in rooms" :key="room.name">
                         <div class="room-title">
                             <i :class="room.tone"
