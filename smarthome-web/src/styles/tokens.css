@@ -64,10 +64,30 @@
     --color-ai-soft: var(--color-primary-50);
     --color-ai-border: var(--color-primary-200);
 
+    /* Unified accent tone palette — single source of truth for colorful accents */
+    --tone-primary: var(--color-primary-700);
+    --tone-primary-soft: var(--color-primary-100);
+    --tone-teal: var(--color-teal-600);
+    --tone-teal-soft: var(--color-teal-soft);
+    --tone-success: var(--color-success);
+    --tone-success-soft: var(--color-success-soft);
+    --tone-warning: var(--color-warning);
+    --tone-warning-soft: var(--color-warning-soft);
+    --tone-danger: var(--color-danger);
+    --tone-danger-soft: var(--color-danger-soft);
+    --tone-info: var(--color-info);
+    --tone-info-soft: var(--color-info-soft);
+    --tone-purple: #8b5cf6;
+    --tone-purple-soft: color-mix(in srgb, #8b5cf6 14%, transparent);
+    --tone-indigo: #6366f1;
+    --tone-indigo-soft: color-mix(in srgb, #6366f1 14%, transparent);
+    --tone-orange: #ff8a1f;
+    --tone-orange-soft: color-mix(in srgb, #ff8a1f 14%, transparent);
+
     --color-scene-home: var(--color-primary-600);
     --color-scene-home-soft: var(--color-primary-50);
-    --color-scene-sleep: #6366f1;
-    --color-scene-sleep-soft: #eef2ff;
+    --color-scene-sleep: var(--tone-indigo);
+    --color-scene-sleep-soft: var(--tone-indigo-soft);
     --color-scene-energy: var(--color-teal-600);
     --color-scene-energy-soft: var(--color-teal-soft);
     --color-scene-security: #334155;
@@ -77,6 +97,7 @@
     --color-device-climate: #0ea5e9;
     --color-device-lock: #64748b;
     --color-device-camera: #7c3aed;
+    --color-device-camera-soft: #f3e8ff;
     --color-device-energy: #10b981;
     --color-device-air: #22c55e;
 
@@ -161,6 +182,7 @@
     --color-device-climate: #38bdf8;
     --color-device-lock: #a78bfa;
     --color-device-camera: #8b5cf6;
+    --color-device-camera-soft: rgba(139, 92, 246, 0.14);
     --color-device-energy: #22c55e;
     --color-device-air: #4ade80;
 

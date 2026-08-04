@@ -22,12 +22,12 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-    { icon: "chat", label: "智能对话", path: "/", tone: "#8b5cf6", soft: "rgba(139, 92, 246, 0.14)" },
+    { icon: "chat", label: "智能对话", path: "/", tone: "var(--tone-purple)", soft: "var(--tone-purple-soft)" },
     { icon: "home", label: "全屋总览", path: "/overview", tone: "var(--color-primary-600)", soft: "var(--color-primary-50)" },
     { icon: "room", label: "房间控制", path: "/rooms", tone: "var(--color-teal-600)", soft: "var(--color-teal-soft)" },
     { icon: "device-management", label: "设备管理", path: "/devices", tone: "var(--color-device-light)", soft: "var(--color-warning-soft)" },
     { icon: "scene", label: "场景模式", path: "/scenes", tone: "var(--color-success)", soft: "var(--color-success-soft)" },
-    { icon: "automation", label: "自动化", path: "/automations", tone: "var(--color-scene-sleep)", soft: "#eef2ff" },
+    { icon: "automation", label: "自动化", path: "/automations", tone: "var(--tone-indigo)", soft: "var(--tone-indigo-soft)" },
     { icon: "settings", label: "设置", path: "/settings", tone: "var(--color-info)", soft: "var(--color-info-soft)" },
 ];
 

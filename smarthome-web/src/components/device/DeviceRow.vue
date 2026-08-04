@@ -145,7 +145,7 @@ defineEmits<{
     color: var(--color-device-lock);
 }
 .device-thumb.is-camera {
-    background: #f3e8ff;
+    background: var(--color-device-camera-soft);
     color: var(--color-device-camera);
 }
 .device-thumb.is-sensor {

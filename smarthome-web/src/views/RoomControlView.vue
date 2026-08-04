@@ -167,15 +167,18 @@ onMounted(() => void load());
             />
 
             <section class="room-grid card-grid-enter">
-                <RoomCard
-                    v-for="room in visibleRooms"
-                    :key="room.id"
-                    :room="room"
-                    :selected="selected?.id === room.id"
-                    :devices="commonDevices"
-                    @select="selectRoom"
-                    @toggle="toggleDevice"
-                />
+                <div class="room-scroll" v-if="visibleRooms.length">
+                    <RoomCard
+                        v-for="room in visibleRooms"
+                        :key="room.id"
+                        :room="room"
+                        :selected="selected?.id === room.id"
+                        :devices="commonDevices"
+                        @select="selectRoom"
+                        @toggle="toggleDevice"
+                    />
+                </div>
+                <p v-else class="room-empty">暂无匹配的房间</p>
             </section>
 
             <RoomControlPanel
@@ -231,9 +234,53 @@ onMounted(() => void load());
 .primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--color-primary-600) !important; color: white !important; }
 .page-tools .primary { height: 38px; padding: 0 14px; font-size: 12px; font-weight: 800; }
 
-.room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.room-grid {
+    position: relative;
+}
+.room-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+}
+.room-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+.room-scroll::-webkit-scrollbar-track {
+    border-radius: 2px;
+    background: var(--color-surface-subtle);
+}
+.room-scroll::-webkit-scrollbar-thumb {
+    border-radius: 2px;
+    background: var(--color-border-strong);
+}
+.room-scroll > * {
+    min-width: calc(33.333% - 8px);
+    scroll-snap-align: start;
+}
+.room-empty {
+    display: grid;
+    min-height: 120px;
+    place-items: center;
+    border: 1px dashed var(--color-border-strong);
+    border-radius: 14px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 800;
+}
 
 @media (max-width: 1450px) {
     .page-header { display: grid; }
+    .room-scroll > * {
+        min-width: calc(50% - 6px);
+    }
+}
+
+@media (max-width: 900px) {
+    .room-scroll > * {
+        min-width: calc(100% - 0px);
+    }
 }
 </style>

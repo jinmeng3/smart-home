@@ -111,7 +111,7 @@ const statusLabel = (device: DashboardDevice) =>
 }
 
 .device-icon.is-camera {
-    background: #f3e8ff;
+    background: var(--color-device-camera-soft);
     color: var(--color-device-camera);
 }
 

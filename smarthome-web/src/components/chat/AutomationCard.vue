@@ -83,7 +83,7 @@ const automationMeta = computed(() => {
 }
 
 .automation-icon.is-purple {
-    background: #f3e8ff;
+    background: var(--color-device-camera-soft);
     color: var(--color-device-camera);
 }
 

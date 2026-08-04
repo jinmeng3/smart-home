@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
@@ -64,8 +64,59 @@ const rooms = shallowRef([
     },
 ]);
 const selectedTab = ref("常用设备");
+const searchKeyword = ref("");
 const refreshed = ref("5 分钟前");
 const activeDialog = ref<OverviewDialog>(null);
+
+interface OverviewDevice {
+    id: number;
+    name: string;
+    room: string;
+    status: "在线" | "离线";
+    detail: string;
+    updatedAt: string;
+    icon: string;
+    tone: string;
+    frequent: boolean;
+    favorite: boolean;
+}
+
+const devices = ref<OverviewDevice[]>([
+    { id: 1, name: "客厅吸顶灯", room: "客厅", status: "在线", detail: "亮度 80%", updatedAt: "10:15", icon: "light", tone: "orange", frequent: true, favorite: true },
+    { id: 2, name: "客厅空调", room: "客厅", status: "在线", detail: "26°C 制冷", updatedAt: "10:15", icon: "air-conditioner", tone: "blue", frequent: true, favorite: true },
+    { id: 3, name: "主卧空调", room: "主卧", status: "在线", detail: "26°C 制冷", updatedAt: "10:14", icon: "air-conditioner", tone: "blue", frequent: true, favorite: false },
+    { id: 4, name: "智能门锁", room: "玄关", status: "在线", detail: "已上锁", updatedAt: "10:13", icon: "lock", tone: "purple", frequent: true, favorite: true },
+    { id: 5, name: "空气净化器", room: "客厅", status: "在线", detail: "自动模式", updatedAt: "10:12", icon: "sensor", tone: "green", frequent: true, favorite: false },
+    { id: 6, name: "厨房烟感", room: "厨房", status: "在线", detail: "电量 18% · 告警", updatedAt: "10:10", icon: "notification", tone: "orange", frequent: false, favorite: false },
+    { id: 7, name: "阳台门磁", room: "阳台", status: "在线", detail: "已关闭", updatedAt: "10:09", icon: "security", tone: "green", frequent: false, favorite: false },
+    { id: 8, name: "客厅摄像头", room: "客厅", status: "离线", detail: "连接中断", updatedAt: "09:58", icon: "camera", tone: "purple", frequent: false, favorite: false },
+]);
+
+const visibleDevices = computed(() => {
+    const keyword = searchKeyword.value.trim().toLocaleLowerCase();
+
+    return devices.value.filter((device) => {
+        const matchesTab =
+            selectedTab.value === "全部设备" ||
+            (selectedTab.value === "常用设备" && device.frequent) ||
+            (selectedTab.value === "收藏设备" && device.favorite);
+        const matchesKeyword =
+            !keyword ||
+            [device.name, device.room, device.status, device.detail].some(
+                (value) => value.toLocaleLowerCase().includes(keyword),
+            );
+
+        return matchesTab && matchesKeyword;
+    });
+});
+
+const toggleFavorite = (deviceId: number) => {
+    devices.value = devices.value.map((device) =>
+        device.id === deviceId
+            ? { ...device, favorite: !device.favorite }
+            : device,
+    );
+};
 
 const openDialog = (dialog: Exclude<OverviewDialog, null>) => {
     activeDialog.value = dialog;
@@ -97,6 +148,7 @@ const handleRoomCreated = (name: string) => {
             <PageHeader title="全屋总览" description="查看家庭运行状态、房间分布与设备总览">
                 <label class="search"
                     ><SvgIcon name="search" size="sm" /><input
+                        v-model="searchKeyword"
                         placeholder="搜索设备、场景或房间"
                 /></label>
             </PageHeader>
@@ -132,7 +184,7 @@ const handleRoomCreated = (name: string) => {
                 />
             </section>
             <section class="panel home-status">
-                <h2>家庭概况</h2>
+
                 <div class="status-row">
                     <div>
                         <i class="green"><SvgIcon name="security" /></i
@@ -223,72 +275,41 @@ const handleRoomCreated = (name: string) => {
                                 <th>状态</th>
                                 <th>状态信息</th>
                                 <th>更新时间</th>
+                                <th>收藏</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr
-                                v-for="row in [
-                                    [
-                                        '客厅吸顶灯',
-                                        '客厅',
-                                        '在线',
-                                        '亮度 80%',
-                                        '10:15',
-                                        'light',
-                                        'orange',
-                                    ],
-                                    [
-                                        '客厅空调',
-                                        '客厅',
-                                        '在线',
-                                        '26°C 制冷',
-                                        '10:15',
-                                        'air-conditioner',
-                                        'blue',
-                                    ],
-                                    [
-                                        '主卧空调',
-                                        '主卧',
-                                        '在线',
-                                        '26°C 制冷',
-                                        '10:14',
-                                        'air-conditioner',
-                                        'blue',
-                                    ],
-                                    [
-                                        '智能门锁',
-                                        '玄关',
-                                        '在线',
-                                        '已上锁',
-                                        '10:13',
-                                        'lock',
-                                        'purple',
-                                    ],
-                                    [
-                                        '空气净化器',
-                                        '客厅',
-                                        '在线',
-                                        '自动模式',
-                                        '10:12',
-                                        'sensor',
-                                        'green',
-                                    ],
-                                ]"
-                                :key="row[0]"
+                                v-for="device in visibleDevices.slice(0, 5)"
+                                :key="device.id"
                             >
                                 <td class="device-cell">
-                                    <i :class="row[6]"
-                                        ><SvgIcon :name="row[5]" size="sm" /></i
-                                    ><span>{{ row[0] }}</span>
+                                    <i :class="device.tone"
+                                        ><SvgIcon :name="device.icon" size="sm" /></i
+                                    ><span>{{ device.name }}</span>
                                 </td>
-                                <td>{{ row[1] }}</td>
-                                <td class="online">● {{ row[2] }}</td>
-                                <td>{{ row[3] }}</td>
-                                <td>{{ row[4] }}</td>
+                                <td>{{ device.room }}</td>
+                                <td :class="device.status === '在线' ? 'online' : 'offline'">● {{ device.status }}</td>
+                                <td>{{ device.detail }}</td>
+                                <td>{{ device.updatedAt }}</td>
+                                <td>
+                                    <button
+                                        class="favorite"
+                                        :class="{ active: device.favorite }"
+                                        :aria-label="device.favorite ? `取消收藏${device.name}` : `收藏${device.name}`"
+                                        type="button"
+                                        @click="toggleFavorite(device.id)"
+                                    >{{ device.favorite ? "★" : "☆" }}</button>
+                                </td>
+                            </tr>
+                            <tr v-if="visibleDevices.length === 0">
+                                <td class="device-empty" colspan="6">没有符合条件的设备</td>
                             </tr>
                         </tbody>
                     </table>
-                    <button class="view-all">查看全部设备（28）⌄</button>
+                    <button class="view-all" type="button" @click="openDialog('devices')">
+                        查看全部设备（{{ devices.length }}）⌄
+                    </button>
                 </section>
                 <section class="panel activity">
                     <header>
@@ -349,46 +370,69 @@ const handleRoomCreated = (name: string) => {
         <aside class="right page-shell">
             <section class="panel">
                 <header>
-                    <h2>家庭日程 / 自动化计划</h2>
+                    <h2 class="schedule-title">
+                        <span class="tone-chip is-orange">
+                            <SvgIcon name="calendar" size="sm" />
+                        </span>
+                        家庭日程
+                        <small>/ 自动化计划</small>
+                    </h2>
                     <a role="button" tabindex="0" @click="openDialog('schedule')">更多</a>
                 </header>
-                <h3 class="date">‹　2025年5月20日 星期二　›</h3>
-                <div
-                    class="schedule"
-                    v-for="item in [
-                        [
-                            '07:00',
-                            '起床模式',
-                            '窗帘打开 · 卧室灯亮 · 空调制热 24°C',
-                            'orange',
-                        ],
-                        [
-                            '19:00',
-                            '回家模式',
-                            '玄关灯亮 · 空调制冷 26°C · 新风开启',
-                            'blue',
-                        ],
-                        [
-                            '22:00',
-                            '离家模式',
-                            '关闭灯光 · 安防布防 · 监控夜视',
-                            'purple',
-                        ],
-                        [
-                            '23:00',
-                            '睡眠模式',
-                            '灯光渐暗 · 窗帘关闭 · 安防设防',
-                            'teal',
-                        ],
-                    ]"
-                    :key="item[0]"
-                >
-                    <time>{{ item[0] }}</time
-                    ><span :class="item[3]"
-                        ><b>{{ item[1] }}</b
-                        ><small>{{ item[2] }}</small></span
-                    >
+                <div class="date-nav">
+                    <button class="date-arrow" type="button" aria-label="上一个日期">
+                        <SvgIcon name="chevron-left" size="sm" />
+                    </button>
+                    <div class="date-info">
+                        <strong>5月20日 星期二</strong>
+                        <span class="today-badge"><i></i>今天</span>
+                    </div>
+                    <button class="date-arrow" type="button" aria-label="下一个日期">
+                        <SvgIcon name="chevron-right" size="sm" />
+                    </button>
                 </div>
+                <div class="schedule-list">
+                    <article
+                        v-for="item in [
+                            [
+                                '07:00',
+                                '起床模式',
+                                '窗帘打开 · 卧室灯亮 · 空调制热 24°C',
+                                'orange',
+                            ],
+                            [
+                                '19:00',
+                                '回家模式',
+                                '玄关灯亮 · 空调制冷 26°C · 新风开启',
+                                'blue',
+                            ],
+                            [
+                                '22:00',
+                                '离家模式',
+                                '关闭灯光 · 安防布防 · 监控夜视',
+                                'purple',
+                            ],
+                            [
+                                '23:00',
+                                '睡眠模式',
+                                '灯光渐暗 · 窗帘关闭 · 安防设防',
+                                'teal',
+                            ],
+                        ]"
+                        :key="item[0]"
+                        :class="`is-${item[3]}`"
+                    >
+                        <time class="schedule-time">{{ item[0] }}</time>
+                        <span class="timeline-node" aria-hidden="true"></span>
+                        <div class="schedule-body">
+                            <b>{{ item[1] }}</b>
+                            <small>{{ item[2] }}</small>
+                        </div>
+                    </article>
+                </div>
+                <p class="schedule-summary">
+                    今日计划 <b>4</b> 个 · 已开启 <b>3</b> 个
+                </p>
             </section>
             <section class="panel">
                 <header>
@@ -450,7 +494,8 @@ const handleRoomCreated = (name: string) => {
 <style scoped>
 .page-shell {
     min-width: 0;
-    overflow: auto;
+    height: 100%;
+    overflow: hidden;
     border: 1px solid var(--color-border);
     border-radius: 18px;
     background: var(--color-page-bg);
@@ -502,8 +547,8 @@ const handleRoomCreated = (name: string) => {
     color: #20b86a;
 }
 .orange {
-    background: #fff0df;
-    color: #ff8a1f;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .purple {
     background: #eee9ff;
@@ -563,6 +608,23 @@ const handleRoomCreated = (name: string) => {
 .ok,
 .online {
     color: #17ad62 !important;
+}
+.offline {
+    color: var(--color-danger) !important;
+}
+.favorite {
+    color: var(--color-text-muted);
+    font-size: 18px;
+    line-height: 1;
+}
+.favorite:hover,
+.favorite.active {
+    color: var(--color-warning);
+}
+.device-empty {
+    height: 96px;
+    color: var(--color-text-tertiary) !important;
+    text-align: center !important;
 }
 .rooms {
     padding: 0;
@@ -686,8 +748,8 @@ const handleRoomCreated = (name: string) => {
     color: #20b86a;
 }
 .device-cell i.orange {
-    background: #fff0df;
-    color: #ff8a1f;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .device-cell i.purple {
     background: #eee9ff;
@@ -729,8 +791,8 @@ const handleRoomCreated = (name: string) => {
     color: #20b86a;
 }
 .activity i.orange {
-    background: #fff0df;
-    color: #ff8a1f;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .activity i.purple {
     background: #eee9ff;
@@ -757,44 +819,177 @@ const handleRoomCreated = (name: string) => {
 .right .panel {
     padding: 14px;
 }
-.date {
-    text-align: center;
-    margin: 12px 0;
-    font-size: 12px;
-}
-.schedule {
-    display: grid;
-    grid-template-columns: 52px 1fr;
-    gap: 8px;
-    margin: 11px 0;
-}
-.schedule time {
-    font-size: 11px;
-    font-weight: 900;
-}
-.schedule span {
+.schedule-title {
     display: flex;
-    flex-direction: column;
-    border-left: 3px solid #2875f4;
-    padding-left: 9px;
-    font-size: 11px;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
 }
-.schedule span.blue {
-    border-left-color: #2875f4;
-}
-.schedule span.orange {
-    border-left-color: #ff8a1f;
-}
-.schedule span.purple {
-    border-left-color: #7651ee;
-}
-.schedule span.teal {
-    border-left-color: #0d9488;
-}
-.schedule small {
-    margin-top: 4px;
+.schedule-title small {
     color: #7e8da3;
     font-size: 10px;
+    font-weight: 400;
+}
+.schedule-title .tone-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+.date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 12px 0 4px;
+}
+.date-arrow {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #e1e8f1;
+    border-radius: 7px;
+    background: #fff;
+    color: #41516a;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.date-arrow:hover {
+    border-color: var(--tone-primary);
+    color: var(--tone-primary);
+    background: #edf4ff;
+}
+.date-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.date-info strong {
+    color: #1c2a40;
+    font-size: 12px;
+}
+.today-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    background: #e7f9ee;
+    padding: 2px 8px;
+    color: #20b86a;
+    font-size: 10px;
+    font-weight: 700;
+}
+.today-badge i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #20b86a;
+}
+.schedule-list {
+    position: relative;
+    margin: 8px 0 2px;
+}
+.schedule-list::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: calc(52px + 8px + 5px);
+    width: 2px;
+    background: #e2e9f2;
+}
+.schedule-list article {
+    position: relative;
+    display: grid;
+    grid-template-columns: 52px 22px 1fr;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+.schedule-list article:hover {
+    background: #f7fafd;
+}
+.schedule-time {
+    padding-top: 2px;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: right;
+}
+.timeline-node {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #2875f4;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e9f2ff;
+}
+.schedule-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 1px;
+}
+.schedule-body b {
+    color: #26354c;
+    font-size: 12px;
+}
+.schedule-body small {
+    color: #7e8da3;
+    font-size: 10px;
+    line-height: 1.4;
+}
+.schedule-list article.is-orange .schedule-time {
+    color: var(--tone-orange);
+}
+.schedule-list article.is-orange .timeline-node {
+    background: var(--tone-orange);
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--tone-orange-soft);
+}
+.schedule-list article.is-blue .schedule-time {
+    color: #2871f5;
+}
+.schedule-list article.is-blue .timeline-node {
+    background: #2871f5;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e9f2ff;
+}
+.schedule-list article.is-purple .schedule-time {
+    color: #7651ee;
+}
+.schedule-list article.is-purple .timeline-node {
+    background: #7651ee;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #eee9ff;
+}
+.schedule-list article.is-teal .schedule-time {
+    color: #0d9488;
+}
+.schedule-list article.is-teal .timeline-node {
+    background: #0d9488;
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #e0f5f6;
+}
+.schedule-summary {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 6px;
+    border-top: 1px dashed #e2e9f2;
+    padding-top: 8px;
+    color: #7e8da3;
+    font-size: 10px;
+}
+.schedule-summary b {
+    color: var(--tone-primary);
+}
+.schedule-summary em {
+    color: #20b86a;
+    font-style: normal;
 }
 .device-count {
     display: grid;
@@ -868,7 +1063,7 @@ const handleRoomCreated = (name: string) => {
     color: #17ad62;
 }
 .quick button.tone-orange svg {
-    color: #ff8a1f;
+    color: var(--tone-orange);
 }
 .quick small {
     color: #8593a8;
@@ -957,16 +1152,14 @@ const handleRoomCreated = (name: string) => {
     padding: 14px 16px;
 }
 .room-grid {
-    display: flex;
-    grid-template-columns: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
-    overflow-x: auto;
+    overflow: hidden;
     padding: 0 14px 14px;
-    scrollbar-width: thin;
 }
 .room-grid article {
-    min-width: 235px;
-    flex: 1 0 235px;
+    min-width: 0;
     padding: 12px;
 }
 .room-title b {
@@ -1029,11 +1222,194 @@ const handleRoomCreated = (name: string) => {
 }
 @media (max-width: 1200px) {
     .room-grid {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .room-grid article {
-        min-width: 235px;
-        flex-basis: 235px;
+        min-width: 0;
+    }
+}
+
+/* Device overview uses larger type while keeping every column in bounds. */
+.device-list {
+    min-width: 0;
+    overflow: hidden;
+}
+.device-list nav {
+    flex-wrap: wrap;
+}
+.device-list nav h2 {
+    font-size: 16px;
+}
+.device-list nav button {
+    min-height: 34px;
+    padding: 6px 11px;
+    font-size: 13px;
+}
+.device-list table {
+    table-layout: fixed;
+    font-size: 13px;
+}
+.device-list th,
+.device-list td {
+    overflow: hidden;
+    padding: 8px 6px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.device-list th:nth-child(1) { width: 27%; }
+.device-list th:nth-child(2) { width: 13%; }
+.device-list th:nth-child(3) { width: 13%; }
+.device-list th:nth-child(4) { width: 21%; }
+.device-list th:nth-child(5) { width: 16%; }
+.device-list th:nth-child(6) { width: 10%; }
+.device-cell {
+    display: table-cell;
+    font-weight: 800;
+}
+.device-cell i {
+    display: inline-grid;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.device-cell span {
+    vertical-align: middle;
+}
+.device-list .view-all {
+    height: 34px;
+    font-size: 13px;
+}
+
+@media (max-width: 760px) {
+    .device-list nav h2 {
+        width: 100%;
+    }
+    .device-list nav button {
+        flex: 1;
+        padding-right: 6px;
+        padding-left: 6px;
+        font-size: 12px;
+    }
+    .device-list table {
+        font-size: 12px;
+    }
+    .device-list th,
+    .device-list td {
+        padding-right: 4px;
+        padding-left: 4px;
+    }
+    .device-cell i {
+        display: none;
+    }
+}
+
+/* Keep the dashboard inside the application viewport without page scrolling. */
+.overview {
+    display: grid;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+    gap: 8px;
+    padding: 12px;
+}
+.overview .stats article {
+    min-height: 76px;
+    padding: 11px 13px;
+}
+.overview .stats i {
+    width: 42px;
+    height: 42px;
+}
+.overview .stats strong {
+    font-size: 21px;
+}
+.home-status {
+    padding: 10px 12px;
+}
+.home-status .status-row {
+    gap: 8px;
+    margin-top: 7px;
+}
+.room-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+    padding: 0 10px 10px;
+}
+.rooms header {
+    padding: 9px 12px;
+}
+.room-grid article {
+    padding: 8px;
+}
+.room-devices {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    margin: 5px 0;
+}
+.room-devices span {
+    display: grid;
+    grid-template-columns: 18px 38px minmax(0, 1fr);
+    align-items: center;
+}
+.room-devices small,
+.room-devices b {
+    display: inline;
+}
+.bottom-grid {
+    min-height: 0;
+    overflow: hidden;
+}
+.bottom-grid > .panel {
+    min-height: 0;
+    overflow: hidden;
+}
+.right {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    height: 100%;
+    min-height: 0;
+    gap: 8px;
+    overflow: hidden;
+    padding: 10px;
+}
+.right .panel {
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px;
+}
+.schedule-list article {
+    padding: 5px 0;
+}
+.quick {
+    gap: 6px;
+    margin-top: 8px;
+}
+.quick button {
+    min-height: 48px;
+    padding: 6px;
+}
+.right footer {
+    margin-top: 8px;
+}
+
+@media (max-height: 820px) {
+    .overview {
+        gap: 6px;
+        padding: 8px;
+    }
+    .overview .stats article {
+        min-height: 66px;
+        padding: 8px 10px;
+    }
+    .overview .stats small,
+    .status-row small,
+    .room-grid article > button,
+    .activity p:nth-of-type(n + 4),
+    .device-list tbody tr:nth-child(n + 4) {
+        display: none;
+    }
+    .panel {
+        padding: 8px;
     }
 }
 </style>

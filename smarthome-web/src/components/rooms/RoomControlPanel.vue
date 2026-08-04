@@ -148,7 +148,7 @@ const selectCategory = (name: string) => {
     display: grid;
     min-width: 0;
     min-height: 0;
-    grid-template-columns: 138px minmax(0, 1fr);
+    grid-template-columns: 164px minmax(0, 1fr);
     align-self: stretch;
     overflow: hidden;
     border: 1px solid var(--color-border-subtle);
@@ -163,29 +163,29 @@ const selectCategory = (name: string) => {
 
 .room-sidebar {
     border-right: 1px solid var(--color-border-subtle);
-    padding: 14px 10px;
+    padding: 20px 14px;
     background: var(--color-sidebar-bg);
 }
 
 .room-sidebar h1 {
-    margin: 0 8px 10px;
+    margin: 0 10px 16px;
     color: var(--color-text-primary);
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 900;
 }
 
 .room-sidebar nav {
     display: grid;
-    gap: 4px;
+    gap: 6px;
 }
 
 .room-sidebar button {
     position: relative;
-    min-height: 31px;
-    border-radius: 7px;
-    padding: 0 12px;
+    min-height: 38px;
+    border-radius: 9px;
+    padding: 0 14px;
     color: var(--color-text-secondary);
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 800;
     text-align: left;
     transition: 160ms var(--motion-ease);
@@ -215,33 +215,37 @@ const selectCategory = (name: string) => {
     min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 10px 14px 12px;
+    padding: 18px;
     background: var(--color-page-bg);
 }
 
 .category-bar {
     display: grid;
-    grid-template-columns: 1.25fr repeat(6, minmax(0, 1fr));
-    gap: 9px;
-    padding-bottom: 7px;
+    grid-template-columns: 1.2fr repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    padding-bottom: 16px;
 }
 
 .category-bar button {
     display: inline-flex;
     min-width: 0;
-    height: 32px;
+    height: 36px;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     gap: 7px;
     border: 1px solid var(--color-border-subtle);
-    border-radius: 8px;
+    border-radius: 9px;
     background: var(--color-card-bg);
     color: var(--color-text-secondary);
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 800;
     box-shadow: var(--shadow-card);
     transition: 160ms var(--motion-ease);
+}
+
+.category-bar button:first-child {
+    min-width: 0;
 }
 
 .category-bar button svg {
@@ -262,17 +266,22 @@ const selectCategory = (name: string) => {
 }
 
 .control-section h2 {
-    margin: 0 5px 6px;
-    color: var(--color-text-secondary);
-    font-size: 11px;
+    margin: 0 2px 10px;
+    color: var(--color-text-primary);
+    font-size: 15px;
     font-weight: 900;
 }
 
-.device-grid,
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+}
+
 .environment-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
 }
 
 .device-card,
@@ -285,9 +294,14 @@ const selectCategory = (name: string) => {
 }
 
 .device-card {
-    min-height: 76px;
-    padding: 8px 10px;
+    min-height: 104px;
+    grid-column: span 2;
+    padding: 13px 14px;
     transition: 160ms var(--motion-ease);
+}
+
+.device-card:nth-last-child(-n + 2) {
+    grid-column: span 3;
 }
 
 .device-card:hover {
@@ -306,17 +320,17 @@ const selectCategory = (name: string) => {
 
 .device-card header {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 7px;
+    gap: 10px;
 }
 
 .device-icon {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     place-items: center;
-    border-radius: 7px;
+    border-radius: 10px;
     background: var(--color-primary-50);
     color: var(--color-primary-600);
 }
@@ -336,19 +350,19 @@ const selectCategory = (name: string) => {
 
 .device-card strong {
     color: var(--color-text-primary);
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 900;
 }
 
 .device-card small {
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 700;
 }
 
 .switch {
-    width: 29px;
-    height: 16px;
+    width: 34px;
+    height: 19px;
     border-radius: 999px;
     background: var(--color-text-muted);
     padding: 2px;
@@ -357,8 +371,8 @@ const selectCategory = (name: string) => {
 
 .switch span {
     display: block;
-    width: 12px;
-    height: 12px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
     background: white;
     box-shadow: 0 1px 3px rgb(15 23 42 / 24%);
@@ -370,18 +384,18 @@ const selectCategory = (name: string) => {
 }
 
 .switch.enabled span {
-    transform: translateX(13px);
+    transform: translateX(15px);
 }
 
 .range-row,
 .temperature-row,
 .purifier-row {
     display: flex;
-    min-height: 24px;
+    min-height: 38px;
     align-items: flex-end;
-    gap: 6px;
+    gap: 8px;
     color: var(--color-text-tertiary);
-    font-size: 8px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -428,18 +442,18 @@ const selectCategory = (name: string) => {
 .temperature-row > b {
     margin-right: auto;
     color: var(--color-text-primary);
-    font-size: 14px;
+    font-size: 20px;
 }
 
 .temperature-row button {
     display: grid;
-    width: 22px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     place-items: center;
     border-radius: 8px;
     background: var(--color-primary-50);
     color: var(--color-primary-700);
-    font-size: 13px;
+    font-size: 17px;
     font-weight: 700;
 }
 
@@ -453,14 +467,14 @@ const selectCategory = (name: string) => {
 }
 
 .environment-section {
-    margin-top: 7px;
+    margin-top: 16px;
 }
 
 .environment-grid article {
     position: relative;
-    min-height: 50px;
+    min-height: 72px;
     overflow: hidden;
-    padding: 7px 10px;
+    padding: 12px 14px;
 }
 
 .environment-grid small,
@@ -472,23 +486,23 @@ const selectCategory = (name: string) => {
 
 .environment-grid small {
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 750;
 }
 
 .environment-grid strong {
     margin-top: 3px;
     color: var(--color-text-primary);
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 900;
 }
 
 .environment-grid svg {
     position: absolute;
-    right: 9px;
-    bottom: 8px;
-    width: 52px;
-    height: 18px;
+    right: 12px;
+    bottom: 10px;
+    width: 58px;
+    height: 20px;
     fill: none;
     stroke: var(--color-primary-500);
     stroke-linecap: round;
@@ -503,7 +517,7 @@ const selectCategory = (name: string) => {
     stroke: var(--color-warning);
 }
 .environment-grid svg.purple {
-    stroke: #8b5cf6;
+    stroke: var(--tone-purple);
 }
 
 .empty-state {
@@ -518,25 +532,27 @@ const selectCategory = (name: string) => {
 
 @media (max-width: 1280px) {
     .category-bar {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto;
+        grid-template-columns: 1.2fr repeat(4, minmax(0, 1fr));
     }
-    .category-bar button {
-        min-width: 96px;
+    .category-bar button:nth-child(5),
+    .category-bar button:nth-child(6) {
+        display: none;
     }
-    .category-bar button:first-child {
-        min-width: 120px;
+    .device-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .device-grid,
+    .device-card,
+    .device-card:nth-last-child(-n + 2) {
+        grid-column: span 1;
+    }
     .environment-grid {
-        grid-template-columns: repeat(3, minmax(160px, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 1450px) {
     .quick-control {
-        grid-template-columns: 128px minmax(0, 1fr);
+        grid-template-columns: 148px minmax(0, 1fr);
     }
     .room-sidebar {
         padding-right: 10px;
@@ -582,6 +598,12 @@ const selectCategory = (name: string) => {
 }
 
 @media (max-width: 620px) {
+    .category-bar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .category-bar button:nth-child(4) {
+        display: none;
+    }
     .device-grid,
     .environment-grid {
         grid-template-columns: 1fr;

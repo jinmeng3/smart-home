@@ -478,7 +478,7 @@ const viewMode = ref<"list" | "grid">("list");
     color: var(--color-device-lock);
 }
 .device-grid-icon.is-camera {
-    background: #f3e8ff;
+    background: var(--color-device-camera-soft);
     color: var(--color-device-camera);
 }
 .device-grid-icon.is-sensor {

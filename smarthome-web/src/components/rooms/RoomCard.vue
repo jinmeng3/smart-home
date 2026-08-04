@@ -33,15 +33,15 @@ defineEmits<{
                     <b></b>{{ room.onlineCount }} 个设备在线
                 </p>
             </div>
-            <div class="room-metrics">
-                <span><SvgIcon name="temperature" size="sm" />{{ room.temperature }}°C</span>
-                <span><SvgIcon name="humidity" size="sm" />{{ room.humidity }}%</span>
-                <span class="quality"><SvgIcon name="air-quality" size="sm" />优 {{ room.pm25 }}</span>
-            </div>
         </header>
+        <div class="room-metrics">
+            <span><SvgIcon name="temperature" size="sm" />{{ room.temperature }}°C</span>
+            <span><SvgIcon name="humidity" size="sm" />{{ room.humidity }}%</span>
+            <span class="quality"><SvgIcon name="air-quality" size="sm" />优 {{ room.pm25 }}</span>
+        </div>
         <div class="room-devices">
             <button
-                v-for="device in devices.slice(0, 4)"
+                v-for="device in devices"
                 :key="device.name"
                 :class="{ on: room.deviceStates[device.key] }"
                 type="button"
@@ -57,11 +57,12 @@ defineEmits<{
 
 <style scoped>
 .room-card {
+    position: relative;
     min-width: 0;
     border: 1px solid var(--color-border);
     border-radius: 14px;
     background: var(--color-card-bg);
-    padding: 14px;
+    padding: 16px;
     box-shadow: var(--shadow-card);
     cursor: pointer;
     transition: 160ms var(--motion-ease);
@@ -71,10 +72,20 @@ defineEmits<{
     border-color: var(--color-primary-300);
     box-shadow: var(--shadow-card-hover);
 }
+.room-card.selected::before {
+    position: absolute;
+    top: 18px;
+    bottom: 18px;
+    left: -1px;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--color-primary-600);
+    content: "";
+}
 .room-card > header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 .room-title {
     min-width: 0;
@@ -82,8 +93,8 @@ defineEmits<{
 }
 .room-avatar {
     display: grid;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     flex: 0 0 auto;
     place-items: center;
     border-radius: 11px;
@@ -97,7 +108,11 @@ defineEmits<{
     color: var(--color-primary-700);
 }
 .room-avatar.is-bedroom {
-    background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--tone-indigo) 12%, var(--color-panel-background)),
+        var(--tone-indigo-soft)
+    );
     color: var(--color-scene-sleep);
 }
 .room-avatar.is-study {
@@ -117,13 +132,17 @@ defineEmits<{
     color: var(--color-device-air);
 }
 .room-avatar.is-else {
-    background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+    background: linear-gradient(
+        135deg,
+        var(--color-device-camera-soft),
+        color-mix(in srgb, var(--color-device-camera-soft) 55%, var(--color-panel-background))
+    );
     color: var(--color-device-camera);
 }
 .room-card h2 {
     overflow: hidden;
     margin: 0;
-    font-size: 15px;
+    font-size: 16px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -133,7 +152,7 @@ defineEmits<{
     gap: 5px;
     margin: 4px 0 0;
     color: var(--color-text-tertiary);
-    font-size: 10px;
+    font-size: 11px;
 }
 .room-status small {
     border-radius: 999px;
@@ -151,20 +170,22 @@ defineEmits<{
     background: var(--color-success);
 }
 .room-metrics {
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-    margin: 0 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 14px;
 }
 .room-metrics span {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    border-radius: 6px;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    border-radius: 9px;
     background: var(--color-surface-subtle);
-    padding: 4px 6px;
+    padding: 5px 7px;
     color: var(--color-text-secondary);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -173,27 +194,57 @@ defineEmits<{
     color: var(--color-success);
 }
 .room-devices {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: 10px;
+    display: flex;
+    gap: 7px;
+    margin-top: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+}
+.room-devices::-webkit-scrollbar {
+    height: 3px;
+}
+.room-devices::-webkit-scrollbar-track {
+    border-radius: 2px;
+    background: var(--color-surface-subtle);
+}
+.room-devices::-webkit-scrollbar-thumb {
+    border-radius: 2px;
+    background: var(--color-border-strong);
 }
 .room-devices button {
     display: grid;
-    min-width: 0;
+    min-width: 82px;
+    flex: 0 0 auto;
     place-items: center;
-    gap: 3px;
-    border-radius: 8px;
+    gap: 4px;
+    min-height: 68px;
+    border: 1px solid transparent;
+    border-radius: 10px;
     background: var(--color-surface-subtle);
-    padding: 7px 3px;
+    padding: 8px 10px;
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 10px;
+    scroll-snap-align: start;
+    transition: 160ms var(--motion-ease);
+}
+.room-devices button:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-surface-hover);
 }
 .room-devices button.on {
+    border-color: var(--color-primary-200);
     background: var(--color-primary-50);
     color: var(--color-primary-700);
 }
 .room-devices i {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 8px;
+    background: var(--color-card-bg);
     font-style: normal;
 }
 .room-devices span {
@@ -204,6 +255,21 @@ defineEmits<{
     font-weight: 800;
 }
 .room-devices small {
-    font-size: 8px;
+    color: var(--color-text-muted);
+    font-size: 9px;
+}
+.room-devices button.on small {
+    color: var(--color-primary-600);
+}
+
+@media (max-width: 620px) {
+    .room-card {
+        padding: 14px;
+    }
+
+    .room-devices button {
+        min-width: 72px;
+        padding: 6px 8px;
+    }
 }
 </style>

@@ -78,7 +78,7 @@ const platformToneMap: Record<string, string> = {
                     <dt><SvgIcon name="plug" size="sm" />连接方式</dt>
                     <dd>
                         <em
-                            class="platform"
+                            class="platform tone-chip"
                             :class="`is-${platformToneMap[device.connection] ?? 'blue'}`"
                             >{{ device.connection }}</em
                         >
@@ -286,7 +286,7 @@ dl div:nth-child(3) dt svg {
 }
 
 dl div:nth-child(4) dt svg {
-    color: #8b5cf6;
+    color: var(--tone-purple);
 }
 
 dl div:nth-child(5) dt svg {
@@ -309,7 +309,7 @@ dd.is-room {
 }
 
 dd.is-firmware {
-    color: #8b5cf6;
+    color: var(--tone-purple);
 }
 
 dd.is-sync {
@@ -324,26 +324,6 @@ dd .platform {
     font-size: 12px;
     font-style: normal;
     font-weight: 900;
-}
-
-dd .platform.is-blue {
-    background: var(--color-info-soft);
-    color: var(--color-info);
-}
-
-dd .platform.is-green {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-
-dd .platform.is-orange {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-
-dd .platform.is-purple {
-    background: #f3e8ff;
-    color: #8b5cf6;
 }
 
 .device-detail-empty {

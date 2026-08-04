@@ -28,7 +28,7 @@ defineProps<{
                 :class="{ 'is-connected': platform.connected }"
             >
                 <span
-                    class="platform-icon"
+                    class="platform-icon tone-chip"
                     :class="`is-${platformToneMap[platform.name] ?? 'blue'}`"
                 >
                     <SvgIcon
@@ -101,27 +101,8 @@ article:hover {
     height: 28px;
     place-items: center;
     border-radius: 8px;
-    background: var(--color-surface-subtle);
-    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 900;
-}
-
-.platform-icon.is-blue {
-    background: var(--color-info-soft);
-    color: var(--color-info);
-}
-.platform-icon.is-green {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-.platform-icon.is-orange {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-.platform-icon.is-purple {
-    background: #f3e8ff;
-    color: #8b5cf6;
 }
 
 strong {

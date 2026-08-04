@@ -43,7 +43,7 @@ const suggestionToneMap: Record<SettingsSectionId, string> = {
                 @click="emit('select', item.target)"
             >
                 <span
-                    class="suggestion-icon"
+                    class="suggestion-icon tone-chip"
                     :class="`is-${suggestionToneMap[item.target] ?? 'primary'}`"
                 >
                     <SvgIcon name="ai" size="sm" />
@@ -75,32 +75,5 @@ const suggestionToneMap: Record<SettingsSectionId, string> = {
     flex: none;
     place-items: center;
     border-radius: 9999px;
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
-}
-
-.suggestion-icon.is-success {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-.suggestion-icon.is-indigo {
-    background: color-mix(in srgb, #6366f1 14%, transparent);
-    color: #6366f1;
-}
-.suggestion-icon.is-purple {
-    background: color-mix(in srgb, #8b5cf6 14%, transparent);
-    color: #8b5cf6;
-}
-.suggestion-icon.is-orange {
-    background: color-mix(in srgb, #ff8a1f 14%, transparent);
-    color: #ff8a1f;
-}
-.suggestion-icon.is-warning {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-.suggestion-icon.is-danger {
-    background: var(--color-danger-soft);
-    color: var(--color-danger);
 }
 </style>

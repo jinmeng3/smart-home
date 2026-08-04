@@ -24,7 +24,7 @@ defineEmits<{
                 type="button"
                 @click="$emit('action', item.key)"
             >
-                <span aria-hidden="true">
+                <span aria-hidden="true" class="tone-chip" :class="`is-${item.tone}`">
                     <SvgIcon :name="item.icon" />
                 </span>
                 {{ item.label }}
@@ -77,25 +77,6 @@ button span {
     height: 30px;
     place-items: center;
     border-radius: 9px;
-    background: var(--color-surface-subtle);
-    color: var(--color-text-secondary);
-}
-
-.is-primary span {
-    background: var(--color-primary-100);
-    color: var(--color-primary-700);
-}
-.is-success span {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-.is-warning span {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-.is-purple span {
-    background: #f3e8ff;
-    color: #8b5cf6;
 }
 
 button:hover {
@@ -112,7 +93,7 @@ button:hover {
     border-color: var(--color-warning-border);
 }
 .is-purple:hover {
-    border-color: #d8b4fe;
+    border-color: color-mix(in srgb, var(--tone-purple) 45%, var(--color-border-default));
 }
 
 button:active {

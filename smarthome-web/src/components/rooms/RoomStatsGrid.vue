@@ -11,28 +11,28 @@ defineProps<{
 <template>
     <section class="stats-grid">
         <article>
-            <i class="blue"><SvgIcon name="home" /></i>
+            <i class="tone-chip is-blue"><SvgIcon name="home" /></i>
             <span
                 >房间数量<strong>{{ roomCount }} <small>个</small></strong
                 ><em>较上月 ↑ 2</em></span
             >
         </article>
         <article>
-            <i class="green"><SvgIcon name="online-device" /></i>
+            <i class="tone-chip is-green"><SvgIcon name="online-device" /></i>
             <span
                 >在线设备<strong>{{ onlineCount }} <small>个</small></strong
                 ><em>在线率 86.4%</em></span
             >
         </article>
         <article>
-            <i class="orange"><SvgIcon name="notification" /></i>
+            <i class="tone-chip is-orange"><SvgIcon name="notification" /></i>
             <span
                 >当前告警<strong>2 <small>条</small></strong
                 ><em>待处理告警</em></span
             >
         </article>
         <article>
-            <i class="purple"><SvgIcon name="comfort" /></i>
+            <i class="tone-chip is-purple"><SvgIcon name="comfort" /></i>
             <span
                 >平均舒适度<strong>{{ comfortScore }} <small>分</small></strong
                 ><em>舒适度良好</em></span
@@ -66,22 +66,6 @@ defineProps<{
     place-items: center;
     border-radius: 12px;
     font-style: normal;
-}
-.stats-grid i.blue {
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
-}
-.stats-grid i.green {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
-.stats-grid i.orange {
-    background: var(--color-warning-soft);
-    color: var(--color-warning);
-}
-.stats-grid i.purple {
-    background: #f3e8ff;
-    color: #8b5cf6;
 }
 .stats-grid span {
     min-width: 0;

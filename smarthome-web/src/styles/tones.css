@@ -1,0 +1,121 @@
+/* ============================================================
+   Tone utilities — 共享的"强调色"配色方案
+   颜色只定义在 tokens.css 的 --tone-* 命名空间里，这里只做应用。
+   语义名与颜色名互为别名（is-primary/is-blue），调用方任选其一。
+   适用形状由组件自身类控制（如 .section-icon、.platform-icon），
+   这里只负责 background / color / 渐变，保证可组合复用。
+   ============================================================ */
+
+/* --- 柔和色块：浅色底 + 强调色前景（图标块、胶囊、徽章） --- */
+.tone-chip {
+    background: var(--tone-primary-soft);
+    color: var(--tone-primary);
+}
+.tone-chip.is-teal {
+    background: var(--tone-teal-soft);
+    color: var(--tone-teal);
+}
+.tone-chip.is-green,
+.tone-chip.is-success {
+    background: var(--tone-success-soft);
+    color: var(--tone-success);
+}
+.tone-chip.is-amber,
+.tone-chip.is-warning {
+    background: var(--tone-warning-soft);
+    color: var(--tone-warning);
+}
+.tone-chip.is-red,
+.tone-chip.is-danger {
+    background: var(--tone-danger-soft);
+    color: var(--tone-danger);
+}
+.tone-chip.is-sky,
+.tone-chip.is-info {
+    background: var(--tone-info-soft);
+    color: var(--tone-info);
+}
+.tone-chip.is-purple {
+    background: var(--tone-purple-soft);
+    color: var(--tone-purple);
+}
+.tone-chip.is-indigo {
+    background: var(--tone-indigo-soft);
+    color: var(--tone-indigo);
+}
+.tone-chip.is-orange {
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
+}
+
+/* --- 竖向柔和渐变块（激活选项卡、高亮条等） --- */
+.tone-gradient {
+    background: linear-gradient(
+        to bottom,
+        var(--color-primary-50),
+        var(--color-primary-100)
+    );
+    color: var(--tone-primary);
+}
+.tone-gradient.is-teal {
+    background: linear-gradient(
+        to bottom,
+        var(--tone-teal-soft),
+        color-mix(in srgb, var(--tone-teal-soft) 45%, var(--tone-teal))
+    );
+    color: var(--tone-teal);
+}
+.tone-gradient.is-amber,
+.tone-gradient.is-warning {
+    background: linear-gradient(
+        to bottom,
+        var(--tone-warning-soft),
+        color-mix(in srgb, var(--tone-warning-soft) 40%, var(--tone-warning))
+    );
+    color: var(--tone-warning);
+}
+.tone-gradient.is-red,
+.tone-gradient.is-danger {
+    background: linear-gradient(
+        to bottom,
+        var(--tone-danger-soft),
+        color-mix(in srgb, var(--tone-danger-soft) 45%, var(--tone-danger))
+    );
+    color: var(--tone-danger);
+}
+.tone-gradient.is-sky,
+.tone-gradient.is-info {
+    background: linear-gradient(
+        to bottom,
+        var(--tone-info-soft),
+        color-mix(in srgb, var(--tone-info-soft) 45%, var(--tone-info))
+    );
+    color: var(--tone-info);
+}
+.tone-gradient.is-purple {
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--tone-purple) 10%, transparent),
+        color-mix(in srgb, var(--tone-purple) 18%, transparent)
+    );
+    color: var(--tone-purple);
+}
+.tone-gradient.is-orange {
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--tone-orange) 10%, transparent),
+        color-mix(in srgb, var(--tone-orange) 18%, transparent)
+    );
+    color: var(--tone-orange);
+}
+
+/* --- 强调色文字 / 描边（svg stroke 等） --- */
+.tone-text.is-purple {
+    color: var(--tone-purple);
+}
+.tone-text.is-indigo {
+    color: var(--tone-indigo);
+}
+.tone-text.is-orange {
+    color: var(--tone-orange);
+}

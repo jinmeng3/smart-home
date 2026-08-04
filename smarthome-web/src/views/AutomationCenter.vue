@@ -576,8 +576,8 @@ const batchEnable = (ids: number[]) => {
     color: #2873f3;
 }
 .devices i.dev-light {
-    background: #fff0df;
-    color: #ff8a1f;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .devices i.dev-curtain {
     background: #e0f5f6;
@@ -688,8 +688,8 @@ const batchEnable = (ids: number[]) => {
     color: #2871f5;
 }
 .steps i.is-orange {
-    background: #fff0df;
-    color: #ff8a1f;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
 }
 .steps i.is-teal {
     background: #e0f5f6;
@@ -831,7 +831,7 @@ const batchEnable = (ids: number[]) => {
     color: #0d9488;
 }
 .quick button.tone-orange svg {
-    color: #ff8a1f;
+    color: var(--tone-orange);
 }
 .quick small {
     color: #8492a6;
