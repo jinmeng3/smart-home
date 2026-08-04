@@ -83,7 +83,7 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
 </script>
 
 <template>
-    <SettingsSectionCard id="members" icon="members" title="家庭成员与权限">
+    <SettingsSectionCard id="members" icon="members" title="家庭成员与权限" tone="teal">
         <div class="member-summary">
             <div>
                 <strong>{{ members.length }}</strong>

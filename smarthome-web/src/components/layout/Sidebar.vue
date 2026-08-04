@@ -17,18 +17,18 @@ interface MenuItem {
     icon: string;
     label: string;
     path?: string;
+    tone: string;
+    soft: string;
 }
 
 const menuItems: MenuItem[] = [
-    { icon: "chat", label: "智能对话", path: "/" },
-    { icon: "home", label: "全屋总览", path: "/overview" },
-    { icon: "room", label: "房间控制", path: "/rooms" },
-    { icon: "device-management", label: "设备管理", path: "/devices" },
-    { icon: "scene", label: "场景模式", path: "/scenes" },
-    { icon: "automation", label: "自动化", path: "/automations" },
-    // { icon: "energy", label: "能耗分析" },
-    // { icon: "security", label: "安防中心" },
-    { icon: "settings", label: "设置", path: "/settings" },
+    { icon: "chat", label: "智能对话", path: "/", tone: "#8b5cf6", soft: "rgba(139, 92, 246, 0.14)" },
+    { icon: "home", label: "全屋总览", path: "/overview", tone: "var(--color-primary-600)", soft: "var(--color-primary-50)" },
+    { icon: "room", label: "房间控制", path: "/rooms", tone: "var(--color-teal-600)", soft: "var(--color-teal-soft)" },
+    { icon: "device-management", label: "设备管理", path: "/devices", tone: "var(--color-device-light)", soft: "var(--color-warning-soft)" },
+    { icon: "scene", label: "场景模式", path: "/scenes", tone: "var(--color-success)", soft: "var(--color-success-soft)" },
+    { icon: "automation", label: "自动化", path: "/automations", tone: "var(--color-scene-sleep)", soft: "#eef2ff" },
+    { icon: "settings", label: "设置", path: "/settings", tone: "var(--color-info)", soft: "var(--color-info-soft)" },
 ];
 
 const activeLabel = computed(() => {
@@ -176,7 +176,17 @@ const openConversation = async (sessionId: string) => {
                     v-if="activeLabel === item.label && !store.sidebarCollapsed"
                     class="absolute left-0 h-6 w-1 rounded-full bg-[var(--color-primary-600)]"
                 ></span>
-                <SvgIcon :name="item.icon" />
+                <span
+                    class="menu-icon"
+                    :class="{ 'is-active': activeLabel === item.label }"
+                    :style="
+                        activeLabel === item.label
+                            ? { background: item.soft, color: item.tone }
+                            : {}
+                    "
+                >
+                    <SvgIcon :name="item.icon" />
+                </span>
                 <span v-show="!store.sidebarCollapsed" class="truncate">
                     {{ item.label }}
                 </span>
@@ -266,6 +276,24 @@ const openConversation = async (sessionId: string) => {
 </template>
 
 <style scoped>
+.menu-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 8px;
+    color: inherit;
+    transition:
+        background 160ms var(--motion-ease),
+        color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.menu-icon.is-active {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+
 .conversation-panel {
     display: flex;
     min-height: 0;

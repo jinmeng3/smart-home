@@ -2,12 +2,14 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     account,
+    automations,
     ai_model,
     auth,
     chat,
     device,
     households,
     members,
+    overview,
     rooms,
     scenes,
 )
@@ -16,12 +18,15 @@ api_router = APIRouter(prefix="/api")
 
 # 统一在此注册业务路由，避免各模块直接依赖 FastAPI 应用实例。
 api_router.include_router(account.router)
+api_router.include_router(automations.router)
 api_router.include_router(ai_model.router)
 api_router.include_router(chat.router)
 api_router.include_router(chat.codex_router)
 api_router.include_router(device.router)
 api_router.include_router(households.router)
 api_router.include_router(members.router)
+api_router.include_router(overview.router)
 api_router.include_router(rooms.router)
+api_router.include_router(rooms.environment_router)
 api_router.include_router(scenes.router)
 api_router.include_router(auth.router)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SettingsSectionId } from "../../types/settings";
 import type { SettingsSuggestionItem } from "../../types/settings";
 import SvgIcon from "../common/SvgIcon.vue";
 
@@ -9,6 +10,16 @@ defineProps<{
 const emit = defineEmits<{
     select: [target: SettingsSuggestionItem["target"]];
 }>();
+
+const suggestionToneMap: Record<SettingsSectionId, string> = {
+    account: "primary",
+    appearance: "purple",
+    ai: "indigo",
+    homeAssistant: "orange",
+    notifications: "warning",
+    security: "danger",
+    backup: "success",
+};
 </script>
 
 <template>
@@ -32,7 +43,8 @@ const emit = defineEmits<{
                 @click="emit('select', item.target)"
             >
                 <span
-                    class="grid h-9 w-9 place-items-center rounded-full bg-[var(--color-primary-50)] text-[var(--color-primary-600)]"
+                    class="suggestion-icon"
+                    :class="`is-${suggestionToneMap[item.target] ?? 'primary'}`"
                 >
                     <SvgIcon name="ai" size="sm" />
                 </span>
@@ -54,3 +66,41 @@ const emit = defineEmits<{
         </div>
     </section>
 </template>
+
+<style scoped>
+.suggestion-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+
+.suggestion-icon.is-success {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+.suggestion-icon.is-indigo {
+    background: color-mix(in srgb, #6366f1 14%, transparent);
+    color: #6366f1;
+}
+.suggestion-icon.is-purple {
+    background: color-mix(in srgb, #8b5cf6 14%, transparent);
+    color: #8b5cf6;
+}
+.suggestion-icon.is-orange {
+    background: color-mix(in srgb, #ff8a1f 14%, transparent);
+    color: #ff8a1f;
+}
+.suggestion-icon.is-warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+.suggestion-icon.is-danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+</style>

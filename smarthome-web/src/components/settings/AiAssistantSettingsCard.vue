@@ -114,7 +114,7 @@ const applySettings = async () => {
 </script>
 
 <template>
-    <SettingsSectionCard id="ai" icon="ai" title="智能助手">
+    <SettingsSectionCard id="ai" icon="ai" title="智能助手" tone="indigo">
         <label class="settings-field">
             <span>模型选择</span>
             <select

@@ -5,6 +5,7 @@ defineProps<{
     id: string;
     icon: string;
     title: string;
+    tone?: string;
 }>();
 </script>
 
@@ -15,7 +16,8 @@ defineProps<{
     >
         <div class="mb-4 flex items-center gap-3">
             <span
-                class="grid h-9 w-9 place-items-center rounded-lg bg-[var(--color-ai-soft)] text-[var(--color-ai)]"
+                class="section-icon"
+                :class="`is-${tone ?? 'primary'}`"
             >
                 <SvgIcon :name="icon" />
             </span>
@@ -26,3 +28,45 @@ defineProps<{
         <slot />
     </section>
 </template>
+
+<style scoped>
+.section-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+
+.section-icon.is-success {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+.section-icon.is-teal {
+    background: var(--color-teal-soft);
+    color: var(--color-teal-600);
+}
+.section-icon.is-purple {
+    background: color-mix(in srgb, #8b5cf6 14%, transparent);
+    color: #8b5cf6;
+}
+.section-icon.is-indigo {
+    background: color-mix(in srgb, #6366f1 14%, transparent);
+    color: #6366f1;
+}
+.section-icon.is-orange {
+    background: color-mix(in srgb, #ff8a1f 14%, transparent);
+    color: #ff8a1f;
+}
+.section-icon.is-warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+.section-icon.is-danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+</style>

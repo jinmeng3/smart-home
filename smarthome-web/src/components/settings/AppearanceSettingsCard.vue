@@ -25,7 +25,7 @@ const fontOptions: Array<{ value: FontSize; label: string }> = [
 </script>
 
 <template>
-    <SettingsSectionCard id="appearance" icon="appearance" title="界面">
+    <SettingsSectionCard id="appearance" icon="appearance" title="界面" tone="purple">
         <div class="settings-field">
             <span>主题模式</span>
             <div class="segmented">

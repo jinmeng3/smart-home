@@ -14,6 +14,7 @@ from app.schemas.device import (
     DeviceCreate,
     DeviceDetailRead,
     DeviceDetailWithLogs,
+    DeviceImageRead,
     DeviceListRead,
     DeviceLogListRead,
     DeviceLogRead,
@@ -168,8 +169,9 @@ def list_device_logs(
 
 def upload_device_image(
     db: Session, device_id: int | None, file: UploadFile, settings: Settings
-) -> str:
+) -> DeviceImageRead:
     """校验并保存设备图片，可选关联设备并更新其 image_url，返回访问地址。"""
+    device = get_device_or_404(db, device_id) if device_id is not None else None
     extension = IMAGE_EXTENSION_BY_TYPE.get(file.content_type or "")
     if file.content_type not in settings.allowed_device_image_types or not extension:
         raise HTTPException(
@@ -196,11 +198,15 @@ def upload_device_image(
     image_path.write_bytes(content)
     image_url = f"/uploads/devices/{filename}"
 
-    if device_id is not None:
-        device = get_device_or_404(db, device_id)
+    if device is not None:
         device.image_url = image_url
         db.commit()
-    return image_url
+    return DeviceImageRead(
+        image_url=image_url,
+        original_name=file.filename or "image",
+        mime_type=file.content_type or "application/octet-stream",
+        size_bytes=len(content),
+    )
 
 
 def batch_group_devices(

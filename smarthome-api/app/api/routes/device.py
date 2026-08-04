@@ -12,6 +12,7 @@ from app.schemas.device import (
     DeviceCreate,
     DeviceDetailRead,
     DeviceDetailWithLogs,
+    DeviceImageRead,
     DeviceListRead,
     DeviceLogListRead,
     DeviceQueryParams,
@@ -106,15 +107,17 @@ def get_device_logs(
     return ApiResponse(data=list_device_logs(db, device_id, page, page_size))
 
 
-@router.post("/images", response_model=ApiResponse[str])
+@router.post("/images", response_model=ApiResponse[DeviceImageRead])
 def upload_image(
     file: UploadFile = UPLOAD_IMAGE_FILE,
     device_id: int | None = DEVICE_ID_QUERY,
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
-) -> ApiResponse[str]:
+) -> ApiResponse[DeviceImageRead]:
     """上传设备图片，可选关联已有设备。"""
-    return ApiResponse.ok(data=upload_device_image(db, device_id, file, settings))
+    return ApiResponse.ok(
+        data=upload_device_image(db, device_id, file, settings), message="uploaded"
+    )
 
 
 @router.post("/groups/assign", response_model=ApiResponse[DeviceBatchGroupResult])

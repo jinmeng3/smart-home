@@ -234,6 +234,8 @@ const handleRoomCreated = (name: string) => {
                                         '在线',
                                         '亮度 80%',
                                         '10:15',
+                                        'light',
+                                        'orange',
                                     ],
                                     [
                                         '客厅空调',
@@ -241,6 +243,8 @@ const handleRoomCreated = (name: string) => {
                                         '在线',
                                         '26°C 制冷',
                                         '10:15',
+                                        'air-conditioner',
+                                        'blue',
                                     ],
                                     [
                                         '主卧空调',
@@ -248,6 +252,8 @@ const handleRoomCreated = (name: string) => {
                                         '在线',
                                         '26°C 制冷',
                                         '10:14',
+                                        'air-conditioner',
+                                        'blue',
                                     ],
                                     [
                                         '智能门锁',
@@ -255,6 +261,8 @@ const handleRoomCreated = (name: string) => {
                                         '在线',
                                         '已上锁',
                                         '10:13',
+                                        'lock',
+                                        'purple',
                                     ],
                                     [
                                         '空气净化器',
@@ -262,11 +270,17 @@ const handleRoomCreated = (name: string) => {
                                         '在线',
                                         '自动模式',
                                         '10:12',
+                                        'sensor',
+                                        'green',
                                     ],
                                 ]"
                                 :key="row[0]"
                             >
-                                <td>{{ row[0] }}</td>
+                                <td class="device-cell">
+                                    <i :class="row[6]"
+                                        ><SvgIcon :name="row[5]" size="sm" /></i
+                                    ><span>{{ row[0] }}</span>
+                                </td>
                                 <td>{{ row[1] }}</td>
                                 <td class="online">● {{ row[2] }}</td>
                                 <td>{{ row[3] }}</td>
@@ -288,31 +302,42 @@ const handleRoomCreated = (name: string) => {
                                 'lock',
                                 '门锁开启',
                                 '张晓明通过指纹打开了玄关门锁',
+                                'purple',
                             ],
                             [
                                 '10:10',
                                 'air-conditioner',
                                 '空调运行',
                                 '客厅空调已开启，设定 26°C 制冷模式',
+                                'blue',
                             ],
                             [
                                 '10:05',
                                 'curtain',
                                 '窗帘关闭',
                                 '主卧窗帘已自动关闭',
+                                'teal',
                             ],
                             [
                                 '09:58',
                                 'automation',
                                 '自动化执行',
                                 '“离家模式”自动执行完成',
+                                'green',
                             ],
-                            ['09:45', 'light', '灯光开启', '卫生间灯光已开启'],
+                            [
+                                '09:45',
+                                'light',
+                                '灯光开启',
+                                '卫生间灯光已开启',
+                                'orange',
+                            ],
                         ]"
                         :key="item[0]"
                     >
                         <time>{{ item[0] }}</time
-                        ><i><SvgIcon :name="item[1]" size="sm" /></i
+                        ><i :class="item[4]"
+                            ><SvgIcon :name="item[1]" size="sm" /></i
                         ><span
                             ><b>{{ item[2] }}</b
                             ><small>{{ item[3] }}</small></span
@@ -335,19 +360,31 @@ const handleRoomCreated = (name: string) => {
                             '07:00',
                             '起床模式',
                             '窗帘打开 · 卧室灯亮 · 空调制热 24°C',
+                            'orange',
                         ],
                         [
                             '19:00',
                             '回家模式',
                             '玄关灯亮 · 空调制冷 26°C · 新风开启',
+                            'blue',
                         ],
-                        ['22:00', '离家模式', '关闭灯光 · 安防布防 · 监控夜视'],
-                        ['23:00', '睡眠模式', '灯光渐暗 · 窗帘关闭 · 安防设防'],
+                        [
+                            '22:00',
+                            '离家模式',
+                            '关闭灯光 · 安防布防 · 监控夜视',
+                            'purple',
+                        ],
+                        [
+                            '23:00',
+                            '睡眠模式',
+                            '灯光渐暗 · 窗帘关闭 · 安防设防',
+                            'teal',
+                        ],
                     ]"
                     :key="item[0]"
                 >
                     <time>{{ item[0] }}</time
-                    ><span
+                    ><span :class="item[3]"
                         ><b>{{ item[1] }}</b
                         ><small>{{ item[2] }}</small></span
                     >
@@ -371,19 +408,31 @@ const handleRoomCreated = (name: string) => {
             <section class="panel">
                 <h2>快捷操作</h2>
                 <div class="quick">
-                    <button @click="openDialog('inspection')">
+                    <button
+                        class="tone-purple"
+                        @click="openDialog('inspection')"
+                    >
                         <SvgIcon name="scan" />一键巡检<small
                             >检查全屋设备</small
                         ></button
-                    ><button @click="openDialog('mode')">
+                    ><button
+                        class="tone-blue"
+                        @click="openDialog('mode')"
+                    >
                         <SvgIcon name="home" />全屋模式<small
                             >快速启用场景</small
                         ></button
-                    ><button @click="openDialog('sync')">
+                    ><button
+                        class="tone-green"
+                        @click="openDialog('sync')"
+                    >
                         <SvgIcon name="refresh" />同步设备<small
                             >刷新设备状态</small
                         ></button
-                    ><button @click="openDialog('room')">
+                    ><button
+                        class="tone-orange"
+                        @click="openDialog('room')"
+                    >
                         <SvgIcon name="plus" />添加房间<small>创建新房间</small>
                     </button>
                 </div>
@@ -615,6 +664,39 @@ const handleRoomCreated = (name: string) => {
     border-bottom: 1px solid #edf1f6;
     color: #63738b;
 }
+.device-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.device-cell i {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    place-items: center;
+    border-radius: 7px;
+}
+.device-cell i.blue {
+    background: #e9f2ff;
+    color: #2871f5;
+}
+.device-cell i.green {
+    background: #e7f9ee;
+    color: #20b86a;
+}
+.device-cell i.orange {
+    background: #fff0df;
+    color: #ff8a1f;
+}
+.device-cell i.purple {
+    background: #eee9ff;
+    color: #7651ee;
+}
+.device-cell i.teal {
+    background: #e0f5f6;
+    color: #0d9488;
+}
 .view-all {
     margin-top: 4px;
 }
@@ -637,6 +719,26 @@ const handleRoomCreated = (name: string) => {
     border-radius: 50%;
     background: #edf4ff;
     color: #3276f4;
+}
+.activity i.blue {
+    background: #e9f2ff;
+    color: #2871f5;
+}
+.activity i.green {
+    background: #e7f9ee;
+    color: #20b86a;
+}
+.activity i.orange {
+    background: #fff0df;
+    color: #ff8a1f;
+}
+.activity i.purple {
+    background: #eee9ff;
+    color: #7651ee;
+}
+.activity i.teal {
+    background: #e0f5f6;
+    color: #0d9488;
 }
 .activity span {
     display: flex;
@@ -676,6 +778,18 @@ const handleRoomCreated = (name: string) => {
     border-left: 3px solid #2875f4;
     padding-left: 9px;
     font-size: 11px;
+}
+.schedule span.blue {
+    border-left-color: #2875f4;
+}
+.schedule span.orange {
+    border-left-color: #ff8a1f;
+}
+.schedule span.purple {
+    border-left-color: #7651ee;
+}
+.schedule span.teal {
+    border-left-color: #0d9488;
 }
 .schedule small {
     margin-top: 4px;
@@ -743,6 +857,18 @@ const handleRoomCreated = (name: string) => {
 .quick button svg {
     grid-row: span 2;
     color: #2873f5;
+}
+.quick button.tone-purple svg {
+    color: #7651ee;
+}
+.quick button.tone-blue svg {
+    color: #2873f5;
+}
+.quick button.tone-green svg {
+    color: #17ad62;
+}
+.quick button.tone-orange svg {
+    color: #ff8a1f;
 }
 .quick small {
     color: #8593a8;

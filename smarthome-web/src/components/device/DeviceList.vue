@@ -160,7 +160,11 @@ const viewMode = ref<"list" | "grid">("list");
                     @click="$emit('select', device)"
                 >
                     <header>
-                        <span class="device-grid-icon" aria-hidden="true">
+                        <span
+                            class="device-grid-icon"
+                            :class="`is-${device.type}`"
+                            aria-hidden="true"
+                        >
                             <SvgIcon :name="deviceTypeIconMap[device.type]" />
                         </span>
                         <span
@@ -459,6 +463,35 @@ const viewMode = ref<"list" | "grid">("list");
     );
     color: var(--color-primary-700);
     box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.device-grid-icon.is-light {
+    background: var(--color-warning-soft);
+    color: var(--color-device-light);
+}
+.device-grid-icon.is-air_conditioner {
+    background: var(--color-info-soft);
+    color: var(--color-device-climate);
+}
+.device-grid-icon.is-lock {
+    background: var(--color-surface-subtle);
+    color: var(--color-device-lock);
+}
+.device-grid-icon.is-camera {
+    background: #f3e8ff;
+    color: var(--color-device-camera);
+}
+.device-grid-icon.is-sensor {
+    background: var(--color-success-soft);
+    color: var(--color-device-air);
+}
+.device-grid-icon.is-socket {
+    background: var(--color-teal-soft);
+    color: var(--color-device-energy);
+}
+.device-grid-icon.is-curtain {
+    background: var(--color-teal-soft);
+    color: var(--color-teal-600);
 }
 
 .device-grid-main {

@@ -134,3 +134,10 @@ class DeviceBatchGroupResult(BaseModel):
     group_id: int
     group: str
     assigned_count: int = 0
+
+
+class DeviceImageRead(BaseModel):
+    image_url: str
+    original_name: str
+    mime_type: str
+    size_bytes: int

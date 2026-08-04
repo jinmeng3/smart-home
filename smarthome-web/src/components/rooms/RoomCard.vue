@@ -21,7 +21,11 @@ defineEmits<{
         @click="$emit('select', room)"
     >
         <header>
-            <span class="room-avatar">{{ room.name.slice(0, 1) }}</span>
+            <span
+                class="room-avatar"
+                :class="room.roomType ? `is-${room.roomType}` : ''"
+                >{{ room.name.slice(0, 1) }}</span
+            >
             <div class="room-title">
                 <h2>{{ room.name }}</h2>
                 <p class="room-status">
@@ -80,11 +84,41 @@ defineEmits<{
     display: grid;
     width: 42px;
     height: 42px;
+    flex: 0 0 auto;
     place-items: center;
     border-radius: 11px;
     background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
     color: var(--color-primary-700);
     font-weight: 900;
+}
+
+.room-avatar.is-living {
+    background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
+    color: var(--color-primary-700);
+}
+.room-avatar.is-bedroom {
+    background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+    color: var(--color-scene-sleep);
+}
+.room-avatar.is-study {
+    background: linear-gradient(135deg, var(--color-teal-soft), #f0fdfa);
+    color: var(--color-teal-600);
+}
+.room-avatar.is-kitchen {
+    background: linear-gradient(135deg, var(--color-warning-soft), #fffbeb);
+    color: var(--color-device-light);
+}
+.room-avatar.is-bathroom {
+    background: linear-gradient(135deg, var(--color-info-soft), #f0f9ff);
+    color: var(--color-info);
+}
+.room-avatar.is-balcony {
+    background: linear-gradient(135deg, var(--color-success-soft), #f0fdf4);
+    color: var(--color-device-air);
+}
+.room-avatar.is-else {
+    background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+    color: var(--color-device-camera);
 }
 .room-card h2 {
     overflow: hidden;

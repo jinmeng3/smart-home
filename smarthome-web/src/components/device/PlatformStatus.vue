@@ -2,6 +2,13 @@
 import SvgIcon from "../common/SvgIcon.vue";
 import { platformIconMap } from "./deviceMeta";
 
+const platformToneMap: Record<string, string> = {
+    "Home Assistant": "orange",
+    Matter: "blue",
+    Zigbee: "green",
+    MQTT: "purple",
+};
+
 defineProps<{
     platforms: {
         name: string;
@@ -15,16 +22,28 @@ defineProps<{
     <section class="device-side-card">
         <h2>接入平台</h2>
         <div class="platform-list">
-            <article v-for="platform in platforms" :key="platform.name">
-                <span class="platform-icon">
+            <article
+                v-for="platform in platforms"
+                :key="platform.name"
+                :class="{ 'is-connected': platform.connected }"
+            >
+                <span
+                    class="platform-icon"
+                    :class="`is-${platformToneMap[platform.name] ?? 'blue'}`"
+                >
                     <SvgIcon
                         :name="platformIconMap[platform.name] ?? 'layers'"
                         size="sm"
                     />
                 </span>
                 <strong>{{ platform.name }}</strong>
-                <em>{{ platform.status }}</em>
-                <i :class="{ 'is-connected': platform.connected }"></i>
+                <em
+                    class="platform-status"
+                    :class="{ 'is-connected': platform.connected }"
+                >
+                    <i></i>
+                    {{ platform.status }}
+                </em>
             </article>
         </div>
     </section>
@@ -47,17 +66,33 @@ h2 {
 
 .platform-list {
     display: grid;
-    gap: 9px;
+    gap: 8px;
 }
 
 article {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) auto 8px;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
     align-items: center;
     gap: 9px;
-    border-radius: 8px;
-    padding: 8px 6px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 8px 9px;
     background: var(--color-panel-secondary);
+    transition:
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+article.is-connected {
+    border-color: var(--color-success-border);
+    background: var(--color-success-soft);
+}
+
+article:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
 }
 
 .platform-icon {
@@ -66,10 +101,27 @@ article {
     height: 28px;
     place-items: center;
     border-radius: 8px;
-    background: var(--color-primary-100);
-    color: var(--color-primary-700);
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 900;
+}
+
+.platform-icon.is-blue {
+    background: var(--color-info-soft);
+    color: var(--color-info);
+}
+.platform-icon.is-green {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+.platform-icon.is-orange {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+.platform-icon.is-purple {
+    background: #f3e8ff;
+    color: #8b5cf6;
 }
 
 strong {
@@ -81,21 +133,38 @@ strong {
     white-space: nowrap;
 }
 
-em {
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 800;
-}
-
-i {
-    width: 8px;
-    height: 8px;
+.platform-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     border-radius: 999px;
-    background: var(--color-text-muted);
+    padding: 3px 9px;
+    color: var(--color-text-tertiary);
+    background: var(--color-surface-subtle);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 900;
 }
 
-i.is-connected {
-    background: var(--color-success);
+.platform-status i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.platform-status.is-connected {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    article {
+        transition-duration: 1ms;
+    }
+
+    article:hover {
+        transform: none;
+    }
 }
 </style>

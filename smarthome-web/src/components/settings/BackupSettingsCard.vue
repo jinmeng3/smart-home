@@ -58,7 +58,7 @@ const readBackupFile = (event: Event) => {
 </script>
 
 <template>
-    <SettingsSectionCard id="backup" icon="backup" title="备份恢复">
+    <SettingsSectionCard id="backup" icon="backup" title="备份恢复" tone="success">
         <div class="settings-field">
             <span>导出配置</span>
             <button

@@ -4,7 +4,7 @@ import SvgIcon from "../common/SvgIcon.vue";
 const actions = [
     { key: "scan", label: "扫描新设备", tone: "primary", icon: "scan" },
     { key: "group", label: "批量分组", tone: "success", icon: "group" },
-    { key: "firmware", label: "固件更新", tone: "primary", icon: "firmware" },
+    { key: "firmware", label: "固件更新", tone: "purple", icon: "firmware" },
     { key: "logs", label: "查看日志", tone: "warning", icon: "log" },
 ] as const;
 
@@ -56,10 +56,11 @@ h2 {
 
 button {
     display: grid;
-    min-height: 72px;
+    min-height: 76px;
     place-items: center;
+    gap: 8px;
     border: 1px solid var(--color-border-default);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--color-panel-background);
     color: var(--color-text-secondary);
     font-size: 13px;
@@ -72,26 +73,46 @@ button {
 
 button span {
     display: grid;
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     place-items: center;
-    border-radius: 8px;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
 }
 
 .is-primary span {
     background: var(--color-primary-100);
+    color: var(--color-primary-700);
 }
 .is-success span {
     background: var(--color-success-soft);
+    color: var(--color-success);
 }
 .is-warning span {
     background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+.is-purple span {
+    background: #f3e8ff;
+    color: #8b5cf6;
 }
 
 button:hover {
-    border-color: var(--color-primary-300);
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+}
+.is-primary:hover {
+    border-color: var(--color-primary-300);
+}
+.is-success:hover {
+    border-color: var(--color-success-border);
+}
+.is-warning:hover {
+    border-color: var(--color-warning-border);
+}
+.is-purple:hover {
+    border-color: #d8b4fe;
 }
 
 button:active {

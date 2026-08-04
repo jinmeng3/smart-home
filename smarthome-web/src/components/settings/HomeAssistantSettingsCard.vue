@@ -66,7 +66,7 @@ const applyParameters = () => {
 </script>
 
 <template>
-    <SettingsSectionCard id="homeAssistant" icon="platform" title="模型添加">
+    <SettingsSectionCard id="homeAssistant" icon="platform" title="模型添加" tone="orange">
         <label class="settings-field integration-field">
             <span class="integration-label">模型名称</span>
             <input

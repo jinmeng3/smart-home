@@ -199,9 +199,11 @@ const batchEnable = (ids: number[]) => {
                         ><button>⋮</button>
                     </header>
                     <div class="devices">
-                        <i><SvgIcon name="light" size="sm" /></i
-                        ><i><SvgIcon name="curtain" size="sm" /></i
-                        ><i><SvgIcon name="temperature" size="sm" /></i
+                        <i class="dev-light"><SvgIcon name="light" size="sm" /></i
+                        ><i class="dev-curtain"
+                            ><SvgIcon name="curtain" size="sm" /></i
+                        ><i class="dev-temp"
+                            ><SvgIcon name="temperature" size="sm" /></i
                         ><span>等 {{ item.devices }} 个设备</span>
                     </div>
                     <footer>
@@ -230,15 +232,21 @@ const batchEnable = (ids: number[]) => {
                     <div class="steps">
                         <div
                             v-for="(step, index) in [
-                                ['位置触发', '到达家 100m 内', 'room'],
-                                ['打开灯光', '客厅灯、玄关灯', 'light'],
-                                ['关闭窗帘', '客厅窗帘', 'curtain'],
-                                ['设置空调', '制冷 26°C', 'air-conditioner'],
-                                ['安防模式', '回家模式', 'security'],
+                                ['位置触发', '到达家 100m 内', 'room', 'blue'],
+                                ['打开灯光', '客厅灯、玄关灯', 'light', 'orange'],
+                                ['关闭窗帘', '客厅窗帘', 'curtain', 'teal'],
+                                [
+                                    '设置空调',
+                                    '制冷 26°C',
+                                    'air-conditioner',
+                                    'blue',
+                                ],
+                                ['安防模式', '回家模式', 'security', 'purple'],
                             ]"
                             :key="step[0]"
                         >
-                            <i><SvgIcon :name="step[2]" /></i
+                            <i :class="`is-${step[3]}`"
+                                ><SvgIcon :name="step[2]" /></i
                             ><b>{{ step[0] }}</b
                             ><small>{{ step[1] }}</small
                             ><em v-if="index < 4">→</em>
@@ -321,19 +329,28 @@ const batchEnable = (ids: number[]) => {
             <section class="panel">
                 <h2>▣ 快捷操作</h2>
                 <div class="quick">
-                    <button @click="activeDialog = 'batch'">
+                    <button
+                        class="tone-blue"
+                        @click="activeDialog = 'batch'"
+                    >
                         <SvgIcon name="power" />批量启用<small
                             >启用多个规则</small
                         ></button
-                    ><button @click="activeDialog = 'schedule'">
+                    ><button
+                        class="tone-purple"
+                        @click="activeDialog = 'schedule'"
+                    >
                         <SvgIcon name="clock" />定时设置<small
                             >统一定时管理</small
                         ></button
-                    ><button>
+                    ><button class="tone-teal">
                         <SvgIcon name="layers" />排序管理<small
                             >自定义排序</small
                         ></button
-                    ><button @click="activeDialog = 'logs'">
+                    ><button
+                        class="tone-orange"
+                        @click="activeDialog = 'logs'"
+                    >
                         <SvgIcon name="log" />查看日志<small
                             >执行记录与日志</small
                         >
@@ -558,6 +575,18 @@ const batchEnable = (ids: number[]) => {
     background: #edf4ff;
     color: #2873f3;
 }
+.devices i.dev-light {
+    background: #fff0df;
+    color: #ff8a1f;
+}
+.devices i.dev-curtain {
+    background: #e0f5f6;
+    color: #0d9488;
+}
+.devices i.dev-temp {
+    background: #e9f2ff;
+    color: #2871f5;
+}
 .devices span {
     color: #74839a;
     font-size: 12px;
@@ -653,6 +682,22 @@ const batchEnable = (ids: number[]) => {
     border-radius: 14px;
     background: #edf4ff;
     color: #2872f2;
+}
+.steps i.is-blue {
+    background: #e9f2ff;
+    color: #2871f5;
+}
+.steps i.is-orange {
+    background: #fff0df;
+    color: #ff8a1f;
+}
+.steps i.is-teal {
+    background: #e0f5f6;
+    color: #0d9488;
+}
+.steps i.is-purple {
+    background: #eee9ff;
+    color: #7651ee;
 }
 .steps b {
     margin-top: 8px;
@@ -775,6 +820,18 @@ const batchEnable = (ids: number[]) => {
 .quick svg {
     grid-row: span 2;
     color: #3075ef;
+}
+.quick button.tone-blue svg {
+    color: #2873f5;
+}
+.quick button.tone-purple svg {
+    color: #7651ee;
+}
+.quick button.tone-teal svg {
+    color: #0d9488;
+}
+.quick button.tone-orange svg {
+    color: #ff8a1f;
 }
 .quick small {
     color: #8492a6;

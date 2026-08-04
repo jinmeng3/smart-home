@@ -48,7 +48,11 @@ const statusLabel = (device: DashboardDevice) =>
                 class="device-row"
                 :class="`is-${device.status}`"
             >
-                <span class="device-icon" aria-hidden="true">
+                <span
+                    class="device-icon"
+                    :class="`is-${device.type}`"
+                    aria-hidden="true"
+                >
                     <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
                 </span>
                 <div class="device-copy">
@@ -89,6 +93,41 @@ const statusLabel = (device: DashboardDevice) =>
     border-radius: 8px;
     background: var(--color-surface-subtle);
     color: var(--color-primary-700);
+}
+
+.device-icon.is-light {
+    background: var(--color-warning-soft);
+    color: var(--color-device-light);
+}
+
+.device-icon.is-air_conditioner {
+    background: var(--color-info-soft);
+    color: var(--color-device-climate);
+}
+
+.device-icon.is-lock {
+    background: var(--color-surface-subtle);
+    color: var(--color-device-lock);
+}
+
+.device-icon.is-camera {
+    background: #f3e8ff;
+    color: var(--color-device-camera);
+}
+
+.device-icon.is-sensor {
+    background: var(--color-success-soft);
+    color: var(--color-device-air);
+}
+
+.device-icon.is-socket {
+    background: var(--color-teal-soft);
+    color: var(--color-device-energy);
+}
+
+.device-icon.is-curtain {
+    background: var(--color-teal-soft);
+    color: var(--color-teal-600);
 }
 
 .device-copy {

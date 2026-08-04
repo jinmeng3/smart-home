@@ -20,7 +20,7 @@ ENV/
 !.env.example
 
 # Runtime data
-db/
+/db/
 *.db
 *.sqlite
 *.sqlite3
