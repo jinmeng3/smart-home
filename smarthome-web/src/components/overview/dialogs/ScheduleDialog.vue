@@ -2,11 +2,11 @@
 import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
+import { useModalConfirm } from "../../../composables/useModalConfirm";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>();
 
-const loading = ref(false);
 const autoSync = ref(true);
 
 const schedules = reactive([
@@ -36,13 +36,10 @@ const schedules = reactive([
     },
 ]);
 
-const confirm = async () => {
-    loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+const { loading, confirm } = useModalConfirm(() => {
     ElMessage.success("编辑家庭日程操作成功");
-    loading.value = false;
     emit("update:modelValue", false);
-};
+});
 </script>
 
 <template>

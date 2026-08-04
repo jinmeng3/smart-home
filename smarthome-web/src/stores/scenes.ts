@@ -10,6 +10,7 @@ import {
     useSceneTemplate,
     updateSceneEnabled,
 } from "../services/scenes";
+import { sleep } from "../utils/async";
 import type {
     Scene,
     SceneFilters,
@@ -103,9 +104,7 @@ export const useScenesStore = defineStore("scenes", () => {
                     ...stepStatuses.value,
                     [step.id]: "running",
                 };
-                await new Promise<void>((resolve) => {
-                    window.setTimeout(resolve, 180);
-                });
+                await sleep(180);
                 stepStatuses.value = {
                     ...stepStatuses.value,
                     [step.id]: "completed",

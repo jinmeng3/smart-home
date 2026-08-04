@@ -3,6 +3,7 @@ import { reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import { sleep } from "../../../utils/async";
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -48,7 +49,7 @@ const confirm = async () => {
         return;
     }
     loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    await sleep(450);
     emit("room-created", roomName.value.trim());
     ElMessage.success("添加房间操作成功");
     loading.value = false;

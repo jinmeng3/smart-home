@@ -2,6 +2,7 @@
 import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
+import { useModalConfirm } from "../../../composables/useModalConfirm";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -9,21 +10,17 @@ const emit = defineEmits<{
     synced: [];
 }>();
 
-const loading = ref(false);
 const syncOptions = reactive([
     "名称与房间归属",
     "电量与在线状态",
     "检测新接入设备",
 ]);
 
-const confirm = async () => {
-    loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+const { loading, confirm } = useModalConfirm(() => {
     emit("synced");
     ElMessage.success("同步设备状态操作成功");
-    loading.value = false;
     emit("update:modelValue", false);
-};
+});
 </script>
 
 <template>

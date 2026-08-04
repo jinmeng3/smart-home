@@ -2,11 +2,11 @@
 import { reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
+import { useModalConfirm } from "../../../composables/useModalConfirm";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>();
 
-const loading = ref(false);
 const inspectionScope = ref("all");
 const inspectionItems = reactive([
     "在线状态",
@@ -17,13 +17,10 @@ const inspectionItems = reactive([
     "异常告警",
 ]);
 
-const confirm = async () => {
-    loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+const { loading, confirm } = useModalConfirm(() => {
     ElMessage.success("全屋巡检操作成功");
-    loading.value = false;
     emit("update:modelValue", false);
-};
+});
 </script>
 
 <template>

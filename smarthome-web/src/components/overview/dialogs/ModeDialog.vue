@@ -3,11 +3,11 @@ import { ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import { useModalConfirm } from "../../../composables/useModalConfirm";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>();
 
-const loading = ref(false);
 const selectedMode = ref("home");
 const selectedScope = ref("all");
 const autoSync = ref(true);
@@ -40,13 +40,10 @@ const modes = [
 ] as const;
 const scopes = ["客厅", "主卧", "次卧", "厨房", "卫生间", "阳台"];
 
-const confirm = async () => {
-    loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+const { loading, confirm } = useModalConfirm(() => {
     ElMessage.success("切换全屋模式操作成功");
-    loading.value = false;
     emit("update:modelValue", false);
-};
+});
 </script>
 
 <template>

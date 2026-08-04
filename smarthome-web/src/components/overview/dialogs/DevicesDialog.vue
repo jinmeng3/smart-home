@@ -2,11 +2,10 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
+import { useModalConfirm } from "../../../composables/useModalConfirm";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>();
-
-const loading = ref(false);
 
 const deviceRows = [
     ["客厅吸顶灯", "客厅", "在线", "—", "10:15", "正常"],
@@ -19,13 +18,10 @@ const deviceRows = [
     ["客厅摄像头", "客厅", "离线", "—", "09:58", "离线"],
 ];
 
-const confirm = async () => {
-    loading.value = true;
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+const { loading, confirm } = useModalConfirm(() => {
     ElMessage.success("设备状态总览操作成功");
-    loading.value = false;
     emit("update:modelValue", false);
-};
+});
 </script>
 
 <template>

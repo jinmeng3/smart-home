@@ -5,6 +5,7 @@ import { useAuthStore } from "../../stores/auth";
 import { useSettingsStore } from "../../stores/settings";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { sleep } from "../../utils/async";
 import "element-plus/theme-chalk/el-input.css";
 
 type AuthMode = "login" | "register";
@@ -106,9 +107,6 @@ const showFeedback = (type: FeedbackType, message: string, shake = false) => {
     }
 };
 
-const wait = (ms: number) =>
-    new Promise<void>((resolve) => setTimeout(resolve, ms));
-
 const submit = async () => {
     feedback.value = null;
     if (mode.value === "login") {
@@ -136,7 +134,7 @@ const submit = async () => {
             );
             loginForm.password = "";
             outcome.value = "login";
-            await wait(1200);
+            await sleep(1200);
             authStore.loginVisible = false;
         } else {
             await authStore.register(
@@ -150,7 +148,7 @@ const submit = async () => {
             registerForm.password = "";
             registerForm.confirmPassword = "";
             outcome.value = "register";
-            await wait(1200);
+            await sleep(1200);
             authStore.loginVisible = false;
         }
         // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
@@ -191,7 +189,7 @@ const logout = async () => {
     try {
         await authStore.logout(false);
         outcome.value = "logout";
-        await wait(1200);
+        await sleep(1200);
         authStore.loginVisible = false;
     } catch (error) {
         showFeedback(
