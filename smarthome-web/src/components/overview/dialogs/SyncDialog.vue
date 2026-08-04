@@ -98,53 +98,10 @@ const { loading, confirm } = useModalConfirm(() => {
 </template>
 
 <style scoped>
-.box {
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    background: var(--color-panel-background);
-    padding: 16px;
-}
 .sync-layout {
     display: grid;
     grid-template-columns: 1.65fr 1fr;
     gap: 16px;
-}
-.chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-.chips button {
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-panel-background);
-    padding: 7px 12px;
-}
-.chips button.active {
-    border-color: var(--color-primary-400);
-    background: var(--color-primary-100);
-    color: var(--color-primary-600);
-}
-.switch-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-}
-.switch-row input {
-    width: 38px;
-    height: 20px;
-    accent-color: var(--color-primary-500);
-}
-.switch-row small {
-    display: block;
-    color: var(--color-text-tertiary);
-}
-.side-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
 }
 .sync-summary p {
     display: flex;

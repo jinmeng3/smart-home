@@ -82,33 +82,10 @@ const { loading, confirm } = useModalConfirm(() => {
 </template>
 
 <style scoped>
-.box {
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    background: var(--color-panel-background);
-    padding: 16px;
-}
 .inspection-top {
     display: grid;
     grid-template-columns: 1fr 140px;
     gap: 12px;
-}
-.chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-.chips button {
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-panel-background);
-    padding: 7px 12px;
-}
-.chips button.active {
-    border-color: var(--color-primary-400);
-    background: var(--color-primary-100);
-    color: var(--color-primary-600);
 }
 .wide {
     margin-bottom: 18px;

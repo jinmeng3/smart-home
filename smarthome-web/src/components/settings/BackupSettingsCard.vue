@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { ElButton, ElMessage } from "element-plus";
+import { ElMessage } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import type { BackupSettings, SettingsState } from "../../types/settings";
 import BaseSwitch from "../BaseSwitch.vue";
@@ -122,25 +121,10 @@ const readBackupFile = (event: Event) => {
         <BaseSmartModal
             v-model="historyVisible"
             width="620px"
+            title="备份历史"
+            description="查看最近生成的本地备份记录"
+            icon="backup"
         >
-            <template #header>
-                <header class="dialog-header">
-                    <span class="dialog-icon" aria-hidden="true">
-                        <SvgIcon name="backup" size="sm" />
-                    </span>
-                    <div>
-                        <h2>备份历史</h2>
-                        <p>查看最近生成的本地备份记录</p>
-                    </div>
-                    <ElButton
-                        aria-label="关闭"
-                        class="close-button"
-                        text
-                        @click="historyVisible = false"
-                        >×</ElButton
-                    >
-                </header>
-            </template>
 
             <div class="backup-dialog-body">
                 <section class="backup-panel backup-panel-actions">

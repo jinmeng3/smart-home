@@ -20,6 +20,7 @@ interface SmartModalProps {
     draftText?: string;
     showDraft?: boolean;
     beforeClose?: () => boolean | Promise<boolean>;
+    closeButtonDisabled?: boolean;
 }
 
 const props = withDefaults(defineProps<SmartModalProps>(), {
@@ -34,6 +35,7 @@ const props = withDefaults(defineProps<SmartModalProps>(), {
     cancelText: "取消",
     draftText: "保存草稿",
     showDraft: false,
+    closeButtonDisabled: false,
 });
 
 const emit = defineEmits<{
@@ -187,30 +189,30 @@ onBeforeUnmount(() => {
                     >
                         <slot name="header">
                             <header
-                                class="smart-modal-header smart-modal-stagger-1"
+                                class="dialog-header smart-modal-stagger-1"
                             >
                                 <slot name="icon">
                                     <span
-                                        class="smart-modal-icon"
+                                        class="dialog-icon"
                                         aria-hidden="true"
                                     >
-                                        <SvgIcon :name="icon" size="lg" />
+                                        <SvgIcon :name="icon" size="sm" />
                                     </span>
                                 </slot>
-                                <div class="smart-modal-title">
+                                <div>
                                     <h2 :id="titleId">{{ title }}</h2>
                                     <p v-if="description">{{ description }}</p>
                                 </div>
-                                <button
+                                <ElButton
                                     v-if="closable"
-                                    class="smart-modal-close"
-                                    type="button"
+                                    class="close-button"
+                                    text
                                     aria-label="关闭"
-                                    :disabled="loading"
+                                    :disabled="loading || closeButtonDisabled"
                                     @click="close"
                                 >
                                     <SvgIcon name="close" size="sm" />
-                                </button>
+                                </ElButton>
                             </header>
                         </slot>
 
@@ -359,30 +361,6 @@ onBeforeUnmount(() => {
     margin-top: 5px;
     color: var(--color-text-secondary);
     font-size: 14px;
-}
-
-.smart-modal-close {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    border: 0;
-    border-radius: 50%;
-    color: var(--color-text-tertiary);
-    background: transparent;
-    transition:
-        background-color 160ms var(--motion-ease),
-        color 160ms var(--motion-ease),
-        transform 160ms var(--motion-ease);
-}
-
-.smart-modal-close:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-hover);
-}
-
-.smart-modal-close:active {
-    transform: scale(0.94);
 }
 
 .smart-modal-status {
@@ -536,11 +514,19 @@ onBeforeUnmount(() => {
     place-items: center;
     border-radius: 50%;
     color: var(--color-text-tertiary);
+    transition:
+        background-color 160ms var(--motion-ease),
+        color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
 }
 
 .smart-modal :deep(.close-button:hover) {
     color: var(--color-text-primary);
     background: var(--color-surface-hover);
+}
+
+.smart-modal :deep(.close-button:active) {
+    transform: scale(0.94);
 }
 
 .smart-modal :deep(.dialog-footer) {

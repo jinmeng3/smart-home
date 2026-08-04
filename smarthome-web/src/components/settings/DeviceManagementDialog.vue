@@ -2,7 +2,6 @@
 import { computed } from "vue";
 import { ElButton, ElMessage, ElMessageBox } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
 
@@ -57,27 +56,11 @@ const revokeDevice = async (deviceId: number) => {
     <BaseSmartModal
         :model-value="props.modelValue"
         width="720px"
+        title="登录设备管理"
+        description="管理当前账户已记录的登录设备"
+        icon="device-management"
         @update:model-value="emit('update:modelValue', $event)"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">
-                    <SvgIcon name="device-management" size="sm" />
-                </span>
-                <div>
-                    <h2>登录设备管理</h2>
-                    <p>管理当前账户已记录的登录设备</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    text
-                    @click="closeDialog"
-                >
-                    ×
-                </ElButton>
-            </header>
-        </template>
 
         <div class="device-dialog-body">
             <section class="device-list-card">

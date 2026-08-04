@@ -2,7 +2,6 @@
 import { computed, ref } from "vue";
 import { ElButton, ElMessage } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import type { FamilyMember, MemberRole } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import MemberListItem from "./MemberListItem.vue";
@@ -114,27 +113,11 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
         v-model="dialogVisible"
         width="720px"
         :close-on-overlay="!submitting && loadingMemberId === null"
+        title="家庭成员与权限"
+        description="查看家庭成员，并管理每位成员的访问权限"
+        icon="members"
+        :close-button-disabled="submitting || loadingMemberId !== null"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">
-                    <SvgIcon name="members" size="sm" />
-                </span>
-                <div>
-                    <h2>家庭成员与权限</h2>
-                    <p>查看家庭成员，并管理每位成员的访问权限</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    :disabled="submitting || loadingMemberId !== null"
-                    text
-                    @click="dialogVisible = false"
-                    >×</ElButton
-                >
-            </header>
-        </template>
-
         <div class="member-toolbar">
             <input
                 v-model="memberEmail"
@@ -241,52 +224,6 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     background: var(--color-ai-soft);
 }
 
-.dialog-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 17px 20px 14px;
-    border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-header-start),
-        var(--color-dialog-header-end)
-    );
-}
-
-.dialog-icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    place-items: center;
-    border-radius: 11px;
-    color: white;
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-icon-start),
-        var(--color-dialog-icon-end)
-    );
-}
-
-.dialog-header h2 {
-    color: var(--color-text-primary);
-    font-size: 17px;
-    font-weight: 800;
-}
-
-.dialog-header p {
-    margin-top: 2px;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-}
-
-.close-button {
-    margin: -4px -6px 0 auto;
-    color: var(--color-text-tertiary);
-    font-size: 22px;
-}
-
 .member-toolbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 112px 84px;
@@ -305,21 +242,6 @@ const updateMemberRole = (member: FamilyMember, role: MemberRole) => {
     gap: 8px;
     overflow-y: auto;
     padding: 0 20px 18px;
-}
-
-.dialog-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-workspace-background);
-}
-
-.dialog-footer span {
-    color: var(--color-text-tertiary);
-    font-size: 11px;
 }
 
 @media (max-width: 640px) {

@@ -105,24 +105,10 @@ const applyParameters = () => {
     <BaseSmartModal
         v-model="dialogVisible"
         width="760px"
+        title="模型配置"
+        description="状态、连接测试和厂商扩展参数"
+        icon="platform"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="ai-icon" aria-hidden="true">
-                    <SvgIcon name="platform" size="sm" />
-                </span>
-                <div>
-                    <h2>模型配置</h2>
-                    <p>状态、连接测试和厂商扩展参数</p>
-                </div>
-                <ElButton
-                    class="close-button"
-                    text
-                    @click="dialogVisible = false"
-                    >×</ElButton
-                >
-            </header>
-        </template>
 
         <section class="model-config-layout">
             <div class="model-config-main">

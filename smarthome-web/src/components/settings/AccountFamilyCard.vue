@@ -2,7 +2,6 @@
 import { computed, ref, watch } from "vue";
 import { ElButton, ElMessageBox } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import type { AccountForm } from "../../types/account";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import "element-plus/theme-chalk/el-message-box.css";
@@ -147,27 +146,11 @@ const deleteAvatar = async () => {
     <BaseSmartModal
         v-model="dialogVisible"
         width="620px"
+        title="账户与家庭"
+        description="查看当前账户信息并管理所属家庭"
+        icon="account"
+        :close-button-disabled="loading"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">
-                    <SvgIcon name="account" size="sm" />
-                </span>
-                <div>
-                    <h2>账户与家庭</h2>
-                    <p>查看当前账户信息并管理所属家庭</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    :disabled="loading"
-                    text
-                    @click="dialogVisible = false"
-                    >×</ElButton
-                >
-            </header>
-        </template>
-
         <section class="current-account">
             <img
                 v-if="visibleAvatarUrl"
@@ -315,52 +298,6 @@ const deleteAvatar = async () => {
     flex: 1;
 }
 
-.dialog-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 17px 20px 14px;
-    border-bottom: 1px solid var(--color-divider);
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-header-start),
-        var(--color-dialog-header-end)
-    );
-}
-
-.dialog-icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    place-items: center;
-    border-radius: 11px;
-    color: white;
-    background: linear-gradient(
-        135deg,
-        var(--color-dialog-icon-start),
-        var(--color-dialog-icon-end)
-    );
-}
-
-.dialog-header h2 {
-    color: var(--color-text-primary);
-    font-size: 17px;
-    font-weight: 800;
-}
-
-.dialog-header p {
-    margin-top: 2px;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-}
-
-.close-button {
-    margin: -4px -6px 0 auto;
-    color: var(--color-text-tertiary);
-    font-size: 22px;
-}
-
 .current-account {
     margin: 0;
     padding: 16px 18px;
@@ -461,21 +398,6 @@ const deleteAvatar = async () => {
 
 .address-field {
     grid-column: 1 / -1;
-}
-
-.dialog-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-divider);
-    background: var(--color-workspace-background);
-}
-
-.dialog-footer > span {
-    color: var(--color-text-tertiary);
-    font-size: 11px;
 }
 
 @media (max-width: 640px) {

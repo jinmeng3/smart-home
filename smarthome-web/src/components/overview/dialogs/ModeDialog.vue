@@ -117,12 +117,6 @@ const { loading, confirm } = useModalConfirm(() => {
 </template>
 
 <style scoped>
-.box {
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    background: var(--color-panel-background);
-    padding: 16px;
-}
 .mode-layout {
     display: grid;
     grid-template-columns: 1.65fr 1fr;
@@ -158,8 +152,7 @@ const { loading, confirm } = useModalConfirm(() => {
     background: var(--color-primary-100);
     color: var(--color-primary-600);
 }
-.mode-card small,
-.switch-row small {
+.mode-card small {
     display: block;
     color: var(--color-text-tertiary);
 }
@@ -171,39 +164,6 @@ const { loading, confirm } = useModalConfirm(() => {
     border-radius: 50%;
     background: var(--color-primary-500);
     color: #fff;
-}
-.side-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-.chips button {
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-panel-background);
-    padding: 7px 12px;
-}
-.chips button.active {
-    border-color: var(--color-primary-400);
-    background: var(--color-primary-100);
-    color: var(--color-primary-600);
-}
-.switch-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-}
-.switch-row input {
-    width: 38px;
-    height: 20px;
-    accent-color: var(--color-primary-500);
 }
 .impact p {
     display: flex;

@@ -161,23 +161,6 @@ const { loading, confirm } = useModalConfirm(() => {
     display: block;
     color: var(--color-text-tertiary);
 }
-.chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-.chips button {
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-panel-background);
-    padding: 7px 12px;
-}
-.chips button.active {
-    border-color: var(--color-primary-400);
-    background: var(--color-primary-100);
-    color: var(--color-primary-600);
-}
 .setting-row input {
     width: 38px;
     height: 20px;

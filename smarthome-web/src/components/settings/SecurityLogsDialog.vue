@@ -2,7 +2,6 @@
 import { computed } from "vue";
 import { ElButton } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
-import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 
 const props = defineProps<{
@@ -25,27 +24,11 @@ const closeDialog = () => {
     <BaseSmartModal
         :model-value="props.modelValue"
         width="680px"
+        title="操作日志"
+        description="查看最近的本地安全变更"
+        icon="log"
         @update:model-value="emit('update:modelValue', $event)"
     >
-        <template #header>
-            <header class="dialog-header">
-                <span class="dialog-icon" aria-hidden="true">
-                    <SvgIcon name="log" size="sm" />
-                </span>
-                <div>
-                    <h2>操作日志</h2>
-                    <p>查看最近的本地安全变更</p>
-                </div>
-                <ElButton
-                    aria-label="关闭"
-                    class="close-button"
-                    text
-                    @click="closeDialog"
-                >
-                    ×
-                </ElButton>
-            </header>
-        </template>
 
         <div class="logs-dialog-body">
             <section class="logs-card">
