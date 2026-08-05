@@ -51,7 +51,7 @@ export const runRoomQuickAction = (roomId: number, action: string) =>
 
 // ── 房间日志 ────────────────────────────────────────────────────────────────────
 
-const getRoomLogs = (
+export const getRoomLogs = (
   roomId: number,
   params: {
     date_from?: string;
@@ -74,7 +74,7 @@ const getRoomLogs = (
 
 // ── 房间设备绑定 ────────────────────────────────────────────────────────────────
 
-const getRoomDevices = (
+export const getRoomDevices = (
   roomId: number,
   params: { keyword?: string; type?: string; status?: string } = {},
 ) => {
@@ -88,7 +88,7 @@ const getRoomDevices = (
   );
 };
 
-const replaceRoomDevices = (
+export const replaceRoomDevices = (
   roomId: number,
   devices: RoomDeviceBindingInput[],
 ) =>
@@ -97,7 +97,7 @@ const replaceRoomDevices = (
     body: JSON.stringify({ devices }),
   });
 
-const updateRoomDeviceMeta = (
+export const updateRoomDeviceMeta = (
   roomId: number,
   deviceId: number,
   payload: RoomDeviceMetaInput,
@@ -112,12 +112,12 @@ const updateRoomDeviceMeta = (
 
 // ── 房间环境 ────────────────────────────────────────────────────────────────────
 
-const getRoomEnvironmentLatest = (roomId: number) =>
+export const getRoomEnvironmentLatest = (roomId: number) =>
   apiRequest<RoomEnvironmentLatest>(
     `/api/rooms/${roomId}/environment/latest`,
   );
 
-const getRoomEnvironmentTrends = (
+export const getRoomEnvironmentTrends = (
   roomId: number,
   metrics = "temperature,humidity",
 ) =>
@@ -127,20 +127,20 @@ const getRoomEnvironmentTrends = (
     )}`,
   );
 
-const createEnvironmentReport = (roomId: number) =>
+export const createEnvironmentReport = (roomId: number) =>
   apiRequest<RoomEnvironmentReport>(`/api/rooms/${roomId}/environment/reports`, {
     method: "POST",
   });
 
-const getEnvironmentReport = (taskId: string) =>
+export const getEnvironmentReport = (taskId: string) =>
   apiRequest<RoomEnvironmentReport>(`/api/environment/reports/${taskId}`);
 
 // ── 房间场景 ────────────────────────────────────────────────────────────────────
 
-const getRoomScenes = (roomId: number) =>
+export const getRoomScenes = (roomId: number) =>
   apiRequest<RoomSceneListResponse>(`/api/rooms/${roomId}/scenes`);
 
-const previewRoomScene = (roomId: number, sceneId: string) =>
+export const previewRoomScene = (roomId: number, sceneId: string) =>
   apiRequest<RoomScenePreview>(
     `/api/rooms/${roomId}/scenes/${sceneId}/preview`,
     {
@@ -148,7 +148,7 @@ const previewRoomScene = (roomId: number, sceneId: string) =>
     },
   );
 
-const executeRoomScene = (
+export const executeRoomScene = (
   roomId: number,
   sceneId: string,
   payload: { scope?: "room" | "all"; sync_automation?: boolean } = {},

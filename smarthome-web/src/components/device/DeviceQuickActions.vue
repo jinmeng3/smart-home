@@ -3,7 +3,7 @@ import SvgIcon from "../common/SvgIcon.vue";
 
 const actions = [
     { key: "scan", label: "扫描新设备", tone: "primary", icon: "scan" },
-    { key: "group", label: "批量分组", tone: "success", icon: "group" },
+    { key: "delete", label: "批量删除", tone: "danger", icon: "delete" },
     { key: "firmware", label: "固件更新", tone: "purple", icon: "firmware" },
     { key: "logs", label: "查看日志", tone: "warning", icon: "log" },
 ] as const;
@@ -92,6 +92,10 @@ button:hover {
 .is-warning:hover {
     border-color: var(--color-warning-border);
 }
+.is-danger:hover {
+    border-color: var(--color-danger-border, #f56c6c);
+}
+
 .is-purple:hover {
     border-color: color-mix(in srgb, var(--tone-purple) 45%, var(--color-border-default));
 }

@@ -6,6 +6,7 @@ import SvgIcon from "../common/SvgIcon.vue";
 import {
     deviceTypeIconMap,
     getDeviceStatusLabel,
+    getDeviceTypeIcon,
 } from "../device/deviceMeta";
 import { formatDeviceTimestamp } from "../../utils/device";
 
@@ -53,7 +54,7 @@ const statusLabel = (device: DashboardDevice) =>
                     :class="`is-${device.type}`"
                     aria-hidden="true"
                 >
-                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
+                    <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="sm" />
                 </span>
                 <div class="device-copy">
                     <strong>{{ device.name }}</strong>

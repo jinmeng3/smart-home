@@ -34,6 +34,9 @@ class Device(Base):
     firmware: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="固件版本"
     )
+    icon: Mapped[str] = mapped_column(
+        String(64), default="device-management", comment="设备图标"
+    )
     image_url: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="设备图片地址"
     )

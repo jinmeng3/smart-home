@@ -15,14 +15,25 @@ import type {
   DeviceCreatePayload,
   DeviceDetail,
   DeviceFilters,
+  DeviceLog,
 } from "../types/device";
 
 export type DeviceSortKey = "updated" | "name" | "status";
-export type DeviceQuickActionKey = "scan" | "group" | "firmware" | "logs";
+export type DeviceQuickActionKey = "scan" | "delete" | "firmware" | "logs";
+
+const logActionLabels: Record<string, string> = {
+  create: "创建",
+  update: "更新",
+  sync: "同步",
+  group: "分组",
+  delete: "删除",
+  turn_on: "开启",
+  turn_off: "关闭",
+};
 
 const quickActionMessages: Record<Exclude<DeviceQuickActionKey, "logs">, string> = {
   scan: "扫描新设备接口已预留",
-  group: "批量分组接口已预留",
+  delete: "批量删除接口已预留",
   firmware: "固件更新接口已预留",
 };
 
@@ -49,6 +60,14 @@ export const useDeviceManagementController = () => {
   const editingDevice = ref<Device | null>(null);
   const deleteDialogOpen = ref(false);
   const deletingDevice = ref<Device | null>(null);
+  const batchDeleteDialogOpen = ref(false);
+  const batchMode = ref(false);
+  const selectedDeviceIds = ref<number[]>([]);
+  const batchDeleting = ref(false);
+  const batchDeletingIds = ref<number[]>([]);
+  const logDialogOpen = ref(false);
+  const deviceLogs = ref<DeviceLog[]>([]);
+  const logDeviceName = ref("");
   const sort = ref<DeviceSortKey>("updated");
 
   const viewMode = ref<"all" | "frequent" | "favorite">("all");
@@ -297,25 +316,107 @@ export const useDeviceManagementController = () => {
     }
   };
 
-  const runBatch = () => {
-    ElMessage.info("批量操作接口已预留");
+  const toggleSelectDevice = (device: Device) => {
+    const id = device.id;
+    const index = selectedDeviceIds.value.indexOf(id);
+    if (index > -1) {
+      selectedDeviceIds.value.splice(index, 1);
+    } else {
+      selectedDeviceIds.value.push(id);
+    }
   };
 
+  const clearSelection = () => {
+    selectedDeviceIds.value = [];
+  };
+
+  const toggleBatchMode = () => {
+    batchMode.value = !batchMode.value;
+    if (!batchMode.value) {
+      clearSelection();
+    }
+  };
+
+  const batchDeleteDevices = (ids: number[]) => {
+    batchDeletingIds.value = ids;
+    batchDeleteDialogOpen.value = true;
+  };
+
+  const runBatch = () => {
+    if (!devices.value.length) {
+      ElMessage.warning("当前没有可删除的设备");
+      return;
+    }
+    batchDeletingIds.value = devices.value.map((d) => d.id);
+    batchDeleteDialogOpen.value = true;
+  };
+
+  const cancelBatchDelete = () => {
+    if (batchDeleting.value || deleting.value) return;
+    batchDeleteDialogOpen.value = false;
+    batchDeletingIds.value = [];
+  };
+
+  const confirmBatchDelete = async () => {
+    const ids = batchDeletingIds.value;
+    if (!ids.length) {
+      batchDeleteDialogOpen.value = false;
+      return;
+    }
+
+    batchDeleting.value = true;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+      try {
+        await apiDeleteDevice(id);
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    batchDeleting.value = false;
+    batchDeleteDialogOpen.value = false;
+    batchDeletingIds.value = [];
+
+    if (failCount === 0) {
+      ElMessage.success(`已成功删除 ${successCount} 台设备`);
+    } else {
+      ElMessage.warning(`已删除 ${successCount} 台，${failCount} 台删除失败`);
+    }
+
+    selectedDeviceIds.value = [];
+    batchMode.value = false;
+    await loadDevices();
+  };
+
+  const batchDeletingDevices = computed(() => {
+    const ids = batchDeletingIds.value;
+    if (!ids.length) return [];
+    return devices.value.filter((d) => ids.includes(d.id));
+  });
+
   const runQuickAction = (key: DeviceQuickActionKey) => {
+    if (key === "delete") {
+      void runBatch();
+      return;
+    }
+
     if (key === "logs") {
       if (selectedId.value === null) {
         ElMessage.warning("请先选择设备");
         return;
       }
 
+      const device = devices.value.find((d) => d.id === selectedId.value);
+      logDeviceName.value = device?.name ?? "";
+
       void apiListDeviceLogs(selectedId.value)
         .then((logs) => {
-          const latest = logs[0];
-          ElMessage.info(
-            latest
-              ? `共 ${logs.length} 条日志，最近：${latest.message}`
-              : "该设备暂无日志",
-          );
+          deviceLogs.value = logs;
+          logDialogOpen.value = true;
         })
         .catch((error: unknown) => {
           ElMessage.error(
@@ -328,18 +429,45 @@ export const useDeviceManagementController = () => {
     ElMessage.info(quickActionMessages[key]);
   };
 
+  const logActionLabel = (action: string): string => {
+    return logActionLabels[action] ?? action;
+  };
+
+  const closeLogDialog = () => {
+    logDialogOpen.value = false;
+    deviceLogs.value = [];
+    logDeviceName.value = "";
+  };
+
   return {
     addDevice,
+    batchDeleteDialogOpen,
+    batchMode,
+    selectedDeviceIds,
+    batchDeleting,
+    batchDeletingIds,
+    batchDeletingDevices,
+    toggleSelectDevice,
+    clearSelection,
+    toggleBatchMode,
+    batchDeleteDevices,
+    cancelBatchDelete,
     cancelRemoveDevice,
+    confirmBatchDelete,
     confirmRemoveDevice,
     deleteDialogOpen,
     deleting,
     deletingDevice,
     devices,
+    deviceLogs,
     editingDevice,
     editorOpen,
     filters,
     loading,
+    logActionLabel,
+    logDeviceName,
+    logDialogOpen,
+    closeLogDialog,
     platforms,
     removeDevice,
     rooms,

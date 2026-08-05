@@ -1,6 +1,8 @@
 import { apiRequest } from "./client";
 import type {
   Device,
+  DeviceBatchGroupPayload,
+  DeviceBatchGroupResult,
   DeviceCreatePayload,
   DeviceDetail,
   DeviceFilters,
@@ -22,6 +24,7 @@ export interface ApiDevice {
   status: Device["status"];
   connection: DevicePlatform;
   firmware: string;
+  icon?: string | null;
   image_url?: string | null;
   last_online?: string | null;
   created_at?: string;
@@ -53,6 +56,7 @@ export const mapDevice = (device: ApiDevice): Device => ({
   status: device.status,
   connection: device.connection,
   firmware: device.firmware,
+  icon: device.icon ?? undefined,
   lastOnline: device.last_online ?? "",
   image: device.image_url ?? undefined,
 });
@@ -82,6 +86,7 @@ const mapCreatePayload = (payload: DeviceCreatePayload) => ({
   connection: payload.connection,
   device_id: payload.deviceId,
   firmware: payload.firmware,
+  icon: payload.icon,
   image_url: payload.imageUrl,
 });
 
@@ -93,6 +98,7 @@ const mapUpdatePayload = (payload: DeviceUpdatePayload) => ({
   status: payload.status,
   connection: payload.connection,
   firmware: payload.firmware,
+  icon: payload.icon,
   image_url: payload.imageUrl,
 });
 
@@ -168,6 +174,28 @@ export const syncDevices = (platform: DevicePlatform) =>
     body: JSON.stringify({ platform }),
   });
 
+export const batchAssignDeviceGroup = async (
+  payload: DeviceBatchGroupPayload,
+): Promise<DeviceBatchGroupResult> => {
+  const response = await apiRequest<{
+    group_id: number;
+    group: string;
+    assigned_count: number;
+  }>("/api/devices/groups/assign", {
+    method: "POST",
+    body: JSON.stringify({
+      group: payload.group,
+      device_ids: payload.deviceIds,
+    }),
+  });
+
+  return {
+    groupId: response.group_id,
+    group: response.group,
+    assignedCount: response.assigned_count,
+  };
+};
+
 export const listDeviceLogs = async (id: number): Promise<DeviceLog[]> => {
   const response = await apiRequest<{ total: number; items: ApiDeviceLog[] }>(
     `/api/devices/${id}/logs`,
@@ -184,4 +212,3 @@ export const uploadDeviceImage = async (file: File): Promise<string> => {
     body: formData,
   });
 };
-

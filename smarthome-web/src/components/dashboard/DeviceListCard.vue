@@ -5,7 +5,7 @@ import { statusColorMap } from "../../constants/status-colors";
 import type { DashboardDevice } from "../../types/device";
 import type { SemanticStatus } from "../../constants/status-colors";
 import { getDeviceRuntimeStatus } from "../../utils/device";
-import { deviceTypeIconMap, deviceTypeLabelMap, getDeviceStatusLabel } from "../device/deviceMeta";
+import { deviceTypeIconMap, deviceTypeLabelMap, getDeviceStatusLabel, getDeviceTypeIcon, getDeviceTypeLabel } from "../device/deviceMeta";
 import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
                 <span
                     class="grid h-6 w-6 place-items-center rounded-lg bg-slate-100 text-[var(--color-primary-700)]"
                 >
-                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
+                    <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="sm" />
                 </span>
                 <strong class="truncate text-sm text-slate-700">{{
                     device.name
@@ -201,14 +201,14 @@ onBeforeUnmount(() => {
                         />
                         <SvgIcon
                             v-else
-                            :name="deviceTypeIconMap[store.selectedDevice.type]"
+                            :name="getDeviceTypeIcon(store.selectedDevice.icon || store.selectedDevice.type)"
                             size="lg"
                         />
                     </div>
                     <div class="device-detail-title">
                         <strong>{{ store.selectedDevice.name }}</strong>
                         <span class="device-type-badge">{{
-                            deviceTypeLabelMap[store.selectedDevice.type]
+                            getDeviceTypeLabel(store.selectedDevice.type)
                         }}</span>
                         <span
                             class="device-status-badge"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Device } from "../../types/device";
-import { deviceStatusLabelMap, deviceTypeIconMap, deviceTypeLabelMap } from "./deviceMeta";
+import { deviceStatusLabelMap, deviceTypeIconMap, deviceTypeLabelMap, getDeviceTypeIcon, getDeviceTypeLabel } from "./deviceMeta";
 
 defineProps<{
     device: Device | null;
@@ -51,14 +51,12 @@ const platformToneMap: Record<string, string> = {
                 <div class="device-image">
                     <img v-if="device.image" :src="device.image" alt="" />
                     <span v-else>
-                        <SvgIcon :name="deviceTypeIconMap[device.type]" size="lg" />
+                        <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="lg" />
                     </span>
                 </div>
                 <div class="device-title">
                     <strong>{{ device.name }}</strong>
-                    <span class="device-type">{{
-                        deviceTypeLabelMap[device.type]
-                    }}</span>
+                    <span class="device-type">{{ getDeviceTypeLabel(device.type) }}</span>
                     <span class="device-status" :class="`is-${device.status}`">
                         <i :class="`status-dot is-${device.status}`"></i>
                         {{ deviceStatusLabelMap[device.status] }}

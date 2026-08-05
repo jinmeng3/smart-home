@@ -9,6 +9,8 @@ import {
     deviceTypeIconMap,
     deviceTypeLabelMap,
     deviceTypeOptions,
+    getDeviceTypeIcon,
+    getDeviceTypeLabel,
     getStatusClasses,
 } from "./deviceMeta";
 
@@ -22,6 +24,8 @@ defineProps<{
     syncing: boolean;
     sort: "updated" | "name" | "status";
     activeType: DeviceType | "";
+    batchMode?: boolean;
+    selectedDeviceIds?: number[];
 }>();
 
 defineEmits<{
@@ -30,6 +34,7 @@ defineEmits<{
     "update:sort": [value: "updated" | "name" | "status"];
     "update:activeType": [value: DeviceType | ""];
     select: [device: Device];
+    "batch-select": [device: Device];
     edit: [device: Device];
     remove: [device: Device];
     add: [];
@@ -55,10 +60,11 @@ const viewMode = ref<"list" | "grid">("list");
                 </button>
                 <button
                     class="device-list-action"
+                    :class="{ 'is-active': batchMode }"
                     type="button"
                     @click="$emit('batch')"
                 >
-                    <SvgIcon name="layers" /> 批量操作
+                    <SvgIcon name="delete" /> 批量删除
                 </button>
                 <button
                     class="device-list-action device-list-sync"
@@ -134,9 +140,12 @@ const viewMode = ref<"list" | "grid">("list");
                         :key="device.id"
                         :device="device"
                         :selected="selectedId === device.id"
+                        :batch-mode="batchMode"
+                        :batch-selected="selectedDeviceIds?.includes(device.id)"
                         @edit="$emit('edit', $event)"
                         @remove="$emit('remove', $event)"
                         @select="$emit('select', $event)"
+                        @batch-select="$emit('batch-select', $event)"
                     />
                 </tbody>
             </table>
@@ -165,7 +174,7 @@ const viewMode = ref<"list" | "grid">("list");
                             :class="`is-${device.type}`"
                             aria-hidden="true"
                         >
-                            <SvgIcon :name="deviceTypeIconMap[device.type]" />
+                            <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" />
                         </span>
                         <span
                             class="device-status-badge"
@@ -177,7 +186,7 @@ const viewMode = ref<"list" | "grid">("list");
                     </header>
                     <div class="device-grid-main">
                         <strong>{{ device.name }}</strong>
-                        <small>{{ deviceTypeLabelMap[device.type] }}</small>
+                        <small>{{ getDeviceTypeLabel(device.type) }}</small>
                     </div>
                     <dl>
                         <div>
@@ -349,6 +358,24 @@ const viewMode = ref<"list" | "grid">("list");
     font-weight: 700;
 }
 
+.device-pagination select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    text-align: center;
+    text-align-last: center;
+    padding: 0 32px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+}
+
+.device-pagination select::-ms-expand {
+    display: none;
+}
+
 .device-list-tools select option,
 .device-pagination select option {
     background: var(--color-panel-background);
@@ -397,6 +424,11 @@ const viewMode = ref<"list" | "grid">("list");
     border-color: var(--color-primary-500);
     background: var(--color-primary-600);
     color: var(--color-text-on-primary);
+}
+.device-list-action.is-active {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .device-table-wrap {
@@ -575,7 +607,7 @@ const viewMode = ref<"list" | "grid">("list");
     border: 1px solid;
     border-radius: 999px;
     padding: 4px 9px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     white-space: nowrap;
 }
@@ -589,7 +621,7 @@ table {
 th {
     padding: 10px;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     text-align: left;
     white-space: nowrap;

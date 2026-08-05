@@ -3,15 +3,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-DeviceType = Literal[
-    "light",
-    "air_conditioner",
-    "lock",
-    "camera",
-    "sensor",
-    "socket",
-    "curtain",
-]
 DeviceStatus = Literal["online", "offline", "warning", "running"]
 DevicePlatform = Literal["Home Assistant", "Matter", "Zigbee", "MQTT"]
 
@@ -20,7 +11,7 @@ class DeviceQueryParams(BaseModel):
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=10, ge=1, le=100)
     keyword: str | None = Field(default=None, max_length=80)
-    type: DeviceType | None = None
+    type: str | None = Field(default=None, max_length=32)
     status: DeviceStatus | None = None
     room: str | None = Field(default=None, max_length=80)
 
@@ -28,19 +19,22 @@ class DeviceQueryParams(BaseModel):
 class DeviceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     room: str = Field(min_length=1, max_length=80)
-    type: DeviceType
+    type: str = Field(min_length=1, max_length=32)
     brand: str = Field(min_length=1, max_length=64)
     connection: DevicePlatform
     device_id: str | None = Field(default=None, min_length=1, max_length=64)
     firmware: str = Field(default="1.0.0", min_length=1, max_length=64)
+    icon: str = "device-management"
     image_url: str | None = Field(default=None, max_length=255)
 
     @field_validator(
         "name",
         "room",
         "brand",
+        "type",
         "device_id",
         "firmware",
+        "icon",
         "image_url",
         mode="before",
     )
@@ -52,14 +46,15 @@ class DeviceCreate(BaseModel):
 class DeviceUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     room: str | None = Field(default=None, min_length=1, max_length=80)
-    type: DeviceType | None = None
+    type: str | None = Field(default=None, min_length=1, max_length=32)
     brand: str | None = Field(default=None, min_length=1, max_length=64)
     status: DeviceStatus | None = None
     connection: DevicePlatform | None = None
     firmware: str | None = Field(default=None, min_length=1, max_length=64)
+    icon: str | None = Field(default=None, min_length=1, max_length=64)
     image_url: str | None = Field(default=None, max_length=255)
 
-    @field_validator("name", "room", "brand", "firmware", "image_url", mode="before")
+    @field_validator("name", "room", "brand", "firmware", "icon", "image_url", mode="before")
     @classmethod
     def strip_strings(cls, value: str | None) -> str | None:
         return value.strip() if isinstance(value, str) else value
@@ -81,11 +76,12 @@ class DeviceRead(BaseModel):
     id: int
     name: str
     room: str
-    type: DeviceType
+    type: str
     brand: str
     status: DeviceStatus
     connection: DevicePlatform
     firmware: str
+    icon: str = "device-management"
     image_url: str | None
     last_online: datetime | None
 

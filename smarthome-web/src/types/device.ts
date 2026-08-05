@@ -1,11 +1,15 @@
-export type DeviceType =
-  | "light"
-  | "air_conditioner"
-  | "lock"
-  | "camera"
-  | "sensor"
-  | "socket"
-  | "curtain";
+export type DeviceType = string;
+
+/** 预定义的设备类型，用于类型选择器中的快捷选项 */
+export const PRESET_DEVICE_TYPES = [
+  "light",
+  "air_conditioner",
+  "lock",
+  "camera",
+  "sensor",
+  "socket",
+  "curtain",
+] as const;
 
 export type DeviceStatus = "online" | "offline" | "warning" | "running";
 
@@ -20,6 +24,7 @@ export interface Device {
   status: DeviceStatus;
   connection: DevicePlatform;
   firmware: string;
+  icon?: string;
   lastOnline: string;
   image?: string;
 }
@@ -62,6 +67,7 @@ export interface DeviceCreatePayload {
   connection: DevicePlatform;
   deviceId?: string;
   firmware?: string;
+  icon?: string;
   imageUrl?: string;
 }
 
@@ -73,13 +79,26 @@ export interface DeviceUpdatePayload {
   status?: DeviceStatus;
   connection?: DevicePlatform;
   firmware?: string;
+  icon?: string;
   imageUrl?: string;
+}
+
+export interface DeviceBatchGroupPayload {
+  group: string;
+  deviceIds: number[];
+}
+
+export interface DeviceBatchGroupResult {
+  groupId: number;
+  group: string;
+  assignedCount: number;
 }
 
 export interface DashboardDevice {
   id: string;
   name: string;
   type: DeviceType;
+  icon?: string;
   status: string;
   value?: string;
   room: string;

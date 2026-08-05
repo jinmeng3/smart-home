@@ -18,6 +18,7 @@ def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
     migrate_ai_model_settings()
     migrate_device_group_column()
+    migrate_device_icon_column()
     migrate_room_columns()
 
 
@@ -67,6 +68,20 @@ def migrate_device_group_column() -> None:
                 text(
                     "ALTER TABLE devices ADD COLUMN group_id INTEGER NULL "
                     "REFERENCES device_group(id) ON DELETE SET NULL"
+                )
+            )
+
+
+def migrate_device_icon_column() -> None:
+    """为已有开发数据库补充设备图标列。"""
+    columns = {column["name"] for column in inspect(engine).get_columns("devices")}
+
+    if "icon" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE devices ADD COLUMN icon "
+                    "VARCHAR(64) NOT NULL DEFAULT 'device-management'"
                 )
             )
 

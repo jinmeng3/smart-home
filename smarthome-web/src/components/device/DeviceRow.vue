@@ -6,16 +6,21 @@ import {
     deviceStatusLabelMap,
     deviceTypeIconMap,
     deviceTypeLabelMap,
+    getDeviceTypeIcon,
+    getDeviceTypeLabel,
     getStatusClasses,
 } from "./deviceMeta";
 
 defineProps<{
     device: Device;
     selected: boolean;
+    batchMode?: boolean;
+    batchSelected?: boolean;
 }>();
 
 defineEmits<{
     select: [device: Device];
+    "batch-select": [device: Device];
     edit: [device: Device];
     remove: [device: Device];
 }>();
@@ -30,9 +35,9 @@ defineEmits<{
         <td>
             <input
                 class="device-checkbox"
-                :checked="selected"
+                :checked="batchMode ? batchSelected : selected"
                 type="checkbox"
-                @click.stop="$emit('select', device)"
+                @click.stop="batchMode ? $emit('batch-select', device) : $emit('select', device)"
             />
         </td>
         <td>
@@ -42,13 +47,13 @@ defineEmits<{
                     :class="`is-${device.type}`"
                     aria-hidden="true"
                 >
-                    <SvgIcon :name="deviceTypeIconMap[device.type]" size="sm" />
+                    <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="sm" />
                 </span>
                 <strong>{{ device.name }}</strong>
             </div>
         </td>
         <td>{{ device.room }}</td>
-        <td>{{ deviceTypeLabelMap[device.type] }}</td>
+        <td>{{ getDeviceTypeLabel(device.type) }}</td>
         <td>{{ device.brand }}</td>
         <td>
             <span
@@ -174,7 +179,7 @@ defineEmits<{
     border: 1px solid;
     border-radius: 999px;
     padding: 4px 9px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
 }
 
@@ -189,7 +194,7 @@ defineEmits<{
     border: 0;
     background: transparent;
     color: var(--color-primary-600);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     transition:
         color 160ms var(--motion-ease),
