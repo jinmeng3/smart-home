@@ -14,7 +14,7 @@ export interface AIModelRead {
   updated_at: string | null;
 }
 
-export interface AIModelUpdate {
+interface AIModelUpdate {
   name?: string;
   provider?: string;
   api_endpoint?: string;
@@ -49,4 +49,9 @@ export const updateAIModel = (payload: AIModelUpdate) =>
   apiRequest<AIModelRead>("/api/ai_model/model", {
     method: "PATCH",
     body: JSON.stringify(payload),
+  });
+
+export const deleteAIModel = () =>
+  apiRequest<void>("/api/ai_model/model", {
+    method: "DELETE",
   });

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
 import ChatWindow from "../components/chat/ChatWindow.vue";
 import Header from "../components/layout/Header.vue";
 import DeviceListCard from "../components/dashboard/DeviceListCard.vue";
 import EnergyCard from "../components/dashboard/EnergyCard.vue";
 import ScheduleCard from "../components/dashboard/ScheduleCard.vue";
 import SecurityCard from "../components/dashboard/SecurityCard.vue";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useAuthStore } from "../stores/auth";
 import { useHomeStore } from "../stores/home";
 
@@ -21,18 +21,7 @@ const refreshHomeData = () => {
     void store.refreshRecentConversations();
 };
 
-onMounted(() => {
-    refreshHomeData();
-});
-
-watch(
-    () => authStore.isAuthenticated,
-    (isAuthenticated) => {
-        if (isAuthenticated) {
-            refreshHomeData();
-        }
-    },
-);
+useAuthenticatedLoader(refreshHomeData);
 </script>
 
 <template>

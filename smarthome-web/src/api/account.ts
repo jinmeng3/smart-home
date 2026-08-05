@@ -3,14 +3,14 @@ import type { HouseholdMember, HouseholdRole } from "../types/settings";
 
 // ── DTO 类型 ──────────────────────────────────────────────────────────────────────
 
-export interface AccountRead {
+interface AccountRead {
   id: number;
   name: string;
   email: string;
   avatar_url: string | null;
 }
 
-export interface HouseholdRead {
+interface HouseholdRead {
   id: number;
   name: string;
   address: string | null;
@@ -73,6 +73,19 @@ export const deleteAvatar = () =>
 
 export const listHouseholds = () =>
   apiRequest<HouseholdRead[]>("/api/households");
+
+export const createHousehold = (payload: {
+  name: string;
+  address?: string | null;
+  timezone?: string;
+}) =>
+  apiRequest<HouseholdRead>("/api/households", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const getHouseholdDetail = (householdId: number) =>
+  apiRequest<HouseholdRead>(`/api/households/${householdId}`);
 
 export const updateHousehold = (
   householdId: number,

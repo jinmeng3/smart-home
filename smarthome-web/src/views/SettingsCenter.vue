@@ -7,7 +7,6 @@ import {
     reactive,
     ref,
     watch,
-    watchEffect,
 } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -24,12 +23,10 @@ import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPa
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
 import SettingsTabs from "../components/settings/SettingsTabs.vue";
 import { useSettingsStore } from "../stores/settings";
-import { useHomeStore } from "../stores/home";
 import { useAuthStore } from "../stores/auth";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
-const store = useHomeStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const activeSection = ref<SettingsSectionId>("account");

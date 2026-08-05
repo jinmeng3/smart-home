@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { watch } from "vue";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
@@ -10,6 +10,7 @@ import SceneGrid from "../components/scenes/SceneGrid.vue";
 import SceneStats from "../components/scenes/SceneStats.vue";
 import SceneTemplateDialog from "../components/scenes/SceneTemplateDialog.vue";
 import SceneToolbar from "../components/scenes/SceneToolbar.vue";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useSceneModeController } from "../composables/useSceneModeController";
 import { useAuthStore } from "../stores/auth";
 import { useScenesStore } from "../stores/scenes";
@@ -55,16 +56,7 @@ watch(
     },
 );
 
-watch(
-    () => authStore.isAuthenticated,
-    (authenticated) => {
-        if (authenticated) void loadScenes();
-    },
-);
-
-onMounted(() => {
-    void loadScenes();
-});
+useAuthenticatedLoader(() => void loadScenes());
 </script>
 
 <template>

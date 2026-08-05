@@ -64,10 +64,6 @@ const batchEnable = (ids: number[]) => {
     <div class="contents">
         <main class="automation page-shell page-enter">
             <PageHeader title="自动化" description="管理家庭自动化规则、触发条件与执行状态">
-                <label
-                    ><SvgIcon name="search" size="sm" /><input
-                        placeholder="搜索设备、场景或房间"
-                /></label>
             </PageHeader>
             <div class="filters">
                 <label

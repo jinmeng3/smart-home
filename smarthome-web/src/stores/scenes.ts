@@ -1,23 +1,34 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import {
+    batchUpdateSceneEnabled as apiBatchUpdateSceneEnabled,
+    batchUpdateSceneSchedule as apiBatchUpdateSceneSchedule,
     copyScene as apiCopyScene,
     createScene as apiCreateScene,
     executeScene as apiExecuteScene,
     fetchSceneSummary,
     fetchScenes,
+    getSceneLogs as apiGetSceneLogs,
+    previewScene as apiPreviewScene,
+    previewSceneTemplate as apiPreviewSceneTemplate,
     saveSceneDraft as apiSaveSceneDraft,
-    useSceneTemplate as apiUseSceneTemplate,
+    updateScene as apiUpdateScene,
     updateSceneEnabled as apiUpdateSceneEnabled,
+    updateSceneOrder as apiUpdateSceneOrder,
+    useSceneTemplate as apiUseSceneTemplate,
 } from "../api/scenes";
 import { sleep } from "../utils/async";
 import type {
     Scene,
     SceneFilters,
     SceneInput,
+    SceneLog,
+    SceneOrderItem,
+    ScenePreview,
     SceneStepStatus,
     SceneSummary,
     SceneTemplate,
+    SceneTemplatePreview,
 } from "../types/scene";
 
 export const useScenesStore = defineStore("scenes", () => {
@@ -155,11 +166,64 @@ export const useScenesStore = defineStore("scenes", () => {
         return duplicate;
     };
 
+    const editScene = async (scene: Scene, payload: SceneInput) => {
+        const updated = await apiUpdateScene(scene.id, payload);
+        scenes.value = scenes.value.map((item) =>
+            item.id === scene.id ? updated : item,
+        );
+        resetStepStatuses();
+        return updated;
+    };
+
+    const reorderScenes = async (items: SceneOrderItem[]) => {
+        await apiUpdateSceneOrder(items);
+        await loadScenes();
+    };
+
+    const previewScene = async (scene: Scene) => {
+        return await apiPreviewScene(scene.id);
+    };
+
+    const loadSceneLogs = async (sceneId: string, limit = 20) => {
+        return await apiGetSceneLogs(sceneId, limit);
+    };
+
+    const batchSetEnabled = async (sceneIds: string[], enabled: boolean) => {
+        const result = await apiBatchUpdateSceneEnabled({ sceneIds, enabled });
+        await loadScenes();
+        return result;
+    };
+
+    const batchSetSchedule = async (
+        sceneIds: string[],
+        triggerType: SceneInput["triggerType"],
+        triggerLabel: string,
+    ) => {
+        const result = await apiBatchUpdateSceneSchedule({
+            sceneIds,
+            triggerType,
+            triggerLabel,
+        });
+        await loadScenes();
+        return result;
+    };
+
+    const previewTemplate = async (templateId: string) => {
+        return await apiPreviewSceneTemplate(templateId);
+    };
+
     return {
         filters,
         loading,
         addScene,
+        batchSetEnabled,
+        batchSetSchedule,
         duplicateScene,
+        editScene,
+        loadSceneLogs,
+        previewScene,
+        previewTemplate,
+        reorderScenes,
         runningSceneId,
         scenes,
         selectedScene,

@@ -30,6 +30,14 @@ export interface ChatCompletionMessage {
   content: string;
 }
 
+interface OpenAICompletionsPayload {
+  model?: string | null;
+  messages: ChatCompletionMessage[];
+  sessionId?: number | null;
+  stream?: boolean;
+  [key: string]: unknown;
+}
+
 // ── 映射函数 ──────────────────────────────────────────────────────────────────────
 
 const formatConversationTime = (value: string) => {
@@ -54,7 +62,7 @@ const toRecentConversation = (session: ChatSessionRead): RecentConversation => (
   icon: "MessageCircle",
 });
 
-// ── 流式响应解析 ──────────────────────────────────────────────────────────────────
+// ── 流式响应解析 ────────────────────────────────────────────────────────────────────
 
 const parseContentDelta = (line: string) => {
   if (!line.startsWith("data: ")) return "";
@@ -65,7 +73,7 @@ const parseContentDelta = (line: string) => {
   return payload.choices?.[0]?.delta?.content ?? "";
 };
 
-// ── API 导出函数 ──────────────────────────────────────────────────────────────────
+// ── API 导出函数 ────────────────────────────────────────────────────────────────────
 
 export const listChatSessions = async () => {
   const sessions = await apiRequest<ChatSessionRead[]>("/api/chat/sessions");
@@ -96,6 +104,70 @@ export const streamChatCompletion = async (
     method: "POST",
     headers: createApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ messages, session_id: sessionId, stream: true }),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    await parseResponse<never>(response);
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        const delta = parseContentDelta(line.trim());
+        if (delta) onDelta(delta);
+      }
+    }
+    const delta = parseContentDelta(buffer.trim());
+    if (delta) onDelta(delta);
+  } finally {
+    if (signal.aborted) {
+      await reader.cancel().catch(() => undefined);
+    }
+    reader.releaseLock();
+  }
+};
+
+// ── OpenAI 兼容接口 ────────────────────────────────────────────────────────────────
+// 后端 `/api/v1/chat/completions` 与 `/api/chat/completions` 复用同一处理器。
+// 非流式时直接返回上游模型的完整响应（未经 ApiResponse 包装）；
+// 流式时返回文本事件流。
+
+const openAICompletions = (payload: OpenAICompletionsPayload) =>
+  apiRequest<unknown>("/api/v1/chat/completions", {
+    method: "POST",
+    body: JSON.stringify({
+      model: payload.model ?? null,
+      messages: payload.messages,
+      session_id: payload.sessionId ?? null,
+      stream: payload.stream ?? false,
+    }),
+  });
+
+const streamOpenAICompletions = async (
+  payload: Omit<OpenAICompletionsPayload, "stream">,
+  onDelta: (content: string) => void,
+  signal: AbortSignal,
+) => {
+  const response = await fetch("/api/v1/chat/completions", {
+    method: "POST",
+    headers: createApiHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      model: payload.model ?? null,
+      messages: payload.messages,
+      session_id: payload.sessionId ?? null,
+      stream: true,
+    }),
     signal,
   });
 

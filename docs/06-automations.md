@@ -55,7 +55,7 @@
   }
   ```
 - **数据库**: `automations`, `automation_triggers`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`listAutomations`）
 
 ### 1.2 创建自动化规则
 
@@ -84,7 +84,7 @@
   ```
 - **输出**: 自动化规则对象
 - **数据库**: `automations`, `automation_triggers`, `automation_conditions`, `automation_actions`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`createAutomation`）
 
 ### 1.3 获取自动化规则详情
 
@@ -93,7 +93,7 @@
 - **输入**: 路径参数 `automation_id`
 - **输出**: 自动化规则对象（含 triggers, conditions, actions）
 - **数据库**: `automations`, `automation_triggers`, `automation_conditions`, `automation_actions`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`getAutomation`）
 
 ### 1.4 更新自动化规则
 
@@ -102,7 +102,7 @@
 - **输入**: 同创建，但所有字段可选
 - **输出**: 更新后的自动化规则对象
 - **数据库**: `automations`, `automation_triggers`, `automation_conditions`, `automation_actions`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`updateAutomation`）
 
 ### 1.5 启用/停用自动化规则
 
@@ -117,7 +117,7 @@
   { "code": 0, "message": "ok", "data": { "id": "int", "enabled": "bool" } }
   ```
 - **数据库**: `automations`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`toggleAutomationEnabled`）
 
 ### 1.6 执行自动化规则
 
@@ -133,7 +133,7 @@
   { "code": 0, "message": "ok", "data": { "executionId": "int", "status": "string" } }
   ```
 - **数据库**: `automation_executions`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`executeAutomation`）
 
 ### 1.7 获取执行记录
 
@@ -166,7 +166,7 @@
   }
   ```
 - **数据库**: `automation_executions`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`listAutomationExecutions`）
 
 ### 1.8 批量启用自动化规则
 
@@ -193,7 +193,7 @@
   }
   ```
 - **数据库**: `automations`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`batchEnableAutomations`）
 
 ### 1.9 批量设置定时
 
@@ -215,4 +215,4 @@
   { "code": 0, "message": "ok", "data": { "updatedCount": "int", "unchangedCount": "int" } }
   ```
 - **数据库**: `automations`, `automation_triggers`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`batchSetAutomationSchedule`）

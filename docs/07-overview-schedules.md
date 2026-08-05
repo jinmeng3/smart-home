@@ -20,6 +20,8 @@
 
 ### 1.1 获取家庭总览
 
+> 响应字段为后端直接序列化结果，`OverviewRead` 系列模型未启用驼峰别名，因此保持 `snake_case`。
+
 - **方法**: `GET /api/households/{household_id}/overview`
 - **功能**: 获取家庭概览数据，包括设备统计、环境状况、房间列表、最近设备状态
 - **输入**: 路径参数 `household_id`（需是该家庭会员）
@@ -30,36 +32,36 @@
     "message": "ok",
     "data": {
       "summary": {
-        "deviceTotal": "int",
-        "deviceOnline": "int",
-        "runningAutomationCount": "int",
-        "alertCount": "int",
-        "monthlyEnergyKwh": "float",
-        "energySavingRate": "float"
+        "device_total": "int",
+        "device_online": "int",
+        "running_automation_count": "int",
+        "alert_count": "int",
+        "monthly_energy_kwh": "float",
+        "energy_saving_rate": "float"
       },
-      "homeStatus": {
+      "home_status": {
         "status": "string",
-        "peopleHome": "int",
+        "people_home": "int",
         "temperature": "float",
         "humidity": "int",
-        "airQuality": "string",
+        "air_quality": "string",
         "pm25": "int",
-        "lockedCount": "int",
-        "lockTotal": "int"
+        "locked_count": "int",
+        "lock_total": "int"
       },
       "rooms": [
         {
           "id": "int",
           "name": "string",
-          "deviceCount": "int",
-          "lightOn": "int",
-          "lightTotal": "int",
+          "device_count": "int",
+          "light_on": "int",
+          "light_total": "int",
           "temperature": "float",
-          "deviceSummaries": "string[]"
+          "device_summaries": "string[]"
         }
       ],
-      "recentDevices": [
-        { "id": "int", "name": "string", "roomName": "string", "online": "bool", "stateText": "string", "updatedAt": "datetime" }
+      "recent_devices": [
+        { "id": "int", "name": "string", "room_name": "string", "online": "bool", "state_text": "string", "updated_at": "datetime" }
       ],
       "activities": [],
       "schedule": [],
@@ -68,16 +70,16 @@
   }
   ```
 - **数据库**: `rooms`, `devices`, `automations`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`getHouseholdOverview`）
 
 ### 1.2 获取家庭设备列表
 
 - **方法**: `GET /api/households/{household_id}/devices`
-- **功能**: 获取家庭下所有设备
+- **功能**: 获取家庭下所有设备（复用设备列表响应形状）
 - **输入**: 路径参数 `household_id`
-- **输出**: 同设备列表响应
+- **输出**: 同设备列表响应 (`DeviceListResponse`)
 - **数据库**: `devices`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`getHouseholdDevices`）
 
 ### 1.3 同步家庭设备（幂等）
 
@@ -97,7 +99,7 @@
   }
   ```
 - **数据库**: `device_sync_jobs`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`syncHouseholdDevices`）
 
 ---
 
@@ -129,7 +131,7 @@
   }
   ```
 - **数据库**: `overview_executions`, `rooms`, `devices`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`executeMode`）
 
 ---
 
@@ -163,7 +165,7 @@
   }
   ```
 - **数据库**: `inspection_jobs`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`createInspection`）
 
 ### 3.2 查询巡检任务
 
@@ -172,7 +174,7 @@
 - **输入**: 路径参数 `inspection_id`
 - **输出**: 同创建巡检响应
 - **数据库**: `inspection_jobs`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`getInspection`）
 
 ---
 
@@ -258,7 +260,7 @@
   }
   ```
 - **数据库**: `device_sync_jobs`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`createSyncJob`）
 
 ### 5.2 查询同步任务
 
@@ -267,4 +269,4 @@
 - **输入**: 路径参数 `job_id`
 - **输出**: 同创建设备同步响应
 - **数据库**: `device_sync_jobs`
-- **实现状态**: ✅ 后端已实现 — ❌ 前端未对接
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现（`getSyncJob`）

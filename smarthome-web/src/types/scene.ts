@@ -100,3 +100,83 @@ export interface SceneTemplateUseInput {
   enabled: boolean;
   deviceMapping?: Record<string, string>;
 }
+
+// ── 场景执行日志 ────────────────────────────────────────────────────────────────
+
+export interface SceneLog {
+  id: string;
+  sceneId: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  message: string | null;
+}
+
+export interface SceneLogListResponse {
+  items: SceneLog[];
+}
+
+// ── 场景预览 ────────────────────────────────────────────────────────────────────
+
+export interface ScenePreviewStep {
+  stepId: string;
+  name: string;
+  deviceId: string;
+  estimatedMs: number;
+  riskLevel: "low" | "high";
+}
+
+export interface ScenePreview {
+  sceneId: string;
+  highRisk: boolean;
+  triggerLabel: string;
+  steps: ScenePreviewStep[];
+}
+
+// ── 场景排序 ────────────────────────────────────────────────────────────────────
+
+export interface SceneOrderItem {
+  id: string;
+  sort_order: number;
+}
+
+export interface SceneOrderResult {
+  updated: number;
+}
+
+// ── 场景批量操作 ────────────────────────────────────────────────────────────────
+
+export interface SceneBatchEnabledInput {
+  sceneIds: string[];
+  enabled: boolean;
+}
+
+export interface SceneBatchEnabledResult {
+  updatedCount: number;
+}
+
+export interface SceneBatchScheduleInput {
+  sceneIds: string[];
+  triggerType: SceneTriggerType;
+  triggerLabel: string;
+}
+
+export interface SceneBatchScheduleResult {
+  updatedCount: number;
+}
+
+// ── 场景模板预览 ────────────────────────────────────────────────────────────────
+
+export interface SceneTemplatePreviewStep {
+  name: string;
+  description: string;
+  deviceId: string;
+  matched: boolean;
+}
+
+export interface SceneTemplatePreview {
+  templateId: string;
+  matchedDeviceCount: number;
+  missingDeviceCount: number;
+  steps: SceneTemplatePreviewStep[];
+}

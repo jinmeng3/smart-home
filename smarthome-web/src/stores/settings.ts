@@ -1,7 +1,9 @@
 import { onScopeDispose, ref } from "vue";
 import { defineStore } from "pinia";
 import {
+  createHousehold as apiCreateHousehold,
   getAccount,
+  getHouseholdDetail,
   listHouseholds,
   listMembers,
   updateAccount as apiUpdateAccount,
@@ -136,20 +138,26 @@ export const useSettingsStore = defineStore("settings", () => {
       const members = householdEntry?.members ?? [];
       const role = isAdminRole(household?.role) ? "管理员" : "成员";
 
+      // 若当前用户是所加入家庭的一员，则拉取其家庭详情以确保数据最新。
+      const detail = household
+        ? await getHouseholdDetail(household.id).catch(() => household)
+        : null;
+      const resolved = detail ?? household;
+
       settings.value.account = {
         ...settings.value.account,
         id: account.id,
         username: account.name,
         email: account.email,
         avatarUrl: account.avatar_url,
-        familyName: household?.name ?? "",
-        householdId: household?.id,
-        householdAddress: household?.address ?? null,
-        householdTimezone: household?.timezone ?? "Asia/Shanghai",
+        familyName: resolved?.name ?? "",
+        householdId: resolved?.id,
+        householdAddress: resolved?.address ?? null,
+        householdTimezone: resolved?.timezone ?? "Asia/Shanghai",
         role,
         members,
       };
-      settings.value.summary.currentHome = household?.name ?? "";
+      settings.value.summary.currentHome = resolved?.name ?? "";
       settings.value.summary.accountStatus = role;
       accountHomeLoaded.value = true;
     })().finally(() => {
@@ -207,7 +215,11 @@ export const useSettingsStore = defineStore("settings", () => {
           address: settings.value.account.householdAddress,
           timezone: settings.value.account.householdTimezone,
         })
-      : Promise.resolve(null);
+      : apiCreateHousehold({
+          name: settings.value.account.familyName,
+          address: settings.value.account.householdAddress,
+          timezone: settings.value.account.householdTimezone,
+        });
     const [account, household] = await Promise.all([
       accountRequest,
       householdRequest,
@@ -218,6 +230,7 @@ export const useSettingsStore = defineStore("settings", () => {
       username: account.name,
       email: account.email,
       avatarUrl: account.avatar_url,
+      householdId: household?.id ?? settings.value.account.householdId,
       familyName: household?.name ?? settings.value.account.familyName,
       householdAddress:
         household?.address ?? settings.value.account.householdAddress,

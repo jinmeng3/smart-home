@@ -12,7 +12,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     "update:modelValue": [value: boolean];
-    create: [room: Pick<Room, "name" | "floor" | "roomType">];
+    create: [room: {
+        name: string;
+        floor: string;
+        roomType: string;
+        icon: string;
+        themeColor: string;
+        deviceIds: number[];
+    }];
     update: [room: Room];
 }>();
 
@@ -158,7 +165,12 @@ const confirm = () => {
     if (props.mode === "edit" && props.room) {
         emit("update", { ...props.room, ...roomForm });
     } else {
-        emit("create", { ...roomForm });
+        emit("create", {
+            ...roomForm,
+            icon: selectedIcon.value,
+            themeColor: selectedColor.value,
+            deviceIds: selectedDevices.map((_, i) => i + 1),
+        });
     }
     close();
 };

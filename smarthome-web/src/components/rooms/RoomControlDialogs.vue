@@ -22,7 +22,14 @@ defineProps<{
 
 const emit = defineEmits<{
     "update:modelValue": [value: RoomDialog];
-    create: [room: Pick<Room, "name" | "floor" | "roomType">];
+    create: [room: {
+        name: string;
+        floor: string;
+        roomType: string;
+        icon: string;
+        themeColor: string;
+        deviceIds: number[];
+    }];
     update: [room: Room];
 }>();
 

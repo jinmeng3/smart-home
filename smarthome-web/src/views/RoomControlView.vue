@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { ElMessage } from "element-plus";
 import {
+  createRoom,
   fetchRooms,
   runRoomQuickAction,
+  updateRoom,
   updateRoomDevice,
 } from "../api/room";
 import SvgIcon from "../components/common/SvgIcon.vue";
@@ -19,7 +22,7 @@ import type {
     RoomDeviceCard,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
-import { commonDevices as mockCommonDevices } from "../mock/rooms";
+import { commonDevices } from "../mock/rooms";
 
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
@@ -50,8 +53,6 @@ const comfort = computed(() =>
           )
         : 0,
 );
-
-const commonDevices: RoomDeviceCard[] = mockCommonDevices;
 
 const environment = computed<RoomEnvironmentItem[]>(() => {
     const room = selected.value;
@@ -109,35 +110,54 @@ const toggleDevice = async (device: RoomDeviceCard) => {
     );
 };
 
-const handleRoomUpdated = (room: Room) => replaceRoom(room);
+const handleRoomUpdated = async (room: Room) => {
+  loading.value = true;
+  try {
+    const updated = await updateRoom(room.id, {
+      name: room.name,
+      floor: room.floor,
+      room_type: room.roomType,
+      icon: (room as any).icon ?? "room",
+      theme_color: (room as any).themeColor ?? "#3478f6",
+      version: (room as any).version ?? undefined,
+    });
+    replaceRoom(updated);
+    ElMessage.success("房间已更新");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "房间更新失败");
+  } finally {
+    loading.value = false;
+  }
+};
 
-const handleRoomCreated = (
-    payload: Pick<Room, "name" | "floor" | "roomType">,
+const handleRoomCreated = async (
+  payload: {
+    name: string;
+    floor: string;
+    roomType: string;
+    icon: string;
+    themeColor: string;
+    deviceIds: number[];
+  },
 ) => {
-    const room: Room = {
-        ...payload,
-        id: Math.max(0, ...rooms.value.map((item) => item.id)) + 1,
-        imageUrl: null,
-        area: 16,
-        comfort: 81,
-        temperature: 24,
-        humidity: 55,
-        pm25: 18,
-        illuminance: 320,
-        noise: 42,
-        deviceCount: 6,
-        onlineCount: 6,
-        deviceStates: {
-            light: true,
-            airConditioner: true,
-            curtain: true,
-            socket: true,
-        },
-        updatedAt: new Date().toISOString(),
-    };
-
+  loading.value = true;
+  try {
+    const room = await createRoom({
+      name: payload.name,
+      floor: payload.floor,
+      room_type: payload.roomType,
+      icon: payload.icon,
+      theme_color: payload.themeColor,
+      device_ids: payload.deviceIds,
+    });
     rooms.value = [...rooms.value, room];
     selectRoom(room);
+    ElMessage.success("房间已创建");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "房间创建失败");
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(() => void load());
