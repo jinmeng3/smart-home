@@ -255,7 +255,7 @@ const loadOverviewData = async () => {
 useAuthenticatedLoader(loadOverviewData);</script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <main class="overview page-shell page-enter">
             <PageHeader title="全屋总览" description="查看家庭运行状态、房间分布与设备总览">
                 <label class="search"
@@ -560,17 +560,7 @@ useAuthenticatedLoader(loadOverviewData);</script>
     height: 100%;
     overflow: hidden;
 }
-.contents {
-    display: grid;
-    grid-column: span 2 / span 2;
-    grid-template-columns: 1fr 330px;
-    gap: 14px;
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    min-height: 0;
-}
-.contents > .overview {
+.app-page-layout > .overview {
     min-width: 0;
     overflow-x: hidden;
     overflow-y: auto;

@@ -45,51 +45,51 @@ defineProps<{
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
 }
 .stats-grid article {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--color-card-bg);
-    padding: 14px 16px;
+    padding: 10px 12px;
     box-shadow: var(--shadow-card);
 }
 .stats-grid i {
     display: grid;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     place-items: center;
-    border-radius: 12px;
+    border-radius: 10px;
     font-style: normal;
 }
 .stats-grid span {
     min-width: 0;
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
 }
 .stats-grid strong {
     display: block;
     margin-top: 1px;
     color: var(--color-text-primary);
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 900;
     letter-spacing: -0.01em;
 }
 .stats-grid strong small {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
 }
 .stats-grid em {
     display: block;
     margin-top: 1px;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 10px;
     font-style: normal;
 }
 @media (max-width: 1450px) {

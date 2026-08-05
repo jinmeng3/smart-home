@@ -24,7 +24,29 @@ import type {
     RoomDeviceCard,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
-import { commonDevices } from "../mock/rooms";
+
+const deviceCardConfig: Record<string, { icon: string; name: string }> = {
+    light: { icon: "light", name: "吸顶灯" },
+    television: { icon: "device-management", name: "电视" },
+    airConditioner: { icon: "air-conditioner", name: "空调" },
+    airPurifier: { icon: "sensor", name: "空气净化器" },
+    socket: { icon: "plug", name: "智能插座" },
+    curtain: { icon: "curtain", name: "窗帘" },
+    camera: { icon: "camera", name: "摄像头" },
+    lock: { icon: "lock", name: "门锁" },
+};
+
+const deriveDevices = (room: Room): RoomDeviceCard[] => {
+    return Object.entries(room.deviceStates).map(([key]) => {
+        const config = deviceCardConfig[key];
+        return {
+            key,
+            icon: config?.icon ?? "device-management",
+            name: config?.name ?? key,
+            detail: "",
+        };
+    });
+};
 
 const authStore = useAuthStore();
 
@@ -38,14 +60,22 @@ const floor = ref("");
 const roomType = ref("");
 const activeDialog = ref<RoomDialog>(null);
 
+const roomGridExpanded = ref(false);
+
+const toggleRoomGrid = () => {
+    roomGridExpanded.value = !roomGridExpanded.value;
+};
+
 const selected = computed(
     () =>
         rooms.value.find((room) => room.id === selectedId.value) ??
         rooms.value[0],
 );
-const visibleRooms = computed(() =>
-    rooms.value.filter((room) => room.name.includes(keyword.value)).slice(0, 3),
-);
+const visibleRooms = computed(() => {
+    const filtered = rooms.value.filter((room) => room.name.includes(keyword.value));
+    if (roomGridExpanded.value) return filtered;
+    return filtered.slice(0, 3);
+});
 const online = computed(() =>
     rooms.value.reduce((sum, room) => sum + room.onlineCount, 0),
 );
@@ -173,7 +203,7 @@ useAuthenticatedLoader(load);
 </script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <main class="workspace page-shell page-enter">
             <PageHeader title="房间控制" description="按房间查看设备状态、环境数据与快捷控制">
                 <div class="page-tools">
@@ -189,37 +219,47 @@ useAuthenticatedLoader(load);
             </PageHeader>
 
             <RoomStatsGrid
+                v-if="!roomGridExpanded"
                 :room-count="rooms.length"
                 :online-count="online"
                 :comfort-score="comfort"
             />
 
-            <section class="room-grid card-grid-enter">
+            <section :class="['room-grid', 'card-grid-enter', { 'room-grid-expanded': roomGridExpanded }]">
                 <RoomCard
                     v-for="room in visibleRooms"
                     :key="room.id"
                     :room="room"
                     :selected="selected?.id === room.id"
-                    :devices="commonDevices"
+                    :devices="deriveDevices(room)"
                     @select="selectRoom"
                     @toggle="toggleDevice"
                 />
             </section>
 
-            <RoomControlPanel
-                :rooms="rooms"
-                :selected="selected"
-                :loading="loading"
-                :devices="commonDevices"
-                :environment="environment"
-                :temperature="temperature"
-                :active-category="activeCategory"
-                @select="selectRoom"
-                @toggle="toggleDevice"
-                @update:temperature="temperature = $event"
-                @update:active-category="activeCategory = $event"
-                @open="activeDialog = $event"
-            />
+            <button v-if="rooms.length > 3" class="room-view-all" type="button" @click="toggleRoomGrid">
+                {{ roomGridExpanded ? '收起房间' : `查看全部房间（${rooms.length}）` }}
+                <span class="chevron-icon" :class="{ 'is-expanded': roomGridExpanded }">
+                    <SvgIcon name="chevron-down" />
+                </span>
+            </button>
+
+            <div class="room-panel-wrapper">
+                <RoomControlPanel
+                    :rooms="rooms"
+                    :selected="selected"
+                    :loading="loading"
+                    :devices="selected ? deriveDevices(selected) : []"
+                    :environment="environment"
+                    :temperature="temperature"
+                    :active-category="activeCategory"
+                    @select="selectRoom"
+                    @toggle="toggleDevice"
+                    @update:temperature="temperature = $event"
+                    @update:active-category="activeCategory = $event"
+                    @open="activeDialog = $event"
+                />
+            </div>
         </main>
 
         <RoomDetailPanel
@@ -242,25 +282,89 @@ useAuthenticatedLoader(load);
 <style scoped>
 .workspace {
     min-height: 0;
-    overflow-y: auto;
+    flex: 1;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 12px;
 }
 .page-tools { display: flex; align-items: center; gap: 8px; }
-.page-tools label { display: flex; min-width: 220px; height: 38px; align-items: center; gap: 8px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); padding: 0 11px; color: var(--color-text-tertiary); }
+.page-tools label { display: flex; min-width: 180px; height: 34px; align-items: center; gap: 6px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card-bg); padding: 0 9px; color: var(--color-text-tertiary); }
 .page-tools input { min-width: 0; flex: 1; border: 0; outline: 0; }
-.page-tools select { height: 38px; padding-left: 10px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-card-bg); color: var(--color-text-primary); }
+.page-tools select { height: 34px; padding-left: 8px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card-bg); color: var(--color-text-primary); font-size: 12px; }
 
 .page-tools select option {
     background: var(--color-card-bg);
     color: var(--color-text-primary);
 }
 .primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--color-primary-600) !important; color: white !important; }
-.page-tools .primary { height: 38px; padding: 0 14px; font-size: 12px; font-weight: 800; }
+.page-tools .primary { height: 34px; padding: 0 12px; font-size: 11px; font-weight: 800; }
 
-.room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+.room-grid-expanded {
+    max-height: 320px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+.room-grid-expanded::-webkit-scrollbar {
+    width: 6px;
+}
+
+.room-grid-expanded::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: var(--color-border);
+}
+
+.room-grid-expanded::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.room-view-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: fit-content;
+    margin: 0 auto;
+    color: var(--color-primary-600);
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 150ms;
+}
+
+.room-view-all:hover {
+    background: var(--color-primary-50);
+}
+
+.chevron-icon {
+    display: inline-flex;
+    transition: transform 300ms ease;
+}
+
+.chevron-icon.is-expanded {
+    transform: rotate(180deg);
+}
+
+.room-panel-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.room-panel-wrapper:deep(.quick-control) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
 
 @media (max-width: 1450px) {
     .page-header { display: grid; }
@@ -269,5 +373,11 @@ useAuthenticatedLoader(load);
 
 @media (max-width: 900px) {
     .room-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+    .room-grid-expanded {
+        max-height: 280px;
+    }
 }
 </style>

@@ -51,7 +51,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <section class="device-management-page page-shell page-enter">
             <header class="device-page-header">
                 <div class="device-page-title">

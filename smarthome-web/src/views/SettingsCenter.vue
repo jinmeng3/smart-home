@@ -21,7 +21,7 @@ import SecuritySettingsCard from "../components/settings/SecuritySettingsCard.vu
 import SecurityStatusPanel from "../components/settings/SecurityStatusPanel.vue";
 import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPanel.vue";
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
-import SettingsTabs from "../components/settings/SettingsTabs.vue";
+import SvgIcon from "../components/common/SvgIcon.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
@@ -438,7 +438,7 @@ const removeMember = async (membershipId: number) => {
 
 <template>
     <fieldset
-        class="contents m-0 min-w-0 border-0 p-0"
+        class="app-page-layout m-0 min-w-0 border-0 p-0"
         :disabled="!authStore.isAuthenticated"
     >
         <section
@@ -471,14 +471,9 @@ const removeMember = async (membershipId: number) => {
                 </div>
             </header>
 
-            <SettingsTabs
-                :active-section="activeSection"
-                @select="selectSection"
-            />
-
             <div
                 ref="scrollContainer"
-                class="settings-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-1"
+                class="settings-scroll-area min-h-0 flex-1 overflow-y-auto pr-1"
             >
                 <div class="settings-card-grid card-grid-enter grid grid-cols-2 gap-4">
                     <AccountFamilyCard
@@ -520,32 +515,50 @@ const removeMember = async (membershipId: number) => {
                 </div>
             </div>
 
-            <footer
-                class="mt-4 flex shrink-0 items-center gap-4 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-3"
-            >
-                <button
-                    class="primary-button"
-                    :class="{ 'button-loading': savingAccount }"
-                    :disabled="savingAccount || !settingsDirty"
-                    type="button"
-                    @click="saveAllSettings"
-                >
-                    {{ savingAccount ? "保存中" : "保存更改" }}
-                </button>
-                <button
-                    class="secondary-button min-w-[140px]"
-                    type="button"
-                    @click="settingsStore.resetSettings"
-                >
-                    恢复默认
-                </button>
+            <footer class="settings-actions">
+                <div class="settings-save-state">
+                    <span class="settings-save-state-icon" aria-hidden="true">
+                        <SvgIcon
+                            :name="settingsDirty ? 'edit' : 'check-circle'"
+                            size="sm"
+                        />
+                    </span>
+                    <span>
+                        <strong>{{ settingsDirty ? "有尚未保存的更改" : "所有设置均已保存" }}</strong>
+                        <small>设置将同步到当前家庭账户</small>
+                    </span>
+                </div>
+
                 <Transition name="status-crossfade">
                     <span
                         v-if="settingsStore.saveStatus === 'saved'"
-                        class="text-sm font-semibold text-[var(--color-success)]"
-                        >已保存 {{ settingsStore.savedAt }}</span
+                        class="settings-saved-at"
                     >
+                        <SvgIcon name="check-circle" size="sm" />
+                        已保存 {{ settingsStore.savedAt }}
+                    </span>
                 </Transition>
+
+                <div class="settings-action-buttons">
+                    <button
+                        class="settings-reset-button"
+                        type="button"
+                        @click="settingsStore.resetSettings"
+                    >
+                        <SvgIcon name="refresh" size="sm" />
+                        恢复默认
+                    </button>
+                    <button
+                        class="settings-save-button"
+                        :class="{ 'button-loading': savingAccount }"
+                        :disabled="savingAccount || !settingsDirty"
+                        type="button"
+                        @click="saveAllSettings"
+                    >
+                        <SvgIcon :name="savingAccount ? 'refresh' : 'check-circle'" size="sm" />
+                        {{ savingAccount ? "保存中" : "保存更改" }}
+                    </button>
+                </div>
             </footer>
         </section>
 
@@ -573,5 +586,163 @@ const removeMember = async (membershipId: number) => {
     overscroll-behavior: contain;
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
+}
+
+.settings-actions {
+    display: flex;
+    min-height: 72px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 18px;
+    margin-top: 14px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        var(--color-panel-background),
+        var(--color-primary-50)
+    );
+    padding: 12px 14px;
+    box-shadow: var(--shadow-card);
+}
+
+.settings-save-state {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-save-state-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+
+.settings-save-state > span:last-child {
+    display: grid;
+    gap: 2px;
+}
+
+.settings-save-state strong {
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.settings-save-state small {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.settings-saved-at {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    color: var(--color-success);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.settings-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.settings-reset-button,
+.settings-save-button {
+    display: inline-flex;
+    min-width: 124px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 900;
+    transition:
+        transform 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease);
+}
+
+.settings-reset-button {
+    border: 1px solid var(--color-border-default);
+    background: var(--color-panel-background);
+    color: var(--color-text-secondary);
+}
+
+.settings-save-button {
+    border: 1px solid var(--color-primary-600);
+    background: var(--color-primary-600);
+    color: var(--color-text-on-primary);
+    box-shadow: 0 6px 14px var(--color-focus-ring);
+}
+
+.settings-reset-button:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.settings-save-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px var(--color-focus-ring);
+}
+
+.settings-save-button:disabled {
+    border-color: var(--color-border-default);
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.settings-save-button.button-loading svg {
+    animation: settings-save-spin 800ms linear infinite;
+}
+
+@keyframes settings-save-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 1180px) {
+    .settings-save-state small {
+        display: none;
+    }
+
+    .settings-reset-button,
+    .settings-save-button {
+        min-width: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-reset-button,
+    .settings-save-button {
+        transition-duration: 1ms;
+    }
+
+    .settings-save-button:hover:not(:disabled) {
+        transform: none;
+    }
+
+    .settings-save-button.button-loading svg {
+        animation: none;
+    }
 }
 </style>

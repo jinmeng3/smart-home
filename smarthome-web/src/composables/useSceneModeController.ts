@@ -202,7 +202,7 @@ export const useSceneModeController = (store: ScenesStore) => {
     const toggleScene = async (scene: Scene, enabled: boolean) => {
         try {
             await store.setSceneEnabled(scene.id, enabled);
-            ElMessage.success(`${scene.name}${enabled ? "已启用" : "已停用"}`);
+            ElMessage.success(`${scene.name} ${enabled ? "已启用" : "已停用"}`);
         } catch (error) {
             ElMessage.error(error instanceof Error ? error.message : "场景状态更新失败");
         }

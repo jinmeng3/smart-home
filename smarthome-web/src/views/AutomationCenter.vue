@@ -1,143 +1,137 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { storeToRefs } from "pinia";
 import { useAuthStore } from "../stores/auth";
+import { useAutomationsStore, buildAutomationSteps } from "../stores/automations";
+import { useAutomationModeController } from "../composables/useAutomationModeController";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
-import type { AutomationDialog } from "../components/automation/AutomationDialogs.vue";
+import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
-import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
-import { automationRules, type AutomationRule } from "../mock/automations";
 
 const authStore = useAuthStore();
+const store = useAutomationsStore();
+const {
+    automations,
+    filters,
+    runningId,
+    selectedId,
+    selectedAutomation: selected,
+    stats,
+    stepStatuses,
+    visible,
+} = storeToRefs(store);
+const controller = useAutomationModeController(store);
 
-const automations = ref<AutomationRule[]>([]);
-const selectedId = ref(1);
-const query = ref("");
-const triggerFilter = ref("");
-const statusFilter = ref("");
-const activeDialog = ref<AutomationDialog>(null);
-const selected = computed(
-    () =>
-        automations.value.find((item) => item.id === selectedId.value) ??
-        automations.value[0],
-);
-const visible = computed(() =>
-    automations.value.filter(
-        (item) =>
-            item.name.includes(query.value) &&
-            (!triggerFilter.value || item.trigger === triggerFilter.value) &&
-            (!statusFilter.value ||
-                String(item.enabled) === statusFilter.value),
-    ),
+const flowSteps = computed(() =>
+    selected.value ? buildAutomationSteps(selected.value) : [],
 );
 
-const run = (item: AutomationRule) => ElMessage.success(`“${item.name}”已执行`);
-const saveRule = (payload: {
-    mode: "create" | "edit";
-    name: string;
-    description: string;
-    trigger: string;
-}) => {
-    if (payload.mode === "edit" && selected.value)
-        Object.assign(selected.value, payload);
-    else {
-        const rule: AutomationRule = {
-            id: Date.now(),
-            ...payload,
-            devices: 3,
-            icon: "automation",
-            tone: "blue",
-            enabled: true,
-        };
-        automations.value.unshift(rule);
-        selectedId.value = rule.id;
-    }
-    ElMessage.success(payload.mode === "edit" ? "规则已保存" : "自动化已创建");
-};
-const batchEnable = (ids: number[]) => {
-    automations.value.forEach((rule) => {
-        if (ids.includes(rule.id)) rule.enabled = true;
-    });
-    ElMessage.success(`已启用 ${ids.length} 条规则`);
-};
+const records = computed(() =>
+    automations.value.slice(0, 4).map((rule, index) => ({
+        time: ["今天 18:36", "今天 07:00", "昨天 22:30", "昨天 12:15"][
+            index
+        ],
+        name: rule.name,
+        result: "成功",
+        duration: `${(1.9 + index * 0.4).toFixed(1)}s`,
+    })),
+);
 
-const loadAutomations = () => {
+const cardsExpanded = ref(false);
+const visibleCards = computed(() =>
+    cardsExpanded.value ? visible.value : visible.value.slice(0, 3),
+);
+
+const loadAutomations = async () => {
     if (!authStore.isAuthenticated) {
         authStore.openLogin();
         return;
     }
-    automations.value = automationRules;
-    selectedId.value = automationRules[0]?.id;
+    await store.loadAutomations();
 };
 
-useAuthenticatedLoader(loadAutomations);
+useAuthenticatedLoader(() => void loadAutomations());
 </script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <main class="automation page-shell page-enter">
-            <PageHeader title="自动化" description="管理家庭自动化规则、触发条件与执行状态">
-            </PageHeader>
-            <div class="filters">
-                <label
-                    ><SvgIcon name="search" size="sm" /><input
-                        v-model="query"
-                        placeholder="搜索自动化规则" /></label
-                ><span>触发类型</span
-                ><select v-model="triggerFilter">
-                    <option value="">全部</option>
-                    <option>位置触发</option>
-                    <option>时间触发</option>
-                    <option>设备状态</option></select
-                ><span>状态</span
-                ><select v-model="statusFilter">
-                    <option value="">全部</option>
-                    <option value="true">已启用</option>
-                    <option value="false">已停用</option></select
-                ><button class="primary" @click="activeDialog = 'create'">
-                    <SvgIcon name="plus" size="sm" />创建自动化</button
-                ><button @click="activeDialog = 'import'">
-                    <SvgIcon name="upload" size="sm" />导入规则
-                </button>
-            </div>
-            <section class="stats card-grid-enter">
-                <StatsCard
-                    icon="check-circle"
-                    label="已启用规则"
-                    value="18"
-                    detail="共 24 条规则"
-                    tone="blue"
-                />
-                <StatsCard
-                    icon="power"
-                    label="运行中"
-                    value="5"
-                    detail="正在执行"
-                    tone="green"
-                />
-                <StatsCard
-                    icon="calendar"
-                    label="今日执行次数"
-                    value="36 次"
-                    detail="较昨日 ↑ 15%"
-                    tone="orange"
-                />
-                <StatsCard
-                    icon="warning"
-                    label="异常规则"
-                    value="1"
-                    detail="需要处理"
-                    tone="red"
-                />
-            </section>
-            <section class="cards card-grid-enter">
+            <header class="automation-page-header">
+                <div class="automation-page-title">
+                    <h1>自动化</h1>
+                    <p>管理家庭自动化规则、触发条件与执行状态</p>
+                </div>
+                <div class="filters">
+                    <label class="filters-search"
+                        ><SvgIcon name="search" /><input
+                            v-model="filters.keyword"
+                            type="search"
+                            placeholder="搜索自动化规则" /></label
+                    ><select v-model="filters.triggerType" title="触发类型">
+                        <option value="">全部触发</option>
+                        <option>位置触发</option>
+                        <option>时间触发</option>
+                        <option>设备状态</option></select
+                    ><select v-model="filters.enabled" title="启用状态">
+                        <option value="all">全部状态</option>
+                        <option value="true">已启用</option>
+                        <option value="false">已停用</option></select
+                    ><button class="primary" @click="controller.openCreateDialog()">
+                        <SvgIcon name="plus" />创建自动化</button
+                    ><button @click="controller.openImportDialog()">
+                        <SvgIcon name="upload" />导入规则
+                    </button>
+                </div>
+            </header>
+            <Transition name="stats-fade">
+                <section v-if="!cardsExpanded" class="stats card-grid-enter">
+                    <StatsCard
+                        icon="check-circle"
+                        label="已启用规则"
+                        :value="stats.enabled"
+                        :detail="`共 ${stats.total} 条规则`"
+                        tone="blue"
+                    />
+                    <StatsCard
+                        icon="power"
+                        label="运行中"
+                        :value="stats.running"
+                        detail="正在执行"
+                        tone="green"
+                    />
+                    <StatsCard
+                        icon="calendar"
+                        label="今日执行次数"
+                        :value="`${stats.executionsToday} 次`"
+                        detail="较昨日 ↑ 15%"
+                        tone="orange"
+                    />
+                    <StatsCard
+                        icon="warning"
+                        label="异常规则"
+                        :value="stats.abnormal"
+                        detail="需要处理"
+                        tone="red"
+                    />
+                </section>
+            </Transition>
+            <section
+                class="cards card-grid-enter"
+                :class="{ 'is-expanded': cardsExpanded }"
+            >
+                <div v-if="!visible.length" class="cards-empty">
+                    暂无匹配规则
+                </div>
                 <article
-                    v-for="item in visible"
+                    v-for="item in visibleCards"
                     :key="item.id"
-                    :class="{ selected: item.id === selectedId }"
-                    @click="selectedId = item.id"
+                    :class="{
+                        selected: item.id === selectedId,
+                        disabled: !item.enabled,
+                    }"
+                    @click="store.selectAutomation(item.id)"
                 >
                     <header>
                         <i :class="item.tone"><SvgIcon :name="item.icon" /></i
@@ -145,7 +139,13 @@ useAuthenticatedLoader(loadAutomations);
                             ><b>{{ item.name }}</b
                             ><em>{{ item.enabled ? "已启用" : "已停用" }}</em
                             ><small>{{ item.description }}</small></span
-                        ><button>⋮</button>
+                        ><button
+                            type="button"
+                            title="更多操作"
+                            @click.stop="controller.openEditDialog(item)"
+                        >
+                            ⋮
+                        </button>
                     </header>
                     <div class="devices">
                         <i class="dev-light"><SvgIcon name="light" size="sm" /></i
@@ -156,72 +156,105 @@ useAuthenticatedLoader(loadAutomations);
                         ><span>等 {{ item.devices }} 个设备</span>
                     </div>
                     <footer>
-                        <button @click.stop="run(item)">执行</button
-                        ><button
-                            @click.stop="
-                                selectedId = item.id;
-                                activeDialog = 'edit';
-                            "
+                        <button
+                            :disabled="runningId === item.id"
+                            @click.stop="controller.runRule(item)"
                         >
+                            {{ runningId === item.id ? "执行中…" : "执行" }}</button
+                        ><button @click.stop="controller.openEditDialog(item)">
                             <SvgIcon name="edit" size="sm" />编辑</button
                         ><label class="switch"
                             ><input
-                                v-model="item.enabled"
-                                type="checkbox" /><span></span
+                                :checked="item.enabled"
+                                type="checkbox"
+                                @change="
+                                    controller.toggleRule(
+                                        item,
+                                        ($event.target as HTMLInputElement).checked,
+                                    )
+                                " /><span></span
                         ></label>
+                        <button
+                            class="card-delete"
+                            type="button"
+                            title="删除自动化"
+                            @click.stop="controller.removeRule(item)"
+                        >
+                            <SvgIcon name="delete" size="sm" />
+                        </button>
                     </footer>
                 </article>
             </section>
+            <div v-if="visible.length > 3" class="cards-footer">
+                <button
+                    class="automation-view-all"
+                    type="button"
+                    @click="cardsExpanded = !cardsExpanded"
+                >
+                    {{ cardsExpanded ? "收起规则" : `查看全部规则（${visible.length}）` }}
+                    <span
+                        class="chevron-icon"
+                        :class="{ 'is-expanded': cardsExpanded }"
+                    >
+                        <SvgIcon name="chevron-down" />
+                    </span>
+                </button>
+            </div>
             <section class="panel flow">
                 <header>
-                    <h2>自动化流程 / 最近执行</h2>
-                    <a @click="activeDialog = 'logs'">查看更多 ›</a>
+                    <h2>自动化流程</h2>
+                    <a @click="controller.openLogsDialog()">查看更多 ›</a>
                 </header>
                 <div class="flow-body">
                     <div class="steps">
                         <div
-                            v-for="(step, index) in [
-                                ['位置触发', '到达家 100m 内', 'room', 'blue'],
-                                ['打开灯光', '客厅灯、玄关灯', 'light', 'orange'],
-                                ['关闭窗帘', '客厅窗帘', 'curtain', 'teal'],
-                                [
-                                    '设置空调',
-                                    '制冷 26°C',
-                                    'air-conditioner',
-                                    'blue',
-                                ],
-                                ['安防模式', '回家模式', 'security', 'purple'],
-                            ]"
-                            :key="step[0]"
+                            v-for="(step, index) in flowSteps"
+                            :key="step.id"
+                            :class="`is-${stepStatuses[step.id] ?? 'pending'}`"
                         >
-                            <i :class="`is-${step[3]}`"
-                                ><SvgIcon :name="step[2]" /></i
-                            ><b>{{ step[0] }}</b
-                            ><small>{{ step[1] }}</small
-                            ><em v-if="index < 4">→</em>
+                            <div class="step-card">
+                                <i :class="`is-${step.tone}`">
+                                    <SvgIcon :name="step.icon" />
+                                    <span v-if="index === 0" class="step-trigger-badge">触发</span>
+                                </i>
+                                <b>{{ step.name }}</b>
+                                <small>{{ step.description }}</small>
+                            </div>
+                            <div v-if="index < flowSteps.length - 1" class="step-connector">
+                                <SvgIcon name="chevron-right" size="sm" />
+                            </div>
                         </div>
                     </div>
                     <div class="records">
-                        <h3>最近执行记录</h3>
-                        <p
-                            v-for="row in [
-                                ['今天 18:36', '回家联动', '成功', '2.4s'],
-                                ['今天 07:00', '晨间唤醒联动', '成功', '3.1s'],
-                                [
-                                    '昨天 22:30',
-                                    '睡眠模式自动化',
-                                    '成功',
-                                    '2.8s',
-                                ],
-                                ['昨天 12:15', '空调节能联动', '成功', '1.9s'],
-                            ]"
-                            :key="row[0]"
-                        >
-                            <time>{{ row[0] }}</time
-                            ><span>{{ row[1] }}</span
-                            ><b>◉ {{ row[2] }}</b
-                            ><em>{{ row[3] }}</em>
-                        </p>
+                        <h3>最近执行</h3>
+                        <div class="records-growth">
+                            <span class="growth-item">
+                                <em>今日</em>
+                                <strong>12</strong>
+                                <small class="growth-up">↑ 25%</small>
+                            </span>
+                            <span class="growth-item">
+                                <em>本周</em>
+                                <strong>68</strong>
+                                <small class="growth-up">↑ 12%</small>
+                            </span>
+                            <span class="growth-item">
+                                <em>成功率</em>
+                                <strong>98%</strong>
+                                <small class="growth-neutral">持平</small>
+                            </span>
+                        </div>
+                        <div class="records-list">
+                            <div v-for="row in records" :key="row.time" class="record-row">
+                                <time>{{ row.time }}</time>
+                                <span class="record-name">{{ row.name }}</span>
+                                <span class="record-result is-success">
+                                    <SvgIcon name="check-circle" size="sm" />{{ row.result }}
+                                </span>
+                                <em class="record-duration">{{ row.duration }}</em>
+                            </div>
+                            <div v-if="!records.length" class="records-empty">暂无执行记录</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -268,11 +301,19 @@ useAuthenticatedLoader(loadAutomations);
                     </div>
                 </dl>
                 <footer>
-                    <button class="primary" @click="run(selected)">
-                        ▶ 执行</button
-                    ><button @click="activeDialog = 'edit'">
+                    <button
+                        class="primary"
+                        :disabled="runningId === selected.id"
+                        @click="controller.runRule(selected)"
+                    >
+                        ▶ {{ runningId === selected.id ? "执行中…" : "执行" }}</button
+                    ><button @click="controller.openEditDialog(selected)">
                         <SvgIcon name="edit" size="sm" />编辑</button
-                    ><button>▣ 复制</button>
+                    ><button @click="controller.copyRule(selected)">
+                        <SvgIcon name="layers" size="sm" />复制</button
+                    ><button class="danger" @click="controller.removeRule(selected)">
+                        <SvgIcon name="delete" size="sm" />删除
+                    </button>
                 </footer>
             </section>
             <section class="panel">
@@ -280,25 +321,25 @@ useAuthenticatedLoader(loadAutomations);
                 <div class="quick">
                     <button
                         class="tone-blue"
-                        @click="activeDialog = 'batch'"
+                        @click="controller.openBatchDialog()"
                     >
                         <SvgIcon name="power" />批量启用<small
                             >启用多个规则</small
                         ></button
                     ><button
                         class="tone-purple"
-                        @click="activeDialog = 'schedule'"
+                        @click="controller.openScheduleDialog()"
                     >
                         <SvgIcon name="clock" />定时设置<small
                             >统一定时管理</small
                         ></button
-                    ><button class="tone-teal">
+                    ><button class="tone-teal" @click="controller.runAction('sort')">
                         <SvgIcon name="layers" />排序管理<small
                             >自定义排序</small
                         ></button
                     ><button
                         class="tone-orange"
-                        @click="activeDialog = 'logs'"
+                        @click="controller.openLogsDialog()"
                     >
                         <SvgIcon name="log" />查看日志<small
                             >执行记录与日志</small
@@ -338,20 +379,108 @@ useAuthenticatedLoader(loadAutomations);
                     ><span
                         ><b>{{ item[1] }}</b
                         ><small>{{ item[2] }}</small></span
-                    ><button>使用</button>
+                    ><button type="button" @click="controller.useTemplate(item[1])">使用</button>
                 </p>
                 <a class="browse">浏览更多模板 ›</a>
             </section>
         </aside>
         <AutomationDialogs
-            v-model="activeDialog"
-            :rule="selected"
+            v-model="controller.activeDialog.value"
+            :rule="selected ?? undefined"
             :rules="automations"
-            @save="saveRule"
-            @batch="batchEnable"
-            @imported="(count) => ElMessage.success(`已导入 ${count} 条规则`)"
-            @scheduled="() => ElMessage.success('定时设置已保存')"
+            @save="controller.saveRule"
+            @batch="controller.batchEnable"
+            @imported="controller.importRules"
+            @scheduled="controller.scheduleRules"
         />
+
+        <BaseSmartModal
+            :closable="!controller.deleting.value"
+            :loading="controller.deleting.value"
+            :model-value="controller.deleteDialogOpen.value"
+            width="520px"
+            @update:model-value="
+                $event
+                    ? (controller.deleteDialogOpen.value = true)
+                    : controller.cancelRemoveRule()
+            "
+        >
+            <template #header>
+                <header class="dialog-header">
+                    <span class="dialog-icon" aria-hidden="true">
+                        <SvgIcon name="warning" />
+                    </span>
+                    <div>
+                        <h2>删除自动化</h2>
+                        <p>此操作将从规则列表中移除该自动化。</p>
+                    </div>
+                    <button
+                        class="close-button"
+                        :disabled="controller.deleting.value"
+                        type="button"
+                        aria-label="关闭"
+                        @click="controller.cancelRemoveRule"
+                    >
+                        <SvgIcon name="close" size="sm" />
+                    </button>
+                </header>
+            </template>
+
+            <section
+                v-if="controller.deletingRule.value"
+                class="rule-delete-dialog-body"
+            >
+                <div class="rule-delete-summary">
+                    <span
+                        class="rule-delete-thumb"
+                        :class="controller.deletingRule.value.tone"
+                        aria-hidden="true"
+                    >
+                        <SvgIcon :name="controller.deletingRule.value.icon" />
+                    </span>
+                    <div class="rule-delete-summary-info">
+                        <strong>{{ controller.deletingRule.value.name }}</strong>
+                        <p>{{ controller.deletingRule.value.description }}</p>
+                    </div>
+                </div>
+                <p class="rule-delete-warning">
+                    <SvgIcon name="warning" />
+                    删除后无法恢复，关联的触发条件、执行动作与执行日志也会一并清除。
+                </p>
+            </section>
+
+            <template #footer>
+                <footer class="dialog-footer">
+                    <span>此操作不可撤销</span>
+                    <div>
+                        <button
+                            class="rule-delete-cancel-button"
+                            :disabled="controller.deleting.value"
+                            type="button"
+                            @click="controller.cancelRemoveRule"
+                        >
+                            取消
+                        </button>
+                        <button
+                            class="rule-delete-confirm-button"
+                            :disabled="controller.deleting.value"
+                            type="button"
+                            @click="controller.confirmRemoveRule"
+                        >
+                            <SvgIcon
+                                :name="
+                                    controller.deleting.value
+                                        ? 'refresh'
+                                        : 'warning'
+                                "
+                                size="sm"
+                            />
+                            {{ controller.deleting.value ? "删除中" : "确认删除" }}
+                        </button>
+                    </div>
+                </footer>
+            </template>
+        </BaseSmartModal>
     </div>
 </template>
 
@@ -365,51 +494,118 @@ useAuthenticatedLoader(loadAutomations);
     gap: 14px;
     padding: 20px;
 }
-.filters label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 9px;
-    background: var(--color-card-bg);
-    padding: 0 11px;
-    color: var(--color-text-tertiary);
+.automation-page-header {
+    display: grid;
+    grid-template-columns: minmax(210px, auto) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
 }
-.filters input {
-    min-width: 0;
-    outline: 0;
+.automation-page-title h1 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+.automation-page-title p {
+    margin: 8px 0 0;
+    color: var(--color-text-tertiary);
     font-size: 14px;
+    font-weight: 750;
+}
+@media (max-width: 1180px) {
+    .automation-page-header {
+        grid-template-columns: 1fr;
+    }
+}
+.stats-fade-enter-active,
+.stats-fade-leave-active {
+    transition: opacity 250ms ease, transform 250ms ease;
+}
+.stats-fade-enter-from,
+.stats-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-8px);
 }
 .filters {
     display: flex;
+    flex-wrap: nowrap;
+    min-width: 0;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
-.filters label {
-    width: 230px;
-    height: 42px;
-}
-.filters > span {
-    font-size: 13px;
-    font-weight: 900;
-}
-.filters select,
-.filters button {
-    height: 42px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
+.filters-search {
+    display: flex;
+    min-width: 90px;
+    flex: 1 1 140px;
+    height: 38px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
     background: var(--color-card-bg);
     padding: 0 12px;
-    font-size: 13px;
-    font-weight: 800;
+    color: var(--color-text-tertiary);
+    box-shadow: var(--shadow-card);
+    transition:
+        border-color 180ms var(--motion-ease),
+        box-shadow 180ms var(--motion-ease);
 }
-
+.filters-search:focus-within {
+    border-color: var(--color-primary-400);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+.filters-search input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    outline: none;
+}
+.filters select {
+    width: auto;
+    flex: 0 0 96px;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 800;
+    outline: none;
+    box-shadow: var(--shadow-card);
+}
 .filters select option {
     background: var(--color-card-bg);
     color: var(--color-text-primary);
 }
-.filters select {
-    width: 112px;
+.filters button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    background: var(--color-card-bg);
+    padding: 0 13px;
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+    box-shadow: var(--shadow-card);
+    transition:
+        transform 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease);
+}
+.filters button:hover {
+    transform: translateY(-1px);
 }
 .filters .primary,
 .primary {
@@ -458,6 +654,21 @@ useAuthenticatedLoader(loadAutomations);
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
+.cards.is-expanded {
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+.cards.is-expanded::-webkit-scrollbar {
+    width: 6px;
+}
+.cards.is-expanded::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: var(--color-border);
+}
+.cards.is-expanded::-webkit-scrollbar-track {
+    background: transparent;
+}
 .cards article {
     min-width: 0;
     border: 1px solid var(--color-border-default);
@@ -488,7 +699,7 @@ useAuthenticatedLoader(loadAutomations);
 }
 .cards header b {
     overflow: hidden;
-    font-size: 15px;
+    font-size: 17px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -496,16 +707,16 @@ useAuthenticatedLoader(loadAutomations);
     width: max-content;
     border-radius: 5px;
     background: var(--color-success-soft);
-    padding: 3px 7px;
+    padding: 3px 8px;
     color: var(--color-success);
-    font-size: 11px;
+    font-size: 12px;
     font-style: normal;
 }
 .cards header small {
     grid-column: span 2;
     overflow: hidden;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -534,7 +745,7 @@ useAuthenticatedLoader(loadAutomations);
 }
 .devices span {
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 .cards footer {
     display: flex;
@@ -550,6 +761,69 @@ useAuthenticatedLoader(loadAutomations);
     color: var(--color-primary-600);
     font-size: 13px;
     font-weight: 900;
+}
+.cards footer .card-delete {
+    display: grid;
+    width: 34px;
+    flex: 0 0 34px;
+    place-items: center;
+    padding: 0;
+    color: var(--color-text-tertiary);
+}
+.cards footer .card-delete:hover {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+.cards footer button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+.cards footer button:disabled svg {
+    animation: automation-spin 900ms linear infinite;
+}
+.cards article.disabled {
+    opacity: 0.7;
+}
+.cards .cards-empty {
+    grid-column: 1 / -1;
+    display: grid;
+    min-height: 180px;
+    place-items: center;
+    border: 1px dashed var(--color-border);
+    border-radius: 13px;
+    color: var(--color-text-tertiary);
+    font-weight: 800;
+}
+.cards-footer {
+    display: flex;
+    justify-content: center;
+}
+.cards-footer .automation-view-all {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: fit-content;
+    border: none;
+    background: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: var(--color-primary-600);
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: background-color 150ms;
+}
+.cards-footer .automation-view-all:hover {
+    background: var(--color-primary-50);
+}
+.cards-footer .chevron-icon {
+    display: inline-flex;
+    transition: transform 300ms ease;
+}
+.cards-footer .chevron-icon.is-expanded {
+    transform: rotate(180deg);
 }
 .switch {
     margin-left: auto;
@@ -604,85 +878,251 @@ useAuthenticatedLoader(loadAutomations);
 .flow-body {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    margin-top: 10px;
+    margin-top: 12px;
+    gap: 0;
 }
 .steps {
     display: flex;
     align-items: center;
-    padding: 16px 6px;
+    padding: 8px 4px;
+    gap: 0;
 }
 .steps > div {
-    position: relative;
     display: flex;
     min-width: 0;
     flex: 1;
     align-items: center;
-    flex-direction: column;
+    gap: 0;
+    transition: transform 180ms var(--motion-ease);
 }
-.steps i {
+.steps > div.is-running {
+    transform: translateY(-2px);
+}
+.steps > div.is-running .step-card i {
+    background: var(--color-info-soft);
+    color: var(--color-info);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-info) 20%, transparent);
+}
+.steps > div.is-running .step-card i svg {
+    animation: automation-step-spin 900ms linear infinite;
+}
+.steps > div.is-completed .step-card i {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+@keyframes automation-step-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.step-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    transition: background-color 180ms;
+    width: 100%;
+}
+
+.step-card:hover {
+    background: var(--color-surface-subtle);
+}
+
+.step-card i {
+    position: relative;
     display: grid;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     place-items: center;
     border-radius: 14px;
     background: var(--color-primary-50);
     color: var(--color-primary-600);
+    transition: box-shadow 180ms;
 }
-.steps i.is-blue {
+.step-card i.is-blue {
     background: var(--color-primary-50);
     color: var(--color-primary-600);
 }
-.steps i.is-orange {
+.step-card i.is-orange {
     background: var(--tone-orange-soft);
     color: var(--tone-orange);
 }
-.steps i.is-teal {
+.step-card i.is-teal {
     background: var(--tone-teal-soft);
     color: var(--tone-teal);
 }
-.steps i.is-purple {
+.step-card i.is-purple {
     background: var(--tone-purple-soft);
     color: var(--tone-purple);
 }
-.steps b {
-    margin-top: 8px;
-    font-size: 12px;
-}
-.steps small {
-    color: var(--color-text-tertiary);
-    font-size: 11px;
-    white-space: nowrap;
-}
-.steps em {
+
+.step-trigger-badge {
     position: absolute;
-    top: 13px;
-    right: -5px;
-    color: var(--color-primary-600);
-    font-size: 22px;
-    font-style: normal;
+    top: -4px;
+    right: -4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-primary-600);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1.4;
 }
+
+.step-card b {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+.step-card small {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.step-connector {
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+    opacity: 0.35;
+    padding: 0 2px;
+}
+
 .records {
     border-left: 1px solid var(--color-border-subtle);
-    padding-left: 14px;
+    padding-left: 16px;
 }
 .records h3 {
     font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    margin: 0 0 10px;
 }
-.records p {
+
+.records-growth {
     display: grid;
-    grid-template-columns: 82px 1fr 52px 34px;
-    gap: 5px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--color-border-subtle);
-    font-size: 11px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    background: var(--color-card-bg);
 }
-.records time,
-.records em {
+
+.growth-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.growth-item em {
     color: var(--color-text-tertiary);
+    font-size: 10px;
+    font-weight: 600;
     font-style: normal;
 }
-.records b {
+
+.growth-item strong {
+    color: var(--color-text-primary);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.growth-item small {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.growth-up {
     color: var(--color-success);
+}
+
+.growth-neutral {
+    color: var(--color-text-muted);
+}
+
+.records-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.record-row {
+    display: grid;
+    grid-template-columns: 82px 1fr 60px 34px;
+    gap: 6px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: 12px;
+    transition: background-color 150ms;
+}
+
+.record-row:last-child {
+    border-bottom: 0;
+}
+
+.record-row:hover {
+    background: var(--color-surface-subtle);
+    margin: 0 -4px;
+    padding: 7px 4px;
+    border-radius: 6px;
+}
+
+.record-row time {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.record-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.record-result {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.record-result.is-success {
+    color: var(--color-success);
+}
+
+.record-result > svg {
+    width: 12px;
+    height: 12px;
+}
+
+.record-duration {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 600;
+    font-style: normal;
+    text-align: right;
+}
+
+.records-empty {
+    padding: 16px 0;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    font-size: 12px;
 }
 .right {
     display: flex;
@@ -702,7 +1142,7 @@ useAuthenticatedLoader(loadAutomations);
     min-width: 0;
 }
 .detail-title h3 {
-    font-size: 18px;
+    font-size: 20px;
 }
 .detail-title em {
     width: max-content;
@@ -717,13 +1157,13 @@ useAuthenticatedLoader(loadAutomations);
 .detail-title p {
     grid-column: span 2;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
 }
 .detail dl div {
     display: grid;
     grid-template-columns: 82px 1fr;
     padding: 7px 0;
-    font-size: 12px;
+    font-size: 13px;
 }
 .detail dt {
     color: var(--color-text-tertiary);
@@ -733,7 +1173,7 @@ useAuthenticatedLoader(loadAutomations);
 }
 .detail footer {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 7px;
     margin-top: 14px;
 }
@@ -743,6 +1183,13 @@ useAuthenticatedLoader(loadAutomations);
     border-radius: 7px;
     font-size: 13px;
     font-weight: 900;
+}
+.detail footer .danger {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+.detail footer .danger:hover {
+    background: var(--color-danger-soft);
 }
 .quick {
     display: grid;
@@ -798,12 +1245,12 @@ useAuthenticatedLoader(loadAutomations);
     min-width: 0;
     flex: 1;
     flex-direction: column;
-    font-size: 12px;
+    font-size: 13px;
 }
 .templates p small {
     overflow: hidden;
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -812,7 +1259,7 @@ useAuthenticatedLoader(loadAutomations);
     border-radius: 6px;
     padding: 5px 10px;
     color: var(--color-primary-600);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
 }
 .browse {
@@ -820,10 +1267,190 @@ useAuthenticatedLoader(loadAutomations);
     margin-top: 12px;
     text-align: center;
 }
-@media (max-width: 1200px) {
-    .filters {
-        flex-wrap: wrap;
+
+/* ── 删除确认弹窗 ── */
+.dialog-header .dialog-icon svg {
+    animation: rule-delete-icon-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes rule-delete-icon-pulse {
+    0%,
+    100% {
+        transform: scale(1);
     }
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+.rule-delete-dialog-body {
+    display: grid;
+    gap: 14px;
+}
+
+.rule-delete-summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 16px;
+    background: linear-gradient(
+        135deg,
+        var(--color-card-bg),
+        var(--color-primary-50)
+    );
+    box-shadow: var(--shadow-card);
+}
+
+.rule-delete-thumb {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    place-items: center;
+    border-radius: 50%;
+    box-shadow: 0 6px 16px var(--color-focus-ring);
+}
+
+.rule-delete-summary-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.rule-delete-summary-info strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.rule-delete-summary-info p {
+    margin: 4px 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.rule-delete-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0;
+    border-radius: 12px;
+    background: color-mix(
+        in srgb,
+        var(--color-danger-soft) 62%,
+        transparent
+    );
+    padding: 12px 16px;
+    color: var(--color-danger);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.rule-delete-warning svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    opacity: 0.85;
+}
+
+.rule-delete-cancel-button,
+.rule-delete-confirm-button {
+    min-width: 96px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 900;
+    transition:
+        transform 140ms var(--motion-ease),
+        box-shadow 140ms var(--motion-ease),
+        border-color 140ms,
+        background-color 140ms;
+}
+
+.rule-delete-cancel-button {
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+}
+
+.rule-delete-confirm-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid var(--color-danger);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-danger) 92%, #fff),
+        var(--color-danger)
+    );
+    color: var(--color-text-on-primary);
+    box-shadow: 0 4px 12px var(--color-danger-border);
+}
+
+.rule-delete-cancel-button:hover {
+    border-color: var(--color-text-secondary);
+    color: var(--color-text-primary);
+}
+
+.rule-delete-confirm-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px var(--color-danger-border);
+}
+
+.rule-delete-cancel-button:active,
+.rule-delete-confirm-button:active {
+    transform: translateY(0);
+}
+
+.rule-delete-confirm-button:disabled svg {
+    animation: rule-delete-spin 900ms linear infinite;
+}
+
+@keyframes rule-delete-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes automation-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialog-header .dialog-icon svg,
+    .rule-delete-confirm-button:disabled svg,
+    .cards footer button:disabled svg,
+    .steps > div.is-running i svg {
+        animation: none;
+    }
+
+    .rule-delete-cancel-button,
+    .rule-delete-confirm-button,
+    .steps > div {
+        transition-duration: 1ms;
+    }
+
+    .cards-footer .chevron-icon {
+        transition: none;
+    }
+
+    .stats-fade-enter-active,
+    .stats-fade-leave-active {
+        transition-duration: 1ms;
+    }
+}
+@media (max-width: 1200px) {
     .stats {
         grid-template-columns: repeat(2, 1fr);
     }

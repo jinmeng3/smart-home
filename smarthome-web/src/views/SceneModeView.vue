@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from "vue";
+import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
@@ -32,6 +32,8 @@ const {
 } = storeToRefs(store);
 const controller = useSceneModeController(store);
 
+const sceneGridExpanded = ref(false);
+
 const loadScenes = async () => {
     if (!authStore.isAuthenticated) {
         authStore.openLogin();
@@ -63,7 +65,7 @@ useAuthenticatedLoader(() => void loadScenes());
 </script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <section class="scene-mode-page page-shell page-enter">
             <header class="scene-page-header">
                 <div class="scene-page-title">
@@ -80,32 +82,38 @@ useAuthenticatedLoader(() => void loadScenes());
             </header>
 
             <SceneStats
+                v-if="!sceneGridExpanded"
                 :automation="stats.automation"
                 :enabled="stats.enabled"
                 :manual="stats.manual"
                 :monthly-executions="stats.monthlyExecutions"
             />
 
-            <SceneGrid
-                :loading="loading"
-                :running-scene-id="runningSceneId"
-                :scenes="scenes"
-                :selected-id="selectedSceneId"
-                @copy="controller.copyScene"
-                @edit="controller.editScene"
-                @remove="controller.removeScene"
-                @run="controller.runScene"
-                @select="store.selectScene($event.id)"
-                @toggle="controller.toggleScene"
-            />
+            <div class="scene-grid-wrapper" :class="{ 'is-expanded': sceneGridExpanded }">
+                <SceneGrid
+                    :loading="loading"
+                    :running-scene-id="runningSceneId"
+                    :scenes="scenes"
+                    :selected-id="selectedSceneId"
+                    @copy="controller.copyScene"
+                    @edit="controller.editScene"
+                    @expand="sceneGridExpanded = $event"
+                    @remove="controller.removeScene"
+                    @run="controller.runScene"
+                    @select="store.selectScene($event.id)"
+                    @toggle="controller.toggleScene"
+                />
+            </div>
 
-            <SceneFlow
-                :running="runningSceneId === selectedScene?.id"
-                :scene="selectedScene"
-                :step-statuses="stepStatuses"
-                @edit="selectedScene && controller.editScene(selectedScene)"
-                @preview="selectedScene && controller.runScene(selectedScene)"
-            />
+            <div class="scene-flow-wrapper">
+                <SceneFlow
+                    :running="runningSceneId === selectedScene?.id"
+                    :scene="selectedScene"
+                    :step-statuses="stepStatuses"
+                    @edit="selectedScene && controller.editScene(selectedScene)"
+                    @preview="selectedScene && controller.runScene(selectedScene)"
+                />
+            </div>
         </section>
 
         <SceneDetailPanel
@@ -241,9 +249,10 @@ useAuthenticatedLoader(() => void loadScenes());
     display: flex;
     min-width: 0;
     min-height: 0;
+    flex: 1;
     flex-direction: column;
     gap: 14px;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 18px;
 }
 
@@ -273,6 +282,32 @@ useAuthenticatedLoader(() => void loadScenes());
     .scene-page-header {
         grid-template-columns: 1fr;
     }
+}
+
+.scene-grid-wrapper {
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+.scene-grid-wrapper.is-expanded {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.scene-grid-wrapper.is-expanded:deep(.scene-grid-panel) {
+    height: 100%;
+}
+
+.scene-flow-wrapper {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.scene-flow-wrapper:deep(.scene-flow) {
+    flex: 0 0 auto;
+    margin-top: 0;
 }
 
 @media (max-width: 720px) {

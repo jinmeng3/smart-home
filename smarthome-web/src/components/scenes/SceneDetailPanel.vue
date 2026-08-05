@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Scene } from "../../types/scene";
 
-defineProps<{
+const props = defineProps<{
     scene: Scene | null;
     running: boolean;
 }>();
@@ -15,6 +16,49 @@ defineEmits<{
     action: [key: "batch" | "schedule" | "sort" | "logs"];
     template: [name: string];
 }>();
+
+const triggerIcon = computed(() => {
+    const type = props.scene?.triggerType;
+    if (type === "schedule") return "calendar";
+    if (type === "location") return "location";
+    if (type === "device") return "device-management";
+    return "automation";
+});
+
+const executionText = computed(() =>
+    props.scene?.triggerType === "manual" ? "手动执行" : "自动执行",
+);
+
+const detailRows = computed(() => {
+    const scene = props.scene;
+    if (!scene) return [];
+
+    return [
+        {
+            icon: triggerIcon.value,
+            label: "触发条件",
+            value: scene.triggerLabel || "—",
+        },
+        {
+            icon: "automation",
+            label: "执行方式",
+            value: executionText.value,
+            chip: true,
+        },
+        {
+            icon: "room",
+            label: "关联房间",
+            value: scene.roomLabels?.length ? scene.roomLabels.join("、") : "—",
+        },
+        {
+            icon: "device-management",
+            label: "关联设备",
+            value: `${scene.deviceCount} 个设备`,
+        },
+        { icon: "clock", label: "创建时间", value: scene.createdAt },
+        { icon: "refresh", label: "更新时间", value: scene.updatedAt },
+    ];
+});
 
 const templates = [
     { name: "浪漫晚餐模式", count: 6, icon: "light" },
@@ -53,46 +97,42 @@ const actions = [
                 </header>
 
                 <div class="scene-detail-head">
-                    <span :style="{ color: scene.color }"
-                        ><SvgIcon :name="scene.icon"
-                    /></span>
-                    <div>
-                        <h3>{{ scene.name }}</h3>
-                        <p>{{ scene.description }}</p>
+                    <span class="scene-detail-icon" :style="{ color: scene.color }">
+                        <SvgIcon :name="scene.icon" />
+                    </span>
+                    <div class="scene-detail-title">
+                        <div class="scene-detail-name-row">
+                            <h3>{{ scene.name }}</h3>
+                            <span
+                                class="scene-detail-badge"
+                                :class="{ 'is-off': !scene.enabled }"
+                            >
+                                <SvgIcon :name="scene.enabled ? 'check-circle' : 'clock'" />
+                                {{ scene.enabled ? "已启用" : "已停用" }}
+                            </span>
+                        </div>
+                        <p class="scene-detail-desc">{{ scene.description }}</p>
                     </div>
-                    <strong>{{ scene.enabled ? "已启用" : "已停用" }}</strong>
                 </div>
 
-                <dl>
-                    <div>
-                        <dt>触发条件</dt>
-                        <dd>{{ scene.triggerLabel }}</dd>
-                    </div>
-                    <div>
-                        <dt>执行方式</dt>
-                        <dd>
-                            {{
-                                scene.triggerType === "manual"
-                                    ? "手动执行"
-                                    : "自动执行"
-                            }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>关联房间</dt>
-                        <dd>玄关、客厅、餐厅、主卧</dd>
-                    </div>
-                    <div>
-                        <dt>关联设备</dt>
-                        <dd>{{ scene.deviceCount }} 个设备</dd>
-                    </div>
-                    <div>
-                        <dt>创建时间</dt>
-                        <dd>{{ scene.createdAt }}</dd>
-                    </div>
-                    <div>
-                        <dt>更新时间</dt>
-                        <dd>{{ scene.updatedAt }}</dd>
+                <dl class="scene-detail-info">
+                    <div v-for="row in detailRows" :key="row.label" class="info-row">
+                        <span class="info-icon"><SvgIcon :name="row.icon" /></span>
+                        <span class="info-label">{{ row.label }}</span>
+                        <span class="info-value">
+                            <em
+                                v-if="row.chip"
+                                class="exec-chip"
+                                :class="
+                                    scene.triggerType === 'manual'
+                                        ? 'is-manual'
+                                        : 'is-auto'
+                                "
+                            >
+                                {{ row.value }}
+                            </em>
+                            <template v-else>{{ row.value }}</template>
+                        </span>
                     </div>
                 </dl>
 
@@ -103,20 +143,13 @@ const actions = [
                         type="button"
                         @click="$emit('run', scene)"
                     >
-                        <SvgIcon name="power" /> 执行
+                        <SvgIcon name="power" /> {{ running ? "执行中" : "执行" }}
                     </button>
                     <button type="button" @click="$emit('edit', scene)">
                         <SvgIcon name="edit" /> 编辑
                     </button>
                     <button type="button" @click="$emit('copy', scene)">
                         <SvgIcon name="layers" /> 复制
-                    </button>
-                    <button
-                        class="is-danger"
-                        type="button"
-                        @click="$emit('remove', scene)"
-                    >
-                        <SvgIcon name="delete" /> 删除
                     </button>
                 </div>
             </section>
@@ -228,88 +261,161 @@ const actions = [
     font-weight: 900;
 }
 
+/* ── 头部：图标 + 名称 + 描述 + 状态 ───────────────────────── */
 .scene-detail-head {
+    align-items: flex-start;
     gap: 12px;
-    padding-bottom: 12px;
+    padding: 10px 0 14px;
+    margin-bottom: 6px;
     border-bottom: 1px solid var(--color-border);
 }
 
-.scene-detail-head > span {
+.scene-detail-icon {
     display: grid;
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
     place-items: center;
-    border-radius: 999px;
+    border-radius: 14px;
     background: var(--color-primary-50);
-    box-shadow: 0 6px 16px var(--color-focus-ring);
+    box-shadow: inset 0 0 0 1px var(--color-primary-100);
 }
 
-.scene-detail-head div {
+.scene-detail-title {
     min-width: 0;
     flex: 1;
 }
 
-h3,
-p,
-dl {
+.scene-detail-name-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+}
+
+.scene-detail-name-row h3 {
+    min-width: 0;
     margin: 0;
-}
-
-h3 {
+    overflow: hidden;
     color: var(--color-text-primary);
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 900;
+    letter-spacing: -0.01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-p {
-    margin-top: 4px;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-    font-weight: 750;
-}
-
-.scene-detail-head > strong {
+.scene-detail-badge {
+    display: inline-flex;
     flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--color-success-border);
     border-radius: 999px;
     background: var(--color-success-soft);
-    padding: 4px 9px;
+    padding: 3px 9px;
     color: var(--color-success);
-    font-size: 12px;
-    font-weight: 900;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
 }
 
-dl {
+.scene-detail-badge.is-off {
+    border-color: var(--color-border-default);
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
+}
+
+.scene-detail-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    margin: 7px 0 0;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 12.5px;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+/* ── 详情信息行 ───────────────────────────────────────────── */
+.scene-detail-info {
     display: grid;
-    gap: 10px;
-    padding: 13px 0;
+    gap: 0;
+    margin: 0;
+    padding: 6px 0 12px;
 }
 
-dl > div {
+.info-row {
     display: flex;
-    justify-content: space-between;
-    gap: 12px;
+    min-width: 0;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 2px;
+    border-bottom: 1px dashed var(--color-border);
 }
 
-dt {
+.info-row:last-child {
+    border-bottom: 0;
+}
+
+.info-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
+}
+
+.info-label {
     flex: 0 0 auto;
     color: var(--color-text-tertiary);
     font-size: 12px;
     font-weight: 800;
 }
 
-dd {
+.info-value {
     min-width: 0;
-    margin: 0;
+    margin: 0 0 0 auto;
     overflow: hidden;
     color: var(--color-text-secondary);
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 900;
     text-align: right;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.exec-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.exec-chip.is-manual {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.exec-chip.is-auto {
+    border-color: var(--color-success-border);
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+/* ── 操作按钮 ─────────────────────────────────────────────── */
 .scene-detail-actions {
     display: grid;
     width: 100%;

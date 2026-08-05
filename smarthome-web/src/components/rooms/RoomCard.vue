@@ -41,7 +41,7 @@ defineEmits<{
         </div>
         <div class="room-devices">
             <button
-                v-for="device in devices"
+                v-for="device in devices.slice(0, 3)"
                 :key="device.name"
                 :class="{ on: room.deviceStates[device.key] }"
                 type="button"
@@ -60,9 +60,9 @@ defineEmits<{
     position: relative;
     min-width: 0;
     border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--color-card-bg);
-    padding: 16px;
+    padding: 12px;
     box-shadow: var(--shadow-card);
     cursor: pointer;
     transition: 160ms var(--motion-ease);
@@ -85,7 +85,7 @@ defineEmits<{
 .room-card > header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 .room-title {
     min-width: 0;
@@ -93,14 +93,15 @@ defineEmits<{
 }
 .room-avatar {
     display: grid;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     flex: 0 0 auto;
     place-items: center;
-    border-radius: 11px;
+    border-radius: 9px;
     background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
     color: var(--color-primary-700);
     font-weight: 900;
+    font-size: 14px;
 }
 
 .room-avatar.is-living {
@@ -142,25 +143,25 @@ defineEmits<{
 .room-card h2 {
     overflow: hidden;
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .room-status {
     display: flex;
     align-items: center;
-    gap: 5px;
-    margin: 4px 0 0;
+    gap: 4px;
+    margin: 2px 0 0;
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 10px;
 }
 .room-status small {
     border-radius: 999px;
     background: var(--color-success-soft);
-    padding: 1px 6px;
+    padding: 0 5px;
     color: var(--color-success);
     font-size: 9px;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 .room-status b {
     display: inline-block;
@@ -172,20 +173,20 @@ defineEmits<{
 .room-metrics {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 7px;
-    margin-top: 14px;
+    gap: 6px;
+    margin-top: 10px;
 }
 .room-metrics span {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    min-height: 34px;
-    border-radius: 9px;
+    gap: 4px;
+    min-height: 28px;
+    border-radius: 8px;
     background: var(--color-surface-subtle);
-    padding: 5px 7px;
+    padding: 4px 6px;
     color: var(--color-text-secondary);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -194,39 +195,23 @@ defineEmits<{
     color: var(--color-success);
 }
 .room-devices {
-    display: flex;
-    gap: 7px;
-    margin-top: 8px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 6px;
 }
-.room-devices::-webkit-scrollbar {
-    height: 3px;
-}
-.room-devices::-webkit-scrollbar-track {
-    border-radius: 2px;
-    background: var(--color-surface-subtle);
-}
-.room-devices::-webkit-scrollbar-thumb {
-    border-radius: 2px;
-    background: var(--color-border-strong);
-}
+
 .room-devices button {
     display: grid;
-    min-width: 82px;
-    flex: 0 0 auto;
     place-items: center;
-    gap: 4px;
-    min-height: 68px;
+    gap: 3px;
+    min-height: 56px;
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--color-surface-subtle);
-    padding: 8px 10px;
+    padding: 6px 8px;
     color: var(--color-text-tertiary);
-    font-size: 10px;
-    scroll-snap-align: start;
+    font-size: 9px;
     transition: 160ms var(--motion-ease);
 }
 .room-devices button:hover {
@@ -240,10 +225,10 @@ defineEmits<{
 }
 .room-devices i {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     place-items: center;
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--color-card-bg);
     font-style: normal;
 }
@@ -267,9 +252,12 @@ defineEmits<{
         padding: 14px;
     }
 
+    .room-devices {
+        gap: 4px;
+    }
     .room-devices button {
-        min-width: 72px;
-        padding: 6px 8px;
+        padding: 4px 6px;
+        min-height: 48px;
     }
 }
 </style>

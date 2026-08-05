@@ -26,7 +26,7 @@ useAuthenticatedLoader(refreshHomeData);
 </script>
 
 <template>
-    <div class="contents">
+    <div class="app-page-layout">
         <section
             :inert="!authStore.isAuthenticated"
             :aria-disabled="!authStore.isAuthenticated"
