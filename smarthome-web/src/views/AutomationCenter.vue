@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useAuthStore } from "../stores/auth";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
 import type { AutomationDialog } from "../components/automation/AutomationDialogs.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
@@ -8,7 +10,9 @@ import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
 import { automationRules, type AutomationRule } from "../mock/automations";
 
-const automations = ref<AutomationRule[]>(automationRules);
+const authStore = useAuthStore();
+
+const automations = ref<AutomationRule[]>([]);
 const selectedId = ref(1);
 const query = ref("");
 const triggerFilter = ref("");
@@ -58,6 +62,17 @@ const batchEnable = (ids: number[]) => {
     });
     ElMessage.success(`已启用 ${ids.length} 条规则`);
 };
+
+const loadAutomations = () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+    automations.value = automationRules;
+    selectedId.value = automationRules[0]?.id;
+};
+
+useAuthenticatedLoader(loadAutomations);
 </script>
 
 <template>

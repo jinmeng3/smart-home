@@ -27,16 +27,23 @@ const tabs: Array<{ id: SettingsSectionId; label: string; tone: string }> = [
         <button
             v-for="tab in tabs"
             :key="tab.id"
-            class="motion-button relative grid flex-1 place-items-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-primary-700)]"
+            class="motion-button relative grid flex-1 place-items-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors"
             :class="[
                 { active: activeSection === tab.id },
-                'tone-gradient',
-                `is-${tab.tone}`,
+                activeSection === tab.id
+                    ? ['tone-gradient', `is-${tab.tone}`]
+                    : ['tone-text', `is-${tab.tone}`],
             ]"
             type="button"
             @click="emit('select', tab.id)"
         >
             {{ tab.label }}
+            <!-- 激活下划线指示器 -->
+            <span
+                v-if="activeSection === tab.id"
+                class="absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full"
+                :class="`tone-indicator-${tab.tone}`"
+            />
         </button>
     </nav>
 </template>

@@ -16,6 +16,7 @@ const emit = defineEmits<{
     run: [scene: Scene];
     edit: [scene: Scene];
     copy: [scene: Scene];
+    remove: [scene: Scene];
 }>();
 
 const toggleScene = (scene: Scene, enabled: boolean) => {
@@ -37,6 +38,7 @@ const toggleScene = (scene: Scene, enabled: boolean) => {
                 :selected="selectedId === scene.id"
                 @copy="emit('copy', $event)"
                 @edit="emit('edit', $event)"
+                @remove="emit('remove', $event)"
                 @run="emit('run', $event)"
                 @select="emit('select', $event)"
                 @toggle="toggleScene"

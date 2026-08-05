@@ -24,11 +24,13 @@ import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vu
 import SettingsTabs from "../components/settings/SettingsTabs.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useAuthStore } from "../stores/auth";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
+
 const activeSection = ref<SettingsSectionId>("account");
 const savingAccount = ref(false);
 const addingMember = ref(false);

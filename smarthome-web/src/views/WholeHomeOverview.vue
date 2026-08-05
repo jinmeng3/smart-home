@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
@@ -8,25 +8,115 @@ import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
 import type { HouseholdSchedule } from "../api/overview";
+import { getHouseholdOverview, getHouseholdDevices } from "../api/overview";
+import { useSettingsStore } from "../stores/settings";
+import { useAuthStore } from "../stores/auth";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import {
-  overviewRooms,
   overviewActivities,
-  overviewDevices,
   overviewScheduleItems,
-  type ActivityItem,
-  type OverviewDevice,
 } from "../mock/overview";
+import type { ActivityItem } from "../mock/overview";
+import type {
+  OverviewSummary,
+  HomeStatus,
+  OverviewRoom,
+} from "../types/overview";
 
-const rooms = shallowRef(overviewRooms);
-const selectedTab = ref("常用设备");
+// ── 概览展示用设备类型 ────────────────────────────────────────────────────────────
+
+interface OverviewDeviceDisplay {
+  id: number;
+  name: string;
+  room: string;
+  status: "在线" | "离线";
+  detail: string;
+  updatedAt: string;
+  icon: string;
+  tone: string;
+  frequent: boolean;
+  favorite: boolean;
+}
+
+interface OverviewRoomDisplay {
+  name: string;
+  icon: string;
+  count: number;
+  light: string;
+  air: string;
+  extra: string;
+  tone: string;
+}
+
+// ── 设备类型 → 图标/色调映射 ───────────────────────────────────────────────────────
+
+const DEVICE_ICON_MAP: Record<string, string> = {
+  light: "light",
+  air_conditioner: "air-conditioner",
+  lock: "lock",
+  camera: "camera",
+  sensor: "sensor",
+  socket: "plug",
+  curtain: "curtain",
+};
+
+const DEVICE_TONE_MAP: Record<string, string> = {
+  light: "orange",
+  air_conditioner: "blue",
+  lock: "purple",
+  camera: "purple",
+  sensor: "green",
+  socket: "teal",
+  curtain: "teal",
+};
+
+const deviceIcon = (type: string) => DEVICE_ICON_MAP[type] ?? "device-management";
+const deviceTone = (type: string) => DEVICE_TONE_MAP[type] ?? "blue";
+
+// ── 状态 ──────────────────────────────────────────────────────────────────────────
+
+const settingsStore = useSettingsStore();
+const authStore = useAuthStore();
+
+const selectedTab = ref("全部设备");
 const searchKeyword = ref("");
-const refreshed = ref("5 分钟前");
+const refreshed = ref("加载中…");
 const activeDialog = ref<OverviewDialog>(null);
+const loading = ref(false);
 
+const summary = ref<OverviewSummary>({
+  device_total: 0,
+  device_online: 0,
+  running_automation_count: 0,
+  alert_count: 0,
+  monthly_energy_kwh: 0,
+  energy_saving_rate: 0,
+});
+const homeStatus = ref<HomeStatus>({
+  status: "normal",
+  people_home: 0,
+  temperature: 0,
+  humidity: 0,
+  air_quality: "excellent",
+  pm25: 0,
+  locked_count: 0,
+  lock_total: 0,
+});
+const rooms = ref<OverviewRoomDisplay[]>([]);
+const devices = ref<OverviewDeviceDisplay[]>([]);
 const activities = ref<ActivityItem[]>(overviewActivities);
 const scheduleItems = ref(overviewScheduleItems);
 
-const devices = ref<OverviewDevice[]>(overviewDevices);
+// ── 计算属性 ──────────────────────────────────────────────────────────────────────
+
+const onlineRate = computed(() => {
+  if (summary.value.device_total === 0) return "0%";
+  return `${((summary.value.device_online / summary.value.device_total) * 100).toFixed(1)}%`;
+});
+
+const offlineCount = computed(() =>
+  summary.value.device_total - summary.value.device_online,
+);
 
 const visibleDevices = computed(() => {
     const keyword = searchKeyword.value.trim().toLocaleLowerCase();
@@ -45,6 +135,8 @@ const visibleDevices = computed(() => {
         return matchesTab && matchesKeyword;
     });
 });
+
+// ── 操作函数 ──────────────────────────────────────────────────────────────────────
 
 const toggleFavorite = (deviceId: number) => {
     devices.value = devices.value.map((device) =>
@@ -76,10 +168,91 @@ const handleRoomCreated = (name: string) => {
         },
     ];
 };
+
 const handleScheduleSaved = (schedule: HouseholdSchedule) => {
-    scheduleItems.value = schedule.items;
+  scheduleItems.value = schedule.items;
 };
-</script>
+
+// ── 数据加载 ──────────────────────────────────────────────────────────────────────
+
+const loadOverviewData = async () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
+    loading.value = true;
+    try {
+        // 先确保账户与家庭信息已加载，再获取 householdId
+        await settingsStore.loadAccountHome();
+        const householdId = settingsStore.settings.account.householdId;
+        if (!householdId) return;
+        const [overview, deviceList] = await Promise.all([
+            getHouseholdOverview(householdId),
+            getHouseholdDevices(householdId),
+        ]);
+
+        // 概览摘要
+        summary.value = overview.summary;
+
+        // 家庭状态
+        homeStatus.value = overview.home_status;
+
+        // 房间卡片
+        rooms.value = overview.rooms.map((room: OverviewRoom) => ({
+            name: room.name,
+            icon: "room",
+            count: room.device_count,
+            light: `${room.light_on}/${room.light_total} 开`,
+            air: room.device_summaries[0] ?? `${room.temperature}°C`,
+            extra: room.device_summaries[1] ?? "",
+            tone: "blue",
+        }));
+
+        // 设备列表
+        devices.value = deviceList.items.map((device) => ({
+            id: device.id,
+            name: device.name,
+            room: device.room,
+            status: device.status === "online" || device.status === "running" ? "在线" : "离线",
+            detail: device.status === "running" ? "运行中" : device.status === "online" ? "在线" : device.status === "warning" ? "告警" : "离线",
+            updatedAt: device.lastOnline || "未知",
+            icon: deviceIcon(device.type),
+            tone: deviceTone(device.type),
+            frequent: false,
+            favorite: false,
+        }));
+
+        // 尝试从后端获取活动数据，降级使用模拟数据
+        if (overview.activities && overview.activities.length > 0) {
+            activities.value = (overview.activities as any[]).map((act: Record<string, unknown>) => ({
+                time: (act.time || act.created_at || "") as string,
+                icon: (act.icon || "info") as string,
+                title: (act.title || act.name || "") as string,
+                description: (act.description || "") as string,
+                tone: (act.tone || "blue") as string,
+            }));
+        } else {
+            activities.value = overviewActivities;
+        }
+
+        // 尝试从后端获取日程数据，降级使用模拟数据
+        if (overview.schedule && overview.schedule.length > 0) {
+            scheduleItems.value = overview.schedule as any;
+        } else {
+            scheduleItems.value = overviewScheduleItems;
+        }
+
+        refreshed.value = "刚刚";
+    } catch (err) {
+        refreshed.value = "加载失败";
+        console.error("概览数据加载失败:", err);
+    } finally {
+        loading.value = false;
+    }
+};
+
+useAuthenticatedLoader(loadOverviewData);</script>
 
 <template>
     <div class="contents">
@@ -91,34 +264,38 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
                         placeholder="搜索设备、场景或房间"
                 /></label>
             </PageHeader>
+            <div v-if="loading" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <span>加载中…</span>
+            </div>
             <section class="stats card-grid-enter">
                 <StatsCard
                     icon="online-device"
                     label="在线设备总数"
-                    value="28"
-                    detail="在线率 77.8%"
+                    :value="String(summary.device_online)"
+                    :detail="`在线率 ${onlineRate}`"
                     tone="blue"
                 />
                 <StatsCard
                     icon="automation"
                     label="自动化运行中"
-                    value="8"
-                    detail="较昨日 +2"
+                    :value="String(summary.running_automation_count)"
+                    detail="已启用自动化"
                     tone="green"
                 />
                 <StatsCard
                     icon="notification"
                     label="今日告警"
-                    value="2"
-                    detail="较昨日 -1 ↓"
+                    :value="String(summary.alert_count)"
+                    detail="需关注"
                     tone="orange"
                 />
                 <StatsCard
                     icon="air-quality"
                     label="本月节能概况"
-                    value="32.6"
+                    :value="String(summary.monthly_energy_kwh)"
                     unit="kWh"
-                    detail="节能 12% ↑"
+                    :detail="`节能 ${summary.energy_saving_rate}% ↑`"
                     tone="purple"
                 />
             </section>
@@ -128,36 +305,36 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
                     <div>
                         <i class="green"><SvgIcon name="security" /></i
                         ><span
-                            >家庭状态<b class="ok">一切正常</b
+                            >家庭状态<b class="ok">{{ homeStatus.status === "normal" ? "一切正常" : "异常" }}</b
                             ><small>系统运行良好</small></span
                         >
                     </div>
                     <div>
                         <i class="blue"><SvgIcon name="members" /></i
                         ><span
-                            >在家人数<b>2 人</b><small>张晓明 等</small></span
+                            >在家人数<b>{{ homeStatus.people_home }} 人</b><small>家庭成员</small></span
                         >
                     </div>
                     <div>
                         <i class="blue"><SvgIcon name="temperature" /></i
-                        ><span>室内温度<b>26.0°C</b><small>舒适</small></span>
+                        ><span>室内温度<b>{{ homeStatus.temperature }}°C</b><small>{{ homeStatus.temperature > 28 ? "偏热" : homeStatus.temperature > 18 ? "舒适" : "偏冷" }}</small></span>
                     </div>
                     <div>
                         <i class="blue"><SvgIcon name="humidity" /></i
-                        ><span>室内湿度<b>55%</b><small>舒适</small></span>
+                        ><span>室内湿度<b>{{ homeStatus.humidity }}%</b><small>{{ homeStatus.humidity > 70 ? "偏湿" : homeStatus.humidity > 30 ? "舒适" : "偏干" }}</small></span>
                     </div>
                     <div>
                         <i class="green"><SvgIcon name="air-quality" /></i
                         ><span
-                            >空气质量<b class="ok">优 28</b
+                            >空气质量<b :class="homeStatus.air_quality === 'excellent' ? 'ok' : ''">{{ homeStatus.air_quality === "excellent" ? "优" : "一般" }} {{ homeStatus.pm25 }}</b
                             ><small>PM2.5</small></span
                         >
                     </div>
                     <div>
                         <i class="gray"><SvgIcon name="lock" /></i
                         ><span
-                            >门锁状态<b>全部上锁</b
-                            ><small>6/6 已上锁</small></span
+                            >门锁状态<b>{{ homeStatus.locked_count === homeStatus.lock_total ? "全部上锁" : "部分未锁" }}</b
+                            ><small>{{ homeStatus.locked_count }}/{{ homeStatus.lock_total }} 已上锁</small></span
                         >
                     </div>
                 </div>
@@ -242,8 +419,14 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
                             </tr>
                         </tbody>
                     </table>
-                    <RouterLink class="view-all" to="/devices">
-                        查看全部设备（{{ devices.length }}）→
+                    <RouterLink v-if="selectedTab === '全部设备'" class="view-all" to="/devices">
+                        查看全部设备（{{ summary.device_total }}）→
+                    </RouterLink>
+                    <RouterLink v-else-if="selectedTab === '常用设备'" class="view-all" to="/devices?view=frequent">
+                        查看全部常用设备（{{ visibleDevices.length }}）→
+                    </RouterLink>
+                    <RouterLink v-else class="view-all" to="/devices?view=favorite">
+                        查看全部收藏设备（{{ visibleDevices.length }}）→
                     </RouterLink>
                 </section>
             </div>
@@ -300,9 +483,9 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
                     <RouterLink class="more-link" to="/devices">更多</RouterLink>
                 </header>
                 <div class="device-count">
-                    <span>总设备<b>36</b></span
-                    ><span>在线设备<b class="ok">• 28</b></span
-                    ><span>离线设备<b class="warn">• 8</b></span>
+                    <span>总设备<b>{{ summary.device_total }}</b></span
+                    ><span>在线设备<b class="ok">• {{ summary.device_online }}</b></span
+                    ><span>离线设备<b class="warn">• {{ offlineCount }}</b></span>
                 </div>
                 <h3>重点提醒</h3>
                 <p class="alert">⚠ 厨房烟感电池电量低 <em>厨房</em></p>
@@ -389,7 +572,8 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
 }
 .contents > .overview {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 .sidebar {
     display: flex;
@@ -590,6 +774,7 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
 }
 .bottom-grid {
     display: grid;
+    flex-shrink: 0;
     grid-template-columns: 1fr;
     gap: 10px;
 }
@@ -2038,5 +2223,28 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
     .bottom-grid .activity {
         display: none;
     }
+}
+
+/* ── 加载状态 ────────────────────────────────────────────────────────────────────── */
+.loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 200px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--color-border-default);
+    border-top-color: var(--tone-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>

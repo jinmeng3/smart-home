@@ -1,9 +1,6 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import {
-  confirmHighRiskScene,
-  isHighRiskScene,
-} from "../utils/sceneRiskPolicy";
+import { isHighRiskScene } from "../utils/sceneRiskPolicy";
 import type { useScenesStore } from "../stores/scenes";
 import type {
     Scene,
@@ -17,13 +14,26 @@ type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
 export const useSceneModeController = (store: ScenesStore) => {
     const createDialogOpen = ref(false);
     const templateDialogOpen = ref(false);
+    const editingScene = ref<Scene | null>(null);
+    const deleteDialogOpen = ref(false);
+    const deleting = ref(false);
+    const deletingScene = ref<Scene | null>(null);
+    const riskConfirmOpen = ref(false);
+    const riskScene = ref<Scene | null>(null);
+    let riskResolver: ((value: boolean) => void) | null = null;
 
     const openCreateDialog = () => {
+        editingScene.value = null;
         createDialogOpen.value = true;
     };
 
     const openTemplateDialog = () => {
         templateDialogOpen.value = true;
+    };
+
+    const openEditDialog = (scene: Scene) => {
+        editingScene.value = scene;
+        createDialogOpen.value = true;
     };
 
     const createScene = async (payload: SceneInput) => {
@@ -53,10 +63,46 @@ export const useSceneModeController = (store: ScenesStore) => {
         }
     };
 
-    const editScene = async (scene: Scene) => {
-        // 编辑场景需要场景编辑弹窗收集表单，目前复用创建弹窗逻辑未接入。
-        // store.editScene 方法已就绪，可由编辑弹窗调用。
-        ElMessage.info(`编辑 ${scene.name} 的弹窗尚未接入，API 已就绪`);
+    const editScene = (scene: Scene) => {
+        openEditDialog(scene);
+    };
+
+    const saveEditScene = async (scene: Scene, payload: SceneInput) => {
+        try {
+            const updated = await store.editScene(scene, payload);
+            editingScene.value = null;
+            createDialogOpen.value = false;
+            ElMessage.success(`${updated.name} 已更新`);
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "场景更新失败");
+        }
+    };
+
+    const removeScene = (scene: Scene) => {
+        deletingScene.value = scene;
+        deleteDialogOpen.value = true;
+    };
+
+    const cancelRemoveScene = () => {
+        if (deleting.value) return;
+        deleteDialogOpen.value = false;
+        deletingScene.value = null;
+    };
+
+    const confirmRemoveScene = async () => {
+        if (!deletingScene.value) return;
+        const scene = deletingScene.value;
+        deleting.value = true;
+        try {
+            await store.removeScene(scene);
+            ElMessage.success(`${scene.name} 已删除`);
+            deleteDialogOpen.value = false;
+            deletingScene.value = null;
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "场景删除失败");
+        } finally {
+            deleting.value = false;
+        }
     };
 
     const previewSceneSteps = async (scene: Scene) => {
@@ -120,10 +166,12 @@ export const useSceneModeController = (store: ScenesStore) => {
     };
 
     const runScene = async (scene: Scene) => {
-        const confirmed = await confirmHighRiskScene(scene);
+        if (isHighRiskScene(scene)) {
+            const confirmed = await requestHighRiskConfirm(scene);
 
-        if (!confirmed) {
-            return;
+            if (!confirmed) {
+                return;
+            }
         }
 
         try {
@@ -132,6 +180,23 @@ export const useSceneModeController = (store: ScenesStore) => {
         } catch (error) {
             ElMessage.error(error instanceof Error ? error.message : "场景执行失败");
         }
+    };
+
+    /** 打开高风险确认弹窗，并返回用户是否确认执行的 Promise。 */
+    const requestHighRiskConfirm = (scene: Scene): Promise<boolean> => {
+        riskScene.value = scene;
+        riskConfirmOpen.value = true;
+
+        return new Promise<boolean>((resolve) => {
+            riskResolver = resolve;
+        });
+    };
+
+    const resolveRiskConfirm = (confirmed: boolean) => {
+        riskConfirmOpen.value = false;
+        riskScene.value = null;
+        riskResolver?.(confirmed);
+        riskResolver = null;
     };
 
     const toggleScene = async (scene: Scene, enabled: boolean) => {
@@ -144,18 +209,31 @@ export const useSceneModeController = (store: ScenesStore) => {
     };
 
     return {
+        cancelRemoveScene,
+        confirmRemoveScene,
         copyScene,
         createDialogOpen,
         createScene,
+        deleting,
+        deleteDialogOpen,
+        deletingScene,
+        editingScene,
         editScene,
         importTemplate,
         loadSceneLogs,
         openCreateDialog,
+        openEditDialog,
         openTemplateDialog,
         previewSceneSteps,
+        removeScene,
+        requestHighRiskConfirm,
+        resolveRiskConfirm,
+        riskConfirmOpen,
+        riskScene,
         runAction,
         runScene,
         saveDraft,
+        saveEditScene,
         templateDialogOpen,
         toggleScene,
     };

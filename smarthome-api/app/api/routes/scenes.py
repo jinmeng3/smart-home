@@ -33,6 +33,7 @@ from app.services.scene import (
     batch_set_scene_schedule,
     copy_scene,
     create_scene,
+    delete_scene,
     execute_scene,
     list_scene_logs,
     list_scenes,
@@ -151,6 +152,13 @@ def edit_scene(
 ) -> ApiResponse[SceneRead]:
     """覆盖场景信息及步骤。"""
     return ApiResponse(data=update_scene(db, scene_id, payload))
+
+
+@router.delete("/{scene_id}", response_model=ApiResponse[None])
+def remove_scene(scene_id: str, db: Session = DB_DEPENDENCY) -> ApiResponse[None]:
+    """删除场景及其执行步骤、执行日志。"""
+    delete_scene(db, scene_id)
+    return ApiResponse(message="deleted")
 
 
 @router.patch("/{scene_id}/enabled", response_model=ApiResponse[SceneEnabledRead])

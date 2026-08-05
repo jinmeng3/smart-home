@@ -116,6 +116,9 @@ export const updateScene = (sceneId: string, payload: SceneInput) =>
     body: JSON.stringify(payload),
   });
 
+export const deleteScene = (sceneId: string) =>
+  apiRequest<null>(`/api/scenes/${sceneId}`, { method: "DELETE" });
+
 export const updateSceneOrder = (items: SceneOrderItem[]) =>
   apiRequest<SceneOrderResult>(`/api/scenes/order`, {
     method: "PATCH",

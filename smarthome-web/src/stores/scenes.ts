@@ -5,6 +5,7 @@ import {
     batchUpdateSceneSchedule as apiBatchUpdateSceneSchedule,
     copyScene as apiCopyScene,
     createScene as apiCreateScene,
+    deleteScene as apiDeleteScene,
     executeScene as apiExecuteScene,
     fetchSceneSummary,
     fetchScenes,
@@ -175,6 +176,16 @@ export const useScenesStore = defineStore("scenes", () => {
         return updated;
     };
 
+    const removeScene = async (scene: Scene) => {
+        await apiDeleteScene(scene.id);
+        scenes.value = scenes.value.filter((item) => item.id !== scene.id);
+        if (selectedSceneId.value === scene.id) {
+            selectedSceneId.value = null;
+        }
+        resetStepStatuses();
+        summary.value = await fetchSceneSummary();
+    };
+
     const reorderScenes = async (items: SceneOrderItem[]) => {
         await apiUpdateSceneOrder(items);
         await loadScenes();
@@ -224,6 +235,7 @@ export const useScenesStore = defineStore("scenes", () => {
         previewScene,
         previewTemplate,
         reorderScenes,
+        removeScene,
         runningSceneId,
         scenes,
         selectedScene,

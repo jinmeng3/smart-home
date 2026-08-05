@@ -13,6 +13,7 @@ defineProps<{
     <section
         :id="id"
         class="settings-section motion-card rounded-xl border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-4"
+        :class="`tone-border-${tone ?? 'primary'}`"
     >
         <div class="mb-4 flex items-center gap-3">
             <span

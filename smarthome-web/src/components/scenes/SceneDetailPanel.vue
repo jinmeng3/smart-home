@@ -11,6 +11,7 @@ defineEmits<{
     run: [scene: Scene];
     edit: [scene: Scene];
     copy: [scene: Scene];
+    remove: [scene: Scene];
     action: [key: "batch" | "schedule" | "sort" | "logs"];
     template: [name: string];
 }>();
@@ -109,6 +110,13 @@ const actions = [
                     </button>
                     <button type="button" @click="$emit('copy', scene)">
                         <SvgIcon name="layers" /> 复制
+                    </button>
+                    <button
+                        class="is-danger"
+                        type="button"
+                        @click="$emit('remove', scene)"
+                    >
+                        <SvgIcon name="delete" /> 删除
                     </button>
                 </div>
             </section>
@@ -337,6 +345,12 @@ dd {
 .scene-detail-actions .is-primary {
     border-color: var(--color-primary-600);
     background: var(--color-primary-600);
+    color: var(--color-text-on-primary);
+}
+
+.scene-detail-actions .is-danger {
+    border-color: var(--color-danger);
+    background: var(--color-danger);
     color: var(--color-text-on-primary);
 }
 

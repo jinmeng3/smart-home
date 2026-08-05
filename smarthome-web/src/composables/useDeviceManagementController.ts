@@ -51,26 +51,73 @@ export const useDeviceManagementController = () => {
   const deletingDevice = ref<Device | null>(null);
   const sort = ref<DeviceSortKey>("updated");
 
+  const viewMode = ref<"all" | "frequent" | "favorite">("all");
+
+  const setViewMode = (mode: "all" | "frequent" | "favorite") => {
+    viewMode.value = mode;
+  };
+
+  // Favorite device IDs stored in localStorage
+  const favoriteDeviceIds = ref<number[]>([]);
+
+  const loadFavorites = () => {
+    try {
+      const stored = localStorage.getItem("device-favorites");
+      if (stored) {
+        favoriteDeviceIds.value = JSON.parse(stored);
+      }
+    } catch {
+      favoriteDeviceIds.value = [];
+    }
+  };
+
+  const saveFavorites = () => {
+    localStorage.setItem("device-favorites", JSON.stringify(favoriteDeviceIds.value));
+  };
+
+  const toggleFavorite = (deviceId: number) => {
+    const index = favoriteDeviceIds.value.indexOf(deviceId);
+    if (index > -1) {
+      favoriteDeviceIds.value.splice(index, 1);
+    } else {
+      favoriteDeviceIds.value.push(deviceId);
+    }
+    saveFavorites();
+  };
+
+  const isFavorite = (deviceId: number) => favoriteDeviceIds.value.includes(deviceId);
+
+  // Load favorites on initialization
+  loadFavorites();
+
   const rooms = computed(() =>
-    Array.from(new Set(devices.value.map((device) => device.room))).filter(
-      Boolean,
-    ),
+    Array.from(new Set(devices.value.map((device) => device.room))).filter(Boolean),
   );
 
+  const filteredDevices = computed(() => {
+    let result = devices.value;
+    if (viewMode.value === "favorite") {
+      result = result.filter((d) => isFavorite(d.id));
+    }
+    // For "frequent", we could add a heuristic later; for now show all
+    return result;
+  });
+
   const sortedDevices = computed(() => {
+    let result = filteredDevices.value;
     if (sort.value === "name") {
-      return [...devices.value].sort((first, second) =>
+      return [...result].sort((first, second) =>
         first.name.localeCompare(second.name, "zh-CN"),
       );
     }
 
     if (sort.value === "status") {
-      return [...devices.value].sort((first, second) =>
+      return [...result].sort((first, second) =>
         first.status.localeCompare(second.status),
       );
     }
 
-    return devices.value;
+    return result;
   });
 
   const stats = computed(() => {
@@ -314,5 +361,10 @@ export const useDeviceManagementController = () => {
     updatePageSize,
     editDevice,
     loadDevices,
+    viewMode,
+    setViewMode,
+    toggleFavorite,
+    isFavorite,
+    favoriteDeviceIds,
   };
 };

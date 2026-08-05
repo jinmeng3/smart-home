@@ -16,6 +16,7 @@ const emit = defineEmits<{
     run: [scene: Scene];
     edit: [scene: Scene];
     copy: [scene: Scene];
+    remove: [scene: Scene];
 }>();
 
 const triggerText: Record<Scene["triggerType"], string> = {
@@ -93,6 +94,14 @@ const updateEnabled = (enabled: boolean) => {
                 @update:model-value="updateEnabled"
                 @click.stop
             />
+            <button
+                class="scene-delete-button"
+                type="button"
+                title="删除场景"
+                @click.stop="$emit('remove', scene)"
+            >
+                <SvgIcon name="delete" size="sm" />
+            </button>
         </footer>
     </article>
 </template>
@@ -290,6 +299,24 @@ footer {
 
 .scene-run-button:disabled svg {
     animation: scene-spin 900ms linear infinite;
+}
+
+.scene-delete-button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+    transition: color 160ms, border-color 160ms, background-color 160ms;
+}
+
+.scene-delete-button:hover {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 button:disabled {

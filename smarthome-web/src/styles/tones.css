@@ -48,6 +48,105 @@
     color: var(--tone-orange);
 }
 
+/* --- 纯文字色调（非激活标签、次要文字等） --- */
+.tone-text {
+    color: var(--tone-primary);
+}
+.tone-text.is-teal {
+    color: var(--tone-teal);
+}
+.tone-text.is-green,
+.tone-text.is-success {
+    color: var(--tone-success);
+}
+.tone-text.is-amber,
+.tone-text.is-warning {
+    color: var(--tone-warning);
+}
+.tone-text.is-red,
+.tone-text.is-danger {
+    color: var(--tone-danger);
+}
+.tone-text.is-sky,
+.tone-text.is-info {
+    color: var(--tone-info);
+}
+.tone-text.is-purple {
+    color: var(--tone-purple);
+}
+.tone-text.is-indigo {
+    color: var(--tone-indigo);
+}
+.tone-text.is-orange {
+    color: var(--tone-orange);
+}
+
+/* --- 左侧色条边框（分区卡片、面板等） --- */
+.tone-border-primary {
+    border-left: 4px solid var(--tone-primary);
+}
+.tone-border-teal {
+    border-left: 4px solid var(--tone-teal);
+}
+.tone-border-green,
+.tone-border-success {
+    border-left: 4px solid var(--tone-success);
+}
+.tone-border-amber,
+.tone-border-warning {
+    border-left: 4px solid var(--tone-warning);
+}
+.tone-border-red,
+.tone-border-danger {
+    border-left: 4px solid var(--tone-danger);
+}
+.tone-border-sky,
+.tone-border-info {
+    border-left: 4px solid var(--tone-info);
+}
+.tone-border-purple {
+    border-left: 4px solid var(--tone-purple);
+}
+.tone-border-indigo {
+    border-left: 4px solid var(--tone-indigo);
+}
+.tone-border-orange {
+    border-left: 4px solid var(--tone-orange);
+}
+
+/* --- 激活指示器下划线（标签页等） --- */
+.tone-indicator-primary {
+    background: var(--tone-primary);
+}
+.tone-indicator-teal {
+    background: var(--tone-teal);
+}
+.tone-indicator-green,
+.tone-indicator-success {
+    background: var(--tone-success);
+}
+.tone-indicator-amber,
+.tone-indicator-warning {
+    background: var(--tone-warning);
+}
+.tone-indicator-red,
+.tone-indicator-danger {
+    background: var(--tone-danger);
+}
+.tone-indicator-sky,
+.tone-indicator-info {
+    background: var(--tone-info);
+}
+.tone-indicator-purple {
+    background: var(--tone-purple);
+}
+.tone-indicator-indigo {
+    background: var(--tone-indigo);
+}
+.tone-indicator-orange {
+    background: var(--tone-orange);
+}
+
 /* --- 竖向柔和渐变块（激活选项卡、高亮条等） --- */
 .tone-gradient {
     background: linear-gradient(

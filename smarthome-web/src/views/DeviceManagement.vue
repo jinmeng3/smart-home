@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
@@ -10,8 +11,20 @@ import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
 import DeviceToolbar from "../components/device/DeviceToolbar.vue";
 import PlatformStatus from "../components/device/PlatformStatus.vue";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
+import { useAuthStore } from "../stores/auth";
 
 const controller = useDeviceManagementController();
+const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
+
+const loadDevicesIfAuthenticated = () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+    void controller.loadDevices();
+};
 
 watch(
     () => [
@@ -23,12 +36,17 @@ watch(
         controller.filters.room,
     ],
     () => {
-        void controller.loadDevices();
+        loadDevicesIfAuthenticated();
     },
 );
 
 onMounted(() => {
-    void controller.loadDevices();
+    // Read view parameter from URL
+    const view = route.query.view as "all" | "frequent" | "favorite" | undefined;
+    if (view === "frequent" || view === "favorite") {
+        controller.setViewMode(view);
+    }
+    loadDevicesIfAuthenticated();
 });
 </script>
 

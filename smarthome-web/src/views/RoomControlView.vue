@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
+import { useAuthStore } from "../stores/auth";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { ElMessage } from "element-plus";
 import {
   createRoom,
@@ -23,6 +25,8 @@ import type {
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
 import { commonDevices } from "../mock/rooms";
+
+const authStore = useAuthStore();
 
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
@@ -69,6 +73,11 @@ const environment = computed<RoomEnvironmentItem[]>(() => {
 });
 
 const load = async () => {
+    if (!authStore.isAuthenticated) {
+        authStore.openLogin();
+        return;
+    }
+
     loading.value = true;
 
     try {
@@ -160,7 +169,7 @@ const handleRoomCreated = async (
   }
 };
 
-onMounted(() => void load());
+useAuthenticatedLoader(load);
 </script>
 
 <template>

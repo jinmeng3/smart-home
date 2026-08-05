@@ -1,5 +1,4 @@
-import { ElMessageBox } from "element-plus";
-import type { Scene } from "../types/scene";
+import type { Scene, SceneStep } from "../types/scene";
 
 /**
  * 场景执行风险策略模块（SRP：风险判定与确认逻辑从控制器中剥离；
@@ -17,26 +16,11 @@ export const isHighRiskScene = (scene: Scene): boolean =>
     highRiskDeviceKeywords.some((keyword) => step.deviceId.includes(keyword)),
   );
 
-export const confirmHighRiskScene = async (
-  scene: Scene,
-): Promise<boolean> => {
-  if (!isHighRiskScene(scene)) {
-    return true;
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      `${scene.name} 包含门锁或安防相关动作，确认执行？`,
-      "高风险动作确认",
-      {
-        confirmButtonText: "确认执行",
-        cancelButtonText: "取消",
-        type: "warning",
-      },
-    );
-
-    return true;
-  } catch {
-    return false;
-  }
-};
+/**
+ * 返回场景中涉及高风险（门锁 / 安防监控）的具体步骤，
+ * 用于在高风险确认弹窗中展示给用户。
+ */
+export const getHighRiskSteps = (scene: Scene): SceneStep[] =>
+  scene.steps.filter((step) =>
+    highRiskDeviceKeywords.some((keyword) => step.deviceId.includes(keyword)),
+  );

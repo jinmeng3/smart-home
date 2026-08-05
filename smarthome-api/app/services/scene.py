@@ -306,6 +306,13 @@ def copy_scene(db: Session, scene_id: str, name: str) -> SceneRead:
     return create_scene(db, payload)
 
 
+def delete_scene(db: Session, scene_id: str) -> None:
+    """删除场景及其执行步骤、执行日志（ORM 级联清理辅助表）。"""
+    scene = get_scene_or_404(db, scene_id)
+    db.delete(scene)
+    db.commit()
+
+
 def list_scene_logs(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
     get_scene_or_404(db, scene_id)
     logs = db.scalars(

@@ -14,6 +14,7 @@ const authStore = useAuthStore();
 
 const refreshHomeData = () => {
     if (!authStore.isAuthenticated) {
+        authStore.openLogin();
         return;
     }
 
@@ -27,6 +28,8 @@ useAuthenticatedLoader(refreshHomeData);
 <template>
     <div class="contents">
         <section
+            :inert="!authStore.isAuthenticated"
+            :aria-disabled="!authStore.isAuthenticated"
             class="page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] shadow-soft"
         >
             <Header />
