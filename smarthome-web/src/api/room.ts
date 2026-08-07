@@ -17,23 +17,116 @@ import type {
   RoomStats,
 } from "../types/room";
 
-export const fetchRooms = (floor = "", roomType = "") => {
+// ── DTO 类型（后端 snake_case）与映射函数 ───────────────────────────────────────────
+// snake_case/camelCase 转换只允许出现在此 mapper 层；组件/store 只消费领域模型。
+
+interface ApiRoom {
+  id: number;
+  name: string;
+  floor: string;
+  room_type: string;
+  icon?: string | null;
+  theme_color?: string | null;
+  device_count: number;
+  online_count: number;
+  comfort: number;
+  status: string;
+  version?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ApiRoomListResponse {
+  items: ApiRoom[];
+  total: number;
+}
+
+interface ApiRoomDetailResponse {
+  room: ApiRoom;
+  current_scene?: string | null;
+  recent_activity?: string | null;
+  recent_activity_time?: string | null;
+}
+
+interface ApiRoomStats {
+  room_count: number;
+  room_count_change: number;
+  online_rate: number;
+  alert_count: number;
+  pending_alert_count: number;
+}
+
+const mapRoom = (data: ApiRoom): Room => ({
+  id: data.id,
+  name: data.name,
+  floor: data.floor,
+  roomType: data.room_type,
+  imageUrl: null,
+  icon: data.icon ?? "room",
+  themeColor: data.theme_color ?? "",
+  version: data.version ?? 0,
+  area: 0,
+  comfort: data.comfort,
+  deviceCount: data.device_count,
+  onlineCount: data.online_count,
+  updatedAt: data.updated_at ?? "",
+  device: [],
+});
+
+const mapRoomDetail = (data: ApiRoomDetailResponse): RoomDetail => ({
+  room: mapRoom(data.room),
+  currentScene: data.current_scene ?? null,
+  recentActivity: data.recent_activity ?? null,
+  recentActivityTime: data.recent_activity_time ?? null,
+});
+
+const mapRoomStats = (data: ApiRoomStats): RoomStats => ({
+  roomCount: data.room_count,
+  roomCountChange: data.room_count_change,
+  onlineRate: data.online_rate,
+  alertCount: data.alert_count,
+  pendingAlertCount: data.pending_alert_count,
+});
+
+// ── API 导出函数 ──────────────────────────────────────────────────────────────────
+
+// 修正：fetchRooms 通过 mapper 将 snake_case 转为 camelCase 领域模型
+export const fetchRooms = async (floor = "", roomType = "") => {
   const params = new URLSearchParams();
   if (floor) params.set("floor", floor);
   if (roomType) params.set("room_type", roomType);
-  return apiRequest<RoomListResponse>(`/api/rooms?${params}`);
+  const data = await apiRequest<ApiRoomListResponse>(`/api/rooms?${params}`);
+  return { items: data.items.map(mapRoom), total: data.total };
 };
 
+// 修正：使用 POST /api/rooms，而非已废弃的 /api/rooms/add
 export const createRoom = (payload: RoomInput) =>
-  apiRequest<Room>("/api/rooms/add", {
+  apiRequest<Room>("/api/rooms", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.name,
+      floor: payload.floor,
+      room_type: payload.roomType,
+      icon: payload.icon ?? "room",
+      theme_color: payload.themeColor ?? "",
+      device_ids: payload.deviceIds ?? [],
+      version: payload.version,
+    }),
   });
 
+// 修正：使用 PATCH /api/rooms/{id}，而非已废弃的 PUT /api/rooms/{id}
 export const updateRoom = (roomId: number, payload: RoomInput) =>
   apiRequest<Room>(`/api/rooms/${roomId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+    method: "PATCH",
+    body: JSON.stringify({
+      name: payload.name,
+      floor: payload.floor,
+      room_type: payload.roomType,
+      icon: payload.icon ?? "room",
+      theme_color: payload.themeColor ?? "",
+      device_ids: payload.deviceIds ?? [],
+      version: payload.version,
+    }),
   });
 
 export const updateRoomDevice = (
@@ -163,19 +256,24 @@ export const executeRoomScene = (
     },
   );
 
-// ── 房间详情 ────────────────────────────────────────────────────────────────────
+// ── 房间详情 ──────────────────────────────────────────────────────────────────
 
-export const fetchRoomDetail = (roomId: number) =>
-  apiRequest<RoomDetail>(`/api/rooms/${roomId}/detail`);
+// 修正：使用 GET /api/rooms/{id}，并通过 mapper 转换 snake_case 字段
+export const fetchRoomDetail = async (roomId: number) => {
+  const data = await apiRequest<ApiRoomDetailResponse>(`/api/rooms/${roomId}`);
+  return mapRoomDetail(data);
+};
 
-// ── 房间统计概览 ────────────────────────────────────────────────────────────────
+// ── 房间统计概览 ──────────────────────────────────────────────────────────────
 
-export const fetchRoomStats = () =>
-  apiRequest<RoomStats>("/api/rooms/stats");
+export const fetchRoomStats = async () => {
+  const data = await apiRequest<ApiRoomStats>("/api/rooms/stats");
+  return mapRoomStats(data);
+};
 
-// ── 房间删除 ────────────────────────────────────────────────────────────────────
+// ── 房间删除 ──────────────────────────────────────────────────────────────────
 
 export const deleteRoom = (roomId: number) =>
-  apiRequest<Room>(`/api/rooms/${roomId}`, {
+  apiRequest<null>(`/api/rooms/${roomId}`, {
     method: "DELETE",
   });

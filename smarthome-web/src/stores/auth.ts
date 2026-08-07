@@ -11,7 +11,17 @@ import {
 import { authExpiredEvent, tokenKey } from "../api/client";
 
 export const useAuthStore = defineStore("auth", () => {
-  const accessToken = ref(window.sessionStorage.getItem(tokenKey));
+  const storedAccessToken = window.sessionStorage.getItem(tokenKey);
+  const initialAccessToken =
+    storedAccessToken &&
+    storedAccessToken !== "undefined" &&
+    storedAccessToken !== "null"
+      ? storedAccessToken
+      : null;
+
+  if (!initialAccessToken) window.sessionStorage.removeItem(tokenKey);
+
+  const accessToken = ref(initialAccessToken);
   const loginVisible = ref(false);
   const isAuthenticated = computed(() => Boolean(accessToken.value));
 

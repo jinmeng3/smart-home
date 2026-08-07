@@ -222,9 +222,9 @@ const handleRoomUpdated = async (room: Room) => {
     const updated = await updateRoom(room.id, {
       name: room.name,
       floor: room.floor,
-      room_type: room.roomType,
+      roomType: room.roomType,
       icon: room.icon ?? "room",
-      theme_color: room.themeColor ?? "#3478f6",
+      themeColor: room.themeColor ?? "#3478f6",
       version: room.version ?? undefined,
     });
     replaceRoom(updated);
@@ -251,10 +251,10 @@ const handleRoomCreated = async (
     const room = await createRoom({
       name: payload.name,
       floor: payload.floor,
-      room_type: payload.roomType,
+      roomType: payload.roomType,
       icon: payload.icon,
-      theme_color: payload.themeColor,
-      device_ids: payload.deviceIds,
+      themeColor: payload.themeColor,
+      deviceIds: payload.deviceIds,
     });
     rooms.value = [...rooms.value, room];
     await selectRoom(room);
@@ -327,10 +327,10 @@ useAuthenticatedLoader(load);
                 :room-count="rooms.length"
                 :online-count="online"
                 :comfort-score="comfort"
-                :room-count-change="roomStats?.room_count_change ?? 0"
-                :online-rate="roomStats?.online_rate ?? 0"
-                :alert-count="roomStats?.alert_count ?? 0"
-                :pending-alert-count="roomStats?.pending_alert_count ?? 0"
+                :room-count-change="roomStats?.roomCountChange ?? 0"
+                :online-rate="roomStats?.onlineRate ?? 0"
+                :alert-count="roomStats?.alertCount ?? 0"
+                :pending-alert-count="roomStats?.pendingAlertCount ?? 0"
             />
 
             <div v-if="rooms.length === 0 && !loading" class="room-empty-state">
@@ -383,9 +383,9 @@ useAuthenticatedLoader(load);
         <RoomDetailPanel
             :room="selected ?? null"
             :environment="environment"
-            :current-scene="selectedDetail?.current_scene ?? undefined"
-            :recent-activity="selectedDetail?.recent_activity ?? undefined"
-            :recent-activity-time="selectedDetail?.recent_activity_time ?? undefined"
+            :current-scene="selectedDetail?.currentScene ?? undefined"
+            :recent-activity="selectedDetail?.recentActivity ?? undefined"
+            :recent-activity-time="selectedDetail?.recentActivityTime ?? undefined"
             @quick="quick"
             @open="activeDialog = $event"
         />

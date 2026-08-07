@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "check:chunk": "node scripts/check-chunk-budget.mjs",
+    "api:export:backend": "cd ../smarthome-api && python -c \"import json, sys; sys.path.insert(0, '.'); from app.main import app; json.dump(app.openapi(), open('openapi.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)\"",
+    "api:generate": "npm run api:export:backend && node scripts/generate-openapi-types.mjs",
+    "api:check": "node scripts/check-openapi-consistency.mjs",
     "type-check": "vue-tsc --build"
   },
   "dependencies": {

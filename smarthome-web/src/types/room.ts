@@ -41,10 +41,10 @@ export interface RoomPreferencesInput {
 export interface RoomInput {
   name: string;
   floor?: string;
-  room_type?: string;
+  roomType?: string;
   icon?: string;
-  theme_color?: string;
-  device_ids?: number[];
+  themeColor?: string;
+  deviceIds?: number[];
   preferences?: RoomPreferencesInput;
   version?: number | null;
 }
@@ -187,17 +187,17 @@ export interface RoomSceneExecution {
 
 export interface RoomDetail {
   room: Room;
-  current_scene: string | null;
-  recent_activity: string | null;
-  recent_activity_time: string | null;
+  currentScene: string | null;
+  recentActivity: string | null;
+  recentActivityTime: string | null;
 }
 
 // ── 房间统计概览 ──────────────────────────────────────────────────────────────────
 
 export interface RoomStats {
-  room_count: number;
-  room_count_change: number;
-  online_rate: number;
-  alert_count: number;
-  pending_alert_count: number;
+  roomCount: number;
+  roomCountChange: number;
+  onlineRate: number;
+  alertCount: number;
+  pendingAlertCount: number;
 }

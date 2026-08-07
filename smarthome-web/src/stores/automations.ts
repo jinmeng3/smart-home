@@ -10,6 +10,7 @@ import {
     batchSetAutomationSchedule as apiBatchSchedule,
 } from "../api/automation";
 import type { AutomationCreate, AutomationUpdate } from "../types/automation";
+import type { LoadingState } from "../types/loading";
 import { sleep } from "../utils/async";
 
 // ── 自动化流程步骤 ──────────────────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ export const useAutomationsStore = defineStore("automations", () => {
         enabled: "all",
     });
     const automations = ref<AutomationDisplayRule[]>([]);
-    const loading = ref(false);
+    const loading = ref<LoadingState>("idle");
     const runningId = ref<number | null>(null);
     const selectedId = ref<number | null>(null);
     const stepStatuses = ref<Record<string, AutomationStepStatus>>({});
@@ -185,7 +186,7 @@ export const useAutomationsStore = defineStore("automations", () => {
     };
 
     const loadAutomations = async () => {
-        loading.value = true;
+        loading.value = "loading";
         try {
             const result = await apiListAutomations(1, {
                 keyword: filters.keyword || undefined,
@@ -203,8 +204,10 @@ export const useAutomationsStore = defineStore("automations", () => {
                 selectedId.value = automations.value[0]?.id ?? null;
             }
             resetStepStatuses();
-        } finally {
-            loading.value = false;
+            loading.value = "success";
+        } catch (error) {
+            loading.value = "error";
+            throw error;
         }
     };
 

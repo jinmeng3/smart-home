@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 
 export interface LoginPayload {
   account: string;
@@ -23,17 +23,38 @@ export interface LoginResult {
   };
 }
 
-export const login = (payload: LoginPayload) =>
-  apiRequest<LoginResult>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+interface AuthResponseDto {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+  user: LoginResult["user"];
+}
 
-export const register = (payload: RegisterPayload) =>
-  apiRequest<LoginResult>("/api/auth/register", {
+const mapAuthResponse = (response: AuthResponseDto): LoginResult => {
+  const accessToken = response.accessToken?.trim();
+  if (!accessToken) {
+    throw new ApiError("登录响应缺少 accessToken", 200, 0, response);
+  }
+
+  return {
+    access_token: accessToken,
+    token_type: response.tokenType,
+    expires_in: response.expiresIn,
+    user: response.user,
+  };
+};
+
+export const login = async (payload: LoginPayload) =>
+  mapAuthResponse(await apiRequest<AuthResponseDto>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }));
+
+export const register = async (payload: RegisterPayload) =>
+  mapAuthResponse(await apiRequest<AuthResponseDto>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }));
 
 export const logout = () =>
   apiRequest<null>("/api/auth/logout", {

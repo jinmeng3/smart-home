@@ -147,7 +147,7 @@ export const getDevice = async (id: number): Promise<DeviceDetail> => {
 };
 
 export const createDevice = async (payload: DeviceCreatePayload): Promise<Device> => {
-  const response = await apiRequest<ApiDevice>("/api/devices/add", {
+  const response = await apiRequest<ApiDevice>("/api/devices", {
     method: "POST",
     body: JSON.stringify(mapCreatePayload(payload)),
   });
@@ -159,7 +159,7 @@ export const updateDevice = async (
   payload: DeviceUpdatePayload,
 ): Promise<Device> => {
   const response = await apiRequest<ApiDevice>(`/api/devices/${id}`, {
-    method: "PUT",
+    method: "PATCH",
     body: JSON.stringify(mapUpdatePayload(payload)),
   });
   return mapDevice(response);
@@ -205,12 +205,20 @@ export const listDeviceLogs = async (id: number): Promise<DeviceLog[]> => {
   return response.items.map(mapDeviceLog);
 };
 
+interface ApiDeviceImageRead {
+  image_url: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
 export const uploadDeviceImage = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
 
-  return apiRequest<string>("/api/devices/images", {
+  const response = await apiRequest<ApiDeviceImageRead>("/api/devices/images", {
     method: "POST",
     body: formData,
   });
+  return response.image_url;
 };

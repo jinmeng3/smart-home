@@ -8,6 +8,7 @@ import {
 import { useHomeChat } from "../composables/useHomeChat";
 import { listDevices as apiListDevices } from "../api/device";
 import { mapDashboardDevice } from "../utils/device";
+import type { LoadingState } from "../types/loading";
 
 import type { Automation, DashboardDevice } from "../types/device";
 
@@ -32,7 +33,7 @@ export const useHomeStore = defineStore("home", () => {
   const devicesById = shallowRef<Record<string, DashboardDevice>>(initialById);
   const automations = shallowRef<Automation[]>([]);
   const energyToday = ref(18.62);
-  const devicesLoading = ref(false);
+  const devicesLoading = ref<LoadingState>("idle");
   const securityAlertHandled = ref(false);
   const chat = useHomeChat([]);
 
@@ -98,7 +99,7 @@ export const useHomeStore = defineStore("home", () => {
   };
 
   const loadDevices = async () => {
-    devicesLoading.value = true;
+    devicesLoading.value = "loading";
 
     try {
       const response = await apiListDevices({
@@ -114,12 +115,12 @@ export const useHomeStore = defineStore("home", () => {
 
       deviceIds.value = nextIds;
       devicesById.value = nextById;
+      devicesLoading.value = "success";
     } catch {
       // API 加载失败时使用空数据
       deviceIds.value = [];
       devicesById.value = {};
-    } finally {
-      devicesLoading.value = false;
+      devicesLoading.value = "error";
     }
   };
 

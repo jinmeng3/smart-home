@@ -9,6 +9,7 @@ import {
     getDeviceTypeIcon,
 } from "../device/deviceMeta";
 import { formatDeviceTimestamp } from "../../utils/device";
+import { isLoading } from "../../types/loading";
 
 const store = useHomeStore();
 
@@ -34,7 +35,7 @@ const statusLabel = (device: DashboardDevice) =>
             </span>
         </div>
 
-        <div v-if="store.devicesLoading" class="device-placeholder">
+        <div v-if="isLoading(store.devicesLoading)" class="device-placeholder">
             正在加载设备
         </div>
 
