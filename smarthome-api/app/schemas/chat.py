@@ -18,20 +18,26 @@ class ChatCompletionRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class ChatMessageRead(BaseModel):
+class ChatSchema(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+class ChatMessageRead(ChatSchema):
     id: int
     session_id: int
     role: str
     content: str
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class ChatSessionRead(BaseModel):
+class ChatSessionRead(ChatSchema):
     id: int
     title: str
     created_at: datetime
     updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)

@@ -5,7 +5,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class AutomationSchema(BaseModel):
-    model_config = ConfigDict(alias_generator=lambda value: value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:]), populate_by_name=True)
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class FlowItem(AutomationSchema):

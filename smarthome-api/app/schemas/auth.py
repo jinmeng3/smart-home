@@ -1,6 +1,16 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.schemas.account import AccountRead
+
+
+class AuthSchema(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class LoginRequest(BaseModel):
@@ -24,7 +34,7 @@ class RegisterRequest(BaseModel):
         return value.strip()
 
 
-class AuthResponse(BaseModel):
+class AuthResponse(AuthSchema):
     access_token: str
     token_type: str
     expires_in: int

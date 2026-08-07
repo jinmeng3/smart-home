@@ -7,9 +7,6 @@ from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.room import (
-    EnvironmentLatestRead,
-    EnvironmentReportRead,
-    EnvironmentTrendRead,
     RoomDetailRead,
     RoomDeviceListRead,
     RoomDeviceMetaWrite,
@@ -26,14 +23,10 @@ from app.schemas.room import (
 from app.schemas.scene import SceneExecutionRead, SceneListRead, ScenePreviewRead
 from app.services.room import (
     add_room_service,
-    create_environment_report_service,
     delete_room_service,
     edit_room_device_service,
     edit_room_service,
     execute_room_scene_service,
-    get_environment_latest_service,
-    get_environment_report_service,
-    get_environment_trends_service,
     get_room_detail_service,
     get_room_devices_service,
     get_room_logs_service,
@@ -47,7 +40,6 @@ from app.services.room import (
 )
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
-environment_router = APIRouter(prefix="/environment", tags=["rooms"])
 
 
 # === 房间 CRUD ===
@@ -209,66 +201,6 @@ def quick_action(
         quick_action_service(db, current_user, room_id, payload), "快捷操作已执行"
     )
 
-
-# === 房间环境 ===
-
-
-@router.get(
-    "/{room_id}/environment/latest", response_model=ApiResponse[EnvironmentLatestRead]
-)
-def get_environment_latest(
-    room_id: int,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentLatestRead]:
-    """获取房间最新环境数据。"""
-    return ApiResponse.ok(get_environment_latest_service(db, current_user, room_id))
-
-
-@router.get(
-    "/{room_id}/environment/trends", response_model=ApiResponse[EnvironmentTrendRead]
-)
-def get_environment_trends(
-    room_id: int,
-    metrics: str = "temperature,humidity",
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentTrendRead]:
-    """获取房间环境指标的趋势数据。"""
-    return ApiResponse.ok(
-        get_environment_trends_service(
-            db,
-            current_user,
-            room_id,
-            [item.strip() for item in metrics.split(",") if item.strip()],
-        )
-    )
-
-
-@router.post(
-    "/{room_id}/environment/reports",
-    response_model=ApiResponse[EnvironmentReportRead],
-    status_code=status.HTTP_202_ACCEPTED,
-)
-def create_environment_report(
-    room_id: int,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentReportRead]:
-    """创建环境报告导出任务。"""
-    return ApiResponse.ok(create_environment_report_service(db, current_user, room_id))
-
-
-@environment_router.get(
-    "/reports/{task_id}", response_model=ApiResponse[EnvironmentReportRead]
-)
-def get_environment_report(
-    task_id: str,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentReportRead]:
-    """查询环境报告任务状态及下载地址。"""
-    return ApiResponse.ok(get_environment_report_service(db, current_user, task_id))
 
 
 # === 房间场景 ===

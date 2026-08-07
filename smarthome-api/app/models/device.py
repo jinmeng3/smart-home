@@ -133,11 +133,11 @@ class DeviceData(Base):
 
     __tablename__ = "device_data"
     __table_args__ = (
-        Index("ix_device_data_room_name_time", "room_id", "name", "sampled_at"),
+        Index("ix_device_data_room_name_time", "device_id", "name", "sampled_at"),
     )
     id: Mapped[int] = mapped_column(primary_key=True, comment="主键")
-    room_id: Mapped[int] = mapped_column(
-        ForeignKey("rooms.id", ondelete="CASCADE"), index=True, comment="所属房间ID"
+    device_id: Mapped[int] = mapped_column(
+        ForeignKey("device.id", ondelete="CASCADE"), index=True, comment="所属设备ID"
     )
     name: Mapped[str] = mapped_column(
         String(32), nullable=False, comment="指标名称（如temperature/humidity/pm25等）"

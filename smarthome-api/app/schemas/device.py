@@ -2,9 +2,20 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from sqlalchemy import Double
 
 DeviceStatus = Literal["online", "offline", "warning", "running"]
 DevicePlatform = Literal["Home Assistant", "Matter", "Zigbee", "MQTT"]
+
+
+class DeviceSchema(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class DeviceQueryParams(BaseModel):
@@ -16,7 +27,7 @@ class DeviceQueryParams(BaseModel):
     room: str | None = Field(default=None, max_length=80)
 
 
-class DeviceCreate(BaseModel):
+class DeviceCreate(DeviceSchema):
     name: str = Field(min_length=1, max_length=80)
     room: str = Field(min_length=1, max_length=80)
     type: str = Field(min_length=1, max_length=32)
@@ -45,7 +56,7 @@ class DeviceCreate(BaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
-class DeviceUpdate(BaseModel):
+class DeviceUpdate(DeviceSchema):
     name: str | None = Field(default=None, min_length=1, max_length=80)
     room: str | None = Field(default=None, min_length=1, max_length=80)
     type: str | None = Field(default=None, min_length=1, max_length=32)
@@ -75,9 +86,7 @@ class DeviceSync(BaseModel):
     platform: DevicePlatform
 
 
-class DeviceRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+class DeviceRead(DeviceSchema):
     id: int
     name: str
     room: str
@@ -91,9 +100,7 @@ class DeviceRead(BaseModel):
     last_online: datetime | None
 
 
-class DeviceLogRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+class DeviceLogRead(DeviceSchema):
     id: int
     device_id: int
     action: str
@@ -111,17 +118,17 @@ class DeviceDetailWithLogs(DeviceDetailRead):
     logs: list[DeviceLogRead]
 
 
-class DeviceListRead(BaseModel):
+class DeviceListRead(DeviceSchema):
     total: int
     items: list[DeviceRead]
 
 
-class DeviceLogListRead(BaseModel):
+class DeviceLogListRead(DeviceSchema):
     total: int
     items: list[DeviceLogRead]
 
 
-class DeviceSyncRead(BaseModel):
+class DeviceSyncRead(DeviceSchema):
     platform: DevicePlatform
     synced_count: int
 
@@ -133,14 +140,19 @@ class DeviceBatchGroup(BaseModel):
     )
 
 
-class DeviceBatchGroupResult(BaseModel):
+class DeviceBatchGroupResult(DeviceSchema):
     group_id: int
     group: str
     assigned_count: int = 0
 
 
-class DeviceImageRead(BaseModel):
+class DeviceImageRead(DeviceSchema):
     image_url: str
     original_name: str
     mime_type: str
     size_bytes: int
+
+
+class DeviceDataRead(DeviceSchema):
+    name: str
+    data: list[Double]

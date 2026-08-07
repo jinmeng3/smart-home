@@ -137,29 +137,6 @@ class RoomLogListRead(BaseModel):
     items: list[RoomLogRead]
 
 
-class EnvironmentLatestRead(BaseModel):
-    """房间最新环境指标，values 为指标名到数值的映射。"""
-
-    sampled_at: datetime
-    values: dict[str, float]
-
-
-class EnvironmentPoint(RoomSchema):
-    sampled_at: datetime
-    values: dict[str, float]
-
-
-class EnvironmentTrendRead(BaseModel):
-    metrics: list[str]
-    items: list[EnvironmentPoint]
-
-
-class EnvironmentReportRead(RoomSchema):
-    task_id: str
-    status: str
-    download_url: str | None = None
-
-
 class RoomSceneExecuteWrite(RoomSchema):
     scope: str = Field(default="room", pattern="^(room|all)$")
     sync_automation: bool = True

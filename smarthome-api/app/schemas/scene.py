@@ -6,13 +6,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 TriggerType = Literal["manual", "schedule", "location", "device"]
 
 
-def to_camel(value: str) -> str:
-    head, *tail = value.split("_")
-    return head + "".join(part.title() for part in tail)
-
-
 class SceneSchema(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    model_config = ConfigDict(
+        alias_generator=lambda value: (
+            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
+        ),
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class SceneStepWrite(SceneSchema):

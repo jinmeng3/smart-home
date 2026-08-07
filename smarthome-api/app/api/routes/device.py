@@ -10,6 +10,7 @@ from app.schemas.device import (
     DeviceBatchGroup,
     DeviceBatchGroupResult,
     DeviceCreate,
+    DeviceDataRead,
     DeviceDetailRead,
     DeviceDetailWithLogs,
     DeviceImageRead,
@@ -141,3 +142,13 @@ def batch_assign_group(
 ) -> ApiResponse[DeviceBatchGroupResult]:
     """创建或复用分组，并将指定设备批量分配。"""
     return ApiResponse(data=batch_group_devices_service(db, payload))
+
+
+# === 设备数据 ===
+# @router.get("/data", response_model=ApiResponse[DeviceDataRead])
+# def list_device_data(
+#     device_id: int,
+#     db: Session = DB_DEPENDENCY,
+# ) -> ApiResponse[DeviceDataRead]:
+#     """获取设备数据。"""
+#     return ApiResponse.ok(list_device_data_service(db, device_id))

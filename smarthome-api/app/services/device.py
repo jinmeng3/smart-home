@@ -256,3 +256,11 @@ def batch_group_devices_service(
     return DeviceBatchGroupResult(
         group_id=group.id, group=group.name, assigned_count=assigned_count
     )
+
+
+# === 设备数据 ===
+
+
+def list_device_data_service(db: Session, device_id: int):
+    """获取设备数据。"""
+    pass

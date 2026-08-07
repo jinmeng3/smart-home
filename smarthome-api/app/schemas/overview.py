@@ -10,6 +10,7 @@ class OverviewSchema(BaseModel):
             value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
         ),
         populate_by_name=True,
+        from_attributes=True,
     )
 
 

@@ -11,7 +11,7 @@ from app.api.deps import (
     HOUSEHOLD_MEMBER_DEPENDENCY,
 )
 from app.models.automation import Automation
-from app.models.device import Device, DeviceData
+from app.models.device import Device
 from app.models.membership import HouseholdMembership
 from app.models.overview import (
     DeviceSyncJob,
@@ -60,29 +60,6 @@ def room_names(db: Session, household_id: int):
     return select(Room.name).where(Room.household_id == household_id)
 
 
-def latest_environment_by_room(
-    db: Session, rooms: list[Room]
-) -> dict[int, dict[str, float]]:
-    """批量读取每个房间最新的环境指标（指标名到数值）。"""
-    if not rooms:
-        return {}
-    rows = db.execute(
-        select(
-            DeviceData.room_id,
-            DeviceData.name,
-            DeviceData.value,
-            DeviceData.sampled_at,
-        )
-        .where(DeviceData.room_id.in_([r.id for r in rooms]))
-        .order_by(DeviceData.sampled_at.desc())
-    ).all()
-    result: dict[int, dict[str, float]] = {room.id: {} for room in rooms}
-    for room_id, name, value, _at in rows:
-        if name not in result[room_id]:
-            result[room_id][name] = value
-    return result
-
-
 @router.get(
     "/households/{household_id}/overview", response_model=ApiResponse[OverviewRead]
 )
@@ -119,28 +96,6 @@ def get_overview(
         )
         or 0
     )
-    env_by_room = latest_environment_by_room(db, rooms)
-    temperature = (
-        round(
-            sum(env_by_room[room.id].get("temperature", 0) for room in rooms)
-            / len(rooms),
-            1,
-        )
-        if rooms
-        else 0
-    )
-    humidity = (
-        round(
-            sum(env_by_room[room.id].get("humidity", 0) for room in rooms) / len(rooms)
-        )
-        if rooms
-        else 0
-    )
-    pm25 = (
-        round(sum(env_by_room[room.id].get("pm25", 0) for room in rooms) / len(rooms))
-        if rooms
-        else 0
-    )
     room_items = []
     for room in rooms:
         room_devices = [item for item in devices if item.room == room.name]
@@ -152,7 +107,7 @@ def get_overview(
                 device_count=len(room_devices) or room.device_count,
                 light_on=sum(item.status in {"online", "running"} for item in lights),
                 light_total=len(lights),
-                temperature=env_by_room[room.id].get("temperature", 0),
+                temperature=0,
                 device_summaries=[
                     f"{item.name} {item.status}" for item in room_devices[:2]
                 ],
@@ -178,10 +133,10 @@ def get_overview(
             ),
             home_status=HomeStatus(
                 people_home=0,
-                temperature=temperature,
-                humidity=humidity,
-                air_quality="excellent" if pm25 <= 35 else "fair",
-                pm25=pm25,
+                temperature=0,
+                humidity=0,
+                air_quality="excellent",
+                pm25=0,
             ),
             rooms=room_items,
             recent_devices=recent,

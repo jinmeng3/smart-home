@@ -1,26 +1,20 @@
 import json
 from datetime import date, datetime, time, timezone
-from uuid import uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, insert, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.device import Device, DeviceData, DeviceStatus
+from app.models.device import Device, DeviceStatus
 from app.models.membership import HouseholdMembership
 from app.models.room import (
     Room,
     RoomActivityLog,
     RoomDevice,
-    RoomEnvironmentReport,
 )
 from app.models.user import User
 from app.schemas.room import (
-    EnvironmentLatestRead,
-    EnvironmentPoint,
-    EnvironmentReportRead,
-    EnvironmentTrendRead,
     RoomDetailRead,
     RoomDeviceListItem,
     RoomDeviceListRead,
@@ -524,118 +518,6 @@ def quick_action_service(
     db.commit()
     db.refresh(room)
     return _load_room_devices(db, RoomRead.model_validate(room), room.id)
-
-
-def latest_environment(db: Session, room: Room) -> EnvironmentLatestRead:
-    """读取房间最新环境指标，返回指标名到数值的映射。"""
-    rows = db.execute(
-        select(
-            DeviceData.name,
-            DeviceData.value,
-            DeviceData.sampled_at,
-        )
-        .where(DeviceData.room_id == room.id)
-        .order_by(DeviceData.sampled_at.desc())
-        .limit(500)
-    ).all()
-    values: dict[str, float] = {}
-    sampled_at: datetime = room.updated_at
-    for name, value, at in rows:
-        if name not in values:
-            values[name] = value
-            sampled_at = at
-    return EnvironmentLatestRead(sampled_at=sampled_at, values=values)
-
-
-def environment_trends(
-    db: Session, room: Room, metrics: list[str]
-) -> EnvironmentTrendRead:
-    """按采样时间聚合环境指标趋势，指标可任意扩展。"""
-    if not metrics:
-        raise HTTPException(status_code=422, detail="环境指标不合法")
-    rows = db.execute(
-        select(
-            DeviceData.name,
-            DeviceData.value,
-            DeviceData.sampled_at,
-        )
-        .where(
-            DeviceData.room_id == room.id,
-            DeviceData.name.in_(metrics),
-        )
-        .order_by(DeviceData.sampled_at.desc())
-        .limit(288)
-    ).all()
-    grouped: dict[datetime, dict[str, float]] = {}
-    for name, value, at in rows:
-        grouped.setdefault(at, {})[name] = value
-    if not grouped:
-        latest = latest_environment(db, room)
-        return EnvironmentTrendRead(
-            metrics=metrics,
-            items=[
-                EnvironmentPoint(
-                    sampled_at=latest.sampled_at,
-                    values={
-                        metric: latest.values[metric]
-                        for metric in metrics
-                        if metric in latest.values
-                    },
-                )
-            ],
-        )
-    return EnvironmentTrendRead(
-        metrics=metrics,
-        items=[
-            EnvironmentPoint(sampled_at=at, values=values)
-            for at, values in sorted(grouped.items())
-        ],
-    )
-
-
-def get_environment_latest_service(
-    db: Session, user: User, room_id: int
-) -> EnvironmentLatestRead:
-    """获取房间最新环境数据。"""
-    room = get_room_or_404(db, user, room_id)
-    return latest_environment(db, room)
-
-
-def get_environment_trends_service(
-    db: Session, user: User, room_id: int, metrics: list[str]
-) -> EnvironmentTrendRead:
-    """获取房间环境指标的趋势数据。"""
-    room = get_room_or_404(db, user, room_id)
-    return environment_trends(db, room, metrics)
-
-
-def create_environment_report_service(
-    db: Session, user: User, room_id: int
-) -> EnvironmentReportRead:
-    """创建环境报告导出任务。"""
-    room = get_room_or_404(db, user, room_id)
-    report = RoomEnvironmentReport(id=f"report-{uuid4().hex}", room_id=room.id)
-    db.add(report)
-    db.commit()
-    return EnvironmentReportRead(task_id=report.id, status=report.status)
-
-
-def get_environment_report_service(
-    db: Session, user: User, task_id: str
-) -> EnvironmentReportRead:
-    """查询环境报告任务状态。"""
-    accessible = accessible_rooms(db, user).subquery()
-    report = db.scalar(
-        select(RoomEnvironmentReport).where(
-            RoomEnvironmentReport.id == task_id,
-            RoomEnvironmentReport.room_id.in_(select(accessible.c.id)),
-        )
-    )
-    if not report:
-        raise HTTPException(status_code=404, detail="环境报告任务不存在")
-    return EnvironmentReportRead(
-        task_id=report.id, status=report.status, download_url=report.download_url
-    )
 
 
 # === 房间场景 ===

@@ -20,7 +20,6 @@ from app.models.room import (
     Room,
     RoomActivityLog,
     RoomDevice,
-    RoomEnvironmentReport,
 )
 from app.models.scene import (
     Scene,
@@ -55,7 +54,6 @@ __all__ = [
     "Room",
     "RoomActivityLog",
     "RoomDevice",
-    "RoomEnvironmentReport",
     "Scene",
     "SceneDraft",
     "SceneExecutionLog",

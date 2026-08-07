@@ -126,21 +126,3 @@ class RoomActivityLog(Base):
         comment="发生时间",
     )
 
-
-class RoomEnvironmentReport(Base):
-    __tablename__ = "room_environment_reports"
-    id: Mapped[str] = mapped_column(
-        String(64), primary_key=True, comment="报告任务ID（主键）"
-    )
-    room_id: Mapped[int] = mapped_column(
-        ForeignKey("rooms.id", ondelete="CASCADE"), index=True, comment="所属房间ID"
-    )
-    status: Mapped[str] = mapped_column(
-        String(24), default="queued", comment="报告状态"
-    )
-    download_url: Mapped[str | None] = mapped_column(
-        String(500), nullable=True, comment="报告下载地址"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), comment="创建时间"
-    )
