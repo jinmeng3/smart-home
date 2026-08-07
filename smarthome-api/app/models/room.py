@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -22,6 +23,9 @@ class Room(Base):
     __tablename__ = "rooms"
     __table_args__ = (
         UniqueConstraint("household_id", "name", name="unique_room_name"),
+        CheckConstraint("version >= 1", name="ck_room_version_positive"),
+        CheckConstraint("area >= 0", name="ck_room_area_non_negative"),
+        CheckConstraint("comfort BETWEEN 0 AND 100", name="ck_room_comfort_range"),
     )
 
     id: Mapped[int] = mapped_column(
@@ -58,11 +62,11 @@ class Room(Base):
     comfort: Mapped[int] = mapped_column(
         Integer, default=80, nullable=False, comment="舒适度评分"
     )
-    device_count: Mapped[int] = mapped_column(
-        Integer, default=0, nullable=False, comment="设备总数"
-    )
-    online_count: Mapped[int] = mapped_column(
-        Integer, default=0, nullable=False, comment="在线设备数"
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -75,7 +79,10 @@ class Room(Base):
 
 class RoomDevice(Base):
     __tablename__ = "room_devices"
-    __table_args__ = (UniqueConstraint("room_id", "device_id", name="uq_room_device"),)
+    __table_args__ = (
+        UniqueConstraint("room_id", "device_id", name="uq_room_device"),
+        CheckConstraint("sort_order >= 0", name="ck_room_device_sort_order"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, comment="主键")
     room_id: Mapped[int] = mapped_column(
         ForeignKey("rooms.id", ondelete="CASCADE"), index=True, comment="所属房间ID"

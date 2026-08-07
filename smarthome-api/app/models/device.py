@@ -3,7 +3,16 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import (
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -18,9 +27,19 @@ class DeviceStatus(str, enum.Enum):
 
 class Device(Base):
     __tablename__ = "devices"
+    __table_args__ = (
+        Index("ix_devices_household_status", "household_id", "status"),
+        Index("ix_devices_household_updated", "household_id", "updated_at"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True, comment="主键"
+    )
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="所属家庭ID",
     )
     device_id: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, index=True, comment="设备标识"
@@ -55,7 +74,7 @@ class Device(Base):
         String(255), nullable=True, comment="设备图片地址"
     )
     group_id: Mapped[int | None] = mapped_column(
-        ForeignKey("device_group.id", ondelete="SET NULL"),
+        ForeignKey("device_group.id"),
         index=True,
         nullable=True,
         comment="所属分组",
@@ -86,9 +105,18 @@ class Device(Base):
 
 class DeviceGroup(Base):
     __tablename__ = "device_group"
+    __table_args__ = (
+        UniqueConstraint("household_id", "name", name="uq_device_group_household_name"),
+    )
 
     id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True, comment="主键"
+    )
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="所属家庭ID",
     )
     name: Mapped[str] = mapped_column(String(80), nullable=False, comment="分组名称")
     description: Mapped[str | None] = mapped_column(

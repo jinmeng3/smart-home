@@ -26,6 +26,7 @@ from app.models.scene import (
     SceneDraft,
     SceneExecutionLog,
     SceneExecutionStep,
+    SceneRoom,
     SceneStep,
     SceneTemplate,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "SceneDraft",
     "SceneExecutionLog",
     "SceneExecutionStep",
+    "SceneRoom",
     "SceneStep",
     "SceneTemplate",
     "User",

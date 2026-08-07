@@ -11,6 +11,7 @@ from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.user import User
 from app.services.auth import parse_token
+from app.services.household import get_default_household_id as resolve_default_household_id
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -48,6 +49,17 @@ def get_current_user(
 
 
 CURRENT_USER_DEPENDENCY = Depends(get_current_user)
+
+
+def get_default_household_id(
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> int:
+    """返回当前用户最早加入的家庭，供未显式携带家庭ID的兼容接口使用。"""
+    return resolve_default_household_id(db, current_user)
+
+
+DEFAULT_HOUSEHOLD_DEPENDENCY = Depends(get_default_household_id)
 
 
 def get_membership_query(

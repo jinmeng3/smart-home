@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -117,6 +118,9 @@ class AutomationAction(Base):
 
 class AutomationExecution(Base):
     __tablename__ = "automation_executions"
+    __table_args__ = (
+        Index("ix_automation_execution_status_time", "status", "started_at"),
+    )
     id: Mapped[int] = mapped_column(primary_key=True, comment="主键")
     automation_id: Mapped[int] = mapped_column(
         ForeignKey("automations.id", ondelete="CASCADE"), index=True, comment="所属自动化ID"

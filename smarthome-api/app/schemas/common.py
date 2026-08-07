@@ -3,11 +3,6 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-
-class MessageResponse(BaseModel):
-    message: str
-
-
 T = TypeVar("T")
 
 

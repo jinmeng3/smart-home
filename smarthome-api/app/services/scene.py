@@ -1,19 +1,21 @@
 import json
 import re
 from datetime import datetime, timezone
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import CursorResult, case, delete, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.device import Device
+from app.models.room import Room
 from app.models.scene import (
     Scene,
     SceneDraft,
     SceneExecutionLog,
     SceneExecutionStep,
+    SceneRoom,
     SceneStep,
     SceneTemplate,
 )
@@ -54,22 +56,11 @@ def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def slugify(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
-    return slug[:40] or "scene"
-
-
-def unique_scene_id(db: Session, name: str) -> str:
-    base = slugify(name)
-    candidate = base
-    while db.get(Scene, candidate):
-        candidate = f"{base}-{uuid4().hex[:8]}"
-    return candidate
-
-
-def get_scene_or_404(db: Session, scene_id: str) -> Scene:
+def get_scene_or_404(db: Session, household_id: int, scene_id: str) -> Scene:
     scene = db.scalar(
-        select(Scene).options(selectinload(Scene.steps)).where(Scene.id == scene_id)
+        select(Scene)
+        .options(selectinload(Scene.steps))
+        .where(Scene.household_id == household_id, Scene.id == scene_id)
     )
     if not scene:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="场景不存在")
@@ -126,15 +117,6 @@ def serialize_scene(scene: Scene) -> SceneRead:
     )
 
 
-def detect_high_risk(payload: SceneWrite) -> bool:
-    if payload.high_risk is not None:
-        return payload.high_risk
-    values = [payload.name, *(step.device_id for step in payload.steps)]
-    return any(
-        keyword in value.lower() for value in values for keyword in HIGH_RISK_KEYWORDS
-    )
-
-
 def apply_scene_payload(scene: Scene, payload: SceneWrite) -> None:
     scene.name = payload.name
     scene.description = payload.description
@@ -147,7 +129,16 @@ def apply_scene_payload(scene: Scene, payload: SceneWrite) -> None:
     scene.device_count = len(device_ids)
     scene.enabled = payload.enabled
     scene.recommended = payload.recommended
-    scene.high_risk = detect_high_risk(payload)
+    values = [payload.name, *(step.device_id for step in payload.steps)]
+    scene.high_risk = (
+        payload.high_risk
+        if payload.high_risk is not None
+        else any(
+            keyword in value.lower()
+            for value in values
+            for keyword in HIGH_RISK_KEYWORDS
+        )
+    )
     scene.updated_at = now_utc()
 
 
@@ -166,9 +157,14 @@ def replace_steps(scene: Scene, payload: SceneWrite) -> None:
 
 
 def get_scenes_service(
-    db: Session, keyword: str | None, trigger_type: str | None, enabled: str
+    db: Session,
+    household_id: int,
+    keyword: str | None,
+    trigger_type: str | None,
+    enabled: str,
+    room_id: int | None = None,
 ) -> SceneListRead:
-    filters = []
+    filters = [Scene.household_id == household_id]
     if keyword and keyword.strip():
         term = f"%{keyword.strip()}%"
         filters.append(
@@ -185,9 +181,13 @@ def get_scenes_service(
     elif enabled == "disabled":
         filters.append(Scene.enabled.is_(False))
 
+    query = select(Scene)
+    if room_id is not None:
+        query = query.join(SceneRoom, SceneRoom.scene_id == Scene.id).where(
+            SceneRoom.room_id == room_id
+        )
     scenes = db.scalars(
-        select(Scene)
-        .options(selectinload(Scene.steps))
+        query.options(selectinload(Scene.steps))
         .where(*filters)
         .order_by(Scene.sort_order, Scene.updated_at.desc())
     ).all()
@@ -196,28 +196,81 @@ def get_scenes_service(
     )
 
 
-def add_scene_service(db: Session, payload: SceneWrite) -> SceneRead:
-    scene = Scene(id=unique_scene_id(db, payload.name))
+def replace_scene_rooms(
+    db: Session, scene: Scene, household_id: int, room_labels: list[str]
+) -> None:
+    labels = set(room_labels)
+    rooms = (
+        list(
+            db.scalars(
+                select(Room).where(
+                    Room.household_id == household_id,
+                    Room.name.in_(labels),
+                )
+            )
+        )
+        if labels
+        else []
+    )
+    found_labels = {room.name for room in rooms}
+    if found_labels != labels:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "message": "部分房间不存在",
+                "rooms": sorted(labels - found_labels),
+            },
+        )
+    db.execute(delete(SceneRoom).where(SceneRoom.scene_id == scene.id))
+    db.add_all([SceneRoom(scene_id=scene.id, room_id=room.id) for room in rooms])
+
+
+def add_scene_service(
+    db: Session, household_id: int, user_id: int, payload: SceneWrite
+) -> SceneRead:
+    base_id = re.sub(r"[^a-z0-9]+", "-", payload.name.lower()).strip("-")[:40]
+    base_id = base_id or "scene"
+    scene_id = base_id
+    while db.scalar(
+        select(Scene.id).where(Scene.household_id == household_id, Scene.id == scene_id)
+    ):
+        scene_id = f"{base_id}-{uuid4().hex[:8]}"
+    scene = Scene(
+        id=scene_id,
+        household_id=household_id,
+        created_by=user_id,
+    )
     apply_scene_payload(scene, payload)
     replace_steps(scene, payload)
-    scene.sort_order = db.scalar(select(func.max(Scene.sort_order))) or 0
-    scene.sort_order += 10
     db.add(scene)
+    replace_scene_rooms(db, scene, household_id, payload.room_labels)
+    scene.sort_order = (
+        db.scalar(
+            select(func.max(Scene.sort_order)).where(Scene.household_id == household_id)
+        )
+        or 0
+    )
+    scene.sort_order += 10
     db.commit()
     db.refresh(scene)
-    return serialize_scene(get_scene_or_404(db, scene.id))
+    return serialize_scene(get_scene_or_404(db, household_id, scene.id))
 
 
-def edit_scene_service(db: Session, scene_id: str, payload: SceneWrite) -> SceneRead:
-    scene = get_scene_or_404(db, scene_id)
+def edit_scene_service(
+    db: Session, household_id: int, scene_id: str, payload: SceneWrite
+) -> SceneRead:
+    scene = get_scene_or_404(db, household_id, scene_id)
     apply_scene_payload(scene, payload)
     replace_steps(scene, payload)
+    replace_scene_rooms(db, scene, household_id, payload.room_labels)
     db.commit()
-    return serialize_scene(get_scene_or_404(db, scene.id))
+    return serialize_scene(get_scene_or_404(db, household_id, scene.id))
 
 
-def change_enabled_service(db: Session, scene_id: str, enabled: bool) -> Scene:
-    scene = get_scene_or_404(db, scene_id)
+def change_enabled_service(
+    db: Session, household_id: int, scene_id: str, enabled: bool
+) -> Scene:
+    scene = get_scene_or_404(db, household_id, scene_id)
     scene.enabled = enabled
     scene.updated_at = now_utc()
     db.commit()
@@ -229,9 +282,13 @@ def change_enabled_service(db: Session, scene_id: str, enabled: bool) -> Scene:
 
 
 def run_scene_service(
-    db: Session, scene_id: str, confirm_high_risk: bool, source: str
+    db: Session,
+    household_id: int,
+    scene_id: str,
+    confirm_high_risk: bool,
+    source: str,
 ) -> SceneExecutionRead:
-    scene = get_scene_or_404(db, scene_id)
+    scene = get_scene_or_404(db, household_id, scene_id)
     if scene.high_risk and not confirm_high_risk:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -286,8 +343,10 @@ def serialize_execution(log: SceneExecutionLog) -> SceneExecutionRead:
     )
 
 
-def duplicate_scene_service(db: Session, scene_id: str, name: str) -> SceneRead:
-    source = get_scene_or_404(db, scene_id)
+def duplicate_scene_service(
+    db: Session, household_id: int, user_id: int, scene_id: str, name: str
+) -> SceneRead:
+    source = get_scene_or_404(db, household_id, scene_id)
     payload = SceneWrite(
         name=name,
         description=source.description,
@@ -309,18 +368,20 @@ def duplicate_scene_service(db: Session, scene_id: str, name: str) -> SceneRead:
             for step in source.steps
         ],
     )
-    return add_scene_service(db, payload)
+    return add_scene_service(db, household_id, user_id, payload)
 
 
-def remove_scene_service(db: Session, scene_id: str) -> None:
+def remove_scene_service(db: Session, household_id: int, scene_id: str) -> None:
     """删除场景及其执行步骤、执行日志（ORM 级联清理辅助表）。"""
-    scene = get_scene_or_404(db, scene_id)
+    scene = get_scene_or_404(db, household_id, scene_id)
     db.delete(scene)
     db.commit()
 
 
-def get_logs_service(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
-    get_scene_or_404(db, scene_id)
+def get_logs_service(
+    db: Session, household_id: int, scene_id: str, limit: int
+) -> SceneLogListRead:
+    get_scene_or_404(db, household_id, scene_id)
     logs = db.scalars(
         select(SceneExecutionLog)
         .where(SceneExecutionLog.scene_id == scene_id)
@@ -332,29 +393,25 @@ def get_logs_service(db: Session, scene_id: str, limit: int) -> SceneLogListRead
     )
 
 
-def get_summary_service(db: Session) -> SceneSummaryRead:
-    total = db.scalar(select(func.count()).select_from(Scene)) or 0
-    enabled = (
-        db.scalar(
-            select(func.count()).select_from(Scene).where(Scene.enabled.is_(True))
-        )
-        or 0
-    )
-    manual = (
-        db.scalar(
-            select(func.count())
-            .select_from(Scene)
-            .where(Scene.trigger_type == "manual")
-        )
-        or 0
-    )
+def get_summary_service(db: Session, household_id: int) -> SceneSummaryRead:
+    total, enabled, manual = db.execute(
+        select(
+            func.count(Scene.id),
+            func.count().filter(Scene.enabled.is_(True)),
+            func.count().filter(Scene.trigger_type == "manual"),
+        ).where(Scene.household_id == household_id)
+    ).one()
     automation = total - manual
     month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     monthly = (
         db.scalar(
             select(func.count())
             .select_from(SceneExecutionLog)
-            .where(SceneExecutionLog.started_at >= month_start)
+            .join(Scene, Scene.id == SceneExecutionLog.scene_id)
+            .where(
+                Scene.household_id == household_id,
+                SceneExecutionLog.started_at >= month_start,
+            )
         )
         or 0
     )
@@ -370,24 +427,36 @@ def get_summary_service(db: Session) -> SceneSummaryRead:
     )
 
 
-def reorder_scenes_service(db: Session, payload: SceneOrderWrite) -> SceneOrderRead:
+def reorder_scenes_service(
+    db: Session, household_id: int, payload: SceneOrderWrite
+) -> SceneOrderRead:
     ids = [item.id for item in payload.items]
-    scenes = {
-        scene.id: scene for scene in db.scalars(select(Scene).where(Scene.id.in_(ids)))
-    }
-    missing = set(ids) - scenes.keys()
+    found_ids = set(
+        db.scalars(
+            select(Scene.id).where(
+                Scene.household_id == household_id, Scene.id.in_(ids)
+            )
+        )
+    )
+    missing = set(ids) - found_ids
     if missing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="部分场景不存在"
         )
-    for item in payload.items:
-        scenes[item.id].sort_order = item.sort_order
+    order_by_id = {item.id: item.sort_order for item in payload.items}
+    db.execute(
+        update(Scene)
+        .where(Scene.household_id == household_id, Scene.id.in_(ids))
+        .values(sort_order=case(order_by_id, value=Scene.id))
+    )
     db.commit()
     return SceneOrderRead(updated=len(payload.items))
 
 
-def get_scene_preview_service(db: Session, scene_id: str) -> ScenePreviewRead:
-    scene = get_scene_or_404(db, scene_id)
+def get_scene_preview_service(
+    db: Session, household_id: int, scene_id: str
+) -> ScenePreviewRead:
+    scene = get_scene_or_404(db, household_id, scene_id)
     return ScenePreviewRead(
         scene_id=scene.id,
         high_risk=scene.high_risk,
@@ -411,11 +480,17 @@ def get_scene_preview_service(db: Session, scene_id: str) -> ScenePreviewRead:
     )
 
 
-def get_execution_service(db: Session, execution_id: str) -> SceneExecutionRead:
+def get_execution_service(
+    db: Session, household_id: int, execution_id: str
+) -> SceneExecutionRead:
     log = db.scalar(
         select(SceneExecutionLog)
         .options(selectinload(SceneExecutionLog.steps))
-        .where(SceneExecutionLog.id == execution_id)
+        .join(Scene, Scene.id == SceneExecutionLog.scene_id)
+        .where(
+            Scene.household_id == household_id,
+            SceneExecutionLog.id == execution_id,
+        )
     )
     if not log:
         raise HTTPException(
@@ -475,7 +550,11 @@ def get_templates_service(
 
 
 def import_template_service(
-    db: Session, template_id: str, payload: SceneTemplateUseWrite
+    db: Session,
+    household_id: int,
+    user_id: int,
+    template_id: str,
+    payload: SceneTemplateUseWrite,
 ) -> SceneRead:
     template = get_template_or_404(db, template_id)
     data = serialize_template(template)
@@ -499,7 +578,7 @@ def import_template_service(
             for step in data.steps
         ],
     )
-    result = add_scene_service(db, scene_payload)
+    result = add_scene_service(db, household_id, user_id, scene_payload)
     scene = db.get(Scene, result.id)
     if scene is None:
         raise HTTPException(
@@ -507,12 +586,18 @@ def import_template_service(
         )
     scene.source_template_id = template.id
     db.commit()
-    return serialize_scene(get_scene_or_404(db, result.id))
+    return serialize_scene(get_scene_or_404(db, household_id, result.id))
 
 
-def get_template_preview_service(db: Session, template_id: str) -> SceneTemplatePreviewRead:
+def get_template_preview_service(
+    db: Session, household_id: int, template_id: str
+) -> SceneTemplatePreviewRead:
     template = serialize_template(get_template_or_404(db, template_id))
-    known_ids = set(db.scalars(select(Device.device_id)).all())
+    known_ids = set(
+        db.scalars(
+            select(Device.device_id).where(Device.household_id == household_id)
+        ).all()
+    )
     steps = [
         SceneTemplatePreviewStep(
             name=step.name,
@@ -531,9 +616,13 @@ def get_template_preview_service(db: Session, template_id: str) -> SceneTemplate
     )
 
 
-def add_draft_service(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
+def add_draft_service(
+    db: Session, household_id: int, user_id: int, payload: SceneDraftWrite
+) -> SceneDraftRead:
     draft = SceneDraft(
         id=f"draft-{uuid4().hex}",
+        household_id=household_id,
+        created_by=user_id,
         payload_json=payload.model_dump_json(by_alias=True),
         updated_at=now_utc(),
     )
@@ -547,33 +636,42 @@ def add_draft_service(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
 
 
 def batch_change_enabled_service(
-    db: Session, payload: SceneBatchEnabledWrite
+    db: Session, household_id: int, payload: SceneBatchEnabledWrite
 ) -> SceneBatchEnabledResult:
     """批量启用或停用场景。空列表时操作全部场景。"""
-    query = select(Scene)
+    filters = [Scene.household_id == household_id]
     if payload.scene_ids:
-        query = query.where(Scene.id.in_(payload.scene_ids))
-    scenes = list(db.scalars(query).all())
-    now = now_utc()
-    for scene in scenes:
-        scene.enabled = payload.enabled
-        scene.updated_at = now
+        filters.append(Scene.id.in_(payload.scene_ids))
+    result = cast(
+        CursorResult[Any],
+        db.execute(
+            update(Scene)
+            .where(*filters)
+            .values(enabled=payload.enabled, updated_at=now_utc())
+        ),
+    )
     db.commit()
-    return SceneBatchEnabledResult(updated_count=len(scenes))
+    return SceneBatchEnabledResult(updated_count=result.rowcount or 0)
 
 
 def batch_set_schedule_service(
-    db: Session, payload: SceneBatchScheduleWrite
+    db: Session, household_id: int, payload: SceneBatchScheduleWrite
 ) -> SceneBatchScheduleResult:
     """批量设置场景的触发类型和定时触发描述。空列表时操作全部场景。"""
-    query = select(Scene)
+    filters = [Scene.household_id == household_id]
     if payload.scene_ids:
-        query = query.where(Scene.id.in_(payload.scene_ids))
-    scenes = list(db.scalars(query).all())
-    now = now_utc()
-    for scene in scenes:
-        scene.trigger_type = payload.trigger_type
-        scene.trigger_label = payload.trigger_label
-        scene.updated_at = now
+        filters.append(Scene.id.in_(payload.scene_ids))
+    result = cast(
+        CursorResult[Any],
+        db.execute(
+            update(Scene)
+            .where(*filters)
+            .values(
+                trigger_type=payload.trigger_type,
+                trigger_label=payload.trigger_label,
+                updated_at=now_utc(),
+            )
+        ),
+    )
     db.commit()
-    return SceneBatchScheduleResult(updated_count=len(scenes))
+    return SceneBatchScheduleResult(updated_count=result.rowcount or 0)

@@ -15,18 +15,9 @@ EXTENSION_BY_TYPE = {
 # === 头像 ===
 
 
-def avatar_path_from_url(settings: Settings, avatar_url: str | None) -> Path | None:
-    """只取 URL 文件名，避免外部路径逃逸上传目录。"""
-    if not avatar_url:
-        return None
-
-    filename = Path(avatar_url).name
-    return settings.avatar_dir / filename
-
-
 def delete_avatar_file(settings: Settings, avatar_url: str | None) -> None:
     """删除应用管理的头像文件；文件不存在时保持幂等。"""
-    avatar_path = avatar_path_from_url(settings, avatar_url)
+    avatar_path = settings.avatar_dir / Path(avatar_url).name if avatar_url else None
 
     if avatar_path and avatar_path.exists():
         avatar_path.unlink()

@@ -13,7 +13,6 @@ from app.models.automation import (
     AutomationTrigger,
 )
 from app.models.device import Device
-from app.models.room import Room
 from app.schemas.automation import (
     ActionWrite,
     AutomationCreate,
@@ -35,18 +34,18 @@ from app.schemas.automation import (
 # === 自动化规则 ===
 
 
-def automation_query():
-    return select(Automation).options(
-        selectinload(Automation.triggers),
-        selectinload(Automation.conditions),
-        selectinload(Automation.actions),
-    )
-
-
 def get_automation(
     db: Session, automation_id: int, household_id: int | None = None
 ) -> Automation:
-    query = automation_query().where(Automation.id == automation_id)
+    query = (
+        select(Automation)
+        .options(
+            selectinload(Automation.triggers),
+            selectinload(Automation.conditions),
+            selectinload(Automation.actions),
+        )
+        .where(Automation.id == automation_id)
+    )
     if household_id is not None:
         query = query.where(Automation.household_id == household_id)
     automation = db.scalar(query)
@@ -103,11 +102,10 @@ def validate_devices(
     device_ids = {item.device_id for item in actions if item.device_id is not None}
     if not device_ids:
         return
-    room_names = select(Room.name).where(Room.household_id == household_id)
     found = set(
         db.scalars(
             select(Device.id).where(
-                Device.id.in_(device_ids), Device.room.in_(room_names)
+                Device.id.in_(device_ids), Device.household_id == household_id
             )
         ).all()
     )
@@ -229,8 +227,17 @@ def list_automations_service(
     if enabled is not None:
         filters.append(Automation.enabled.is_(enabled))
     total = db.scalar(select(func.count()).select_from(Automation).where(*filters)) or 0
-    rows = db.scalars(
-        automation_query()
+    action_device_count = (
+        select(func.count(func.distinct(AutomationAction.device_id)))
+        .where(
+            AutomationAction.automation_id == Automation.id,
+            AutomationAction.device_id.is_not(None),
+        )
+        .correlate(Automation)
+        .scalar_subquery()
+    )
+    rows = db.execute(
+        select(Automation, action_device_count.label("device_count"))
         .where(*filters)
         .order_by(Automation.updated_at.desc())
         .offset((page - 1) * page_size)
@@ -239,40 +246,27 @@ def list_automations_service(
     today = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
-    enabled_count = (
-        db.scalar(
-            select(func.count())
-            .select_from(Automation)
-            .where(
-                Automation.household_id == household_id, Automation.enabled.is_(True)
-            )
+    household_total, enabled_count = db.execute(
+        select(
+            func.count(Automation.id),
+            func.count().filter(Automation.enabled.is_(True)),
+        ).where(Automation.household_id == household_id)
+    ).one()
+    running, executions_today, abnormal = db.execute(
+        select(
+            func.count().filter(
+                AutomationExecution.status.in_(["queued", "running"])
+            ),
+            func.count().filter(AutomationExecution.started_at >= today),
+            func.count().filter(
+                AutomationExecution.status == "failed",
+                AutomationExecution.started_at >= today,
+            ),
         )
-        or 0
-    )
-    execution_base = (
-        select(func.count())
         .select_from(AutomationExecution)
         .join(Automation)
         .where(Automation.household_id == household_id)
-    )
-    running = (
-        db.scalar(
-            execution_base.where(AutomationExecution.status.in_(["queued", "running"]))
-        )
-        or 0
-    )
-    executions_today = (
-        db.scalar(execution_base.where(AutomationExecution.started_at >= today)) or 0
-    )
-    abnormal = (
-        db.scalar(
-            execution_base.where(
-                AutomationExecution.status == "failed",
-                AutomationExecution.started_at >= today,
-            )
-        )
-        or 0
-    )
+    ).one()
     items = [
         AutomationListItem(
             id=row.id,
@@ -280,22 +274,15 @@ def list_automations_service(
             description=row.description,
             trigger_type=row.trigger_type,
             enabled=row.enabled,
-            device_count=len(
-                {item.device_id for item in row.actions if item.device_id}
-            ),
+            device_count=device_count,
             updated_at=row.updated_at,
         )
-        for row in rows
+        for row, device_count in rows
     ]
     return AutomationListRead(
         summary=AutomationSummary(
             enabled=enabled_count,
-            total=db.scalar(
-                select(func.count())
-                .select_from(Automation)
-                .where(Automation.household_id == household_id)
-            )
-            or 0,
+            total=household_total,
             running=running,
             executions_today=executions_today,
             abnormal=abnormal,

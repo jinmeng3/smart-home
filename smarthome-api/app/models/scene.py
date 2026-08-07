@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -10,8 +20,18 @@ from app.db.base import Base
 
 class Scene(Base):
     __tablename__ = "scenes"
+    __table_args__ = (
+        Index("ix_scenes_household_sort", "household_id", "sort_order"),
+        Index("ix_scenes_household_updated", "household_id", "updated_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="场景ID（主键）")
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(80), comment="场景名称")
     description: Mapped[str] = mapped_column(String(500), default="", comment="场景描述")
     icon: Mapped[str] = mapped_column(String(64), default="home", comment="图标名称")
@@ -57,6 +77,21 @@ class SceneStep(Base):
     step_order: Mapped[int] = mapped_column(Integer, comment="执行顺序")
 
     scene: Mapped[Scene] = relationship(back_populates="steps")
+
+
+class SceneRoom(Base):
+    __tablename__ = "scene_rooms"
+    __table_args__ = (
+        UniqueConstraint("scene_id", "room_id", name="uq_scene_room"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    scene_id: Mapped[str] = mapped_column(
+        ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    room_id: Mapped[int] = mapped_column(
+        ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
 
 class SceneTemplate(Base):
@@ -125,6 +160,12 @@ class SceneDraft(Base):
     __tablename__ = "scene_drafts"
 
     id: Mapped[str] = mapped_column(String(96), primary_key=True, comment="草稿ID（主键）")
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     payload_json: Mapped[str] = mapped_column(Text, comment="表单数据快照（JSON）")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), comment="更新时间"

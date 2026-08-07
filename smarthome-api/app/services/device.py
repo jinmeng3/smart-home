@@ -26,6 +26,7 @@ from app.schemas.device import (
     DeviceSyncRead,
     DeviceUpdate,
 )
+from app.services.household import get_default_household_id
 
 IMAGE_EXTENSION_BY_TYPE = {
     "image/jpeg": ".jpg",
@@ -38,14 +39,11 @@ def accessible_devices(user: User) -> Select[tuple[Device]]:
     """构建当前用户经家庭房间绑定后可访问的设备查询。"""
     return (
         select(Device)
-        .join(RoomDevice, RoomDevice.device_id == Device.id)
-        .join(Room, Room.id == RoomDevice.room_id)
         .join(
             HouseholdMembership,
-            HouseholdMembership.household_id == Room.household_id,
+            HouseholdMembership.household_id == Device.household_id,
         )
         .where(HouseholdMembership.user_id == user.id)
-        .distinct()
     )
 
 
@@ -142,6 +140,7 @@ def add_device_service(db: Session, user: User, payload: DeviceCreate) -> Device
     room = get_room_or_422(db, user, payload.room)
     device = Device(
         **payload.model_dump(exclude={"device_id"}),
+        household_id=room.household_id,
         device_id=platform_id,
         status=DeviceStatus.OFFLINE,
     )
@@ -303,27 +302,42 @@ def batch_group_devices_service(
     db: Session, user: User, payload: DeviceBatchGroup
 ) -> DeviceBatchGroupResult:
     """创建或复用分组，将指定设备分配到该分组。"""
-    group = db.scalar(select(DeviceGroup).where(DeviceGroup.name == payload.group))
-    if not group:
-        group = DeviceGroup(name=payload.group)
-        db.add(group)
-        db.flush()
-
-    assigned_count = 0
+    devices = []
     if payload.device_ids:
-        devices = db.scalars(
-            accessible_devices(user).where(Device.id.in_(payload.device_ids))
-        ).all()
-
+        devices = list(
+            db.scalars(
+                accessible_devices(user).where(Device.id.in_(payload.device_ids))
+            ).all()
+        )
         found_ids = {device.id for device in devices}
         missing_ids = sorted(set(payload.device_ids) - found_ids)
         if missing_ids:
-            db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"message": "部分设备不存在", "device_ids": missing_ids},
             )
+        household_ids = {device.household_id for device in devices}
+        if len(household_ids) != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="不能跨家庭分配设备分组",
+            )
+        household_id = household_ids.pop()
+    else:
+        household_id = get_default_household_id(db, user)
+    group = db.scalar(
+        select(DeviceGroup).where(
+            DeviceGroup.household_id == household_id,
+            DeviceGroup.name == payload.group,
+        )
+    )
+    if not group:
+        group = DeviceGroup(household_id=household_id, name=payload.group)
+        db.add(group)
+        db.flush()
 
+    assigned_count = 0
+    if devices:
         for device in devices:
             device.group_id = group.id
             device.updated_at = datetime.now(timezone.utc)
@@ -340,22 +354,3 @@ def batch_group_devices_service(
     return DeviceBatchGroupResult(
         group_id=group.id, group=group.name, assigned_count=assigned_count
     )
-
-
-    room = db.scalar(
-        select(Room)
-        .join(
-            HouseholdMembership,
-            HouseholdMembership.household_id == Room.household_id,
-        )
-        .where(
-            HouseholdMembership.user_id == user.id,
-            Room.name == payload.room,
-        )
-        .order_by(Room.id)
-    )
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="指定房间不存在或不属于当前用户",
-        )

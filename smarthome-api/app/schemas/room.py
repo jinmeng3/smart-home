@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.models.device import DeviceStatus
+
 
 class RoomSchema(BaseModel):
     model_config = ConfigDict(
@@ -26,8 +28,9 @@ class RoomRead(RoomSchema):
     area: float
     comfort: int
     device: list["RoomDeviceListItem"] = Field(default_factory=list)
-    device_count: int
-    online_count: int
+    device_count: int = Field(default=0, ge=0)
+    online_count: int = Field(default=0, ge=0)
+    created_at: datetime
     updated_at: datetime
 
 
@@ -56,8 +59,8 @@ class RoomListRead(RoomSchema):
 
 
 class RoomDeviceWrite(RoomSchema):
-    device_id: int
-    status: str = Field(min_length=1, max_length=32)
+    device_id: int = Field(gt=0)
+    status: DeviceStatus
 
 
 class RoomQuickActionWrite(RoomSchema):
@@ -68,8 +71,12 @@ class RoomInput(RoomSchema):
     name: str = Field(min_length=1, max_length=80)
     floor: str = Field(default="1F", min_length=1, max_length=40)
     room_type: str = Field(default="living", min_length=1, max_length=32)
-    icon: str = Field(default="room")
+    icon: str = Field(default="room", min_length=1, max_length=40)
     theme_color: str = Field(default="#3478f6", pattern=r"^#[0-9A-Fa-f]{6}$")
+    image_url: str | None = Field(default=None, max_length=500)
+    area: float = Field(default=0, ge=0)
+    comfort: int = Field(default=80, ge=0, le=100)
+    version: int | None = Field(default=None, ge=1)
     device_ids: list[int] = Field(default_factory=list)
 
     @field_validator("name", "floor", mode="before")
@@ -77,16 +84,38 @@ class RoomInput(RoomSchema):
     def strip_text(cls, value: str) -> str:
         return value.strip()
 
+    @field_validator("device_ids")
+    @classmethod
+    def unique_device_ids(cls, value: list[int]) -> list[int]:
+        if any(device_id <= 0 for device_id in value):
+            raise ValueError("设备ID必须为正整数")
+        if len(value) != len(set(value)):
+            raise ValueError("设备ID不能重复")
+        return value
+
 
 class RoomDeviceBinding(RoomSchema):
-    device_id: int
-    group: str = Field(default="未分组", max_length=80)
+    device_id: int = Field(gt=0)
+    group: str = Field(default="未分组", min_length=1, max_length=80)
     favorite: bool = False
     sort_order: int = Field(default=0, ge=0)
 
+    @field_validator("group", mode="before")
+    @classmethod
+    def strip_group(cls, value: str) -> str:
+        return value.strip()
 
-class RoomDevicesWrite(BaseModel):
+
+class RoomDevicesWrite(RoomSchema):
     devices: list[RoomDeviceBinding]
+
+    @field_validator("devices")
+    @classmethod
+    def unique_devices(cls, value: list[RoomDeviceBinding]) -> list[RoomDeviceBinding]:
+        ids = [item.device_id for item in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError("设备ID不能重复")
+        return value
 
 
 class RoomDeviceMetaWrite(RoomSchema):
@@ -117,14 +146,9 @@ class RoomDeviceListItem(RoomSchema):
     updated_at: datetime
 
 
-class RoomDeviceListRead(BaseModel):
+class RoomDeviceListRead(RoomSchema):
     items: list[RoomDeviceListItem]
     total: int
-
-
-class RoomBatchControlWrite(RoomSchema):
-    device_ids: list[int] = Field(min_length=1)
-    action: str = Field(pattern="^(turn_on|turn_off)$")
 
 
 class RoomLogRead(RoomSchema):
@@ -140,8 +164,10 @@ class RoomLogRead(RoomSchema):
     detail: dict[str, Any]
 
 
-class RoomLogListRead(BaseModel):
+class RoomLogListRead(RoomSchema):
     total: int
+    page: int
+    page_size: int
     items: list[RoomLogRead]
 
 

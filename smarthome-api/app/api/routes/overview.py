@@ -12,15 +12,13 @@ from app.api.deps import (
 )
 from app.models.automation import Automation
 from app.models.device import Device
-from app.models.membership import HouseholdMembership
 from app.models.overview import (
     DeviceSyncJob,
     HouseholdSchedule,
     InspectionJob,
     OverviewExecution,
 )
-from app.models.room import Room
-from app.models.room import RoomDevice
+from app.models.room import Room, RoomDevice
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.device import DeviceListRead, DeviceRead
@@ -37,23 +35,12 @@ from app.schemas.overview import (
     SyncJobWrite,
     TaskRead,
 )
+from app.services.household import get_default_household_id
 
 router = APIRouter(tags=["overview"])
 
 
 # === 家庭概览 ===
-
-
-def default_household(db: Session, user: User) -> int:
-    """获取用户默认家庭ID，未加入家庭时抛出403。"""
-    household_id = db.scalar(
-        select(HouseholdMembership.household_id)
-        .where(HouseholdMembership.user_id == user.id)
-        .order_by(HouseholdMembership.id)
-    )
-    if household_id is None:
-        raise HTTPException(status_code=403, detail="当前用户尚未加入家庭")
-    return household_id
 
 
 @router.get(
@@ -70,18 +57,24 @@ def get_overview(
             select(Room).where(Room.household_id == household_id).order_by(Room.id)
         ).all()
     )
-    devices = (
-        list(
-            db.scalars(
-                select(Device)
+    device_rows = (
+        db.execute(
+                select(RoomDevice.room_id, Device)
                 .join(RoomDevice, RoomDevice.device_id == Device.id)
                 .where(RoomDevice.room_id.in_([room.id for room in rooms]))
                 .order_by(Device.updated_at.desc())
             ).all()
-        )
         if rooms
         else []
     )
+    devices_by_room: dict[int, list[Device]] = {}
+    devices: list[Device] = []
+    seen_device_ids: set[int] = set()
+    for room_id, device in device_rows:
+        devices_by_room.setdefault(room_id, []).append(device)
+        if device.id not in seen_device_ids:
+            seen_device_ids.add(device.id)
+            devices.append(device)
     online = sum(item.status in {"online", "running"} for item in devices)
     running = (
         db.scalar(
@@ -95,13 +88,13 @@ def get_overview(
     )
     room_items = []
     for room in rooms:
-        room_devices = [item for item in devices if item.room == room.name]
+        room_devices = devices_by_room.get(room.id, [])
         lights = [item for item in room_devices if item.type == "light"]
         room_items.append(
             OverviewRoom(
                 id=room.id,
                 name=room.name,
-                device_count=len(room_devices) or room.device_count,
+                device_count=len(room_devices),
                 light_on=sum(item.status in {"online", "running"} for item in lights),
                 light_total=len(lights),
                 temperature=0,
@@ -221,7 +214,7 @@ def execute_mode(
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[TaskRead]:
     """按模式批量执行房间设备操作，支持幂等键去重。"""
-    household_id = default_household(db, user)
+    household_id = get_default_household_id(db, user)
     existing = db.scalar(
         select(OverviewExecution).where(
             OverviewExecution.household_id == household_id,
@@ -279,7 +272,7 @@ def create_inspection(
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[TaskRead]:
     """创建设备巡检任务，记录检查范围并返回预估信息。"""
-    household_id = default_household(db, user)
+    household_id = get_default_household_id(db, user)
     count = (
         db.scalar(
             select(func.count())
@@ -322,7 +315,7 @@ def get_inspection(
     job = db.scalar(
         select(InspectionJob).where(
             InspectionJob.id == inspection_id,
-            InspectionJob.household_id == default_household(db, user),
+            InspectionJob.household_id == get_default_household_id(db, user),
         )
     )
     if not job:
@@ -348,7 +341,7 @@ def save_schedule(
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ScheduleRead]:
     """保存或更新家庭某天的日程安排，带版本冲突校验。"""
-    household_id = default_household(db, user)
+    household_id = get_default_household_id(db, user)
     schedule = db.scalar(
         select(HouseholdSchedule).where(
             HouseholdSchedule.household_id == household_id,
@@ -396,7 +389,7 @@ def read_schedule(
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ScheduleRead | None]:
     """读取家庭某天的日程安排，未设置时返回null。"""
-    household_id = default_household(db, user)
+    household_id = get_default_household_id(db, user)
     schedule = db.scalar(
         select(HouseholdSchedule).where(
             HouseholdSchedule.household_id == household_id,
@@ -433,7 +426,7 @@ def create_sync_job(
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SyncJobRead]:
     """按幂等键创建设备同步任务。"""
-    household_id = default_household(db, user)
+    household_id = get_default_household_id(db, user)
     job = db.scalar(
         select(DeviceSyncJob).where(
             DeviceSyncJob.household_id == household_id,
@@ -467,7 +460,7 @@ def get_sync_job(
     job = db.scalar(
         select(DeviceSyncJob).where(
             DeviceSyncJob.id == job_id,
-            DeviceSyncJob.household_id == default_household(db, user),
+            DeviceSyncJob.household_id == get_default_household_id(db, user),
         )
     )
     if not job:
