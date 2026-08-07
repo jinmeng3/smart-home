@@ -129,9 +129,11 @@ const buildDeviceQuery = (filters: DeviceFilters) => {
 
 export const listDevices = async (
   filters: DeviceFilters,
+  signal?: AbortSignal,
 ): Promise<DeviceListResponse> => {
   const response = await apiRequest<ApiDeviceListResponse>(
     `/api/devices?${buildDeviceQuery(filters)}`,
+    { signal },
   );
   return {
     total: response.total,

@@ -46,6 +46,49 @@
     transition-duration: 1ms !important;
 }
 
+/* 流畅模式（data-performance="lite"）：移除高成本视觉效果，保留布局与可用性。
+   系统 prefers-reduced-motion 优先级更高（在 animations.css 中由 * 选择器覆盖）。 */
+:root[data-performance="lite"] {
+    --shadow-card: none;
+    --shadow-card-hover: none;
+}
+
+:root[data-performance="lite"] .app-shell {
+    background: var(--color-page-bg) !important;
+}
+
+:root[data-performance="lite"] *,
+:root[data-performance="lite"] *::before,
+:root[data-performance="lite"] *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+:root[data-performance="lite"] .motion-card:hover,
+:root[data-performance="lite"] .motion-button:hover,
+:root[data-performance="lite"] .smart-modal-section:hover,
+:root[data-performance="lite"] .stats-card:hover,
+:root[data-performance="lite"] .device-row:hover,
+:root[data-performance="lite"] .device-grid-card:hover,
+:root[data-performance="lite"] .device-grid-card.is-selected,
+:root[data-performance="lite"] .scene-card:hover,
+:root[data-performance="lite"] .scene-stat-card:hover,
+:root[data-performance="lite"] .device-stats-card:hover,
+:root[data-performance="lite"] .detail-actions button:hover,
+:root[data-performance="lite"] .detail-quick button:hover {
+    transform: none !important;
+}
+
+:root[data-performance="lite"] .el-select-dropdown,
+:root[data-performance="lite"] .el-message,
+:root[data-performance="lite"] .el-message.is-plain {
+    box-shadow: none !important;
+}
+
 * {
     box-sizing: border-box;
 }

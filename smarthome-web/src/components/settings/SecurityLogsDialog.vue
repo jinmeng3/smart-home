@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ElButton } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import { useSettingsStore } from "../../stores/settings";
 
@@ -61,8 +61,8 @@ const closeDialog = () => {
             <footer class="dialog-footer">
                 <span>日志仅保留最近 8 条</span>
                 <div>
-                    <ElButton type="primary" @click="closeDialog"
-                        >关闭</ElButton
+                    <BaseButton variant="primary" @click="closeDialog"
+                        >关闭</BaseButton
                     >
                 </div>
             </footer>

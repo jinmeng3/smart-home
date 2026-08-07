@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "run-p type-check \"build-only {@}\" -- && npm run check:chunk",
     "preview": "vite preview",
     "build-only": "vite build",
+    "check:chunk": "node scripts/check-chunk-budget.mjs",
     "type-check": "vue-tsc --build"
   },
   "dependencies": {

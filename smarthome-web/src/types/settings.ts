@@ -20,6 +20,7 @@ export interface AppearanceSettings {
   fontSize: FontSize
   animationsEnabled: boolean
   sidebarCollapsed: boolean
+  performanceMode: boolean
 }
 
 export interface ModelAdvancedSettings {

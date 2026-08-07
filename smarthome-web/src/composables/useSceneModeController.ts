@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useAsyncAction } from "./useAsyncAction";
 import { isHighRiskScene } from "../utils/sceneRiskPolicy";
 import type { useScenesStore } from "../stores/scenes";
 import type {
@@ -17,7 +18,6 @@ export const useSceneModeController = (store: ScenesStore) => {
     const templateDialogOpen = ref(false);
     const editingScene = ref<Scene | null>(null);
     const deleteDialogOpen = ref(false);
-    const deleting = ref(false);
     const deletingScene = ref<Scene | null>(null);
     const riskConfirmOpen = ref(false);
     const riskScene = ref<Scene | null>(null);
@@ -40,47 +40,63 @@ export const useSceneModeController = (store: ScenesStore) => {
         createDialogOpen.value = true;
     };
 
-    const createScene = async (payload: SceneInput) => {
-        try {
+    const createScene = useAsyncAction(
+        async (payload: SceneInput) => {
             const scene = await store.addScene(payload);
             ElMessage.success(`${scene.name} 已创建`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景创建失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "场景创建失败",
+                ),
+        },
+    ).run;
 
-    const saveDraft = async (payload: SceneInput) => {
-        try {
+    const saveDraft = useAsyncAction(
+        async (payload: SceneInput) => {
             await store.saveDraft(payload);
             ElMessage.success("场景草稿已保存");
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "草稿保存失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "草稿保存失败",
+                ),
+        },
+    ).run;
 
-    const importTemplate = async (template: SceneTemplate) => {
-        try {
+    const importTemplate = useAsyncAction(
+        async (template: SceneTemplate) => {
             await store.importTemplate(template);
             ElMessage.success(`${template.name} 已导入`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "模板导入失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "模板导入失败",
+                ),
+        },
+    ).run;
 
     const editScene = (scene: Scene) => {
         openEditDialog(scene);
     };
 
-    const saveEditScene = async (scene: Scene, payload: SceneInput) => {
-        try {
+    const saveEditScene = useAsyncAction(
+        async (scene: Scene, payload: SceneInput) => {
             const updated = await store.editScene(scene, payload);
             editingScene.value = null;
             createDialogOpen.value = false;
             ElMessage.success(`${updated.name} 已更新`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景更新失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "场景更新失败",
+                ),
+        },
+    ).run;
 
     const removeScene = (scene: Scene) => {
         deletingScene.value = scene;
@@ -93,21 +109,22 @@ export const useSceneModeController = (store: ScenesStore) => {
         deletingScene.value = null;
     };
 
-    const confirmRemoveScene = async () => {
-        if (!deletingScene.value) return;
-        const scene = deletingScene.value;
-        deleting.value = true;
-        try {
+    const { loading: deleting, run: confirmRemoveScene } = useAsyncAction(
+        async () => {
+            if (!deletingScene.value) return;
+            const scene = deletingScene.value;
             await store.removeScene(scene);
             ElMessage.success(`${scene.name} 已删除`);
             deleteDialogOpen.value = false;
             deletingScene.value = null;
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景删除失败");
-        } finally {
-            deleting.value = false;
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "场景删除失败",
+                ),
+        },
+    );
 
     const previewSceneSteps = async (scene: Scene) => {
         try {
@@ -151,8 +168,8 @@ export const useSceneModeController = (store: ScenesStore) => {
         }
     };
 
-    const runAction = async (key: QuickActionKey) => {
-        try {
+    const runAction = useAsyncAction(
+        async (key: QuickActionKey) => {
             if (key === "batch") {
                 await store.batchSetEnabled([], true);
                 ElMessage.success("已批量启用全部场景");
@@ -179,36 +196,47 @@ export const useSceneModeController = (store: ScenesStore) => {
                     ElMessage.warning("请先选择一个场景");
                 }
             }
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "操作失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "操作失败",
+                ),
+        },
+    ).run;
 
-    const copyScene = async (scene: Scene) => {
-        try {
+    const copyScene = useAsyncAction(
+        async (scene: Scene) => {
             await store.duplicateScene(scene);
             ElMessage.success(`${scene.name} 已复制`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景复制失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "场景复制失败",
+                ),
+        },
+    ).run;
 
-    const runScene = async (scene: Scene) => {
-        if (isHighRiskScene(scene)) {
-            const confirmed = await requestHighRiskConfirm(scene);
-
-            if (!confirmed) {
-                return;
+    const runScene = useAsyncAction(
+        async (scene: Scene) => {
+            if (isHighRiskScene(scene)) {
+                const confirmed = await requestHighRiskConfirm(scene);
+                if (!confirmed) {
+                    return;
+                }
             }
-        }
 
-        try {
             await store.runScene(scene, isHighRiskScene(scene));
             ElMessage.success(`${scene.name} 执行成功`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景执行失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "场景执行失败",
+                ),
+        },
+    ).run;
 
     /** 打开高风险确认弹窗，并返回用户是否确认执行的 Promise。 */
     const requestHighRiskConfirm = (scene: Scene): Promise<boolean> => {
@@ -227,14 +255,20 @@ export const useSceneModeController = (store: ScenesStore) => {
         riskResolver = null;
     };
 
-    const toggleScene = async (scene: Scene, enabled: boolean) => {
-        try {
+    const roleTag = {
+        onError: (error: unknown) =>
+            ElMessage.error(
+                error instanceof Error ? error.message : "场景状态更新失败",
+            ),
+    };
+
+    const toggleScene = useAsyncAction(
+        async (scene: Scene, enabled: boolean) => {
             await store.setSceneEnabled(scene.id, enabled);
             ElMessage.success(`${scene.name} ${enabled ? "已启用" : "已停用"}`);
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "场景状态更新失败");
-        }
-    };
+        },
+        roleTag,
+    ).run;
 
     return {
         cancelRemoveScene,

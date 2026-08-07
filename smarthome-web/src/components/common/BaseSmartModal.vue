@@ -7,9 +7,8 @@ import {
     useId,
     watch,
 } from "vue";
-import { ElButton } from "element-plus";
+import BaseButton from "./BaseButton.vue";
 import SvgIcon from "./SvgIcon.vue";
-import "element-plus/theme-chalk/el-button.css";
 
 const modalStack: symbol[] = [];
 let bodyOverflow = "";
@@ -235,16 +234,16 @@ onBeforeUnmount(() => {
                                     <h2 :id="titleId">{{ title }}</h2>
                                     <p v-if="description">{{ description }}</p>
                                 </div>
-                                <ElButton
+                                <BaseButton
                                     v-if="closable"
                                     class="close-button"
-                                    text
+                                    variant="text"
                                     aria-label="关闭"
                                     :disabled="loading || closeButtonDisabled"
                                     @click="close"
                                 >
                                     <SvgIcon name="close" size="sm" />
-                                </ElButton>
+                                </BaseButton>
                             </header>
                         </slot>
 
@@ -282,27 +281,27 @@ onBeforeUnmount(() => {
                                     <slot name="footerHint" />
                                 </span>
                                 <div class="smart-modal-actions">
-                                    <ElButton
+                                    <BaseButton
                                         :disabled="loading"
                                         @click="close"
                                     >
                                         {{ cancelText }}
-                                    </ElButton>
-                                    <ElButton
+                                    </BaseButton>
+                                    <BaseButton
                                         v-if="showDraft"
                                         :disabled="loading"
                                         @click="saveDraft"
                                     >
                                         {{ draftText }}
-                                    </ElButton>
-                                    <ElButton
+                                    </BaseButton>
+                                    <BaseButton
                                         class="smart-modal-primary"
+                                        variant="primary"
                                         :loading="loading"
-                                        type="primary"
                                         @click="confirm"
                                     >
                                         {{ confirmText }}
-                                    </ElButton>
+                                    </BaseButton>
                                 </div>
                             </footer>
                         </slot>
@@ -439,7 +438,7 @@ onBeforeUnmount(() => {
     gap: 12px;
 }
 
-.smart-modal-actions :deep(.el-button) {
+.smart-modal-actions :deep(.base-button) {
     height: 42px;
     min-width: 96px;
     margin-left: 0;
@@ -452,11 +451,11 @@ onBeforeUnmount(() => {
         transform 160ms var(--motion-ease);
 }
 
-.smart-modal-actions :deep(.el-button:hover) {
+.smart-modal-actions :deep(.base-button:hover) {
     transform: translateY(-1px);
 }
 
-.smart-modal-actions :deep(.el-button:active) {
+.smart-modal-actions :deep(.base-button:active) {
     transform: scale(0.98);
 }
 
@@ -539,12 +538,13 @@ onBeforeUnmount(() => {
 
 .smart-modal :deep(.close-button) {
     display: grid;
-    width: 38px;
-    min-width: 38px;
-    height: 38px;
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
     margin-left: auto;
     place-items: center;
-    border-radius: 50%;
+    border-radius: 50% !important;
+    padding: 0 !important;
     color: var(--color-text-tertiary);
     transition:
         background-color 160ms var(--motion-ease),

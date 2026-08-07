@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ElButton, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import type { AccountForm } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
@@ -165,20 +166,20 @@ const deleteAvatar = async () => {
                 <p>{{ form.email || "未设置邮箱" }}</p>
             </div>
             <div class="avatar-actions">
-                <ElButton
+                <BaseButton
                     :disabled="loading"
-                    size="small"
+                    size="sm"
                     @click="selectAvatar"
                 >
                     上传头像
-                </ElButton>
-                <ElButton
+                </BaseButton>
+                <BaseButton
                     :disabled="loading || !visibleAvatarUrl"
-                    size="small"
+                    size="sm"
                     @click="deleteAvatar"
                 >
                     删除
-                </ElButton>
+                </BaseButton>
             </div>
             <input
                 ref="avatarInput"
@@ -265,20 +266,20 @@ const deleteAvatar = async () => {
             <footer class="dialog-footer">
                 <span>{{ dirty ? "有尚未保存的修改" : "账户信息已同步" }}</span>
                 <div>
-                    <ElButton
+                    <BaseButton
                         :disabled="loading"
                         @click="dialogVisible = false"
                     >
                         关闭
-                    </ElButton>
-                    <ElButton
+                    </BaseButton>
+                    <BaseButton
                         :disabled="!dirty"
                         :loading="loading"
-                        type="primary"
+                        variant="primary"
                         @click="emit('save')"
                     >
                         保存更改
-                    </ElButton>
+                    </BaseButton>
                 </div>
             </footer>
         </template>

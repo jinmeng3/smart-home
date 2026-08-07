@@ -59,6 +59,10 @@ const fontOptions: Array<{ value: FontSize; label: string }> = [
             ><BaseSwitch v-model="appearance.animationsEnabled" />
         </div>
         <div class="settings-field">
+            <span>流畅模式</span
+            ><BaseSwitch v-model="appearance.performanceMode" />
+        </div>
+        <div class="settings-field">
             <span>侧边栏折叠</span
             ><BaseSwitch v-model="appearance.sidebarCollapsed" />
         </div>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import { ElButton, ElInputNumber, ElMessage, ElSlider } from "element-plus";
+import { ElInputNumber, ElMessage, ElSlider } from "element-plus";
 import type { AiAssistantSettings } from "../../types/settings";
 import { useSettingsStore } from "../../stores/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSwitch from "../BaseSwitch.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import ModalSection from "../common/ModalSection.vue";
@@ -144,8 +145,8 @@ const applySettings = async () => {
         </div>
         <div class="settings-field">
             <span>模型高级参数</span>
-            <ElButton plain type="primary" @click="openDialog"
-                >更多设置</ElButton
+            <BaseButton plain variant="primary" @click="openDialog"
+                >更多设置</BaseButton
             >
         </div>
     </SettingsSectionCard>
@@ -252,14 +253,15 @@ const applySettings = async () => {
                     size="large"
                 />
                 <div class="token-presets">
-                    <ElButton
+                    <BaseButton
                         v-for="value in tokenPresets"
                         :key="value"
                         :class="{ active: draft.maxTokens === value }"
                         @click="draft.maxTokens = value"
+                        plain
                     >
                         {{ value.toLocaleString() }}
-                    </ElButton>
+                    </BaseButton>
                 </div>
             </ModalSection>
         </div>
@@ -268,14 +270,14 @@ const applySettings = async () => {
             <footer class="dialog-footer">
                 <p>设置将在保存页面更改后应用到新的对话</p>
                 <div>
-                    <ElButton :disabled="saving" @click="requestClose"
-                        >取消</ElButton
+                    <BaseButton :disabled="saving" @click="requestClose"
+                        >取消</BaseButton
                     >
-                    <ElButton
+                    <BaseButton
                         :loading="saving"
-                        type="primary"
+                        variant="primary"
                         @click="applySettings"
-                        >应用设置</ElButton
+                        >应用设置</BaseButton
                     >
                 </div>
             </footer>

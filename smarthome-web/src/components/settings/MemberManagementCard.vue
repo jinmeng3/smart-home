@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElButton, ElMessage } from "element-plus";
+import { ElMessage } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import type { FamilyMember, HouseholdRole } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
@@ -179,7 +180,7 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
                             : readonlyMessage
                     }}
                 </span>
-                <ElButton @click="dialogVisible = false">完成</ElButton>
+                <BaseButton @click="dialogVisible = false">完成</BaseButton>
             </footer>
         </template>
     </BaseSmartModal>

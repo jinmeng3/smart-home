@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ElButton, ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
@@ -118,14 +119,14 @@ const revokeDevice = async (deviceId: number) => {
                                         device.trusted ? "取消信任" : "设为信任"
                                     }}
                                 </button>
-                                <ElButton
+                                <BaseButton
                                     :disabled="device.current"
+                                    variant="danger"
                                     plain
-                                    type="danger"
                                     @click="revokeDevice(device.id)"
                                 >
                                     移除
-                                </ElButton>
+                                </BaseButton>
                             </div>
                         </div>
                     </article>
@@ -149,8 +150,8 @@ const revokeDevice = async (deviceId: number) => {
             <footer class="dialog-footer">
                 <span>设备信任状态只在本地更新</span>
                 <div>
-                    <ElButton type="primary" @click="closeDialog"
-                        >关闭</ElButton
+                    <BaseButton variant="primary" @click="closeDialog"
+                        >关闭</BaseButton
                     >
                 </div>
             </footer>

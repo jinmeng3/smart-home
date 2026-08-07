@@ -28,6 +28,7 @@ const defaultSettings: SettingsState = {
     fontSize: "medium",
     animationsEnabled: true,
     sidebarCollapsed: false,
+    performanceMode: false,
   },
   aiAssistant: {
     model: "Orion GPT-4o",

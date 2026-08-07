@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { ElButton, ElInput } from "element-plus";
+import { ElInput } from "element-plus";
 import { useAuthStore } from "../../stores/auth";
 import { useSettingsStore } from "../../stores/settings";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { sleep } from "../../utils/async";
@@ -218,13 +219,13 @@ const logout = async () => {
                     <h2>{{ title }}</h2>
                     <p>{{ description }}</p>
                 </div>
-                <ElButton
+                <BaseButton
                     aria-label="关闭"
                     class="close-button"
+                    variant="text"
                     :disabled="submitting"
-                    text
                     @click="authStore.loginVisible = false"
-                    >×</ElButton
+                    >×</BaseButton
                 >
             </header>
         </template>
@@ -366,24 +367,24 @@ const logout = async () => {
             <footer v-if="!outcome" class="dialog-footer">
                 <span>{{ footerHint }}</span>
                 <div>
-                    <ElButton
+                    <BaseButton
                         :disabled="submitting"
                         @click="authStore.loginVisible = false"
-                        >取消</ElButton
+                        >取消</BaseButton
                     >
-                    <ElButton
+                    <BaseButton
                         v-if="authStore.isAuthenticated"
                         :loading="submitting"
-                        type="primary"
+                        variant="primary"
                         @click="logout"
-                        >登出</ElButton
+                        >登出</BaseButton
                     >
-                    <ElButton
+                    <BaseButton
                         v-if="!authStore.isAuthenticated"
                         :loading="submitting"
-                        type="primary"
+                        variant="primary"
                         @click="submit"
-                        >{{ mode === "login" ? "登录" : "创建账户" }}</ElButton
+                        >{{ mode === "login" ? "登录" : "创建账户" }}</BaseButton
                     >
                 </div>
             </footer>

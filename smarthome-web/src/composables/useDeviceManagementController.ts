@@ -1,5 +1,7 @@
 import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useAsyncAction } from "./useAsyncAction";
+import { useDebouncedFilter } from "./useDebouncedFilter";
 import {
   createDevice as apiCreateDevice,
   deleteDevice as apiDeleteDevice,
@@ -51,9 +53,6 @@ export const useDeviceManagementController = () => {
   const devices = ref<Device[]>([]);
   const total = ref(0);
   const loading = ref(false);
-  const syncing = ref(false);
-  const saving = ref(false);
-  const deleting = ref(false);
   const selectedId = ref<number | null>(null);
   const selectedDevice = ref<DeviceDetail | null>(null);
   const editorOpen = ref(false);
@@ -63,7 +62,6 @@ export const useDeviceManagementController = () => {
   const batchDeleteDialogOpen = ref(false);
   const batchMode = ref(false);
   const selectedDeviceIds = ref<number[]>([]);
-  const batchDeleting = ref(false);
   const batchDeletingIds = ref<number[]>([]);
   const logDialogOpen = ref(false);
   const deviceLogs = ref<DeviceLog[]>([]);
@@ -184,11 +182,11 @@ export const useDeviceManagementController = () => {
     }
   };
 
-  const loadDevices = async () => {
+  const loadDevices = async (signal?: AbortSignal) => {
     loading.value = true;
 
     try {
-      const response = await apiListDevices(filters);
+      const response = await apiListDevices(filters, signal);
       devices.value = response.items;
       total.value = response.total;
 
@@ -200,6 +198,9 @@ export const useDeviceManagementController = () => {
         : (response.items[0]?.id ?? null);
       await loadSelectedDevice();
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
       devices.value = [];
       total.value = 0;
       ElMessage.error(
@@ -209,6 +210,97 @@ export const useDeviceManagementController = () => {
       loading.value = false;
     }
   };
+
+  // 筛选输入（搜索/类型/状态/房间）防抖加载：输入停止 250ms 后才请求，
+  // 同时用 AbortSignal 取消旧请求，避免快速连续筛选时旧数据覆盖新数据。
+  const debouncedLoad = useDebouncedFilter((signal) => loadDevices(signal), 250);
+  const loadDevicesDebounced = debouncedLoad.run;
+  const cancelDebouncedLoad = debouncedLoad.cancel;
+
+  // ── 设备操作（useAsyncAction：统一 loading / 防重复提交 / 错误提示）─────────────
+
+  const { loading: saving, run: saveDevice } = useAsyncAction(
+    async (payload: DeviceCreatePayload) => {
+      if (editingDevice.value) {
+        await apiUpdateDevice(editingDevice.value.id, payload);
+        ElMessage.success("设备已更新");
+      } else {
+        const created = await apiCreateDevice(payload);
+        selectedId.value = created.id;
+        ElMessage.success("设备已添加");
+      }
+
+      editorOpen.value = false;
+      await loadDevices();
+    },
+    {
+      onError: (error) =>
+        ElMessage.error(error instanceof Error ? error.message : "设备保存失败"),
+    },
+  );
+
+  const { loading: deleting, run: confirmRemoveDevice } = useAsyncAction(
+    async () => {
+      if (!deletingDevice.value) return;
+      const device = deletingDevice.value;
+      await apiDeleteDevice(device.id);
+      ElMessage.success("设备已删除");
+      deleteDialogOpen.value = false;
+      deletingDevice.value = null;
+      await loadDevices();
+    },
+    {
+      onError: (error) =>
+        ElMessage.error(error instanceof Error ? error.message : "设备删除失败"),
+    },
+  );
+
+  const { loading: syncing, run: runSync } = useAsyncAction(
+    async () => {
+      const response = await apiSyncDevices("Home Assistant");
+      ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
+      await loadDevices();
+    },
+    {
+      onError: (error) =>
+        ElMessage.error(error instanceof Error ? error.message : "设备同步失败"),
+    },
+  );
+
+  const { loading: batchDeleting, run: confirmBatchDelete } = useAsyncAction(
+    async () => {
+      const ids = batchDeletingIds.value;
+      if (!ids.length) {
+        batchDeleteDialogOpen.value = false;
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const id of ids) {
+        try {
+          await apiDeleteDevice(id);
+          successCount++;
+        } catch {
+          failCount++;
+        }
+      }
+
+      batchDeleteDialogOpen.value = false;
+      batchDeletingIds.value = [];
+
+      if (failCount === 0) {
+        ElMessage.success(`已成功删除 ${successCount} 台设备`);
+      } else {
+        ElMessage.warning(`已删除 ${successCount} 台，${failCount} 台删除失败`);
+      }
+
+      selectedDeviceIds.value = [];
+      batchMode.value = false;
+      await loadDevices();
+    },
+  );
 
   const updateFilter = <K extends keyof DeviceFilters>(
     key: K,
@@ -245,28 +337,6 @@ export const useDeviceManagementController = () => {
     editorOpen.value = true;
   };
 
-  const saveDevice = async (payload: DeviceCreatePayload) => {
-    saving.value = true;
-
-    try {
-      if (editingDevice.value) {
-        await apiUpdateDevice(editingDevice.value.id, payload);
-        ElMessage.success("设备已更新");
-      } else {
-        const created = await apiCreateDevice(payload);
-        selectedId.value = created.id;
-        ElMessage.success("设备已添加");
-      }
-
-      editorOpen.value = false;
-      await loadDevices();
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "设备保存失败");
-    } finally {
-      saving.value = false;
-    }
-  };
-
   const removeDevice = (device: Device) => {
     deletingDevice.value = device;
     deleteDialogOpen.value = true;
@@ -279,41 +349,6 @@ export const useDeviceManagementController = () => {
 
     deleteDialogOpen.value = false;
     deletingDevice.value = null;
-  };
-
-  const confirmRemoveDevice = async () => {
-    if (!deletingDevice.value) {
-      return;
-    }
-
-    const device = deletingDevice.value;
-    deleting.value = true;
-
-    try {
-      await apiDeleteDevice(device.id);
-      ElMessage.success("设备已删除");
-      deleteDialogOpen.value = false;
-      deletingDevice.value = null;
-      await loadDevices();
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "设备删除失败");
-    } finally {
-      deleting.value = false;
-    }
-  };
-
-  const runSync = async () => {
-    syncing.value = true;
-
-    try {
-      const response = await apiSyncDevices("Home Assistant");
-      ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
-      await loadDevices();
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : "设备同步失败");
-    } finally {
-      syncing.value = false;
-    }
   };
 
   const toggleSelectDevice = (device: Device) => {
@@ -355,41 +390,6 @@ export const useDeviceManagementController = () => {
     if (batchDeleting.value || deleting.value) return;
     batchDeleteDialogOpen.value = false;
     batchDeletingIds.value = [];
-  };
-
-  const confirmBatchDelete = async () => {
-    const ids = batchDeletingIds.value;
-    if (!ids.length) {
-      batchDeleteDialogOpen.value = false;
-      return;
-    }
-
-    batchDeleting.value = true;
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const id of ids) {
-      try {
-        await apiDeleteDevice(id);
-        successCount++;
-      } catch {
-        failCount++;
-      }
-    }
-
-    batchDeleting.value = false;
-    batchDeleteDialogOpen.value = false;
-    batchDeletingIds.value = [];
-
-    if (failCount === 0) {
-      ElMessage.success(`已成功删除 ${successCount} 台设备`);
-    } else {
-      ElMessage.warning(`已删除 ${successCount} 台，${failCount} 台删除失败`);
-    }
-
-    selectedDeviceIds.value = [];
-    batchMode.value = false;
-    await loadDevices();
   };
 
   const batchDeletingDevices = computed(() => {
@@ -489,6 +489,7 @@ export const useDeviceManagementController = () => {
     updatePageSize,
     editDevice,
     loadDevices,
+    loadDevicesDebounced,
     viewMode,
     setViewMode,
     toggleFavorite,

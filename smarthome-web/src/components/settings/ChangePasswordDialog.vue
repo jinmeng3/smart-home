@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { ElButton, ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-message-box.css";
@@ -254,14 +255,14 @@ const savePassword = async () => {
             <footer class="dialog-footer">
                 <span>修改结果只会保存在本地</span>
                 <div>
-                    <ElButton @click="requestClose">关闭</ElButton>
-                    <ElButton
+                    <BaseButton @click="requestClose">关闭</BaseButton>
+                    <BaseButton
                         :disabled="!canSave"
-                        type="primary"
+                        variant="primary"
                         @click="savePassword"
                     >
                         保存
-                    </ElButton>
+                    </BaseButton>
                 </div>
             </footer>
         </template>

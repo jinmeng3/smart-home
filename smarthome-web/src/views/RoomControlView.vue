@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { ElMessage } from "element-plus";
 import {
@@ -61,7 +62,6 @@ const environmentData = ref<RoomEnvironmentItem[]>([]);
 const detailRequests = new Map<number, Promise<RoomDetail>>();
 const deleteDialogOpen = ref(false);
 const deletingRoom = ref<Room | null>(null);
-const roomDeleting = ref(false);
 
 const roomGridExpanded = ref(false);
 
@@ -201,22 +201,20 @@ const replaceRoom = (room: Room) => {
     );
 };
 
-const toggleDevice = async (device: RoomDeviceCard) => {
-    if (!selected.value) return;
+const toggleDevice = useAsyncAction(
+    async (device: RoomDeviceCard) => {
+        if (!selected.value) return;
 
-    const newStatus = device.status === "online" || device.status === "running" ? "offline" : "online";
+        const newStatus = device.status === "online" || device.status === "running" ? "offline" : "online";
 
-    try {
         const updated = await updateRoomDevice(
             selected.value.id,
             device.id,
             newStatus,
         );
         replaceRoom(updated);
-    } catch {
-        // 忽略切换失败
-    }
-};
+    },
+).run;
 
 const handleRoomUpdated = async (room: Room) => {
   loading.value = true;
@@ -273,29 +271,32 @@ const handleRoomDeleteClick = (room: Room) => {
   deleteDialogOpen.value = true;
 };
 
-const confirmDeleteRoom = async () => {
-  if (!deletingRoom.value) return;
-  roomDeleting.value = true;
-  try {
-    await deleteRoom(deletingRoom.value.id);
-    rooms.value = rooms.value.filter((r) => r.id !== deletingRoom.value!.id);
-    if (selectedId.value === deletingRoom.value.id) {
-      selectedId.value = rooms.value[0]?.id;
-      if (selectedId.value) {
-        await loadEnvironment(selectedId.value);
-      } else {
-        environmentData.value = [];
-      }
-    }
-    ElMessage.success("房间已删除");
-    deleteDialogOpen.value = false;
-    deletingRoom.value = null;
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, "房间删除失败"));
-  } finally {
-    roomDeleting.value = false;
-  }
-};
+const { loading: roomDeleting, run: confirmDeleteRoom } = useAsyncAction(
+    async () => {
+        if (!deletingRoom.value) return;
+
+        await deleteRoom(deletingRoom.value.id);
+        rooms.value = rooms.value.filter((r) => r.id !== deletingRoom.value!.id);
+
+        if (selectedId.value === deletingRoom.value.id) {
+            selectedId.value = rooms.value[0]?.id;
+
+            if (selectedId.value) {
+                await loadEnvironment(selectedId.value);
+            } else {
+                environmentData.value = [];
+            }
+        }
+
+        ElMessage.success("房间已删除");
+        deleteDialogOpen.value = false;
+        deletingRoom.value = null;
+    },
+    {
+        onError: (error) =>
+            ElMessage.error(getErrorMessage(error, "房间删除失败")),
+    },
+);
 
 const cancelDeleteRoom = () => {
   deleteDialogOpen.value = false;

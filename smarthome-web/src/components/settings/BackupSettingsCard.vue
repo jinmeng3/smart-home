@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import { useSettingsStore } from "../../stores/settings";
 import type { BackupSettings, SettingsState } from "../../types/settings";
@@ -200,8 +201,8 @@ const readBackupFile = (event: Event) => {
                 <footer class="dialog-footer">
                     <span>立即备份会刷新最近备份时间</span>
                     <div>
-                        <ElButton type="primary" @click="historyVisible = false"
-                            >关闭</ElButton
+                        <BaseButton variant="primary" @click="historyVisible = false"
+                            >关闭</BaseButton
                         >
                     </div>
                 </footer>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElButton, ElInput, ElMessage } from "element-plus";
+import { ElInput, ElMessage } from "element-plus";
 import type {
     AiAssistantSettings,
     HomeAssistantSettings,
 } from "../../types/settings";
+import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
@@ -164,13 +165,13 @@ const applyParameters = () => {
                     }}</strong>
                 </div>
                 <div class="action-stack">
-                    <ElButton :disabled="!connected" @click="emit('sync')">
+                    <BaseButton :disabled="!connected" @click="emit('sync')">
                         测试连接
-                    </ElButton>
-                    <ElButton @click="dialogVisible = false">取消</ElButton>
-                    <ElButton type="primary" @click="applyParameters">
+                    </BaseButton>
+                    <BaseButton @click="dialogVisible = false">取消</BaseButton>
+                    <BaseButton variant="primary" @click="applyParameters">
                         应用配置
-                    </ElButton>
+                    </BaseButton>
                 </div>
             </aside>
         </section>

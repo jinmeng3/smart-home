@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useAsyncAction } from "./useAsyncAction";
 import type {
     AutomationDisplayRule,
     useAutomationsStore,
@@ -13,7 +14,6 @@ type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
 export const useAutomationModeController = (store: AutomationsStore) => {
     const activeDialog = ref<DialogKey | null>(null);
     const deleteDialogOpen = ref(false);
-    const deleting = ref(false);
     const deletingRule = ref<AutomationRule | null>(null);
 
     // ── 对话框开关 ──────────────────────────────────────────────────────────────
@@ -45,13 +45,13 @@ export const useAutomationModeController = (store: AutomationsStore) => {
 
     // ── 创建 / 编辑 ─────────────────────────────────────────────────────────────
 
-    const saveRule = async (payload: {
-        mode: "create" | "edit";
-        name: string;
-        description: string;
-        trigger: string;
-    }) => {
-        try {
+    const saveRule = useAsyncAction(
+        async (payload: {
+            mode: "create" | "edit";
+            name: string;
+            description: string;
+            trigger: string;
+        }) => {
             if (payload.mode === "edit") {
                 const rule = store.selectedAutomation;
                 if (!rule) return;
@@ -61,10 +61,14 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                 const rule = await store.addAutomation(payload);
                 ElMessage.success(`自动化“${rule.name}”已创建`);
             }
-        } catch (error) {
-            ElMessage.error(error instanceof Error ? error.message : "保存失败");
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "保存失败",
+                ),
+        },
+    ).run;
 
     // ── 删除 ────────────────────────────────────────────────────────────────────
 
@@ -79,108 +83,117 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         deletingRule.value = null;
     };
 
-    const confirmRemoveRule = async () => {
-        if (!deletingRule.value) return;
-        const rule = deletingRule.value;
-        deleting.value = true;
-        try {
+    const { loading: deleting, run: confirmRemoveRule } = useAsyncAction(
+        async () => {
+            if (!deletingRule.value) return;
+            const rule = deletingRule.value;
             await store.removeAutomation(rule);
             ElMessage.success(`${rule.name} 已删除`);
             deleteDialogOpen.value = false;
             deletingRule.value = null;
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "自动化删除失败",
-            );
-        } finally {
-            deleting.value = false;
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "自动化删除失败",
+                ),
+        },
+    );
 
     // ── 复制 / 执行 / 启停 ───────────────────────────────────────────────────────
 
-    const copyRule = async (rule: AutomationRule) => {
-        try {
+    const copyRule = useAsyncAction(
+        async (rule: AutomationRule) => {
             await store.duplicateAutomation(rule);
             ElMessage.success(`${rule.name} 已复制`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "自动化复制失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "自动化复制失败",
+                ),
+        },
+    ).run;
 
-    const runRule = async (rule: AutomationRule) => {
-        try {
+    const runRule = useAsyncAction(
+        async (rule: AutomationRule) => {
             await store.runAutomation(rule);
             ElMessage.success(`“${rule.name}”执行成功`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "自动化执行失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "自动化执行失败",
+                ),
+        },
+    ).run;
 
-    const toggleRule = async (rule: AutomationRule, enabled: boolean) => {
-        try {
+    const toggleRule = useAsyncAction(
+        async (rule: AutomationRule, enabled: boolean) => {
             await store.setAutomationEnabled(rule.id, enabled);
             ElMessage.success(`${rule.name} ${enabled ? "已启用" : "已停用"}`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "自动化状态更新失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "自动化状态更新失败",
+                ),
+        },
+    ).run;
 
     // ── 导入 / 批量操作 ──────────────────────────────────────────────────────────
 
-    const importRules = async (count: number) => {
-        try {
+    const importRules = useAsyncAction(
+        async (count: number) => {
             await store.importRules(count);
             ElMessage.success(`已导入 ${count} 条规则`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "规则导入失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "规则导入失败",
+                ),
+        },
+    ).run;
 
-    const batchEnable = async (ruleIds: number[]) => {
-        try {
+    const batchEnable = useAsyncAction(
+        async (ruleIds: number[]) => {
             await store.batchSetEnabled(ruleIds, true);
             ElMessage.success(`已启用 ${ruleIds.length} 条规则`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "批量启用失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "批量启用失败",
+                ),
+        },
+    ).run;
 
-    const scheduleRules = async (payload: {
-        weekdays: number[];
-        time: string;
-        ruleIds: number[];
-    }) => {
-        try {
+    const scheduleRules = useAsyncAction(
+        async (payload: { weekdays: number[]; time: string; ruleIds: number[] }) => {
             await store.batchSetSchedule(payload.ruleIds, payload);
             ElMessage.success("定时设置已保存");
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "定时设置失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "定时设置失败",
+                ),
+        },
+    ).run;
 
-    const useTemplate = async (name: string) => {
-        try {
+    const useTemplate = useAsyncAction(
+        async (name: string) => {
             const rule = await store.useTemplate(name);
             ElMessage.success(`模板“${rule.name}”已使用`);
-        } catch (error) {
-            ElMessage.error(
-                error instanceof Error ? error.message : "模板使用失败",
-            );
-        }
-    };
+        },
+        {
+            onError: (error) =>
+                ElMessage.error(
+                    error instanceof Error ? error.message : "模板使用失败",
+                ),
+        },
+    ).run;
 
     const runAction = async (key: QuickActionKey) => {
         if (key === "batch") {

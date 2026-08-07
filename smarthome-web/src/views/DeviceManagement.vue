@@ -27,17 +27,25 @@ const loadDevices = useAuthenticatedLoader(controller.loadDevices, {
     immediate: false,
 });
 
+// 分页变更立即请求（离散操作，需要即时反馈）
+watch(
+    () => [controller.filters.page, controller.filters.pageSize],
+    () => {
+        void loadDevices();
+    },
+);
+
+// 筛选条件（搜索词/类型/状态/房间）防抖加载：输入停止 250ms 后才请求，
+// 并通过 AbortSignal 取消旧请求，避免快速连续筛选时旧数据覆盖新数据。
 watch(
     () => [
-        controller.filters.page,
-        controller.filters.pageSize,
         controller.filters.keyword,
         controller.filters.type,
         controller.filters.status,
         controller.filters.room,
     ],
     () => {
-        void loadDevices();
+        controller.loadDevicesDebounced();
     },
 );
 
