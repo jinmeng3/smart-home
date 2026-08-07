@@ -25,6 +25,7 @@ class DeviceCreate(BaseModel):
     device_id: str | None = Field(default=None, min_length=1, max_length=64)
     firmware: str = Field(default="1.0.0", min_length=1, max_length=64)
     icon: str = "device-management"
+    color: str = Field(default="#6b7280", min_length=1, max_length=16)
     image_url: str | None = Field(default=None, max_length=255)
 
     @field_validator(
@@ -35,6 +36,7 @@ class DeviceCreate(BaseModel):
         "device_id",
         "firmware",
         "icon",
+        "color",
         "image_url",
         mode="before",
     )
@@ -52,6 +54,7 @@ class DeviceUpdate(BaseModel):
     connection: DevicePlatform | None = None
     firmware: str | None = Field(default=None, min_length=1, max_length=64)
     icon: str | None = Field(default=None, min_length=1, max_length=64)
+    color: str | None = Field(default=None, min_length=1, max_length=16)
     image_url: str | None = Field(default=None, max_length=255)
 
     @field_validator(

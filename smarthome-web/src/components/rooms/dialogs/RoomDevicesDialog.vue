@@ -1,20 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
-import { getRoomDevices } from "../../../api/room";
-import { getDeviceTypeIcon } from "../../device/deviceMeta";
+import { getRoomDevices, updateRoomDevice } from "../../../api/room";
 import type { Room, RoomDeviceListItem } from "../../../types/room";
 
-interface DeviceInfo {
-    name: string;
-    type: string;
-    status: "online" | "offline" | "warning";
-    detail: string;
-    updatedAt: string;
-    icon: string;
-    id: string;
-}
+const router = useRouter();
 
 const props = defineProps<{
     modelValue: boolean;
@@ -35,26 +28,26 @@ const description = computed(
 );
 
 // 设备数据（从后端加载）
-const devices = ref<DeviceInfo[]>([]);
+const devices = ref<RoomDeviceListItem[]>([]);
+const togglingIds = ref<Set<number>>(new Set());
 const loading = ref(false);
-const deviceTypeOptions = ["灯光", "影音", "环境", "窗帘", "电源", "传感器", "安防"];
 const deviceStatusOptions = [
+    { value: "", label: "全部状态" },
     { value: "online", label: "在线" },
     { value: "offline", label: "离线" },
     { value: "warning", label: "告警" },
 ];
 
-// 从后端加载房间设备
+// 从后端加载房间设备（仅发送 keyword 和 status，分组筛选由前端处理）
 const loadDevices = async () => {
     if (!props.room) return;
     loading.value = true;
     try {
         const response = await getRoomDevices(props.room.id, {
             keyword: deviceKeyword.value || undefined,
-            type: deviceTypeFilter.value || undefined,
             status: deviceStatusFilter.value || undefined,
         });
-        devices.value = response.items.map(mapToDeviceInfo);
+        devices.value = response.items;
     } catch (e) {
         console.error("加载房间设备失败", e);
         devices.value = [];
@@ -62,16 +55,6 @@ const loadDevices = async () => {
         loading.value = false;
     }
 };
-
-const mapToDeviceInfo = (item: RoomDeviceListItem): DeviceInfo => ({
-    id: String(item.id),
-    name: item.name,
-    type: item.group, // 所属分组
-    status: item.status as "online" | "offline" | "warning",
-    detail: item.brand || "",
-    updatedAt: "",
-    icon: getDeviceTypeIcon(item.type),
-});
 
 // 对话框打开时加载设备数据
 watch(
@@ -81,11 +64,34 @@ watch(
             loadDevices();
         }
     },
+    { immediate: true },
 );
 
-const deviceCount = computed(() => props.room?.deviceCount ?? 0);
-const onlineCount = computed(() => props.room?.onlineCount ?? 0);
-const groupCount = 6;
+// 搜索/筛选条件变化时重新从后端加载（防抖）
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+watch(
+    () => [deviceKeyword.value, deviceTypeFilter.value, deviceStatusFilter.value],
+    () => {
+        if (!props.modelValue) return;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            loadDevices();
+        }, 300);
+    },
+);
+
+const deviceCount = computed(() => devices.value.length);
+const onlineCount = computed(() => devices.value.filter((d) => d.status === "online" || d.status === "running").length);
+const groupCount = computed(() => {
+    const groups = new Set(devices.value.map((d) => d.group));
+    return groups.size;
+});
+
+// 从设备数据中推导分组选项
+const deviceTypeOptions = computed(() => {
+    const groups = new Set(devices.value.map((d) => d.group));
+    return ["", ...groups].filter(Boolean);
+});
 
 const filteredDevices = computed(() => {
     const keyword = deviceKeyword.value.trim().toLowerCase();
@@ -96,7 +102,7 @@ const filteredDevices = computed(() => {
         if (keyword && !device.name.toLowerCase().includes(keyword)) {
             return false;
         }
-        if (type && device.type !== type) {
+        if (type && device.group !== type) {
             return false;
         }
         if (status && device.status !== status) {
@@ -116,6 +122,42 @@ const statusClass: Record<string, string> = {
     online: "status-online",
     offline: "status-offline",
     warning: "status-warning",
+};
+
+const formatTime = (value: string): string => {
+    if (!value) return "暂无";
+    const time = new Date(value);
+    if (Number.isNaN(time.getTime())) return value;
+    const now = new Date();
+    const diffMin = Math.floor((now.getTime() - time.getTime()) / 60000);
+    if (diffMin < 1) return "刚刚";
+    if (diffMin < 60) return `${diffMin} 分钟前`;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const clock = `${pad(time.getHours())}:${pad(time.getMinutes())}`;
+    if (time.toDateString() === now.toDateString()) return `今天 ${clock}`;
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (time.toDateString() === yesterday.toDateString()) return `昨天 ${clock}`;
+    return `${pad(time.getMonth() + 1)}-${pad(time.getDate())} ${clock}`;
+};
+
+const toggleDevice = async (device: RoomDeviceListItem) => {
+    if (!props.room) return;
+    togglingIds.value = new Set([...togglingIds.value, device.id]);
+    const newStatus = device.status === "online" || device.status === "running" ? "offline" : "online";
+    try {
+        await updateRoomDevice(props.room.id, device.id, newStatus);
+        devices.value = devices.value.map((d) =>
+            d.id === device.id ? { ...d, status: newStatus } : d,
+        );
+        ElMessage.success(`${device.name} 已${newStatus === "online" ? "开启" : "关闭"}`);
+    } catch (e) {
+        ElMessage.error(e instanceof Error ? e.message : "操作失败");
+    } finally {
+        const next = new Set(togglingIds.value);
+        next.delete(device.id);
+        togglingIds.value = next;
+    }
 };
 
 const close = () => emit("update:modelValue", false);
@@ -150,7 +192,7 @@ const close = () => emit("update:modelValue", false);
                     </div>
                 </div>
                 <div class="stat-card stat-card-online">
-                    <span class="stat-icon"><SvgIcon name="check" size="sm" /></span>
+                    <span class="stat-icon"><SvgIcon name="online-device" size="sm" /></span>
                     <div class="stat-body">
                         <span class="stat-label">在线设备</span>
                         <strong class="stat-value">{{ onlineCount }} <span class="stat-unit">/ {{ deviceCount }}</span></strong>
@@ -185,22 +227,12 @@ const close = () => emit("update:modelValue", false);
                     </button>
                 </div>
                 <select v-model="deviceTypeFilter" class="filter-select">
-                    <option value="">全部类型</option>
+                    <option value="">全部分组</option>
                     <option v-for="type in deviceTypeOptions" :key="type" :value="type">{{ type }}</option>
                 </select>
                 <select v-model="deviceStatusFilter" class="filter-select">
-                    <option value="">全部状态</option>
                     <option v-for="opt in deviceStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
-                <button type="button" class="toolbar-btn toolbar-btn-primary" title="批量开关">
-                    <SvgIcon name="power" size="sm" />批量开关
-                </button>
-                <button type="button" class="toolbar-btn" title="分组管理">
-                    <SvgIcon name="group" size="sm" />分组管理
-                </button>
-                <button type="button" class="toolbar-btn" title="设为常用">
-                    <SvgIcon name="check" size="sm" />设为常用
-                </button>
             </div>
 
             <!-- Device table -->
@@ -209,7 +241,7 @@ const close = () => emit("update:modelValue", false);
                     <span>设备名称</span>
                     <span>所属分组</span>
                     <span>当前状态</span>
-                    <span>电量 / 模式</span>
+                    <span>品牌</span>
                     <span>更新时间</span>
                     <span>快捷操作</span>
                 </div>
@@ -240,28 +272,36 @@ const close = () => emit("update:modelValue", false);
                     tabindex="0"
                 >
                     <span class="cell-name">
-                        <span class="device-icon"><SvgIcon :name="device.icon" size="sm" /></span>
+                      <span class="device-icon" :style="{ '--device-color': device.color || '#6b7280' }"><SvgIcon :name="device.icon || 'device-management'" size="sm" /></span>
                         {{ device.name }}
                     </span>
-                    <span class="cell-type">{{ device.type }}</span>
+                    <span class="cell-type">{{ device.group }}</span>
                     <span :class="['status-badge', statusClass[device.status]]">
-                        {{ statusLabel[device.status] }}
+                        {{ statusLabel[device.status] ?? device.status }}
                     </span>
-                    <span class="cell-detail">{{ device.detail }}</span>
-                    <span class="cell-time">{{ device.updatedAt }}</span>
+                    <span class="cell-detail">{{ device.brand || "—" }}</span>
+                    <span class="cell-time">{{ formatTime(device.updatedAt) }}</span>
                     <span class="cell-actions">
                         <button
                             type="button"
                             class="action-btn"
-                            :title="device.status === 'online' ? '关闭设备' : '开启设备'"
+                            :class="{ 'is-on': device.status === 'online' || device.status === 'running' }"
+                            :disabled="togglingIds.has(device.id)"
+                            :title="(device.status === 'online' || device.status === 'running') ? '关闭设备' : '开启设备'"
+                            @click="toggleDevice(device)"
                         >
                             <SvgIcon name="power" size="sm" />
                         </button>
-                        <button type="button" class="action-btn" title="更多操作">
+                        <button type="button" class="action-btn" title="前往设备管理" @click="close(); router.push('/devices')">
                             <SvgIcon name="more" size="sm" />
                         </button>
                     </span>
                 </div>
+            </div>
+
+            <div class="table-footer">
+                共 <strong>{{ filteredDevices.length }}</strong> 个设备
+                <span v-if="filteredDevices.length !== devices.length">（筛选自 {{ devices.length }} 个）</span>
             </div>
         </div>
     </BaseSmartModal>
@@ -375,24 +415,24 @@ const close = () => emit("update:modelValue", false);
     display: flex;
     flex: 1 1 200px;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-width: 120px;
-    height: 36px;
+    height: 40px;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--color-card-bg);
-    padding: 0 8px;
-    transition: border-color 0.15s;
+    padding: 0 10px;
+    transition: border-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
 }
 
 .search-box:focus-within {
-    border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 2px var(--color-focus-ring);
+    border-color: var(--color-primary-400);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .search-icon {
     flex-shrink: 0;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-muted);
     pointer-events: none;
 }
 
@@ -400,44 +440,57 @@ const close = () => emit("update:modelValue", false);
     flex: 1;
     min-width: 0;
     height: 100%;
-    border: none;
-    background: none;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     padding: 0;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: none !important;
     outline: none;
     color: var(--color-text-primary);
 }
 
+.search-box input:focus,
+.search-box input:focus-visible {
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
 .search-box input::placeholder {
     color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .search-clear {
     display: grid;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     place-items: center;
     border: none;
     border-radius: 50%;
-    background: var(--color-border);
-    color: var(--color-card-bg);
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 0;
-    transition: background 0.12s;
+    transition: background 180ms var(--motion-ease);
 }
 
 .search-clear:hover {
-    background: var(--color-text-tertiary);
+    background: var(--color-border);
+    color: var(--color-text-secondary);
 }
 
 .filter-select {
     width: 110px;
-    height: 36px;
+    height: 40px;
     min-height: 0;
     flex-shrink: 0;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--color-card-bg);
     padding: 0 10px;
     font-size: 13px;
@@ -455,20 +508,21 @@ const close = () => emit("update:modelValue", false);
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    height: 36px;
+    height: 40px;
     flex-shrink: 0;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--color-card-bg);
-    padding: 0 12px;
-    font-size: 12px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 700;
     color: var(--color-text-primary);
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 180ms var(--motion-ease), border-color 180ms var(--motion-ease);
 }
 
 .toolbar-btn:hover {
-    background: var(--color-surface-subtle);
+    background: var(--color-surface-hover);
     border-color: var(--color-primary-300);
 }
 
@@ -481,7 +535,6 @@ const close = () => emit("update:modelValue", false);
 .toolbar-btn-primary:hover {
     background: var(--color-primary-500);
     border-color: var(--color-primary-500);
-    color: #fff;
 }
 
 /* ===== Device table ===== */
@@ -529,6 +582,24 @@ const close = () => emit("update:modelValue", false);
     box-shadow: inset 0 0 0 2px var(--color-focus-ring);
 }
 
+.table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--color-border-subtle);
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+.table-footer strong {
+    color: var(--color-text-secondary);
+}
+.table-footer span {
+    color: var(--color-text-muted);
+}
+
 @keyframes row-fade-in {
     from {
         opacity: 0;
@@ -554,8 +625,8 @@ const close = () => emit("update:modelValue", false);
     flex-shrink: 0;
     place-items: center;
     border-radius: 7px;
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
 }
 
 .cell-type {
@@ -620,6 +691,23 @@ const close = () => emit("update:modelValue", false);
     background: var(--color-primary-50);
     color: var(--color-primary-600);
     border-color: var(--color-primary-300);
+}
+
+.action-btn.is-on {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+    border-color: var(--color-primary-200);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+    background: transparent;
+    color: var(--color-text-tertiary);
+    border-color: var(--color-border);
 }
 
 /* ===== Loading skeleton ===== */

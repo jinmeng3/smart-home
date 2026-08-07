@@ -182,6 +182,8 @@ watch(
                 roomForm.name = props.room.name;
                 roomForm.floor = props.room.floor;
                 roomForm.roomType = props.room.roomType;
+                selectedIcon.value = props.room.icon || "room";
+                selectedColor.value = props.room.themeColor || "#2563eb";
             } else {
                 roomForm.name = "";
                 roomForm.floor = "1F";
@@ -214,12 +216,6 @@ const confirm = () => {
     }
     close();
 };
-
-const preferenceItems = [
-    { label: "常用设备置顶", desc: "在房间卡片中优先显示常用设备" },
-    { label: "显示环境卡片", desc: "在房间卡片中显示温湿度等环境数据" },
-    { label: "显示场景快捷入口", desc: "在房间卡片中显示场景切换入口" },
-] as const;
 
 const roomTypeColorMap: Record<string, string> = {
     living: "var(--color-primary-500)",
@@ -282,7 +278,7 @@ const roomTypeBgMap: Record<string, string> = {
                         </label>
                         <label class="field">
                             <span class="field-label">
-                                <SvgIcon name="layers" size="sm" />
+                                <SvgIcon name="home" size="sm" />
                                 楼层 / 区域
                             </span>
                             <div class="input-wrap">
@@ -432,8 +428,8 @@ const roomTypeBgMap: Record<string, string> = {
                             "
                             @dragend="handleDragEnd"
                         >
-                            <span class="device-icon">
-                                <SvgIcon :name="getDeviceTypeIcon(item.type)" size="sm" />
+                            <span class="device-icon" :style="{ '--device-color': item.color || '#6b7280' }">
+                                <SvgIcon :name="item.icon || getDeviceTypeIcon(item.type)" size="sm" />
                             </span>
                             <span class="device-name">{{ item.name }}</span>
                             <span class="device-check">
@@ -444,30 +440,6 @@ const roomTypeBgMap: Record<string, string> = {
                         </button>
                     </div>
                 </div>
-
-                <!-- 快捷控制偏好（仅编辑模式） -->
-                <section v-if="mode === 'edit'" class="section-card">
-                    <div class="section-head">
-                        <span class="section-head-icon"><SvgIcon name="automation" size="sm" /></span>
-                        <span>快捷控制偏好</span>
-                    </div>
-                    <div class="pref-list">
-                        <label
-                            v-for="item in preferenceItems"
-                            :key="item.label"
-                            class="pref-item"
-                        >
-                            <span class="pref-text">
-                                {{ item.label }}
-                                <small>{{ item.desc }}</small>
-                            </span>
-                            <span class="toggle-switch">
-                                <input type="checkbox" checked />
-                                <span class="toggle-track" />
-                            </span>
-                        </label>
-                    </div>
-                </section>
                 </div>
             </section>
 
@@ -509,9 +481,9 @@ const roomTypeBgMap: Record<string, string> = {
                             type="button"
                             class="on"
                         >
-                            <i>
+                            <i :style="{ '--device-color': device.color || '#6b7280' }">
                                 <SvgIcon
-                                    :name="getDeviceTypeIcon(device.type)"
+                                    :name="device.icon || getDeviceTypeIcon(device.type)"
                                     size="sm"
                                 />
                             </i>
@@ -547,20 +519,26 @@ const roomTypeBgMap: Record<string, string> = {
    ============================================= */
 .room-editor {
     display: grid;
+    height: min(520px, calc(100vh - 260px));
+    min-height: 0;
     grid-template-columns: 1.4fr 1fr;
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
+    overflow: hidden;
 }
 
 .editor-form {
     display: flex;
+    min-height: 0;
     flex-direction: column;
     gap: 16px;
 }
 
 .editor-form-scroll {
+    height: 100%;
+    min-height: 0;
     overflow-y: auto;
-    max-height: 520px;
+    max-height: none;
     padding-right: 4px;
     scroll-behavior: smooth;
 }
@@ -888,6 +866,23 @@ const roomTypeBgMap: Record<string, string> = {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    max-height: 98px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
+}
+
+.icon-grid::-webkit-scrollbar {
+    width: 5px;
+}
+
+.icon-grid::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: var(--color-border);
+}
+
+.icon-grid::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .icon-grid button {
@@ -994,6 +989,23 @@ const roomTypeBgMap: Record<string, string> = {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
+}
+
+.device-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.device-grid::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: var(--color-border);
+}
+
+.device-grid::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .device-grid button {
@@ -1064,17 +1076,16 @@ const roomTypeBgMap: Record<string, string> = {
     height: 28px;
     place-items: center;
     border-radius: 7px;
-    background: var(--color-card-bg);
-    border: 1px solid var(--color-border);
-    transition: all 220ms var(--motion-ease);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
     flex-shrink: 0;
-    color: var(--color-text-tertiary);
+    transition: all 220ms var(--motion-ease);
 }
 
 .device-grid button.active .device-icon {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-100);
-    color: var(--color-primary-600);
+    border-color: color-mix(in srgb, var(--device-color, #6b7280) 30%, transparent);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 20%, transparent);
+    color: var(--device-color, #6b7280);
 }
 
 .device-name {
@@ -1108,97 +1119,13 @@ const roomTypeBgMap: Record<string, string> = {
 }
 
 /* =============================================
-   快捷控制偏好（编辑模式）
-   ============================================= */
-.pref-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.pref-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 8px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background 180ms var(--motion-ease);
-}
-
-.pref-item + .pref-item {
-    border-top: 1px solid var(--color-border-subtle);
-}
-
-.pref-item:hover {
-    background: var(--color-surface-hover);
-}
-
-.pref-text {
-    font-size: 14px;
-    line-height: 1.3;
-    user-select: none;
-}
-
-.pref-text small {
-    display: block;
-    font-size: 11px;
-    color: var(--color-text-tertiary);
-    margin-top: 2px;
-}
-
-/* 自定义 toggle switch */
-.toggle-switch {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    width: 38px;
-    height: 22px;
-    flex-shrink: 0;
-}
-
-.toggle-switch input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.toggle-track {
-    width: 100%;
-    height: 100%;
-    border-radius: 11px;
-    background: var(--color-border);
-    transition: background 250ms var(--motion-ease);
-    cursor: pointer;
-    position: relative;
-}
-
-.toggle-track::after {
-    content: "";
-    position: absolute;
-    left: 2px;
-    top: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-}
-
-.toggle-switch input:checked + .toggle-track {
-    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
-}
-
-.toggle-switch input:checked + .toggle-track::after {
-    transform: translateX(16px);
-}
-
-/* =============================================
    右侧预览面板
    ============================================= */
 .room-preview {
+    position: static;
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
     flex-direction: column;
     gap: 14px;
     border: 1px solid var(--color-border);
@@ -1209,8 +1136,7 @@ const roomTypeBgMap: Record<string, string> = {
         var(--color-surface-subtle) 100%
     );
     padding: 20px;
-    align-self: stretch;
-    justify-content: space-between;
+    align-self: center;
     transition: border-color 220ms var(--motion-ease);
 }
 
@@ -1449,7 +1375,8 @@ const roomTypeBgMap: Record<string, string> = {
     height: 28px;
     place-items: center;
     border-radius: 8px;
-    background: var(--color-card-bg);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
     font-style: normal;
     transition: background 180ms var(--motion-ease);
 }
@@ -1556,11 +1483,18 @@ const roomTypeBgMap: Record<string, string> = {
    ============================================= */
 @media (max-width: 900px) {
     .room-editor {
+        height: auto;
         grid-template-columns: 1fr;
+        overflow: visible;
     }
 
     .room-preview {
         position: static;
+    }
+
+    .editor-form-scroll {
+        height: auto;
+        max-height: 520px;
     }
 
     .field-row {

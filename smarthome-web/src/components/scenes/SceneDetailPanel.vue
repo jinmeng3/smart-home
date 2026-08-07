@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import type { Scene } from "../../types/scene";
+import { fetchSceneTemplates } from "../../api/scenes";
+import type { Scene, SceneTemplate } from "../../types/scene";
 
 const props = defineProps<{
     scene: Scene | null;
@@ -60,12 +61,17 @@ const detailRows = computed(() => {
     ];
 });
 
-const templates = [
-    { name: "浪漫晚餐模式", count: 6, icon: "light" },
-    { name: "聚会模式", count: 7, icon: "group" },
-    { name: "学习模式", count: 5, icon: "room" },
-    { name: "午休模式", count: 4, icon: "clock" },
-];
+const templates = ref<SceneTemplate[]>([]);
+
+onMounted(async () => {
+    try {
+        const all = await fetchSceneTemplates("", "");
+        templates.value = all.filter((t) => t.recommended).slice(0, 4);
+        if (!templates.value.length) templates.value = all.slice(0, 4);
+    } catch {
+        templates.value = [];
+    }
+});
 
 const actions = [
     {
@@ -188,7 +194,7 @@ const actions = [
             <div class="scene-template-list">
                 <button
                     v-for="item in templates"
-                    :key="item.name"
+                    :key="item.id"
                     type="button"
                     @click="$emit('template', item.name)"
                 >
@@ -197,7 +203,7 @@ const actions = [
                     /></span>
                     <span>
                         <strong>{{ item.name }}</strong>
-                        <small>{{ item.count }} 个设备</small>
+                        <small>{{ item.deviceCount }} 个设备</small>
                     </span>
                     <em>使用</em>
                 </button>

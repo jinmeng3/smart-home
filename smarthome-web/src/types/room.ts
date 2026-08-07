@@ -4,11 +4,15 @@ export interface Room {
   floor: string;
   roomType: string;
   imageUrl?: string | null;
+  icon: string;
+  themeColor: string;
+  version: number;
   area: number;
   comfort: number;
   deviceCount: number;
   onlineCount: number;
   updatedAt: string;
+  device: RoomDeviceListItem[];
 }
 
 export interface RoomListResponse {
@@ -17,10 +21,13 @@ export interface RoomListResponse {
 }
 
 export interface RoomDeviceCard {
+  id: number;
   key: string;
   icon: string;
+  color?: string;
   name: string;
   detail: string;
+  status: "online" | "offline" | "warning" | "running";
 }
 
 // ── 添加/编辑房间 ────────────────────────────────────────────────────────────────
@@ -50,9 +57,12 @@ export interface RoomDeviceListItem {
   type: string;
   brand: string;
   status: string;
+  icon: string;
+  color: string;
   group: string;
   favorite: boolean;
   sortOrder: number;
+  updatedAt: string;
 }
 
 export interface RoomDeviceListResponse {

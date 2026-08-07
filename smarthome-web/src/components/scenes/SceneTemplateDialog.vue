@@ -18,7 +18,13 @@ const keyword = ref("");
 const activeCategory = ref("全部");
 const loading = ref(false);
 const loadError = ref("");
-const categories = ["全部", "娱乐", "安防", "睡眠", "学习"];
+
+const categories = computed(() => {
+    const found = Array.from(
+        new Set(sceneTemplates.value.map((template) => template.category).filter(Boolean)),
+    );
+    return ["全部", ...found];
+});
 
 const categoryCounts = computed(() => {
     const counts: Record<string, number> = { "全部": sceneTemplates.value.length };

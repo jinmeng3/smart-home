@@ -41,6 +41,17 @@ const emit = defineEmits<{
 }>();
 
 const platforms = devicePlatformOptions;
+
+const deviceColors = [
+  { value: "#6b7280", label: "灰色" },
+  { value: "#3b82f6", label: "蓝色" },
+  { value: "#22c55e", label: "绿色" },
+  { value: "#f59e0b", label: "橙色" },
+  { value: "#ef4444", label: "红色" },
+  { value: "#8b5cf6", label: "紫色" },
+  { value: "#14b8a6", label: "青色" },
+  { value: "#ec4899", label: "粉色" },
+];
 const form = reactive<DeviceCreatePayload>({
   name: "",
   room: "",
@@ -49,6 +60,7 @@ const form = reactive<DeviceCreatePayload>({
   connection: "Home Assistant",
   firmware: "1.0.0",
   icon: "light",
+  color: "#6b7280",
   imageUrl: "",
 });
 const imagePreviewUrl = ref("");
@@ -87,6 +99,7 @@ const resetForm = () => {
     form.connection = props.device?.connection ?? "Home Assistant";
     form.firmware = props.device?.firmware ?? "1.0.0";
     form.icon = props.device?.icon ?? getDeviceTypeIcon(props.device?.type ?? "light");
+    form.color = props.device?.color ?? "#6b7280";
     form.imageUrl = props.device?.image ?? "";
     imagePreviewUrl.value = props.device?.image ?? "";
     imageFileName.value = props.device?.image ? "已上传设备图片" : "";
@@ -146,6 +159,7 @@ const submit = async () => {
         brand: form.brand.trim(),
         firmware: form.firmware?.trim() || "1.0.0",
         icon: form.icon?.trim() || getDeviceTypeIcon(form.type),
+        color: form.color?.trim() || "#6b7280",
         imageUrl: form.imageUrl?.trim() || undefined,
     });
 };
@@ -363,6 +377,25 @@ onBeforeUnmount(releasePreviewUrl);
                                     @click="form.icon = item.value"
                                 >
                                     <SvgIcon :name="item.value" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="device-icon-picker">
+                            <span class="device-type-label">设备颜色</span>
+                            <div class="icon-grid">
+                                <button
+                                    v-for="c in deviceColors"
+                                    :key="c.value"
+                                    type="button"
+                                    :class="{ active: form.color === c.value }"
+                                    class="color-dot"
+                                    :style="{ '--dot-color': c.value }"
+                                    :title="c.label"
+                                    @click="form.color = c.value"
+                                >
+                                    <svg v-if="form.color === c.value" viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                                        <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -778,6 +811,41 @@ onBeforeUnmount(releasePreviewUrl);
 .device-icon-grid svg {
     width: 16px;
     height: 16px;
+}
+
+/* ── 颜色选择器 ── */
+
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 6px;
+    padding: 2px;
+}
+
+.color-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: var(--dot-color);
+    color: #fff;
+    cursor: pointer;
+    transition: all 160ms var(--motion-ease);
+    padding: 0;
+}
+
+.color-dot:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-dot.active {
+    border-color: var(--color-text-primary);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+    transform: scale(1.1);
 }
 
 /* ── 表单字段 ── */

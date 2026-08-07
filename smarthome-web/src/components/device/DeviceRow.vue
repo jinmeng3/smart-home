@@ -44,7 +44,7 @@ defineEmits<{
             <div class="device-name-cell">
                 <span
                     class="device-thumb"
-                    :class="`is-${device.type}`"
+                    :style="{ '--device-color': device.color || '#6b7280' }"
                     aria-hidden="true"
                 >
                     <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="sm" />
@@ -126,44 +126,9 @@ defineEmits<{
     height: 28px;
     place-items: center;
     border-radius: 7px;
-    background: linear-gradient(
-        180deg,
-        var(--color-card-bg),
-        var(--color-primary-50)
-    );
-    color: var(--color-primary-700);
-    font-size: 12px;
-    font-weight: 900;
-    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-}
-
-.device-thumb.is-light {
-    background: var(--color-warning-soft);
-    color: var(--color-device-light);
-}
-.device-thumb.is-air_conditioner {
-    background: var(--color-info-soft);
-    color: var(--color-device-climate);
-}
-.device-thumb.is-lock {
-    background: var(--color-surface-subtle);
-    color: var(--color-device-lock);
-}
-.device-thumb.is-camera {
-    background: var(--color-device-camera-soft);
-    color: var(--color-device-camera);
-}
-.device-thumb.is-sensor {
-    background: var(--color-success-soft);
-    color: var(--color-device-air);
-}
-.device-thumb.is-socket {
-    background: var(--color-teal-soft);
-    color: var(--color-device-energy);
-}
-.device-thumb.is-curtain {
-    background: var(--color-teal-soft);
-    color: var(--color-teal-600);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
+    flex-shrink: 0;
 }
 
 .device-checkbox {

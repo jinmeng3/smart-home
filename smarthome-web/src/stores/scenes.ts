@@ -56,6 +56,10 @@ export const useScenesStore = defineStore("scenes", () => {
         automation: summary.value?.automation ?? 0,
         manual: summary.value?.manual ?? 0,
         monthlyExecutions: summary.value?.monthlyExecutions ?? 0,
+        enabledRate: summary.value?.enabledRate ?? 0,
+        automationRate: summary.value?.automationRate ?? 0,
+        manualRate: summary.value?.manualRate ?? 0,
+        monthlyGrowthRate: summary.value?.monthlyGrowthRate ?? 0,
     }));
 
     const loadScenes = async () => {

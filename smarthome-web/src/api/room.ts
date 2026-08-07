@@ -38,11 +38,11 @@ export const updateRoom = (roomId: number, payload: RoomInput) =>
 
 export const updateRoomDevice = (
   roomId: number,
-  device: string,
-  value: boolean | number | string,
+  deviceId: number,
+  status: string,
 ) => apiRequest<Room>(`/api/rooms/${roomId}/device`, {
   method: "PATCH",
-  body: JSON.stringify({ device, value }),
+  body: JSON.stringify({ device_id: deviceId, status }),
 });
 
 export const runRoomQuickAction = (roomId: number, action: string) =>
@@ -172,3 +172,10 @@ export const fetchRoomDetail = (roomId: number) =>
 
 export const fetchRoomStats = () =>
   apiRequest<RoomStats>("/api/rooms/stats");
+
+// ── 房间删除 ────────────────────────────────────────────────────────────────────
+
+export const deleteRoom = (roomId: number) =>
+  apiRequest<Room>(`/api/rooms/${roomId}`, {
+    method: "DELETE",
+  });

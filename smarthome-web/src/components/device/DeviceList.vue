@@ -171,7 +171,7 @@ const viewMode = ref<"list" | "grid">("list");
                     <header>
                         <span
                             class="device-grid-icon"
-                            :class="`is-${device.type}`"
+                            :style="{ '--device-color': device.color || '#6b7280' }"
                             aria-hidden="true"
                         >
                             <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" />
@@ -494,42 +494,10 @@ const viewMode = ref<"list" | "grid">("list");
     height: 38px;
     place-items: center;
     border-radius: 8px;
-    background: linear-gradient(
-        180deg,
-        var(--color-card-bg),
-        var(--color-primary-50)
-    );
-    color: var(--color-primary-700);
-    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
-}
-
-.device-grid-icon.is-light {
-    background: var(--color-warning-soft);
-    color: var(--color-device-light);
-}
-.device-grid-icon.is-air_conditioner {
-    background: var(--color-info-soft);
-    color: var(--color-device-climate);
-}
-.device-grid-icon.is-lock {
-    background: var(--color-surface-subtle);
-    color: var(--color-device-lock);
-}
-.device-grid-icon.is-camera {
-    background: var(--color-device-camera-soft);
-    color: var(--color-device-camera);
-}
-.device-grid-icon.is-sensor {
-    background: var(--color-success-soft);
-    color: var(--color-device-air);
-}
-.device-grid-icon.is-socket {
-    background: var(--color-teal-soft);
-    color: var(--color-device-energy);
-}
-.device-grid-icon.is-curtain {
-    background: var(--color-teal-soft);
-    color: var(--color-teal-600);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
+    flex-shrink: 0;
+    transition: 160ms var(--motion-ease);
 }
 
 .device-grid-main {

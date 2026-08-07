@@ -25,6 +25,7 @@ export interface Device {
   connection: DevicePlatform;
   firmware: string;
   icon?: string;
+  color?: string;
   lastOnline: string;
   image?: string;
 }
@@ -68,6 +69,7 @@ export interface DeviceCreatePayload {
   deviceId?: string;
   firmware?: string;
   icon?: string;
+  color?: string;
   imageUrl?: string;
 }
 
@@ -80,6 +82,7 @@ export interface DeviceUpdatePayload {
   connection?: DevicePlatform;
   firmware?: string;
   icon?: string;
+  color?: string;
   imageUrl?: string;
 }
 

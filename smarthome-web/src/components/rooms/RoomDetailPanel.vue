@@ -45,7 +45,7 @@ defineEmits<{
                 </div>
                 <dl>
                     <div class="field-row">
-                        <dt><SvgIcon name="more" size="sm" />所在楼层</dt>
+                        <dt><SvgIcon name="home" size="sm" />所在楼层</dt>
                         <dd class="tone-primary">{{ room.floor }}</dd>
                     </div>
                     <div class="field-row">

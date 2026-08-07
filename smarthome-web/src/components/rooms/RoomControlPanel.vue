@@ -77,15 +77,15 @@ const selectCategory = (name: string) => {
                 <div class="device-grid">
                     <article
                         v-for="device in devices"
-                        :key="device.name"
+                        :key="device.id"
                         class="device-card"
                         :class="{
                             featured: device.key === 'airConditioner',
-                            disabled: false,
+                            disabled: device.status === 'offline',
                         }"
                     >
                         <header>
-                            <span class="device-icon">
+                            <span class="device-icon" :style="{ '--device-color': device.color || '#6b7280' }">
                                 <SvgIcon :name="device.icon" size="sm" />
                             </span>
                             <div>
@@ -94,7 +94,7 @@ const selectCategory = (name: string) => {
                             </div>
                             <button
                                 class="switch"
-                                :class="{ enabled: false }"
+                                :class="{ enabled: device.status === 'online' || device.status === 'running' }"
                                 :aria-label="`切换${device.name}`"
                                 type="button"
                                 @click="$emit('toggle', device)"
@@ -334,8 +334,8 @@ const selectCategory = (name: string) => {
     height: 36px;
     place-items: center;
     border-radius: 10px;
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
+    background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
+    color: var(--device-color, #6b7280);
 }
 
 .device-card header div {

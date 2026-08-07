@@ -30,7 +30,7 @@ defineEmits<{
                     type="button"
                     @click="$emit('preview')"
                 >
-                    <SvgIcon name="power" /> 预览执行
+                    <SvgIcon name="eye" /> 预览动作链
                 </button>
             </div>
         </header>

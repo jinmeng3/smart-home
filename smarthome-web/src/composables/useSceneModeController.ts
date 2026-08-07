@@ -5,6 +5,7 @@ import type { useScenesStore } from "../stores/scenes";
 import type {
     Scene,
     SceneInput,
+    ScenePreview,
     SceneTemplate,
 } from "../types/scene";
 
@@ -21,6 +22,9 @@ export const useSceneModeController = (store: ScenesStore) => {
     const riskConfirmOpen = ref(false);
     const riskScene = ref<Scene | null>(null);
     let riskResolver: ((value: boolean) => void) | null = null;
+    const previewOpen = ref(false);
+    const previewLoading = ref(false);
+    const previewResult = ref<ScenePreview | null>(null);
 
     const openCreateDialog = () => {
         editingScene.value = null;
@@ -112,6 +116,30 @@ export const useSceneModeController = (store: ScenesStore) => {
             ElMessage.error(error instanceof Error ? error.message : "场景预览失败");
             return null;
         }
+    };
+
+    /** 拉取场景动作链预览并打开预览弹窗，不实际控制设备。 */
+    const previewScene = async (scene: Scene) => {
+        previewResult.value = null;
+        previewLoading.value = true;
+        previewOpen.value = true;
+
+        try {
+            const preview = await previewSceneSteps(scene);
+            if (!preview) return;
+            previewResult.value = preview;
+
+            if (preview.highRisk) {
+                ElMessage.warning("该场景包含高风险动作，执行前将再次确认");
+            }
+        } finally {
+            previewLoading.value = false;
+        }
+    };
+
+    const closePreview = () => {
+        previewOpen.value = false;
+        previewResult.value = null;
     };
 
     const loadSceneLogs = async (scene: Scene) => {
@@ -224,7 +252,12 @@ export const useSceneModeController = (store: ScenesStore) => {
         openCreateDialog,
         openEditDialog,
         openTemplateDialog,
+        previewScene,
         previewSceneSteps,
+        previewOpen,
+        previewLoading,
+        previewResult,
+        closePreview,
         removeScene,
         requestHighRiskConfirm,
         resolveRiskConfirm,

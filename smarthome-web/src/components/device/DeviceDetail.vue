@@ -48,7 +48,7 @@ const platformToneMap: Record<string, string> = {
 
         <div v-if="device" class="device-detail-body">
             <div class="device-summary">
-                <div class="device-image">
+                <div class="device-image" :style="{ '--device-color': device.color || '#6b7280' }">
                     <img v-if="device.image" :src="device.image" alt="" />
                     <span v-else>
                         <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="lg" />
@@ -149,13 +149,9 @@ h2 svg {
     height: 76px;
     place-items: center;
     border-radius: 14px;
-    background: linear-gradient(
-        135deg,
-        var(--color-primary-100),
-        var(--color-primary-50)
-    );
-    box-shadow: 0 6px 16px var(--color-focus-ring);
-    overflow: hidden;
+    background: color-mix(in srgb, var(--device-color, #6b7280) 16%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--device-color, #6b7280) 18%, transparent);
+    color: var(--device-color, #6b7280);
 }
 
 .device-image img {
@@ -165,7 +161,7 @@ h2 svg {
 }
 
 .device-image span {
-    color: var(--color-primary-700);
+    color: var(--device-color, #6b7280);
     font-size: 28px;
     font-weight: 900;
 }

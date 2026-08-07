@@ -10,6 +10,7 @@ class RoomSchema(BaseModel):
             value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
         ),
         populate_by_name=True,
+        from_attributes=True,
     )
 
 
@@ -24,6 +25,7 @@ class RoomRead(RoomSchema):
     version: int = 1
     area: float
     comfort: int
+    device: list["RoomDeviceListItem"] = Field(default_factory=list)
     device_count: int
     online_count: int
     updated_at: datetime
@@ -54,8 +56,8 @@ class RoomListRead(RoomSchema):
 
 
 class RoomDeviceWrite(RoomSchema):
-    device: str = Field(min_length=1, max_length=40)
-    value: bool | int | str
+    device_id: int
+    status: str = Field(min_length=1, max_length=32)
 
 
 class RoomQuickActionWrite(RoomSchema):
@@ -99,9 +101,12 @@ class RoomDeviceListItem(RoomSchema):
     type: str
     brand: str
     status: str
+    icon: str = "device-management"
+    color: str = "#6b7280"
     group: str
     favorite: bool
     sort_order: int
+    updated_at: datetime
 
 
 class RoomDeviceListRead(BaseModel):

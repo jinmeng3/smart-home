@@ -39,25 +39,19 @@ interface FormState {
 }
 
 const defaultForm: FormState = {
-    name: "回家模式",
-    description: "回到家时自动开启舒适环境",
+    name: "",
+    description: "",
     icon: "home",
     color: "var(--color-primary-600)",
     triggerType: "location",
-    triggerLabel: "到达“家”半径 100m",
-    rooms: ["玄关", "客厅", "主卧"],
+    triggerLabel: "",
+    rooms: [],
     enabled: true,
 };
 
 const form = reactive<FormState>({ ...defaultForm });
 
-const defaultActions: ActionItem[] = [
-    { id: "entry-light", icon: "light", name: "打开玄关灯", target: "玄关灯 · 开" },
-    { id: "living-light", icon: "light", name: "客厅灯亮度", target: "客厅灯 · 60%" },
-    { id: "ac", icon: "air-conditioner", name: "空调设置", target: "客厅空调 · 26℃ 制冷" },
-    { id: "curtain", icon: "curtain", name: "窗帘打开", target: "客厅窗帘 · 50%" },
-    { id: "camera", icon: "camera", name: "摄像头切换在家模式", target: "摄像头 · 在家模式" },
-];
+const defaultActions: ActionItem[] = [];
 
 const actions = ref<ActionItem[]>(defaultActions.map((action) => ({ ...action })));
 
@@ -381,7 +375,7 @@ const dialogFooterHint = computed(() =>
                             <button class="select-device" type="button">
                                 <span class="device-count">
                                     <SvgIcon name="device-management" size="sm" />
-                                    共 8 个设备
+                                    共 {{ actions.length }} 个设备
                                 </span>
                                 <SvgIcon name="chevron-right" size="sm" />
                             </button>

@@ -10,6 +10,7 @@ import SceneDetailPanel from "../components/scenes/SceneDetailPanel.vue";
 import SceneFlow from "../components/scenes/SceneFlow.vue";
 import SceneGrid from "../components/scenes/SceneGrid.vue";
 import HighRiskConfirmDialog from "../components/scenes/HighRiskConfirmDialog.vue";
+import ScenePreviewDialog from "../components/scenes/ScenePreviewDialog.vue";
 import SceneStats from "../components/scenes/SceneStats.vue";
 import SceneTemplateDialog from "../components/scenes/SceneTemplateDialog.vue";
 import SceneToolbar from "../components/scenes/SceneToolbar.vue";
@@ -84,9 +85,13 @@ useAuthenticatedLoader(() => void loadScenes());
             <SceneStats
                 v-if="!sceneGridExpanded"
                 :automation="stats.automation"
+                :automation-rate="stats.automationRate"
                 :enabled="stats.enabled"
+                :enabled-rate="stats.enabledRate"
                 :manual="stats.manual"
+                :manual-rate="stats.manualRate"
                 :monthly-executions="stats.monthlyExecutions"
+                :monthly-growth-rate="stats.monthlyGrowthRate"
             />
 
             <div class="scene-grid-wrapper" :class="{ 'is-expanded': sceneGridExpanded }">
@@ -111,7 +116,7 @@ useAuthenticatedLoader(() => void loadScenes());
                     :scene="selectedScene"
                     :step-statuses="stepStatuses"
                     @edit="selectedScene && controller.editScene(selectedScene)"
-                    @preview="selectedScene && controller.runScene(selectedScene)"
+                    @preview="selectedScene && controller.previewScene(selectedScene)"
                 />
             </div>
         </section>
@@ -240,6 +245,13 @@ useAuthenticatedLoader(() => void loadScenes());
             :scene="controller.riskScene.value"
             @confirm="controller.resolveRiskConfirm(true)"
             @update:model-value="controller.resolveRiskConfirm(false)"
+        />
+
+        <ScenePreviewDialog
+            v-model="controller.previewOpen.value"
+            :loading="controller.previewLoading.value"
+            :preview="controller.previewResult.value"
+            @run="selectedScene && (controller.closePreview(), controller.runScene(selectedScene))"
         />
     </div>
 </template>

@@ -1,39 +1,57 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 
-defineProps<{
+const props = defineProps<{
     enabled: number;
     automation: number;
     manual: number;
     monthlyExecutions: number;
+    enabledRate: number;
+    automationRate: number;
+    manualRate: number;
+    monthlyGrowthRate: number;
 }>();
+
+const formatRate = (value: number) => `${Math.round(value)}%`;
+
+const noteFor = computed(() => (key: string) => {
+    switch (key) {
+        case "enabled":
+            return `${formatRate(props.enabledRate)} 场景已启用`;
+        case "automation":
+            return `占比 ${formatRate(props.automationRate)}`;
+        case "manual":
+            return `占比 ${formatRate(props.manualRate)}`;
+        case "monthlyExecutions":
+            return `较上月 ${formatRate(props.monthlyGrowthRate)}`;
+        default:
+            return "";
+    }
+});
 
 const items = [
     {
         key: "enabled",
         label: "已启用场景",
-        note: "占比 66.7%",
         icon: "check-circle",
         tone: "primary",
     },
     {
         key: "automation",
         label: "自动化场景",
-        note: "占比 50%",
         icon: "automation",
         tone: "success",
     },
     {
         key: "manual",
         label: "手动场景",
-        note: "占比 50%",
         icon: "power",
         tone: "warning",
     },
     {
         key: "monthlyExecutions",
         label: "本月执行次数",
-        note: "较上月 ↑ 18%",
         icon: "log",
         tone: "info",
     },
@@ -53,7 +71,7 @@ const items = [
             <div>
                 <p>{{ item.label }}</p>
                 <strong>{{ $props[item.key] }}</strong>
-                <small>{{ item.note }}</small>
+                <small>{{ noteFor(item.key) }}</small>
             </div>
         </article>
     </div>

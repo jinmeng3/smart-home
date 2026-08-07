@@ -5,6 +5,7 @@ import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { ElMessage } from "element-plus";
 import {
   createRoom,
+  deleteRoom,
   fetchRooms,
   fetchRoomDetail,
   fetchRoomStats,
@@ -13,6 +14,7 @@ import {
   updateRoom,
   updateRoomDevice,
 } from "../api/room";
+import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import RoomControlDialogs, {
@@ -30,27 +32,28 @@ import type {
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
 
-const deviceCardConfig: Record<string, { icon: string; name: string }> = {
-    light: { icon: "light", name: "吸顶灯" },
-    television: { icon: "device-management", name: "电视" },
-    airConditioner: { icon: "air-conditioner", name: "空调" },
-    airPurifier: { icon: "sensor", name: "空气净化器" },
-    socket: { icon: "plug", name: "智能插座" },
-    curtain: { icon: "curtain", name: "窗帘" },
-    camera: { icon: "camera", name: "摄像头" },
-    lock: { icon: "lock", name: "门锁" },
+const deviceTypeIconMap: Record<string, string> = {
+    light: "light",
+    television: "device-management",
+    airConditioner: "air-conditioner",
+    airPurifier: "sensor",
+    socket: "plug",
+    curtain: "curtain",
+    camera: "camera",
+    lock: "lock",
 };
 
 const deriveDevices = (room: Room): RoomDeviceCard[] => {
-    return Object.keys(deviceCardConfig).map((key) => {
-        const config = deviceCardConfig[key];
-        return {
-            key,
-            icon: config?.icon ?? "device-management",
-            name: config?.name ?? key,
-            detail: "",
-        };
-    });
+    if (!room.device || room.device.length === 0) return [];
+    return room.device.map((d) => ({
+        id: d.id,
+        key: d.type,
+        icon: d.icon || deviceTypeIconMap[d.type] || "device-management",
+        color: d.color,
+        name: d.name,
+        detail: d.brand || "",
+        status: d.status as RoomDeviceCard["status"],
+    }));
 };
 
 const authStore = useAuthStore();
@@ -67,6 +70,9 @@ const activeDialog = ref<RoomDialog>(null);
 const roomStats = ref<RoomStats | null>(null);
 const roomDetailMap = ref<Record<number, RoomDetail>>({});
 const environmentData = ref<RoomEnvironmentItem[]>([]);
+const deleteDialogOpen = ref(false);
+const deletingRoom = ref<Room | null>(null);
+const roomDeleting = ref(false);
 
 const roomGridExpanded = ref(false);
 
@@ -141,28 +147,32 @@ const load = async () => {
     }
 };
 
+const metricConfig: Record<string, { name: string; unit: string; tone: string }> = {
+    temperature: { name: "温度", unit: "°C", tone: "blue" },
+    humidity: { name: "湿度", unit: "%", tone: "blue" },
+    pm25: { name: "PM2.5", unit: " μg/m³", tone: "green" },
+    illuminance: { name: "光照", unit: " lux", tone: "orange" },
+    noise: { name: "噪音", unit: " dB", tone: "purple" },
+};
+
 const loadEnvironment = async (roomId: number) => {
     try {
         const env = await getRoomEnvironmentLatest(roomId);
-        environmentData.value = [
-            { name: "温度", value: `${env.values.temperature ?? 0}°C`, tone: "blue", points: "1,17 12,9 22,14 32,5 43,12 54,3 65,8" },
-            { name: "湿度", value: `${env.values.humidity ?? 0}%`, tone: "blue", points: "1,16 12,18 22,10 32,14 43,6 54,9 65,3" },
-            { name: "PM2.5", value: `${env.values.pm25 ?? 0} μg/m³`, tone: "green", points: "1,18 12,13 22,16 32,7 43,11 54,3 65,10" },
-            { name: "光照", value: `${env.values.illuminance ?? 0} lux`, tone: "orange", points: "1,17 12,8 22,15 32,2 43,16 54,8 65,17" },
-            { name: "噪音", value: `${env.values.noise ?? 0} dB`, tone: "purple", points: "1,17 12,13 22,16 32,9 43,12 54,8 65,2" },
-        ];
-    } catch {
-        // 环境接口不可用时，使用房间数据构造
-        const room = rooms.value.find((r) => r.id === roomId);
-        if (room) {
-            environmentData.value = [
-                { name: "温度", value: `--°C`, tone: "blue", points: "" },
-                { name: "湿度", value: `--%`, tone: "blue", points: "" },
-                { name: "PM2.5", value: `-- μg/m³`, tone: "green", points: "" },
-                { name: "光照", value: `-- lux`, tone: "orange", points: "" },
-                { name: "噪音", value: `-- dB`, tone: "purple", points: "" },
-            ];
+        const items: RoomEnvironmentItem[] = [];
+        for (const [key, val] of Object.entries(env.values)) {
+            const cfg = metricConfig[key];
+            if (cfg) {
+                items.push({
+                    name: cfg.name,
+                    value: `${val ?? 0}${cfg.unit}`,
+                    tone: cfg.tone,
+                    points: "",
+                });
+            }
         }
+        environmentData.value = items;
+    } catch {
+        environmentData.value = [];
     }
 };
 
@@ -197,13 +207,18 @@ const replaceRoom = (room: Room) => {
 const toggleDevice = async (device: RoomDeviceCard) => {
     if (!selected.value) return;
 
-    replaceRoom(
-        await updateRoomDevice(
+    const newStatus = device.status === "online" || device.status === "running" ? "offline" : "online";
+
+    try {
+        const updated = await updateRoomDevice(
             selected.value.id,
-            device.key,
-            true,
-        ),
-    );
+            device.id,
+            newStatus,
+        );
+        replaceRoom(updated);
+    } catch {
+        // 忽略切换失败
+    }
 };
 
 const handleRoomUpdated = async (room: Room) => {
@@ -213,9 +228,9 @@ const handleRoomUpdated = async (room: Room) => {
       name: room.name,
       floor: room.floor,
       room_type: room.roomType,
-      icon: (room as any).icon ?? "room",
-      theme_color: (room as any).themeColor ?? "#3478f6",
-      version: (room as any).version ?? undefined,
+      icon: room.icon ?? "room",
+      theme_color: room.themeColor ?? "#3478f6",
+      version: room.version ?? undefined,
     });
     replaceRoom(updated);
     ElMessage.success("房间已更新");
@@ -254,6 +269,40 @@ const handleRoomCreated = async (
   } finally {
     loading.value = false;
   }
+};
+
+const handleRoomDeleteClick = (room: Room) => {
+  deletingRoom.value = room;
+  deleteDialogOpen.value = true;
+};
+
+const confirmDeleteRoom = async () => {
+  if (!deletingRoom.value) return;
+  roomDeleting.value = true;
+  try {
+    await deleteRoom(deletingRoom.value.id);
+    rooms.value = rooms.value.filter((r) => r.id !== deletingRoom.value!.id);
+    if (selectedId.value === deletingRoom.value.id) {
+      selectedId.value = rooms.value[0]?.id;
+      if (selectedId.value) {
+        await loadEnvironment(selectedId.value);
+      } else {
+        environmentData.value = [];
+      }
+    }
+    ElMessage.success("房间已删除");
+    deleteDialogOpen.value = false;
+    deletingRoom.value = null;
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "房间删除失败");
+  } finally {
+    roomDeleting.value = false;
+  }
+};
+
+const cancelDeleteRoom = () => {
+  deleteDialogOpen.value = false;
+  deletingRoom.value = null;
 };
 
 useAuthenticatedLoader(load);
@@ -304,6 +353,7 @@ useAuthenticatedLoader(load);
                     :devices="deriveDevices(room)"
                     @select="selectRoom"
                     @toggle="toggleDevice"
+                    @delete="handleRoomDeleteClick"
                 />
             </section>
 
@@ -348,6 +398,86 @@ useAuthenticatedLoader(load);
             @create="handleRoomCreated"
             @update="handleRoomUpdated"
         />
+
+        <BaseSmartModal
+            :closable="!roomDeleting"
+            :loading="roomDeleting"
+            :model-value="deleteDialogOpen"
+            width="520px"
+            @update:model-value="
+                $event
+                    ? (deleteDialogOpen = true)
+                    : cancelDeleteRoom()
+            "
+        >
+            <template #header>
+                <header class="delete-dialog-header">
+                    <span class="delete-dialog-icon" aria-hidden="true">
+                        <SvgIcon name="warning" />
+                    </span>
+                    <div>
+                        <h2>删除房间</h2>
+                        <p>此操作将删除房间及其关联的设备绑定。</p>
+                    </div>
+                    <button
+                        class="delete-dialog-close"
+                        :disabled="roomDeleting"
+                        type="button"
+                        aria-label="关闭"
+                        @click="cancelDeleteRoom"
+                    >
+                        <SvgIcon name="close" size="sm" />
+                    </button>
+                </header>
+            </template>
+
+            <section v-if="deletingRoom" class="delete-dialog-body">
+                <div class="delete-device-summary">
+                    <span class="delete-device-thumb" aria-hidden="true">
+                        <SvgIcon name="room" />
+                    </span>
+                    <div>
+                        <strong>{{ deletingRoom.name }}</strong>
+                        <p class="delete-room-meta">
+                            <span><SvgIcon name="home" size="sm" />{{ deletingRoom.floor }}</span>
+                            <span class="meta-sep"></span>
+                            <span><SvgIcon name="online-device" size="sm" />{{ deletingRoom.onlineCount }}/{{ deletingRoom.deviceCount }} 个设备在线</span>
+                        </p>
+                    </div>
+                </div>
+                <p class="delete-dialog-warning">
+                    删除后将无法在房间控制、设备管理和快捷操作中继续管理该房间及其设备。
+                </p>
+            </section>
+
+            <template #footer>
+                <footer class="delete-dialog-footer">
+                    <span>确认后会立即调用后端删除接口。</span>
+                    <div>
+                        <button
+                            class="delete-cancel-button"
+                            :disabled="roomDeleting"
+                            type="button"
+                            @click="cancelDeleteRoom"
+                        >
+                            取消
+                        </button>
+                        <button
+                            class="delete-confirm-button"
+                            :disabled="roomDeleting"
+                            type="button"
+                            @click="confirmDeleteRoom"
+                        >
+                            <SvgIcon
+                                :name="roomDeleting ? 'refresh' : 'warning'"
+                                size="sm"
+                            />
+                            {{ roomDeleting ? "删除中" : "确认删除" }}
+                        </button>
+                    </div>
+                </footer>
+            </template>
+        </BaseSmartModal>
     </div>
 </template>
 
@@ -485,6 +615,172 @@ useAuthenticatedLoader(load);
 @media (max-width: 720px) {
     .room-grid-expanded {
         max-height: 280px;
+    }
+}
+
+/* ── 删除房间弹窗 ─────────────────────────────── */
+.delete-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--color-danger-border);
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-danger-soft)
+    );
+}
+.delete-dialog-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+.delete-dialog-header h2,
+.delete-dialog-header p {
+    margin: 0;
+}
+.delete-dialog-header h2 {
+    color: var(--color-text-primary);
+    font-size: 20px;
+    font-weight: 900;
+}
+.delete-dialog-header p {
+    margin-top: 4px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+.delete-dialog-close {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+}
+.delete-dialog-close:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+.delete-dialog-body {
+    display: grid;
+    gap: 14px;
+    padding: 20px 22px;
+}
+.delete-device-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.delete-device-thumb {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+.delete-device-summary strong {
+    color: var(--color-text-primary);
+    font-size: 16px;
+    font-weight: 900;
+}
+.delete-device-summary p {
+    margin: 4px 0 0;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+}
+.delete-room-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 0 0;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+}
+.delete-room-meta svg {
+    color: var(--color-text-muted);
+    margin-right: 2px;
+}
+.delete-room-meta .meta-sep {
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--color-border);
+}
+.delete-dialog-warning {
+    margin: 0;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 10px;
+    background: var(--color-danger-soft);
+    padding: 12px 14px;
+    color: var(--color-danger);
+    line-height: 1.6;
+}
+.delete-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--color-border-subtle);
+    background: var(--color-workspace-background);
+}
+.delete-dialog-footer span {
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+}
+.delete-dialog-footer > div {
+    display: flex;
+    gap: 8px;
+}
+.delete-cancel-button,
+.delete-confirm-button {
+    display: inline-flex;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 8px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 900;
+}
+.delete-cancel-button {
+    border: 1px solid var(--color-border-default);
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+}
+.delete-confirm-button {
+    border: 1px solid var(--color-danger);
+    background: var(--color-danger);
+    color: var(--color-text-on-primary);
+}
+.delete-cancel-button:hover {
+    background: var(--color-surface-hover);
+}
+.delete-confirm-button:hover {
+    background: color-mix(in srgb, var(--color-danger) 88%, black);
+}
+.delete-confirm-button:disabled svg {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 </style>

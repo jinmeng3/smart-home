@@ -48,6 +48,9 @@ class Device(Base):
     icon: Mapped[str] = mapped_column(
         String(64), default="device-management", comment="设备图标"
     )
+    color: Mapped[str] = mapped_column(
+        String(16), default="#6b7280", comment="设备颜色"
+    )
     image_url: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="设备图片地址"
     )
