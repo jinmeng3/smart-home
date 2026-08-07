@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class RoomSchema(BaseModel):
@@ -93,6 +93,14 @@ class RoomDeviceMetaWrite(RoomSchema):
     group: str | None = Field(default=None, max_length=80)
     favorite: bool | None = None
     sort_order: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def require_update_field(self) -> "RoomDeviceMetaWrite":
+        if not self.model_fields_set:
+            raise ValueError("至少需要提供一个更新字段")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("更新字段不能为 null")
+        return self
 
 
 class RoomDeviceListItem(RoomSchema):

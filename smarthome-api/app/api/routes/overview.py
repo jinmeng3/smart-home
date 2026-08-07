@@ -20,6 +20,7 @@ from app.models.overview import (
     OverviewExecution,
 )
 from app.models.room import Room
+from app.models.room import RoomDevice
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.device import DeviceListRead, DeviceRead
@@ -55,11 +56,6 @@ def default_household(db: Session, user: User) -> int:
     return household_id
 
 
-def room_names(db: Session, household_id: int):
-    """构建指定家庭下全部房间名称的子查询。"""
-    return select(Room.name).where(Room.household_id == household_id)
-
-
 @router.get(
     "/households/{household_id}/overview", response_model=ApiResponse[OverviewRead]
 )
@@ -78,7 +74,8 @@ def get_overview(
         list(
             db.scalars(
                 select(Device)
-                .where(Device.room.in_([room.name for room in rooms]))
+                .join(RoomDevice, RoomDevice.device_id == Device.id)
+                .where(RoomDevice.room_id.in_([room.id for room in rooms]))
                 .order_by(Device.updated_at.desc())
             ).all()
         )
@@ -156,13 +153,17 @@ def get_household_devices(
     devices = list(
         db.scalars(
             select(Device)
-            .where(Device.room.in_(room_names(db, household_id)))
+            .join(RoomDevice, RoomDevice.device_id == Device.id)
+            .join(Room, Room.id == RoomDevice.room_id)
+            .where(Room.household_id == household_id)
             .order_by(Device.updated_at.desc())
         ).all()
     )
     return ApiResponse.ok(
         DeviceListRead(
             total=len(devices),
+            page=1,
+            page_size=max(1, len(devices)),
             items=[DeviceRead.model_validate(item) for item in devices],
         )
     )
@@ -245,7 +246,8 @@ def execute_mode(
         db.scalar(
             select(func.count())
             .select_from(Device)
-            .where(Device.room.in_([item.name for item in rooms]))
+            .join(RoomDevice, RoomDevice.device_id == Device.id)
+            .where(RoomDevice.room_id.in_([item.id for item in rooms]))
         )
         or 0
     )
@@ -282,7 +284,9 @@ def create_inspection(
         db.scalar(
             select(func.count())
             .select_from(Device)
-            .where(Device.room.in_(room_names(db, household_id)))
+            .join(RoomDevice, RoomDevice.device_id == Device.id)
+            .join(Room, Room.id == RoomDevice.room_id)
+            .where(Room.household_id == household_id)
         )
         or 0
     )

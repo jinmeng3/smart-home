@@ -2,20 +2,13 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from sqlalchemy import Double
 
 DeviceStatus = Literal["online", "offline", "warning", "running"]
 DevicePlatform = Literal["Home Assistant", "Matter", "Zigbee", "MQTT"]
 
 
 class DeviceSchema(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=lambda value: (
-            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
-        ),
-        populate_by_name=True,
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeviceQueryParams(BaseModel):
@@ -69,7 +62,15 @@ class DeviceUpdate(DeviceSchema):
     image_url: str | None = Field(default=None, max_length=255)
 
     @field_validator(
-        "name", "room", "brand", "firmware", "icon", "image_url", mode="before"
+        "name",
+        "room",
+        "type",
+        "brand",
+        "firmware",
+        "icon",
+        "color",
+        "image_url",
+        mode="before",
     )
     @classmethod
     def strip_strings(cls, value: str | None) -> str | None:
@@ -79,6 +80,8 @@ class DeviceUpdate(DeviceSchema):
     def require_update_field(self) -> "DeviceUpdate":
         if not self.model_fields_set:
             raise ValueError("至少需要提供一个更新字段")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("更新字段不能为 null")
         return self
 
 
@@ -96,6 +99,7 @@ class DeviceRead(DeviceSchema):
     connection: DevicePlatform
     firmware: str
     icon: str = "device-management"
+    color: str = "#6b7280"
     image_url: str | None
     last_online: datetime | None
 
@@ -120,11 +124,15 @@ class DeviceDetailWithLogs(DeviceDetailRead):
 
 class DeviceListRead(DeviceSchema):
     total: int
+    page: int
+    page_size: int
     items: list[DeviceRead]
 
 
 class DeviceLogListRead(DeviceSchema):
     total: int
+    page: int
+    page_size: int
     items: list[DeviceLogRead]
 
 
@@ -136,8 +144,22 @@ class DeviceSyncRead(DeviceSchema):
 class DeviceBatchGroup(BaseModel):
     group: str = Field(min_length=1, max_length=80, description="分组名称")
     device_ids: list[int] = Field(
-        default=[], description="分配到该组的设备，为空则创建分组但不分配"
+        default_factory=list, description="分配到该组的设备，为空则创建分组但不分配"
     )
+
+    @field_validator("group", mode="before")
+    @classmethod
+    def strip_group(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("device_ids")
+    @classmethod
+    def unique_device_ids(cls, value: list[int]) -> list[int]:
+        if any(device_id <= 0 for device_id in value):
+            raise ValueError("device_ids 必须是正整数")
+        if len(value) != len(set(value)):
+            raise ValueError("device_ids 不能重复")
+        return value
 
 
 class DeviceBatchGroupResult(DeviceSchema):
@@ -151,8 +173,3 @@ class DeviceImageRead(DeviceSchema):
     original_name: str
     mime_type: str
     size_bytes: int
-
-
-class DeviceDataRead(DeviceSchema):
-    name: str
-    data: list[Double]

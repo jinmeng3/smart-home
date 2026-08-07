@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,10 @@ from app.core.config import Settings
 from app.models.user import User
 from app.schemas.account import AccountRead
 from app.schemas.auth import AuthResponse
+
+DUMMY_PASSWORD_HASH = bcrypt.hashpw(b"invalid-password", bcrypt.gensalt()).decode(
+    "utf-8"
+)
 
 # === Token 工具 ===
 
@@ -62,15 +66,46 @@ def login_service(
     password: str,
 ) -> AuthResponse:
     """校验邮箱和密码，并返回认证结果。"""
-    user = db.scalar(select(User).where(User.email == account))
+    normalized_account = account.casefold()
+    user = db.scalar(select(User).where(func.lower(User.email) == normalized_account))
+    password_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
+    password_matches = bcrypt.checkpw(
+        password.encode("utf-8"), password_hash.encode("utf-8")
+    )
+    now = datetime.now(timezone.utc)
 
-    if not user or not bcrypt.checkpw(
-        password.encode("utf-8"), user.password_hash.encode("utf-8")
-    ):
+    if user and user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is unavailable",
+        )
+
+    locked_until = user.locked_until if user else None
+    if locked_until and locked_until.tzinfo is None:
+        locked_until = locked_until.replace(tzinfo=timezone.utc)
+    if user and locked_until and locked_until > now:
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Too many failed login attempts. Try again later",
+        )
+
+    if not user or not password_matches:
+        if user:
+            user.failed_login_count += 1
+            if user.failed_login_count >= settings.max_failed_login_attempts:
+                user.locked_until = now + timedelta(seconds=settings.login_lock_seconds)
+                user.failed_login_count = 0
+            db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid account or password",
         )
+
+    user.failed_login_count = 0
+    user.locked_until = None
+    user.last_login_at = now
+    db.commit()
+    db.refresh(user)
 
     return AuthResponse(
         access_token=generate_token(
@@ -92,7 +127,8 @@ def register_service(
     password: str,
 ) -> AuthResponse:
     """注册用户，数据库唯一约束作为并发场景的最终防线。"""
-    user = db.scalar(select(User).where(User.email == email))
+    normalized_email = email.casefold()
+    user = db.scalar(select(User).where(func.lower(User.email) == normalized_email))
     if user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User already exists"
@@ -101,7 +137,7 @@ def register_service(
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode(
         "utf-8"
     )
-    new_user = User(name=username, email=email, password_hash=password_hash)
+    new_user = User(name=username, email=normalized_email, password_hash=password_hash)
     db.add(new_user)
 
     try:

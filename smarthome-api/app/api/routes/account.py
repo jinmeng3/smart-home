@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -36,9 +36,11 @@ def update_me(
         current_user.name = payload.name.strip()
 
     if payload.email is not None:
+        normalized_email = str(payload.email).casefold()
         existing_user = db.scalar(
             select(User).where(
-                User.email == str(payload.email), User.id != current_user.id
+                func.lower(User.email) == normalized_email,
+                User.id != current_user.id,
             )
         )
 
@@ -47,7 +49,7 @@ def update_me(
                 status_code=status.HTTP_409_CONFLICT, detail="邮箱已被使用"
             )
 
-        current_user.email = str(payload.email)
+        current_user.email = normalized_email
 
     try:
         db.commit()
@@ -97,7 +99,12 @@ def delete_avatar(
     """
     删除当前用户头像，并清空账号中的头像地址。
     """
-    delete_avatar_file(settings, current_user.avatar_url)
+    old_avatar_url = current_user.avatar_url
     current_user.avatar_url = None
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    delete_avatar_file(settings, old_avatar_url)
     return ApiResponse(data=AvatarResponse(avatar_url=None))

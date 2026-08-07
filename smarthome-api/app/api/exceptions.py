@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +15,8 @@ HTTP_TO_APP_CODE = {
     status.HTTP_403_FORBIDDEN: AppCode.FORBIDDEN,
     status.HTTP_404_NOT_FOUND: AppCode.NOT_FOUND,
     status.HTTP_409_CONFLICT: AppCode.CONFLICT,
+    status.HTTP_423_LOCKED: AppCode.LOCKED,
+    status.HTTP_429_TOO_MANY_REQUESTS: AppCode.TOO_MANY_REQUESTS,
     status.HTTP_413_CONTENT_TOO_LARGE: AppCode.PAYLOAD_TOO_LARGE,
     status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: AppCode.UNSUPPORTED_MEDIA_TYPE,
     status.HTTP_422_UNPROCESSABLE_CONTENT: AppCode.UNPROCESSABLE_ENTITY,
@@ -22,11 +25,13 @@ HTTP_TO_APP_CODE = {
 }
 
 
-def error_response(status_code: int, message: str) -> JSONResponse:
+def error_response(
+    status_code: int, message: str, data: Any | None = None
+) -> JSONResponse:
     """将 HTTP 状态码映射为统一的业务错误响应。"""
     app_code = HTTP_TO_APP_CODE.get(status_code, AppCode.INTERNAL_SERVER_ERROR)
-    payload = ApiResponse.fail(code=int(app_code), message=message)
-    return JSONResponse(status_code=status_code, content=payload.model_dump())
+    payload = ApiResponse.fail(code=int(app_code), message=message, data=data)
+    return JSONResponse(status_code=status_code, content=payload.model_dump(mode="json"))
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -35,14 +40,27 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def http_exception_handler(
         _request: Request, exc: HTTPException
     ) -> JSONResponse:
-        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
-        return error_response(exc.status_code, detail)
+        if isinstance(exc.detail, str):
+            return error_response(exc.status_code, exc.detail)
+        return error_response(exc.status_code, "请求处理失败", exc.detail)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
         _request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        return error_response(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc.errors()))
+        errors = [
+            {
+                "field": ".".join(str(part) for part in error["loc"] if part != "body"),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+            for error in exc.errors()
+        ]
+        return error_response(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "请求参数校验失败",
+            {"errors": errors},
+        )
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(

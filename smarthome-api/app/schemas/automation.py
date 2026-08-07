@@ -68,6 +68,14 @@ class AutomationUpdate(AutomationSchema):
     note: str | None = Field(default=None, max_length=100)
     version: int | None = Field(default=None, ge=1)
 
+    @model_validator(mode="after")
+    def require_update_field(self) -> "AutomationUpdate":
+        if not self.model_fields_set:
+            raise ValueError("至少需要提供一个更新字段")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("更新字段不能为 null")
+        return self
+
 
 class AutomationRead(AutomationSchema):
     id: int

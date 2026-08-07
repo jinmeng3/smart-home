@@ -65,7 +65,13 @@ def list_room_stats(
     return ApiResponse.ok(list_room_stats_service(db, current_user))
 
 
-@router.get("/{room_id}/detail", response_model=ApiResponse[RoomDetailRead])
+@router.get("/{room_id}", response_model=ApiResponse[RoomDetailRead])
+@router.get(
+    "/{room_id}/detail",
+    response_model=ApiResponse[RoomDetailRead],
+    include_in_schema=False,
+    deprecated=True,
+)
 def get_room_detail(
     room_id: int,
     db: Session = DB_DEPENDENCY,
@@ -76,7 +82,14 @@ def get_room_detail(
 
 
 @router.post(
-    "/add", response_model=ApiResponse[RoomRead], status_code=status.HTTP_201_CREATED
+    "", response_model=ApiResponse[RoomRead], status_code=status.HTTP_201_CREATED
+)
+@router.post(
+    "/add",
+    response_model=ApiResponse[RoomRead],
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+    deprecated=True,
 )
 def add_room(
     payload: RoomInput,
@@ -87,7 +100,13 @@ def add_room(
     return ApiResponse.ok(add_room_service(db, current_user, payload), "created")
 
 
-@router.put("/{room_id}", response_model=ApiResponse[RoomRead])
+@router.patch("/{room_id}", response_model=ApiResponse[RoomRead])
+@router.put(
+    "/{room_id}",
+    response_model=ApiResponse[RoomRead],
+    include_in_schema=False,
+    deprecated=True,
+)
 def edit_room(
     room_id: int,
     payload: RoomInput,
@@ -98,12 +117,12 @@ def edit_room(
     return ApiResponse.ok(edit_room_service(db, current_user, room_id, payload))
 
 
-@router.delete("/{room_id}", response_model=ApiResponse[RoomRead])
+@router.delete("/{room_id}", response_model=ApiResponse[None])
 def delete_room(
     room_id: int,
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[RoomRead]:
+) -> ApiResponse[None]:
     """删除房间。"""
     delete_room_service(db, current_user, room_id)
     return ApiResponse.ok(message="deleted")

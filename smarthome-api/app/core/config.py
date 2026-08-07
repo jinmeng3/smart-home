@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # 身份认证
     jwt_secret_key: str
     access_token_expire_seconds: int = 3600
+    max_failed_login_attempts: int = Field(default=5, ge=1, le=20)
+    login_lock_seconds: int = Field(default=900, ge=60, le=86400)
 
     # 跨域资源共享
     cors_origins: list[str] = Field(
