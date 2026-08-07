@@ -8,11 +8,7 @@ import {
 import { useHomeChat } from "../composables/useHomeChat";
 import { listDevices as apiListDevices } from "../api/device";
 import { mapDashboardDevice } from "../utils/device";
-import {
-  automations as mockAutomations,
-  devices as mockDevices,
-  messages as mockMessages,
-} from "../mock/home";
+
 import type { Automation, DashboardDevice } from "../types/device";
 
 const buildDeviceMap = (devices: DashboardDevice[]) => ({
@@ -31,14 +27,14 @@ export const useHomeStore = defineStore("home", () => {
   );
   const selectedDeviceId = ref<string | null>(null);
   const deviceDrawerOpen = ref(false);
-  const { ids: initialIds, byId: initialById } = buildDeviceMap(mockDevices);
+  const { ids: initialIds, byId: initialById } = buildDeviceMap([]);
   const deviceIds = shallowRef(initialIds);
   const devicesById = shallowRef<Record<string, DashboardDevice>>(initialById);
-  const automations = shallowRef<Automation[]>(mockAutomations);
+  const automations = shallowRef<Automation[]>([]);
   const energyToday = ref(18.62);
   const devicesLoading = ref(false);
   const securityAlertHandled = ref(false);
-  const chat = useHomeChat(mockMessages);
+  const chat = useHomeChat([]);
 
   const devices = computed(() => {
     const ids = deviceIds.value;
@@ -119,9 +115,9 @@ export const useHomeStore = defineStore("home", () => {
       deviceIds.value = nextIds;
       devicesById.value = nextById;
     } catch {
-      const { ids: fallbackIds, byId: fallbackById } = buildDeviceMap(mockDevices);
-      deviceIds.value = fallbackIds;
-      devicesById.value = fallbackById;
+      // API 加载失败时使用空数据
+      deviceIds.value = [];
+      devicesById.value = {};
     } finally {
       devicesLoading.value = false;
     }

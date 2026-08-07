@@ -14,6 +14,9 @@ router = APIRouter(prefix="/account", tags=["account"])
 SETTINGS_DEPENDENCY = Depends(get_settings)
 
 
+# === 账户资料 ===
+
+
 @router.get("/me", response_model=ApiResponse[AccountRead])
 def read_me(current_user: User = CURRENT_USER_DEPENDENCY) -> ApiResponse[AccountRead]:
     """获取当前用户资料。"""
@@ -55,6 +58,9 @@ def update_me(
         ) from exc
     db.refresh(current_user)
     return ApiResponse(data=current_user)
+
+
+# === 头像 ===
 
 
 @router.post("/me/avatar", response_model=ApiResponse[AvatarResponse])

@@ -154,7 +154,7 @@ watch(
                         <label class="field">
                             <span class="field-label">楼层 / 区域</span>
                             <div class="input-wrap">
-                                <SvgIcon name="more" size="sm" class="input-icon" />
+                                <SvgIcon name="layers" size="sm" class="input-icon" />
                                 <select v-model="floor">
                                     <option>一楼</option>
                                     <option>二楼</option>
@@ -763,7 +763,8 @@ watch(
     display: flex;
     flex-direction: column;
     gap: 14px;
-    align-self: center;
+    align-self: stretch;
+    justify-content: space-between;
 }
 
 .preview-header {

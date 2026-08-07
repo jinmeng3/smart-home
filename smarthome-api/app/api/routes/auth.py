@@ -6,9 +6,12 @@ from app.core.config import Settings
 from app.models.user import User
 from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.common import ApiResponse
-from app.services.auth import authenticate_user, register_user
+from app.services.auth import login_service, register_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+# === 登录注册 ===
 
 
 @router.post("/login", response_model=ApiResponse[AuthResponse])
@@ -18,7 +21,7 @@ def login(
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
     """验证账号密码并签发访问令牌。"""
-    auth_response = authenticate_user(db, settings, payload.account, payload.password)
+    auth_response = login_service(db, settings, payload.account, payload.password)
     return ApiResponse(data=auth_response)
 
 
@@ -29,7 +32,7 @@ def register(
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
     """创建用户账号并返回首次登录凭证。"""
-    auth_response = register_user(
+    auth_response = register_service(
         db,
         settings,
         payload.username,
@@ -37,6 +40,9 @@ def register(
         payload.password,
     )
     return ApiResponse(message="created", data=auth_response)
+
+
+# === 退出登录 ===
 
 
 @router.post("/logout", response_model=ApiResponse[None])

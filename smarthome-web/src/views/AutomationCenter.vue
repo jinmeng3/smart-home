@@ -260,61 +260,67 @@ useAuthenticatedLoader(() => void loadAutomations());
             </section>
         </main>
         <aside class="right page-shell">
-            <section v-if="selected" class="panel detail">
-                <header>
-                    <h2>▣ 规则详情</h2>
-                    <SvgIcon name="scan" size="sm" />
-                </header>
-                <div class="detail-title">
-                    <i :class="selected.tone"
-                        ><SvgIcon :name="selected.icon" /></i
-                    ><span
-                        ><h3>{{ selected.name }}</h3>
-                        <em>{{ selected.enabled ? "已启用" : "已停用" }}</em>
-                        <p>当您回到家附近，自动执行舒适回家流程</p></span
-                    >
+            <section class="panel detail">
+                <template v-if="selected">
+                    <header>
+                        <h2>▣ 规则详情</h2>
+                        <SvgIcon name="scan" size="sm" />
+                    </header>
+                    <div class="detail-title">
+                        <i :class="selected.tone"
+                            ><SvgIcon :name="selected.icon" /></i
+                        ><span
+                            ><h3>{{ selected.name }}</h3>
+                            <em>{{ selected.enabled ? "已启用" : "已停用" }}</em>
+                            <p>当您回到家附近，自动执行舒适回家流程</p></span
+                        >
+                    </div>
+                    <dl>
+                        <div>
+                            <dt>触发条件</dt>
+                            <dd>{{ selected.description }}</dd>
+                        </div>
+                        <div>
+                            <dt>执行方式</dt>
+                            <dd>自动执行</dd>
+                        </div>
+                        <div>
+                            <dt>关联房间</dt>
+                            <dd>玄关、客厅、餐厅、主卧</dd>
+                        </div>
+                        <div>
+                            <dt>关联设备</dt>
+                            <dd class="link">{{ selected.devices }} 个设备</dd>
+                        </div>
+                        <div>
+                            <dt>创建时间</dt>
+                            <dd>2026-06-15 10:30</dd>
+                        </div>
+                        <div>
+                            <dt>更新时间</dt>
+                            <dd>2026-08-01 10:15</dd>
+                        </div>
+                    </dl>
+                    <footer>
+                        <button
+                            class="primary"
+                            :disabled="runningId === selected.id"
+                            @click="controller.runRule(selected)"
+                        >
+                            ▶ {{ runningId === selected.id ? "执行中…" : "执行" }}</button
+                        ><button @click="controller.openEditDialog(selected)">
+                            <SvgIcon name="edit" size="sm" />编辑</button
+                        ><button @click="controller.copyRule(selected)">
+                            <SvgIcon name="layers" size="sm" />复制</button
+                        ><button class="danger" @click="controller.removeRule(selected)">
+                            <SvgIcon name="delete" size="sm" />删除
+                        </button>
+                    </footer>
+                </template>
+                <div v-else class="detail-empty">
+                    <SvgIcon name="automation" size="lg" />
+                    <p>选择规则后查看详情</p>
                 </div>
-                <dl>
-                    <div>
-                        <dt>触发条件</dt>
-                        <dd>{{ selected.description }}</dd>
-                    </div>
-                    <div>
-                        <dt>执行方式</dt>
-                        <dd>自动执行</dd>
-                    </div>
-                    <div>
-                        <dt>关联房间</dt>
-                        <dd>玄关、客厅、餐厅、主卧</dd>
-                    </div>
-                    <div>
-                        <dt>关联设备</dt>
-                        <dd class="link">{{ selected.devices }} 个设备</dd>
-                    </div>
-                    <div>
-                        <dt>创建时间</dt>
-                        <dd>2026-06-15 10:30</dd>
-                    </div>
-                    <div>
-                        <dt>更新时间</dt>
-                        <dd>2026-08-01 10:15</dd>
-                    </div>
-                </dl>
-                <footer>
-                    <button
-                        class="primary"
-                        :disabled="runningId === selected.id"
-                        @click="controller.runRule(selected)"
-                    >
-                        ▶ {{ runningId === selected.id ? "执行中…" : "执行" }}</button
-                    ><button @click="controller.openEditDialog(selected)">
-                        <SvgIcon name="edit" size="sm" />编辑</button
-                    ><button @click="controller.copyRule(selected)">
-                        <SvgIcon name="layers" size="sm" />复制</button
-                    ><button class="danger" @click="controller.removeRule(selected)">
-                        <SvgIcon name="delete" size="sm" />删除
-                    </button>
-                </footer>
             </section>
             <section class="panel">
                 <h2>▣ 快捷操作</h2>
@@ -1190,6 +1196,26 @@ useAuthenticatedLoader(() => void loadAutomations());
 }
 .detail footer .danger:hover {
     background: var(--color-danger-soft);
+}
+.detail-empty {
+    display: flex;
+    min-height: 200px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--color-text-tertiary);
+    text-align: center;
+}
+.detail-empty svg {
+    width: 40px;
+    height: 40px;
+    color: var(--color-primary-300);
+}
+.detail-empty p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
 }
 .quick {
     display: grid;

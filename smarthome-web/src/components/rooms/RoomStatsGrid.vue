@@ -5,6 +5,10 @@ defineProps<{
     roomCount: number;
     onlineCount: number;
     comfortScore: number;
+    roomCountChange: number;
+    onlineRate: number;
+    alertCount: number;
+    pendingAlertCount: number;
 }>();
 </script>
 
@@ -14,21 +18,21 @@ defineProps<{
             <i class="tone-chip is-blue"><SvgIcon name="home" /></i>
             <span
                 >房间数量<strong>{{ roomCount }} <small>个</small></strong
-                ><em>较上月 ↑ 2</em></span
+                ><em>{{ roomCountChange >= 0 ? `较上月 ↑ ${roomCountChange}` : `较上月 ↓ ${Math.abs(roomCountChange)}` }}</em></span
             >
         </article>
         <article>
             <i class="tone-chip is-green"><SvgIcon name="online-device" /></i>
             <span
                 >在线设备<strong>{{ onlineCount }} <small>个</small></strong
-                ><em>在线率 86.4%</em></span
+                ><em>在线率 {{ onlineRate }}%</em></span
             >
         </article>
         <article>
             <i class="tone-chip is-orange"><SvgIcon name="notification" /></i>
             <span
-                >当前告警<strong>2 <small>条</small></strong
-                ><em>待处理告警</em></span
+                >当前告警<strong>{{ alertCount }} <small>条</small></strong
+                ><em>{{ pendingAlertCount > 0 ? '待处理告警' : '无待处理告警' }}</em></span
             >
         </article>
         <article>
@@ -70,26 +74,26 @@ defineProps<{
 .stats-grid span {
     min-width: 0;
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
 }
 .stats-grid strong {
     display: block;
     margin-top: 1px;
     color: var(--color-text-primary);
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 900;
     letter-spacing: -0.01em;
 }
 .stats-grid strong small {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
 }
 .stats-grid em {
     display: block;
     margin-top: 1px;
     color: var(--color-text-tertiary);
-    font-size: 10px;
+    font-size: 12px;
     font-style: normal;
 }
 @media (max-width: 1450px) {

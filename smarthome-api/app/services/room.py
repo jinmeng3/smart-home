@@ -1,85 +1,237 @@
 import json
 from datetime import date, datetime, time, timezone
+from uuid import uuid4
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, insert, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.device import Device
+from app.models.device import Device, DeviceData
+from app.models.membership import HouseholdMembership
 from app.models.room import (
     Room,
     RoomActivityLog,
     RoomDevice,
-    RoomEnvironmentSample,
-    RoomPreference,
+    RoomEnvironmentReport,
 )
+from app.models.user import User
 from app.schemas.room import (
     EnvironmentLatestRead,
     EnvironmentPoint,
+    EnvironmentReportRead,
     EnvironmentTrendRead,
+    RoomDetailRead,
     RoomDeviceListItem,
     RoomDeviceListRead,
+    RoomDeviceMetaWrite,
     RoomDevicesWrite,
+    RoomDeviceWrite,
+    RoomInput,
+    RoomListRead,
     RoomLogListRead,
     RoomLogRead,
-    RoomWrite,
+    RoomQuickActionWrite,
+    RoomRead,
+    RoomSceneExecuteWrite,
+    RoomStatsRead,
+)
+from app.schemas.scene import SceneExecutionRead, SceneListRead, ScenePreviewRead
+from app.services.scene import (
+    get_scene_preview_service,
+    get_scenes_service,
+    run_scene_service,
 )
 
 
-def replace_bindings(db: Session, room: Room, device_ids: list[int]) -> None:
-    devices = (
-        list(db.scalars(select(Device).where(Device.id.in_(device_ids))).all())
-        if device_ids
-        else []
+def accessible_rooms(db: Session, user: User):
+    """构建当前用户所有可访问房间的查询。"""
+    household_ids = select(HouseholdMembership.household_id).where(
+        HouseholdMembership.user_id == user.id
     )
-    if len(devices) != len(set(device_ids)):
-        raise HTTPException(status_code=422, detail="部分设备不存在")
-    db.query(RoomDevice).filter(RoomDevice.room_id == room.id).delete(
-        synchronize_session=False
-    )
-    for index, device in enumerate(devices):
-        device.room = room.name
-        db.add(RoomDevice(room_id=room.id, device_id=device.id, sort_order=index))
-    room.device_count = len(devices)
-    room.online_count = sum(
-        device.status in {"online", "running"} for device in devices
+    return select(Room).where(Room.household_id.in_(household_ids))
+
+
+def serialize(room: Room) -> RoomRead:
+    return RoomRead(
+        id=room.id,
+        name=room.name,
+        floor=room.floor,
+        room_type=room.room_type,
+        image_url=room.image_url,
+        area=room.area,
+        comfort=room.comfort,
+        icon=room.icon,
+        theme_color=room.theme_color,
+        version=room.version,
+        device_count=room.device_count,
+        online_count=room.online_count,
+        updated_at=room.updated_at,
     )
 
 
-def save_room(
-    db: Session, household_id: int, payload: RoomWrite, room: Room | None = None
-) -> Room:
-    duplicate = db.scalar(
-        select(Room).where(
-            Room.household_id == household_id,
-            Room.name == payload.name,
-            Room.id != (room.id if room else -1),
-        )
+def get_room_or_404(db: Session, user: User, room_id: int) -> Room:
+    """按ID获取用户可访问的房间，不存在时抛出404。"""
+    room = db.scalar(accessible_rooms(db, user).where(Room.id == room_id))
+    if not room:
+        raise HTTPException(status_code=404, detail="房间不存在")
+    return room
+
+
+def default_household_id(db: Session, user: User) -> int:
+    """获取用户默认家庭ID，未加入家庭时抛出403。"""
+    household_id = db.scalar(
+        select(HouseholdMembership.household_id)
+        .where(HouseholdMembership.user_id == user.id)
+        .order_by(HouseholdMembership.id)
     )
-    if duplicate:
-        raise HTTPException(status_code=409, detail="同一家庭内房间名称不能重复")
-    is_new = room is None
-    if room is None:
-        room = Room(household_id=household_id, name=payload.name)
-        db.add(room)
+    if household_id is None:
+        raise HTTPException(status_code=403, detail="当前用户尚未加入家庭")
+    return household_id
+
+
+# === 房间 CRUD ===
+
+
+def list_rooms_service(
+    db: Session,
+    user: User,
+    floor: str | None = None,
+    room_type: str | None = None,
+) -> RoomListRead:
+    """按楼层和类型筛选房间列表。"""
+    query = accessible_rooms(db, user).order_by(Room.id)
+    if floor:
+        query = query.where(Room.floor == floor)
+    if room_type:
+        query = query.where(Room.room_type == room_type)
+    rooms = list(db.scalars(query))
+    items = [RoomRead.model_validate(room) for room in rooms]
+    return RoomListRead(items=items, total=len(items))
+
+
+def list_room_stats_service(db: Session, user: User) -> RoomStatsRead:
+    """获取当前用户所有房间的统计概览。"""
+    rooms = list(db.scalars(accessible_rooms(db, user).order_by(Room.id)))
+    total = len(rooms)
+    online_count = sum(room.online_count for room in rooms)
+    total_devices = sum(room.device_count for room in rooms)
+    online_rate = (online_count / total_devices * 100) if total_devices > 0 else 0.0
+
+    return RoomStatsRead(
+        room_count=total,
+        room_count_change=0,
+        online_rate=round(online_rate, 1),
+        alert_count=total - (1 if total > 0 else 0) if total > 0 else 0,
+        pending_alert_count=total - (1 if total > 0 else 0) if total > 0 else 0,
+    )
+
+
+def add_room_service(db: Session, user: User, payload: RoomInput) -> RoomRead:
+    """创建房间。"""
+    household_id = default_household_id(db, user)
+    room = Room(household_id=household_id, **payload.model_dump(exclude={"device_ids"}))
+
+    try:
         db.flush()
-    elif payload.version is not None and payload.version != room.version:
-        raise HTTPException(status_code=409, detail="房间版本冲突")
-    room.name, room.floor, room.room_type = (
-        payload.name,
-        payload.floor,
-        payload.room_type,
-    )
-    room.icon, room.theme_color = payload.icon, payload.theme_color
-    room.version = 1 if is_new else room.version + 1
-    replace_bindings(db, room, payload.device_ids)
-    preference = db.get(RoomPreference, room.id) or RoomPreference(room_id=room.id)
-    for field, value in payload.preferences.model_dump().items():
-        setattr(preference, field, value)
-    db.add(preference)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="房间名已存在")
+
+    for device_id in payload.device_ids:
+        device = db.scalar(select(Device).where(Device.id == device_id))
+        if device:
+            db.add(RoomDevice(room_id=room.id, device_id=device.id))
+    db.add(room)
     db.commit()
     db.refresh(room)
-    return room
+    return RoomRead.model_validate(room)
+
+
+def edit_room_service(
+    db: Session, user: User, room_id: int, payload: RoomInput
+) -> RoomRead:
+    """更新房间信息。"""
+    room = get_room_or_404(db, user, room_id)
+    for key, value in payload.model_dump(exclude={"device_ids"}).items():
+        setattr(room, key, value)
+
+    existing_ids = set(
+        db.scalars(
+            select(RoomDevice.device_id).where(RoomDevice.room_id == room_id)
+        ).all()
+    )
+    new_ids = set(payload.device_ids)
+
+    to_delete = existing_ids - new_ids
+    to_add = new_ids - existing_ids
+
+    if to_delete:
+        db.execute(
+            delete(RoomDevice).where(
+                RoomDevice.room_id == room_id,
+                RoomDevice.device_id.in_(to_delete),
+            )
+        )
+    if to_add:
+        db.execute(
+            insert(RoomDevice).values(
+                [{"room_id": room_id, "device_id": did} for did in to_add]
+            )
+        )
+    if new_ids:
+        devices = db.scalars(select(Device).where(Device.id.in_(new_ids))).all()
+        room.device_count = len(devices)
+        room.online_count = sum(d.status in {"online", "running"} for d in devices)
+    else:
+        room.device_count = 0
+        room.online_count = 0
+    db.commit()
+    db.refresh(room)
+    return RoomRead.model_validate(room)
+
+
+def get_room_detail_service(db: Session, user: User, room_id: int) -> RoomDetailRead:
+    """获取房间详情。"""
+    room = get_room_or_404(db, user, room_id)
+    recent_log = db.scalar(
+        select(RoomActivityLog)
+        .where(RoomActivityLog.room_id == room.id)
+        .order_by(RoomActivityLog.occurred_at.desc())
+    )
+    recent_activity = None
+    recent_activity_time = None
+    if recent_log:
+        recent_activity = recent_log.event
+        now = datetime.now(timezone.utc)
+        diff = now - recent_log.occurred_at
+        minutes = int(diff.total_seconds() / 60)
+        if minutes < 1:
+            recent_activity_time = "刚刚"
+        elif minutes < 60:
+            recent_activity_time = f"{minutes} 分钟前"
+        elif minutes < 1440:
+            recent_activity_time = f"{minutes // 60} 小时前"
+        else:
+            recent_activity_time = f"{minutes // 1440} 天前"
+
+    room_read = RoomRead.model_validate(room)
+
+    return RoomDetailRead(
+        room=room_read,
+        current_scene="休闲模式",  # 暂用默认值，后续可从场景接口获取
+        recent_activity=recent_activity,
+        recent_activity_time=recent_activity_time,
+    )
+
+
+def delete_room_service(db: Session, user: User, room_id: int):
+    room = get_room_or_404(db, user, room_id)
+    db.delete(room)
+    db.commit()
+
+
+# === 房间日志 ===
 
 
 def write_activity(
@@ -152,6 +304,24 @@ def list_room_logs(
             for log, name in rows
         ],
     )
+
+
+def get_room_logs_service(
+    db: Session,
+    user: User,
+    room_id: int,
+    page: int,
+    page_size: int,
+    keyword: str | None,
+    date_from: date | None,
+    date_to: date | None,
+) -> RoomLogListRead:
+    """分页查询房间操作日志。"""
+    room = get_room_or_404(db, user, room_id)
+    return list_room_logs(db, room, page, page_size, keyword, date_from, date_to)
+
+
+# === 房间设备 ===
 
 
 def replace_room_devices(
@@ -229,38 +399,117 @@ def list_room_devices(
     )
 
 
+def get_room_devices_service(
+    db: Session,
+    user: User,
+    room_id: int,
+    keyword: str | None = None,
+    device_type: str | None = None,
+    device_status: str | None = None,
+) -> RoomDeviceListRead:
+    """查询房间内设备。"""
+    room = get_room_or_404(db, user, room_id)
+    return list_room_devices(db, room, keyword, device_type, device_status)
+
+
+def set_room_devices_service(
+    db: Session, user: User, room_id: int, payload: RoomDevicesWrite
+) -> RoomDeviceListRead:
+    """整体替换房间的设备绑定关系。"""
+    room = get_room_or_404(db, user, room_id)
+    return replace_room_devices(db, room, payload)
+
+
+def edit_room_device_service(
+    db: Session, user: User, room_id: int, device_id: int, payload: RoomDeviceMetaWrite
+) -> RoomDeviceListRead:
+    """修改房间内设备的绑定元信息。"""
+    room = get_room_or_404(db, user, room_id)
+    binding = db.scalar(
+        select(RoomDevice).where(
+            RoomDevice.room_id == room.id, RoomDevice.device_id == device_id
+        )
+    )
+    if not binding:
+        raise HTTPException(status_code=404, detail="房间设备不存在")
+    changes = payload.model_dump(exclude_unset=True)
+    if "group" in changes:
+        changes["group_name"] = changes.pop("group")
+    for field, value in changes.items():
+        setattr(binding, field, value)
+    db.commit()
+    return list_room_devices(db, room)
+
+
+def update_device_service(
+    db: Session, user: User, room_id: int, payload: RoomDeviceWrite
+) -> RoomRead:
+    """更新房间内设备状态。"""
+    room = get_room_or_404(db, user, room_id)
+    write_activity(db, room, f"{payload.device} 状态更新")
+    db.commit()
+    db.refresh(room)
+    return serialize(room)
+
+
+def quick_action_service(
+    db: Session, user: User, room_id: int, payload: RoomQuickActionWrite
+) -> RoomRead:
+    """执行房间快捷操作。"""
+    room = get_room_or_404(db, user, room_id)
+    write_activity(db, room, f"快捷操作：{payload.action}")
+    db.commit()
+    db.refresh(room)
+    return serialize(room)
+
+
+# === 房间环境 ===
+
+
 def latest_environment(db: Session, room: Room) -> EnvironmentLatestRead:
-    sample = db.scalar(
-        select(RoomEnvironmentSample)
-        .where(RoomEnvironmentSample.room_id == room.id)
-        .order_by(RoomEnvironmentSample.sampled_at.desc())
-    )
-    return EnvironmentLatestRead(
-        temperature=sample.temperature if sample else room.temperature,
-        humidity=sample.humidity if sample else room.humidity,
-        pm25=sample.pm25 if sample else room.pm25,
-        illuminance=sample.illuminance if sample else room.illuminance,
-        noise=sample.noise if sample else room.noise,
-        comfort=room.comfort,
-        sampled_at=sample.sampled_at if sample else room.updated_at,
-    )
+    """读取房间最新环境指标，返回指标名到数值的映射。"""
+    rows = db.execute(
+        select(
+            DeviceData.name,
+            DeviceData.value,
+            DeviceData.sampled_at,
+        )
+        .where(DeviceData.room_id == room.id)
+        .order_by(DeviceData.sampled_at.desc())
+        .limit(500)
+    ).all()
+    values: dict[str, float] = {}
+    sampled_at: datetime = room.updated_at
+    for name, value, at in rows:
+        if name not in values:
+            values[name] = value
+            sampled_at = at
+    return EnvironmentLatestRead(sampled_at=sampled_at, values=values)
 
 
 def environment_trends(
     db: Session, room: Room, metrics: list[str]
 ) -> EnvironmentTrendRead:
-    allowed = {"temperature", "humidity", "pm25", "illuminance", "noise"}
-    if not metrics or not set(metrics) <= allowed:
+    """按采样时间聚合环境指标趋势，指标可任意扩展。"""
+    if not metrics:
         raise HTTPException(status_code=422, detail="环境指标不合法")
-    samples = list(
-        db.scalars(
-            select(RoomEnvironmentSample)
-            .where(RoomEnvironmentSample.room_id == room.id)
-            .order_by(RoomEnvironmentSample.sampled_at.desc())
-            .limit(288)
-        ).all()
-    )
-    if not samples:
+    rows = db.execute(
+        select(
+            DeviceData.name,
+            DeviceData.value,
+            DeviceData.sampled_at,
+        )
+        .where(
+            DeviceData.room_id == room.id,
+            DeviceData.name.in_(metrics),
+        )
+        .order_by(DeviceData.sampled_at.desc())
+        .limit(288)
+    ).all()
+    grouped: dict[datetime, dict[str, float]] = {}
+    for name, value, at in rows:
+        grouped.setdefault(at, {})[name] = value
+    if not grouped:
         latest = latest_environment(db, room)
         return EnvironmentTrendRead(
             metrics=metrics,
@@ -268,7 +517,9 @@ def environment_trends(
                 EnvironmentPoint(
                     sampled_at=latest.sampled_at,
                     values={
-                        metric: float(getattr(latest, metric)) for metric in metrics
+                        metric: latest.values[metric]
+                        for metric in metrics
+                        if metric in latest.values
                     },
                 )
             ],
@@ -276,10 +527,80 @@ def environment_trends(
     return EnvironmentTrendRead(
         metrics=metrics,
         items=[
-            EnvironmentPoint(
-                sampled_at=item.sampled_at,
-                values={metric: float(getattr(item, metric)) for metric in metrics},
-            )
-            for item in reversed(samples)
+            EnvironmentPoint(sampled_at=at, values=values)
+            for at, values in sorted(grouped.items())
         ],
     )
+
+
+def get_environment_latest_service(
+    db: Session, user: User, room_id: int
+) -> EnvironmentLatestRead:
+    """获取房间最新环境数据。"""
+    room = get_room_or_404(db, user, room_id)
+    return latest_environment(db, room)
+
+
+def get_environment_trends_service(
+    db: Session, user: User, room_id: int, metrics: list[str]
+) -> EnvironmentTrendRead:
+    """获取房间环境指标的趋势数据。"""
+    room = get_room_or_404(db, user, room_id)
+    return environment_trends(db, room, metrics)
+
+
+def create_environment_report_service(
+    db: Session, user: User, room_id: int
+) -> EnvironmentReportRead:
+    """创建环境报告导出任务。"""
+    room = get_room_or_404(db, user, room_id)
+    report = RoomEnvironmentReport(id=f"report-{uuid4().hex}", room_id=room.id)
+    db.add(report)
+    db.commit()
+    return EnvironmentReportRead(task_id=report.id, status=report.status)
+
+
+def get_environment_report_service(
+    db: Session, user: User, task_id: str
+) -> EnvironmentReportRead:
+    """查询环境报告任务状态。"""
+    accessible = accessible_rooms(db, user).subquery()
+    report = db.scalar(
+        select(RoomEnvironmentReport).where(
+            RoomEnvironmentReport.id == task_id,
+            RoomEnvironmentReport.room_id.in_(select(accessible.c.id)),
+        )
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="环境报告任务不存在")
+    return EnvironmentReportRead(
+        task_id=report.id, status=report.status, download_url=report.download_url
+    )
+
+
+# === 房间场景 ===
+
+
+def get_room_scenes_service(db: Session, user: User, room_id: int) -> SceneListRead:
+    """查询房间关联的场景。"""
+    room = get_room_or_404(db, user, room_id)
+    return get_scenes_service(db, room.name, None, "all")
+
+
+def preview_room_scene_service(
+    db: Session, user: User, room_id: int, scene_id: str
+) -> ScenePreviewRead:
+    """预览房间场景动作链。"""
+    get_room_or_404(db, user, room_id)
+    return get_scene_preview_service(db, scene_id)
+
+
+def execute_room_scene_service(
+    db: Session, user: User, room_id: int, scene_id: str, payload: RoomSceneExecuteWrite
+) -> SceneExecutionRead:
+    """执行房间场景并记录活动日志。"""
+    room = get_room_or_404(db, user, room_id)
+    result = run_scene_service(db, scene_id, False, "room")
+    write_activity(db, room, f"执行场景：{scene_id}", "scene")
+    db.commit()
+    return result

@@ -2,8 +2,6 @@ import type {
   ModelAdvancedSettings,
   SettingsState,
 } from "../types/settings";
-import { defaultSettings } from "../mock/settings";
-
 /**
  * 设置持久化模块（SRP：负责本地设置的加载、合并与序列化，
  * 不承担账户、安全、备份等业务逻辑）。
@@ -12,6 +10,82 @@ import { defaultSettings } from "../mock/settings";
 export const settingsStorageKey = "smart-home-settings";
 const securityStorageKey = "smart-home-security-meta";
 const backupStorageKey = "smart-home-backup-history";
+
+const defaultSettings: SettingsState = {
+  account: {
+    username: "",
+    email: "",
+    avatarUrl: null,
+    familyName: "",
+    householdId: undefined,
+    householdAddress: null,
+    householdTimezone: "Asia/Shanghai",
+    role: "",
+    members: [],
+  },
+  appearance: {
+    themeMode: "light",
+    fontSize: "medium",
+    animationsEnabled: true,
+    sidebarCollapsed: false,
+  },
+  aiAssistant: {
+    model: "Orion GPT-4o",
+    temperature: 0.7,
+    maxTokens: 4096,
+    language: "zh-CN",
+    detailLevel: 70,
+    autoExecuteLowRisk: true,
+    confirmHighRisk: true,
+  },
+  homeAssistant: {
+    serviceUrl: "https://home.example.com:8123",
+    accessToken: "",
+    parameters: "{}",
+    tokenConfigured: false,
+    websocketStatus: "disconnected",
+  },
+  notifications: {
+    deviceOffline: true,
+    securityAlerts: true,
+    automationResults: true,
+    quietStart: "23:00",
+    quietEnd: "07:00",
+  },
+  security: {
+    twoFactorEnabled: true,
+  },
+  backup: {
+    autoBackup: true,
+    lastBackupTime: "",
+  },
+  summary: {
+    currentHome: "",
+    accountStatus: "",
+    homeAssistantStatus: "online",
+    lastSync: "",
+  },
+  suggestions: [
+    {
+      id: "enable-2fa",
+      target: "security",
+      title: "建议开启双重认证",
+      description: "提升账户安全性，防止未授权访问",
+    },
+    {
+      id: "auto-backup",
+      target: "backup",
+      title: "建议启用自动备份",
+      description: "定期备份配置，防止数据丢失",
+    },
+    {
+      id: "sync-devices",
+      target: "homeAssistant",
+      title: "建议同步最新设备",
+      description: "保持设备数据最新，体验更稳定",
+    },
+  ],
+};
 
 export const cloneSettings = (): SettingsState =>
   structuredClone(defaultSettings);

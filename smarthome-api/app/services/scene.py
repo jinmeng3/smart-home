@@ -47,6 +47,9 @@ from app.schemas.scene import (
 HIGH_RISK_KEYWORDS = ("lock", "camera", "门锁", "摄像头", "安防")
 
 
+# === 场景管理 ===
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -162,7 +165,7 @@ def replace_steps(scene: Scene, payload: SceneWrite) -> None:
     )
 
 
-def list_scenes(
+def get_scenes_service(
     db: Session, keyword: str | None, trigger_type: str | None, enabled: str
 ) -> SceneListRead:
     filters = []
@@ -193,7 +196,7 @@ def list_scenes(
     )
 
 
-def create_scene(db: Session, payload: SceneWrite) -> SceneRead:
+def add_scene_service(db: Session, payload: SceneWrite) -> SceneRead:
     scene = Scene(id=unique_scene_id(db, payload.name))
     apply_scene_payload(scene, payload)
     replace_steps(scene, payload)
@@ -205,7 +208,7 @@ def create_scene(db: Session, payload: SceneWrite) -> SceneRead:
     return serialize_scene(get_scene_or_404(db, scene.id))
 
 
-def update_scene(db: Session, scene_id: str, payload: SceneWrite) -> SceneRead:
+def edit_scene_service(db: Session, scene_id: str, payload: SceneWrite) -> SceneRead:
     scene = get_scene_or_404(db, scene_id)
     apply_scene_payload(scene, payload)
     replace_steps(scene, payload)
@@ -213,7 +216,7 @@ def update_scene(db: Session, scene_id: str, payload: SceneWrite) -> SceneRead:
     return serialize_scene(get_scene_or_404(db, scene.id))
 
 
-def set_scene_enabled(db: Session, scene_id: str, enabled: bool) -> Scene:
+def change_enabled_service(db: Session, scene_id: str, enabled: bool) -> Scene:
     scene = get_scene_or_404(db, scene_id)
     scene.enabled = enabled
     scene.updated_at = now_utc()
@@ -222,7 +225,10 @@ def set_scene_enabled(db: Session, scene_id: str, enabled: bool) -> Scene:
     return scene
 
 
-def execute_scene(
+# === 场景执行 ===
+
+
+def run_scene_service(
     db: Session, scene_id: str, confirm_high_risk: bool, source: str
 ) -> SceneExecutionRead:
     scene = get_scene_or_404(db, scene_id)
@@ -280,7 +286,7 @@ def serialize_execution(log: SceneExecutionLog) -> SceneExecutionRead:
     )
 
 
-def copy_scene(db: Session, scene_id: str, name: str) -> SceneRead:
+def duplicate_scene_service(db: Session, scene_id: str, name: str) -> SceneRead:
     source = get_scene_or_404(db, scene_id)
     payload = SceneWrite(
         name=name,
@@ -303,17 +309,17 @@ def copy_scene(db: Session, scene_id: str, name: str) -> SceneRead:
             for step in source.steps
         ],
     )
-    return create_scene(db, payload)
+    return add_scene_service(db, payload)
 
 
-def delete_scene(db: Session, scene_id: str) -> None:
+def remove_scene_service(db: Session, scene_id: str) -> None:
     """删除场景及其执行步骤、执行日志（ORM 级联清理辅助表）。"""
     scene = get_scene_or_404(db, scene_id)
     db.delete(scene)
     db.commit()
 
 
-def list_scene_logs(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
+def get_logs_service(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
     get_scene_or_404(db, scene_id)
     logs = db.scalars(
         select(SceneExecutionLog)
@@ -326,7 +332,7 @@ def list_scene_logs(db: Session, scene_id: str, limit: int) -> SceneLogListRead:
     )
 
 
-def summarize_scenes(db: Session) -> SceneSummaryRead:
+def get_summary_service(db: Session) -> SceneSummaryRead:
     total = db.scalar(select(func.count()).select_from(Scene)) or 0
     enabled = (
         db.scalar(
@@ -364,7 +370,7 @@ def summarize_scenes(db: Session) -> SceneSummaryRead:
     )
 
 
-def update_scene_order(db: Session, payload: SceneOrderWrite) -> SceneOrderRead:
+def reorder_scenes_service(db: Session, payload: SceneOrderWrite) -> SceneOrderRead:
     ids = [item.id for item in payload.items]
     scenes = {
         scene.id: scene for scene in db.scalars(select(Scene).where(Scene.id.in_(ids)))
@@ -380,7 +386,7 @@ def update_scene_order(db: Session, payload: SceneOrderWrite) -> SceneOrderRead:
     return SceneOrderRead(updated=len(payload.items))
 
 
-def preview_scene(db: Session, scene_id: str) -> ScenePreviewRead:
+def get_scene_preview_service(db: Session, scene_id: str) -> ScenePreviewRead:
     scene = get_scene_or_404(db, scene_id)
     return ScenePreviewRead(
         scene_id=scene.id,
@@ -405,7 +411,7 @@ def preview_scene(db: Session, scene_id: str) -> ScenePreviewRead:
     )
 
 
-def read_execution(db: Session, execution_id: str) -> SceneExecutionRead:
+def get_execution_service(db: Session, execution_id: str) -> SceneExecutionRead:
     log = db.scalar(
         select(SceneExecutionLog)
         .options(selectinload(SceneExecutionLog.steps))
@@ -416,6 +422,9 @@ def read_execution(db: Session, execution_id: str) -> SceneExecutionRead:
             status_code=status.HTTP_404_NOT_FOUND, detail="执行记录不存在"
         )
     return serialize_execution(log)
+
+
+# === 场景模板 ===
 
 
 def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
@@ -445,7 +454,7 @@ def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
     )
 
 
-def list_templates(
+def get_templates_service(
     db: Session, keyword: str | None, category: str | None, limit: int
 ) -> SceneTemplateListRead:
     filters = [SceneTemplate.enabled.is_(True)]
@@ -465,7 +474,7 @@ def list_templates(
     return SceneTemplateListRead(items=[serialize_template(item) for item in templates])
 
 
-def use_template(
+def import_template_service(
     db: Session, template_id: str, payload: SceneTemplateUseWrite
 ) -> SceneRead:
     template = get_template_or_404(db, template_id)
@@ -490,7 +499,7 @@ def use_template(
             for step in data.steps
         ],
     )
-    result = create_scene(db, scene_payload)
+    result = add_scene_service(db, scene_payload)
     scene = db.get(Scene, result.id)
     if scene is None:
         raise HTTPException(
@@ -501,7 +510,7 @@ def use_template(
     return serialize_scene(get_scene_or_404(db, result.id))
 
 
-def preview_template(db: Session, template_id: str) -> SceneTemplatePreviewRead:
+def get_template_preview_service(db: Session, template_id: str) -> SceneTemplatePreviewRead:
     template = serialize_template(get_template_or_404(db, template_id))
     known_ids = set(db.scalars(select(Device.device_id)).all())
     steps = [
@@ -522,7 +531,7 @@ def preview_template(db: Session, template_id: str) -> SceneTemplatePreviewRead:
     )
 
 
-def save_draft(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
+def add_draft_service(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
     draft = SceneDraft(
         id=f"draft-{uuid4().hex}",
         payload_json=payload.model_dump_json(by_alias=True),
@@ -534,7 +543,10 @@ def save_draft(db: Session, payload: SceneDraftWrite) -> SceneDraftRead:
     return SceneDraftRead(draft_id=draft.id, updated_at=draft.updated_at)
 
 
-def batch_set_scene_enabled(
+# === 批量操作 ===
+
+
+def batch_change_enabled_service(
     db: Session, payload: SceneBatchEnabledWrite
 ) -> SceneBatchEnabledResult:
     """批量启用或停用场景。空列表时操作全部场景。"""
@@ -550,7 +562,7 @@ def batch_set_scene_enabled(
     return SceneBatchEnabledResult(updated_count=len(scenes))
 
 
-def batch_set_scene_schedule(
+def batch_set_schedule_service(
     db: Session, payload: SceneBatchScheduleWrite
 ) -> SceneBatchScheduleResult:
     """批量设置场景的触发类型和定时触发描述。空列表时操作全部场景。"""

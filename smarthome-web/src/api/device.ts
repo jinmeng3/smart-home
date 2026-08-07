@@ -145,7 +145,7 @@ export const getDevice = async (id: number): Promise<DeviceDetail> => {
 };
 
 export const createDevice = async (payload: DeviceCreatePayload): Promise<Device> => {
-  const response = await apiRequest<ApiDevice>("/api/devices", {
+  const response = await apiRequest<ApiDevice>("/api/devices/add", {
     method: "POST",
     body: JSON.stringify(mapCreatePayload(payload)),
   });

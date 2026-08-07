@@ -12,6 +12,9 @@ EXTENSION_BY_TYPE = {
 }
 
 
+# === 头像 ===
+
+
 def avatar_path_from_url(settings: Settings, avatar_url: str | None) -> Path | None:
     """只取 URL 文件名，避免外部路径逃逸上传目录。"""
     if not avatar_url:

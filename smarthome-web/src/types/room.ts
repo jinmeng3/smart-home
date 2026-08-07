@@ -6,14 +6,8 @@ export interface Room {
   imageUrl?: string | null;
   area: number;
   comfort: number;
-  temperature: number;
-  humidity: number;
-  pm25: number;
-  illuminance: number;
-  noise: number;
   deviceCount: number;
   onlineCount: number;
-  deviceStates: Record<string, boolean | number | string>;
   updatedAt: string;
 }
 
@@ -102,13 +96,8 @@ export interface RoomLogListResponse {
 // ── 房间环境 ────────────────────────────────────────────────────────────────────
 
 export interface RoomEnvironmentLatest {
-  temperature: number;
-  humidity: number;
-  pm25: number;
-  illuminance: number;
-  noise: number;
-  comfort: number;
   sampledAt: string;
+  values: Record<string, number>;
 }
 
 export interface RoomEnvironmentPoint {
@@ -182,4 +171,23 @@ export interface RoomSceneExecution {
   startedAt: string;
   finishedAt: string | null;
   steps: RoomSceneExecutionStep[];
+}
+
+// ── 房间详情（含最近活动和当前场景） ────────────────────────────────────────────────
+
+export interface RoomDetail {
+  room: Room;
+  current_scene: string | null;
+  recent_activity: string | null;
+  recent_activity_time: string | null;
+}
+
+// ── 房间统计概览 ──────────────────────────────────────────────────────────────────
+
+export interface RoomStats {
+  room_count: number;
+  room_count_change: number;
+  online_rate: number;
+  alert_count: number;
+  pending_alert_count: number;
 }

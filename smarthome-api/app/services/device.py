@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.models.device import Device, DeviceGroup, DeviceLog
+from app.models.device import Device, DeviceGroup, DeviceLog, DeviceStatus
 from app.schemas.device import (
     DeviceBatchGroup,
     DeviceBatchGroupResult,
@@ -39,7 +39,10 @@ def get_device_or_404(db: Session, device_id: int) -> Device:
     return device
 
 
-def list_devices(db: Session, params: DeviceQueryParams) -> DeviceListRead:
+# === 设备 CRUD ===
+
+
+def list_devices_service(db: Session, params: DeviceQueryParams) -> DeviceListRead:
     """组合设备筛选条件并返回分页结果。"""
     filters = []
     if params.keyword:
@@ -66,7 +69,7 @@ def list_devices(db: Session, params: DeviceQueryParams) -> DeviceListRead:
     return DeviceListRead(total=total, items=list(devices))
 
 
-def read_device(db: Session, device_id: int) -> DeviceDetailWithLogs:
+def get_device_service(db: Session, device_id: int) -> DeviceDetailWithLogs:
     """返回设备详情及最近二十条操作日志。"""
     device = get_device_or_404(db, device_id)
     logs = db.scalars(
@@ -81,7 +84,7 @@ def read_device(db: Session, device_id: int) -> DeviceDetailWithLogs:
     )
 
 
-def create_device(db: Session, payload: DeviceCreate) -> Device:
+def add_device_service(db: Session, payload: DeviceCreate) -> Device:
     """创建设备和首条日志，使用同一个事务保证数据一致性。"""
     platform_id = payload.device_id or f"device-{uuid4().hex}"
     if db.scalar(select(Device.id).where(Device.device_id == platform_id)):
@@ -90,7 +93,7 @@ def create_device(db: Session, payload: DeviceCreate) -> Device:
     device = Device(
         **payload.model_dump(exclude={"device_id"}),
         device_id=platform_id,
-        status="offline",
+        status=DeviceStatus.OFFLINE,
     )
     db.add(device)
     db.flush()
@@ -106,7 +109,7 @@ def create_device(db: Session, payload: DeviceCreate) -> Device:
     return device
 
 
-def update_device(db: Session, device_id: int, payload: DeviceUpdate) -> Device:
+def update_device_service(db: Session, device_id: int, payload: DeviceUpdate) -> Device:
     """更新传入字段，并在设备上线时刷新最后在线时间。"""
     device = get_device_or_404(db, device_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -123,14 +126,17 @@ def update_device(db: Session, device_id: int, payload: DeviceUpdate) -> Device:
     return device
 
 
-def delete_device(db: Session, device_id: int) -> None:
+def delete_device_service(db: Session, device_id: int) -> None:
     """删除设备，关联日志由 ORM 级联清理。"""
     device = get_device_or_404(db, device_id)
     db.delete(device)
     db.commit()
 
 
-def sync_devices(db: Session, platform: DevicePlatform) -> DeviceSyncRead:
+# === 设备同步 ===
+
+
+def sync_devices_service(db: Session, platform: DevicePlatform) -> DeviceSyncRead:
     """刷新指定平台的本地设备状态；平台适配器可在此处接入。"""
     devices = list(
         db.scalars(select(Device).where(Device.connection == platform)).all()
@@ -150,7 +156,10 @@ def sync_devices(db: Session, platform: DevicePlatform) -> DeviceSyncRead:
     return DeviceSyncRead(platform=platform, synced_count=len(devices))
 
 
-def list_device_logs(
+# === 设备日志 ===
+
+
+def list_device_logs_service(
     db: Session, device_id: int, page: int, page_size: int
 ) -> DeviceLogListRead:
     """按创建时间倒序返回指定设备的分页日志。"""
@@ -167,7 +176,10 @@ def list_device_logs(
     return DeviceLogListRead(total=total, items=list(logs))
 
 
-def upload_device_image(
+# === 设备图片 ===
+
+
+def upload_image_service(
     db: Session, device_id: int | None, file: UploadFile, settings: Settings
 ) -> DeviceImageRead:
     """校验并保存设备图片，可选关联设备并更新其 image_url，返回访问地址。"""
@@ -209,7 +221,10 @@ def upload_device_image(
     )
 
 
-def batch_group_devices(
+# === 设备分组 ===
+
+
+def batch_group_devices_service(
     db: Session, payload: DeviceBatchGroup
 ) -> DeviceBatchGroupResult:
     """创建或复用分组，将指定设备分配到该分组。"""

@@ -14,6 +14,7 @@ from app.services.auth import parse_token
 
 
 def get_db() -> Generator[Session, None, None]:
+    """获取数据库会话（FastAPI 依赖）。"""
     yield from session_get_db()
 
 
@@ -52,6 +53,7 @@ CURRENT_USER_DEPENDENCY = Depends(get_current_user)
 def get_membership_query(
     household_id: int, user_id: int
 ) -> Select[tuple[HouseholdMembership]]:
+    """构建家庭成员关系的查询条件。"""
     return select(HouseholdMembership).where(
         HouseholdMembership.household_id == household_id,
         HouseholdMembership.user_id == user_id,
@@ -61,6 +63,7 @@ def get_membership_query(
 def get_membership(
     db: Session, household_id: int, user_id: int
 ) -> HouseholdMembership | None:
+    """查询家庭成员关系，不存在时返回 None。"""
     return db.scalar(get_membership_query(household_id, user_id))
 
 
@@ -101,6 +104,7 @@ def require_household_admin(
 
 
 def count_admins(db: Session, household_id: int) -> int:
+    """统计家庭中管理员的剩余数量。"""
     return (
         db.scalar(
             select(func.count())

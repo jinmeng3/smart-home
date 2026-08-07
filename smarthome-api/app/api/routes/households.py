@@ -25,6 +25,9 @@ router = APIRouter(prefix="/households", tags=["households"])
 HOUSEHOLD_ADMIN_DEPENDENCY = Depends(require_household_admin)
 
 
+# === 辅助函数 ===
+
+
 def validate_timezone(timezone: str) -> None:
     """确认时区名称存在于系统 IANA 时区数据库。"""
     try:
@@ -39,6 +42,9 @@ def serialize_role(role: HouseholdRole | str) -> str:
     """将 ORM 枚举或字符串统一序列化为小写角色值。"""
     value = role.value if isinstance(role, HouseholdRole) else role
     return value.lower()
+
+
+# === 家庭 CRUD ===
 
 
 @router.get("", response_model=ApiResponse[list[HouseholdListItem]])

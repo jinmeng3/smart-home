@@ -13,6 +13,8 @@ import type {
   RoomScenePreview,
   RoomSceneExecution,
   RoomSceneListResponse,
+  RoomDetail,
+  RoomStats,
 } from "../types/room";
 
 export const fetchRooms = (floor = "", roomType = "") => {
@@ -23,7 +25,7 @@ export const fetchRooms = (floor = "", roomType = "") => {
 };
 
 export const createRoom = (payload: RoomInput) =>
-  apiRequest<Room>("/api/rooms", {
+  apiRequest<Room>("/api/rooms/add", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -160,3 +162,13 @@ export const executeRoomScene = (
       body: JSON.stringify(payload),
     },
   );
+
+// ── 房间详情 ────────────────────────────────────────────────────────────────────
+
+export const fetchRoomDetail = (roomId: number) =>
+  apiRequest<RoomDetail>(`/api/rooms/${roomId}/detail`);
+
+// ── 房间统计概览 ────────────────────────────────────────────────────────────────
+
+export const fetchRoomStats = () =>
+  apiRequest<RoomStats>("/api/rooms/stats");

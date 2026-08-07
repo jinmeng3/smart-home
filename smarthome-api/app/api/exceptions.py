@@ -23,12 +23,14 @@ HTTP_TO_APP_CODE = {
 
 
 def error_response(status_code: int, message: str) -> JSONResponse:
+    """将 HTTP 状态码映射为统一的业务错误响应。"""
     app_code = HTTP_TO_APP_CODE.get(status_code, AppCode.INTERNAL_SERVER_ERROR)
     payload = ApiResponse.fail(code=int(app_code), message=message)
     return JSONResponse(status_code=status_code, content=payload.model_dump())
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    """注册全局异常处理器，统一返回结构化错误响应。"""
     @app.exception_handler(HTTPException)
     async def http_exception_handler(
         _request: Request, exc: HTTPException

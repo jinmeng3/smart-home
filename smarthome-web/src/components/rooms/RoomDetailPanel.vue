@@ -10,8 +10,11 @@ export interface RoomEnvironmentItem {
 }
 
 defineProps<{
-    room: Room;
+    room: Room | null;
     environment: RoomEnvironmentItem[];
+    currentScene?: string;
+    recentActivity?: string;
+    recentActivityTime?: string;
 }>();
 
 defineEmits<{
@@ -24,55 +27,93 @@ defineEmits<{
     <aside class="room-detail">
         <section>
             <h2><SvgIcon name="room" size="sm" />房间详情</h2>
-            <div class="detail-heading">
-                <span>{{ room.name.slice(0, 1) }}</span>
-                <div>
-                    <h3>
-                        {{ room.name }}
-                        <small>{{ room.comfort >= 84 ? "舒适" : "良好" }}</small>
-                    </h3>
-                    <p><b></b>在线</p>
+            <template v-if="room">
+                <div class="detail-heading">
+                    <span class="detail-avatar">{{ room.name.slice(0, 1) }}</span>
+                    <div>
+                        <h3>
+                            {{ room.name }}
+                            <small
+                                class="comfort-badge"
+                                :class="room.comfort >= 84 ? 'is-comfort' : 'is-good'"
+                            >
+                                {{ room.comfort >= 84 ? "舒适" : "良好" }}
+                            </small>
+                        </h3>
+                        <p class="online-status"><span class="status-pulse" />在线</p>
+                    </div>
                 </div>
-            </div>
-            <dl>
-                <div><dt>所在楼层</dt><dd>{{ room.floor }}</dd></div>
-                <div><dt>面积</dt><dd>{{ room.area }} m²</dd></div>
-                <div><dt>在线设备</dt><dd>{{ room.onlineCount }} / {{ room.deviceCount }} 个</dd></div>
-                <div><dt>当前场景</dt><dd>休闲模式</dd></div>
-                <div><dt>最近活动</dt><dd>10 分钟前（打开台灯）</dd></div>
-            </dl>
-            <div class="detail-actions">
-                <button class="primary" type="button" @click="$emit('open', 'devices')">
-                    <SvgIcon name="power" size="sm" />进入控制
-                </button>
-                <button type="button" @click="$emit('open', 'edit')">
-                    <SvgIcon name="edit" size="sm" />编辑房间
-                </button>
+                <dl>
+                    <div class="field-row">
+                        <dt><SvgIcon name="more" size="sm" />所在楼层</dt>
+                        <dd class="tone-primary">{{ room.floor }}</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt><SvgIcon name="scan" size="sm" />面积</dt>
+                        <dd class="tone-teal">{{ room.area }} m²</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt><SvgIcon name="online-device" size="sm" />在线设备</dt>
+                        <dd class="tone-success">{{ room.onlineCount }} / {{ room.deviceCount }} 个</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt><SvgIcon name="scene" size="sm" />当前场景</dt>
+                        <dd class="tone-purple">{{ currentScene || '休闲模式' }}</dd>
+                    </div>
+                    <div class="field-row">
+                        <dt><SvgIcon name="clock" size="sm" />最近活动</dt>
+                        <dd class="tone-orange">{{ recentActivityTime ? `${recentActivityTime}（${recentActivity}）` : '暂无活动记录' }}</dd>
+                    </div>
+                </dl>
+                <div class="detail-actions">
+                    <button class="primary" type="button" @click="$emit('open', 'devices')">
+                        <SvgIcon name="power" size="sm" />进入控制
+                    </button>
+                    <button type="button" @click="$emit('open', 'edit')">
+                        <SvgIcon name="edit" size="sm" />编辑房间
+                    </button>
+                </div>
+            </template>
+            <div v-else class="section-empty">
+                <SvgIcon name="room" size="lg" />
+                <p>暂无房间数据</p>
             </div>
         </section>
-        <section class="environment-overview" @click="$emit('open', 'environment')">
+        <section class="environment-overview" @click="room && $emit('open', 'environment')">
             <h2><SvgIcon name="sensor" size="sm" />环境概览 <small>实时更新</small></h2>
-            <div class="detail-environment">
-                <p v-for="item in environment" :key="item.name">
-                    <span>{{ item.name }}</span><strong>{{ item.value }}</strong>
-                </p>
+            <template v-if="room">
+                <div class="detail-environment">
+                    <p v-for="item in environment" :key="item.name">
+                        <span>{{ item.name }}</span><strong>{{ item.value }}</strong>
+                    </p>
+                </div>
+            </template>
+            <div v-else class="section-empty">
+                <SvgIcon name="sensor" size="lg" />
+                <p>暂无环境数据</p>
             </div>
         </section>
         <section>
             <h2><SvgIcon name="scene" size="sm" />快捷操作</h2>
-            <div class="detail-quick">
-                <button type="button" @click="$emit('quick', 'all_lights')">
-                    <SvgIcon name="light" />全开灯光
-                </button>
-                <button type="button" @click="$emit('quick', 'air_conditioner')">
-                    <SvgIcon name="air-conditioner" />关闭空调
-                </button>
-                <button type="button" @click="$emit('quick', 'curtains')">
-                    <SvgIcon name="curtain" />打开窗帘
-                </button>
-                <button type="button" @click="$emit('open', 'logs')">
-                    <SvgIcon name="log" />查看日志
-                </button>
+            <template v-if="room">
+                <div class="detail-quick">
+                    <button type="button" @click="$emit('quick', 'all_lights')">
+                        <SvgIcon name="light" />全开灯光
+                    </button>
+                    <button type="button" @click="$emit('quick', 'air_conditioner')">
+                        <SvgIcon name="air-conditioner" />关闭空调
+                    </button>
+                    <button type="button" @click="$emit('quick', 'curtains')">
+                        <SvgIcon name="curtain" />打开窗帘
+                    </button>
+                    <button type="button" @click="$emit('open', 'logs')">
+                        <SvgIcon name="log" />查看日志
+                    </button>
+                </div>
+            </template>
+            <div v-else class="section-empty">
+                <SvgIcon name="scene" size="lg" />
+                <p>请先添加房间后操作</p>
             </div>
         </section>
     </aside>
@@ -107,7 +148,7 @@ defineEmits<{
     gap: 7px;
     margin: 0 0 14px;
     color: var(--color-text-primary);
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 900;
 }
 .room-detail h2 svg {
@@ -116,7 +157,7 @@ defineEmits<{
 .room-detail h2 > small {
     margin-left: auto;
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 750;
 }
 .detail-heading {
@@ -126,7 +167,7 @@ defineEmits<{
     padding-bottom: 14px;
     border-bottom: 1px solid var(--color-border);
 }
-.detail-heading > span {
+.detail-heading .detail-avatar {
     display: grid;
     width: 48px;
     height: 48px;
@@ -135,11 +176,11 @@ defineEmits<{
     border-radius: 14px;
     background: linear-gradient(
         135deg,
-        var(--color-primary-100),
-        var(--color-primary-50)
+        var(--color-primary-500),
+        var(--color-primary-400)
     );
-    color: var(--color-primary-700);
-    font-size: 18px;
+    color: #fff;
+    font-size: 20px;
     font-weight: 900;
     box-shadow: 0 6px 16px var(--color-focus-ring);
 }
@@ -149,56 +190,108 @@ defineEmits<{
 }
 .detail-heading h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 900;
+    color: var(--color-text-primary);
 }
-.detail-heading h3 small {
+.detail-heading h3 .comfort-badge {
     margin-left: 6px;
     border-radius: 999px;
-    background: var(--color-success-soft);
-    padding: 2px 8px;
-    color: var(--color-success);
-    font-size: 11px;
+    padding: 2px 10px;
+    font-size: 13px;
     font-weight: 800;
+    vertical-align: middle;
 }
-.detail-heading p {
+.detail-heading h3 .comfort-badge.is-comfort {
+    background: linear-gradient(135deg, var(--color-success-soft), #f0fdf4);
+    color: var(--color-success);
+}
+.detail-heading h3 .comfort-badge.is-good {
+    background: linear-gradient(135deg, var(--tone-teal-soft), #ecfdfa);
+    color: var(--tone-teal);
+}
+.detail-heading .online-status {
     margin: 5px 0 0;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-    font-weight: 750;
+    color: var(--color-success);
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
-.detail-heading p b {
+.detail-heading .online-status .status-pulse {
     display: inline-block;
-    width: 7px;
-    height: 7px;
-    margin-right: 4px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--color-success);
+    animation: pulse-dot 2s var(--motion-ease) infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 .room-detail dl {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 2px;
     margin: 14px 0;
 }
-.room-detail dl div {
+.room-detail dl .field-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 10px;
-    padding: 8px 0;
-    font-size: 12px;
+    padding: 9px 0;
+    font-size: 14px;
+    transition: background 160ms var(--motion-ease);
+    border-radius: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin: 0 -8px;
 }
-.room-detail dl div + div {
+.room-detail dl .field-row:hover {
+    background: var(--color-surface-hover);
+}
+.room-detail dl .field-row + .field-row {
     border-top: 1px solid var(--color-border-subtle);
 }
 .room-detail dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     color: var(--color-text-tertiary);
-    font-weight: 750;
+    font-weight: 700;
+    font-size: 13px;
+}
+.room-detail dt svg {
+    color: var(--color-text-muted);
+    width: 14px;
+    height: 14px;
+}
+.room-detail dt:hover svg {
+    color: var(--color-text-tertiary);
 }
 .room-detail dd {
     margin: 0;
-    color: var(--color-text-secondary);
-    font-weight: 900;
+    font-weight: 800;
     text-align: right;
+    font-size: 14px;
+}
+.room-detail dd.tone-primary {
+    color: var(--color-primary-600);
+}
+.room-detail dd.tone-teal {
+    color: var(--tone-teal);
+}
+.room-detail dd.tone-success {
+    color: var(--color-success);
+}
+.room-detail dd.tone-purple {
+    color: var(--tone-purple);
+}
+.room-detail dd.tone-orange {
+    color: var(--tone-orange);
 }
 .detail-actions {
     display: grid;
@@ -214,7 +307,7 @@ defineEmits<{
     border: 1px solid var(--color-border);
     border-radius: 9px;
     color: var(--color-text-secondary);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 900;
     transition: 160ms var(--motion-ease);
 }
@@ -257,13 +350,13 @@ defineEmits<{
 }
 .detail-environment span {
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 750;
 }
 .detail-environment strong {
     margin-top: 3px;
     color: var(--color-text-primary);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 900;
 }
 .detail-quick {
@@ -281,7 +374,7 @@ defineEmits<{
     background: var(--color-primary-50);
     padding: 12px 6px;
     color: var(--color-primary-700);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
     transition: 160ms var(--motion-ease);
 }
@@ -294,6 +387,30 @@ defineEmits<{
     width: 18px;
     height: 18px;
 }
+.section-empty {
+    display: flex;
+    min-height: 120px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px dashed var(--color-border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    color: var(--color-text-tertiary);
+    text-align: center;
+}
+.section-empty svg {
+    width: 36px;
+    height: 36px;
+    color: var(--color-primary-300);
+}
+.section-empty p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .room-detail > section,
     .detail-actions button,

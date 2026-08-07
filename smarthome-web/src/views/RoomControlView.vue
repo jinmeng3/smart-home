@@ -6,6 +6,9 @@ import { ElMessage } from "element-plus";
 import {
   createRoom,
   fetchRooms,
+  fetchRoomDetail,
+  fetchRoomStats,
+  getRoomEnvironmentLatest,
   runRoomQuickAction,
   updateRoom,
   updateRoomDevice,
@@ -22,6 +25,8 @@ import RoomDetailPanel from "../components/rooms/RoomDetailPanel.vue";
 import type {
     Room,
     RoomDeviceCard,
+    RoomDetail,
+    RoomStats,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
 
@@ -37,7 +42,7 @@ const deviceCardConfig: Record<string, { icon: string; name: string }> = {
 };
 
 const deriveDevices = (room: Room): RoomDeviceCard[] => {
-    return Object.entries(room.deviceStates).map(([key]) => {
+    return Object.keys(deviceCardConfig).map((key) => {
         const config = deviceCardConfig[key];
         return {
             key,
@@ -59,6 +64,9 @@ const keyword = ref("");
 const floor = ref("");
 const roomType = ref("");
 const activeDialog = ref<RoomDialog>(null);
+const roomStats = ref<RoomStats | null>(null);
+const roomDetailMap = ref<Record<number, RoomDetail>>({});
+const environmentData = ref<RoomEnvironmentItem[]>([]);
 
 const roomGridExpanded = ref(false);
 
@@ -89,17 +97,12 @@ const comfort = computed(() =>
 );
 
 const environment = computed<RoomEnvironmentItem[]>(() => {
-    const room = selected.value;
+    return environmentData.value;
+});
 
-    if (!room) return [];
-
-    return [
-        { name: "温度", value: `${room.temperature}°C`, tone: "blue", points: "1,17 12,9 22,14 32,5 43,12 54,3 65,8" },
-        { name: "湿度", value: `${room.humidity}%`, tone: "blue", points: "1,16 12,18 22,10 32,14 43,6 54,9 65,3" },
-        { name: "PM2.5", value: `${room.pm25} μg/m³`, tone: "green", points: "1,18 12,13 22,16 32,7 43,11 54,3 65,10" },
-        { name: "光照", value: `${room.illuminance} lux`, tone: "orange", points: "1,17 12,8 22,15 32,2 43,16 54,8 65,17" },
-        { name: "噪音", value: `${room.noise} dB`, tone: "purple", points: "1,17 12,13 22,16 32,9 43,12 54,8 65,2" },
-    ];
+const selectedDetail = computed<RoomDetail | null>(() => {
+    if (!selectedId.value) return null;
+    return roomDetailMap.value[selectedId.value] ?? null;
 });
 
 const load = async () => {
@@ -111,12 +114,55 @@ const load = async () => {
     loading.value = true;
 
     try {
-        const result = await fetchRooms(floor.value, roomType.value);
+        const [result, stats] = await Promise.all([
+            fetchRooms(floor.value, roomType.value),
+            fetchRoomStats(),
+        ]);
         rooms.value = result.items;
+        roomStats.value = stats;
         selectedId.value = result.items[0]?.id;
-        temperature.value = Math.round(result.items[0]?.temperature ?? 24);
+        temperature.value = 24;
+        
+        // 加载所有房间的详情
+        const detailPromises = result.items.map((room) =>
+            fetchRoomDetail(room.id).then((detail) => ({ id: room.id, detail })),
+        );
+        const details = await Promise.all(detailPromises);
+        roomDetailMap.value = Object.fromEntries(
+            details.map(({ id, detail }) => [id, detail]),
+        );
+        
+        // 加载选中房间的环境数据
+        if (result.items[0]) {
+            await loadEnvironment(result.items[0].id);
+        }
     } finally {
         loading.value = false;
+    }
+};
+
+const loadEnvironment = async (roomId: number) => {
+    try {
+        const env = await getRoomEnvironmentLatest(roomId);
+        environmentData.value = [
+            { name: "温度", value: `${env.values.temperature ?? 0}°C`, tone: "blue", points: "1,17 12,9 22,14 32,5 43,12 54,3 65,8" },
+            { name: "湿度", value: `${env.values.humidity ?? 0}%`, tone: "blue", points: "1,16 12,18 22,10 32,14 43,6 54,9 65,3" },
+            { name: "PM2.5", value: `${env.values.pm25 ?? 0} μg/m³`, tone: "green", points: "1,18 12,13 22,16 32,7 43,11 54,3 65,10" },
+            { name: "光照", value: `${env.values.illuminance ?? 0} lux`, tone: "orange", points: "1,17 12,8 22,15 32,2 43,16 54,8 65,17" },
+            { name: "噪音", value: `${env.values.noise ?? 0} dB`, tone: "purple", points: "1,17 12,13 22,16 32,9 43,12 54,8 65,2" },
+        ];
+    } catch {
+        // 环境接口不可用时，使用房间数据构造
+        const room = rooms.value.find((r) => r.id === roomId);
+        if (room) {
+            environmentData.value = [
+                { name: "温度", value: `--°C`, tone: "blue", points: "" },
+                { name: "湿度", value: `--%`, tone: "blue", points: "" },
+                { name: "PM2.5", value: `-- μg/m³`, tone: "green", points: "" },
+                { name: "光照", value: `-- lux`, tone: "orange", points: "" },
+                { name: "噪音", value: `-- dB`, tone: "purple", points: "" },
+            ];
+        }
     }
 };
 
@@ -126,9 +172,20 @@ const quick = async (action: string) => {
     replaceRoom(await runRoomQuickAction(selected.value.id, action));
 };
 
-const selectRoom = (room: Room) => {
+const selectRoom = async (room: Room) => {
     selectedId.value = room.id;
-    temperature.value = Math.round(room.temperature);
+    temperature.value = 24;
+    
+    // 加载房间详情
+    try {
+        const detail = await fetchRoomDetail(room.id);
+        roomDetailMap.value = { ...roomDetailMap.value, [room.id]: detail };
+    } catch {
+        // 忽略详情加载失败
+    }
+    
+    // 加载环境数据
+    await loadEnvironment(room.id);
 };
 
 const replaceRoom = (room: Room) => {
@@ -144,7 +201,7 @@ const toggleDevice = async (device: RoomDeviceCard) => {
         await updateRoomDevice(
             selected.value.id,
             device.key,
-            !selected.value.deviceStates[device.key],
+            true,
         ),
     );
 };
@@ -219,13 +276,26 @@ useAuthenticatedLoader(load);
             </PageHeader>
 
             <RoomStatsGrid
-                v-if="!roomGridExpanded"
+                v-show="!roomGridExpanded"
                 :room-count="rooms.length"
                 :online-count="online"
                 :comfort-score="comfort"
+                :room-count-change="roomStats?.room_count_change ?? 0"
+                :online-rate="roomStats?.online_rate ?? 0"
+                :alert-count="roomStats?.alert_count ?? 0"
+                :pending-alert-count="roomStats?.pending_alert_count ?? 0"
             />
 
-            <section :class="['room-grid', 'card-grid-enter', { 'room-grid-expanded': roomGridExpanded }]">
+            <div v-if="rooms.length === 0 && !loading" class="room-empty-state">
+                <SvgIcon name="room" size="lg" />
+                <h3>暂无房间数据</h3>
+                <p>请添加您的第一个房间，开始管理智能家居设备</p>
+                <button class="primary" type="button" @click="activeDialog = 'create'">
+                    <SvgIcon name="plus" size="sm" />添加房间
+                </button>
+            </div>
+
+            <section v-if="rooms.length > 0" :class="['room-grid', 'card-grid-enter', { 'room-grid-expanded': roomGridExpanded }]">
                 <RoomCard
                     v-for="room in visibleRooms"
                     :key="room.id"
@@ -263,9 +333,11 @@ useAuthenticatedLoader(load);
         </main>
 
         <RoomDetailPanel
-            v-if="selected"
-            :room="selected"
+            :room="selected ?? null"
             :environment="environment"
+            :current-scene="selectedDetail?.current_scene ?? undefined"
+            :recent-activity="selectedDetail?.recent_activity ?? undefined"
+            :recent-activity-time="selectedDetail?.recent_activity_time ?? undefined"
             @quick="quick"
             @open="activeDialog = $event"
         />
@@ -291,8 +363,8 @@ useAuthenticatedLoader(load);
 }
 .page-tools { display: flex; align-items: center; gap: 8px; }
 .page-tools label { display: flex; min-width: 180px; height: 34px; align-items: center; gap: 6px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card-bg); padding: 0 9px; color: var(--color-text-tertiary); }
-.page-tools input { min-width: 0; flex: 1; border: 0; outline: 0; }
-.page-tools select { height: 34px; padding-left: 8px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card-bg); color: var(--color-text-primary); font-size: 12px; }
+.page-tools input { min-width: 0; flex: 1; border: 0; outline: 0; font-size: 14px; }
+.page-tools select { height: 34px; padding-left: 8px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-card-bg); color: var(--color-text-primary); font-size: 14px; }
 
 .page-tools select option {
     background: var(--color-card-bg);
@@ -364,6 +436,41 @@ useAuthenticatedLoader(load);
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+}
+
+.room-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex: 1;
+    min-height: 300px;
+    border: 1px dashed var(--color-border);
+    border-radius: 18px;
+    background: var(--color-card-bg);
+    color: var(--color-text-tertiary);
+}
+.room-empty-state svg {
+    width: 48px;
+    height: 48px;
+    color: var(--color-primary-300);
+}
+.room-empty-state h3 {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    font-weight: 900;
+}
+.room-empty-state p {
+    margin: 0;
+    font-size: 14px;
+}
+.room-empty-state button {
+    margin-top: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 800;
 }
 
 @media (max-width: 1450px) {

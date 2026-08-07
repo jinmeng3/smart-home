@@ -12,6 +12,8 @@ from app.models.user import User
 from app.schemas.account import AccountRead
 from app.schemas.auth import AuthResponse
 
+# === Token 工具 ===
+
 
 def generate_token(
     user_id: int,
@@ -50,7 +52,10 @@ def parse_token(
         )
 
 
-def authenticate_user(
+# === 登录注册 ===
+
+
+def login_service(
     db: Session,
     settings: Settings,
     account: str,
@@ -79,7 +84,7 @@ def authenticate_user(
     )
 
 
-def register_user(
+def register_service(
     db: Session,
     settings: Settings,
     username: str,

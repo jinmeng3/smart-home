@@ -6,15 +6,18 @@ from app.models.user import User
 from app.schemas.ai import AIModelCreate, AIModelRead, AIModelUpdate
 from app.schemas.common import ApiResponse
 from app.services.ai_model import (
-    activate_ai_model,
-    create_ai_model,
-    delete_active_ai_model,
-    get_active_ai_model,
-    list_ai_models,
-    update_active_ai_model,
+    activate_model_service,
+    add_ai_model_service,
+    delete_ai_model_service,
+    get_ai_models_service,
+    read_ai_model_service,
+    update_ai_model_service,
 )
 
 router = APIRouter(prefix="/ai_model", tags=["ai_model"])
+
+
+# === 模型查询 ===
 
 
 @router.get("/models", response_model=ApiResponse[list[AIModelRead]])
@@ -23,7 +26,7 @@ def get_ai_models(
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[list[AIModelRead]]:
     """列出当前用户配置的全部 AI 模型。"""
-    return ApiResponse(data=list_ai_models(db, current_user))
+    return ApiResponse(data=get_ai_models_service(db, current_user))
 
 
 @router.get("/model", response_model=ApiResponse[AIModelRead])
@@ -32,7 +35,10 @@ def read_ai_model(
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[AIModelRead]:
     """获取当前用户正在启用的 AI 模型。"""
-    return ApiResponse(data=get_active_ai_model(db, current_user))
+    return ApiResponse(data=read_ai_model_service(db, current_user))
+
+
+# === 模型管理 ===
 
 
 @router.post(
@@ -47,7 +53,7 @@ def add_ai_model(
 ) -> ApiResponse[AIModelRead]:
     """创建 AI 模型配置。"""
     return ApiResponse(
-        data=create_ai_model(db, current_user, payload), message="created"
+        data=add_ai_model_service(db, current_user, payload), message="created"
     )
 
 
@@ -58,7 +64,7 @@ def activate_model(
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[AIModelRead]:
     """将指定模型设为当前启用模型。"""
-    return ApiResponse(data=activate_ai_model(db, current_user, model_id))
+    return ApiResponse(data=activate_model_service(db, current_user, model_id))
 
 
 @router.patch("/model", response_model=ApiResponse[AIModelRead])
@@ -68,7 +74,7 @@ def update_ai_model(
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[AIModelRead]:
     """更新当前启用模型的配置。"""
-    return ApiResponse(data=update_active_ai_model(db, current_user, payload))
+    return ApiResponse(data=update_ai_model_service(db, current_user, payload))
 
 
 @router.delete("/model", status_code=status.HTTP_204_NO_CONTENT)
@@ -77,5 +83,5 @@ def delete_ai_model(
     db: Session = DB_DEPENDENCY,
 ) -> Response:
     """删除当前启用的 AI 模型。"""
-    delete_active_ai_model(db, current_user)
+    delete_ai_model_service(db, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

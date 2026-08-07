@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
@@ -11,7 +11,7 @@ from app.api.deps import (
     HOUSEHOLD_MEMBER_DEPENDENCY,
 )
 from app.models.automation import Automation
-from app.models.device import Device
+from app.models.device import Device, DeviceData
 from app.models.membership import HouseholdMembership
 from app.models.overview import (
     DeviceSyncJob,
@@ -40,7 +40,11 @@ from app.schemas.overview import (
 router = APIRouter(tags=["overview"])
 
 
+# === 家庭概览 ===
+
+
 def default_household(db: Session, user: User) -> int:
+    """获取用户默认家庭ID，未加入家庭时抛出403。"""
     household_id = db.scalar(
         select(HouseholdMembership.household_id)
         .where(HouseholdMembership.user_id == user.id)
@@ -52,7 +56,31 @@ def default_household(db: Session, user: User) -> int:
 
 
 def room_names(db: Session, household_id: int):
+    """构建指定家庭下全部房间名称的子查询。"""
     return select(Room.name).where(Room.household_id == household_id)
+
+
+def latest_environment_by_room(
+    db: Session, rooms: list[Room]
+) -> dict[int, dict[str, float]]:
+    """批量读取每个房间最新的环境指标（指标名到数值）。"""
+    if not rooms:
+        return {}
+    rows = db.execute(
+        select(
+            DeviceData.room_id,
+            DeviceData.name,
+            DeviceData.value,
+            DeviceData.sampled_at,
+        )
+        .where(DeviceData.room_id.in_([r.id for r in rooms]))
+        .order_by(DeviceData.sampled_at.desc())
+    ).all()
+    result: dict[int, dict[str, float]] = {room.id: {} for room in rooms}
+    for room_id, name, value, _at in rows:
+        if name not in result[room_id]:
+            result[room_id][name] = value
+    return result
 
 
 @router.get(
@@ -63,6 +91,7 @@ def get_overview(
     _membership=HOUSEHOLD_MEMBER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[OverviewRead]:
+    """聚合家庭概览数据：设备、自动化、环境与最近动态。"""
     rooms = list(
         db.scalars(
             select(Room).where(Room.household_id == household_id).order_by(Room.id)
@@ -90,11 +119,28 @@ def get_overview(
         )
         or 0
     )
+    env_by_room = latest_environment_by_room(db, rooms)
     temperature = (
-        round(sum(room.temperature for room in rooms) / len(rooms), 1) if rooms else 0
+        round(
+            sum(env_by_room[room.id].get("temperature", 0) for room in rooms)
+            / len(rooms),
+            1,
+        )
+        if rooms
+        else 0
     )
-    humidity = round(sum(room.humidity for room in rooms) / len(rooms)) if rooms else 0
-    pm25 = round(sum(room.pm25 for room in rooms) / len(rooms)) if rooms else 0
+    humidity = (
+        round(
+            sum(env_by_room[room.id].get("humidity", 0) for room in rooms) / len(rooms)
+        )
+        if rooms
+        else 0
+    )
+    pm25 = (
+        round(sum(env_by_room[room.id].get("pm25", 0) for room in rooms) / len(rooms))
+        if rooms
+        else 0
+    )
     room_items = []
     for room in rooms:
         room_devices = [item for item in devices if item.room == room.name]
@@ -106,7 +152,7 @@ def get_overview(
                 device_count=len(room_devices) or room.device_count,
                 light_on=sum(item.status in {"online", "running"} for item in lights),
                 light_total=len(lights),
-                temperature=room.temperature,
+                temperature=env_by_room[room.id].get("temperature", 0),
                 device_summaries=[
                     f"{item.name} {item.status}" for item in room_devices[:2]
                 ],
@@ -151,6 +197,7 @@ def get_household_devices(
     _membership=HOUSEHOLD_MEMBER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[DeviceListRead]:
+    """列出家庭下全部房间关联的设备。"""
     devices = list(
         db.scalars(
             select(Device)
@@ -177,7 +224,8 @@ def sync_household_devices(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SyncJobRead]:
-    key = f"household-{household_id}-{date.today().isoformat()}"
+    """按幂等键创建当天的设备同步任务。"""
+    key = f"household-{household_id}-{datetime.now(timezone.utc).date().isoformat()}"
     job = db.scalar(
         select(DeviceSyncJob).where(
             DeviceSyncJob.household_id == household_id,
@@ -203,6 +251,9 @@ def sync_household_devices(
     )
 
 
+# === 模式与巡检 ===
+
+
 @router.post(
     "/overview/modes/execute",
     response_model=ApiResponse[TaskRead],
@@ -213,6 +264,7 @@ def execute_mode(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[TaskRead]:
+    """按模式批量执行房间设备操作，支持幂等键去重。"""
     household_id = default_household(db, user)
     existing = db.scalar(
         select(OverviewExecution).where(
@@ -269,6 +321,7 @@ def create_inspection(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[TaskRead]:
+    """创建设备巡检任务，记录检查范围并返回预估信息。"""
     household_id = default_household(db, user)
     count = (
         db.scalar(
@@ -306,6 +359,7 @@ def get_inspection(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[TaskRead]:
+    """查询巡检任务的执行进度。"""
     job = db.scalar(
         select(InspectionJob).where(
             InspectionJob.id == inspection_id,
@@ -324,6 +378,9 @@ def get_inspection(
     )
 
 
+# === 家庭日程 ===
+
+
 @router.put("/schedules/{schedule_date}", response_model=ApiResponse[ScheduleRead])
 def save_schedule(
     schedule_date: date,
@@ -331,6 +388,7 @@ def save_schedule(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ScheduleRead]:
+    """保存或更新家庭某天的日程安排，带版本冲突校验。"""
     household_id = default_household(db, user)
     schedule = db.scalar(
         select(HouseholdSchedule).where(
@@ -378,6 +436,7 @@ def read_schedule(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ScheduleRead | None]:
+    """读取家庭某天的日程安排，未设置时返回null。"""
     household_id = default_household(db, user)
     schedule = db.scalar(
         select(HouseholdSchedule).where(
@@ -401,6 +460,9 @@ def read_schedule(
     )
 
 
+# === 设备同步任务 ===
+
+
 @router.post(
     "/device-sync-jobs",
     response_model=ApiResponse[SyncJobRead],
@@ -411,6 +473,7 @@ def create_sync_job(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SyncJobRead]:
+    """按幂等键创建设备同步任务。"""
     household_id = default_household(db, user)
     job = db.scalar(
         select(DeviceSyncJob).where(
@@ -441,6 +504,7 @@ def create_sync_job(
 def get_sync_job(
     job_id: int, db: Session = DB_DEPENDENCY, user: User = CURRENT_USER_DEPENDENCY
 ) -> ApiResponse[SyncJobRead]:
+    """查询设备同步任务的状态与统计。"""
     job = db.scalar(
         select(DeviceSyncJob).where(
             DeviceSyncJob.id == job_id,

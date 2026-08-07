@@ -24,15 +24,28 @@ class RoomRead(RoomSchema):
     version: int = 1
     area: float
     comfort: int
-    temperature: float
-    humidity: int
-    pm25: int
-    illuminance: int
-    noise: int
     device_count: int
     online_count: int
-    device_states: dict[str, bool | int | str]
     updated_at: datetime
+
+
+class RoomDetailRead(RoomSchema):
+    """房间详情（包含最近活动和当前场景）"""
+
+    room: RoomRead
+    current_scene: str | None = None
+    recent_activity: str | None = None
+    recent_activity_time: str | None = None
+
+
+class RoomStatsRead(RoomSchema):
+    """房间统计概览"""
+
+    room_count: int
+    room_count_change: int = 0  # 较上月变化
+    online_rate: float = 0.0  # 在线率百分比
+    alert_count: int = 0  # 报警次数
+    pending_alert_count: int = 0  # 待处理报警次数
 
 
 class RoomListRead(RoomSchema):
@@ -49,24 +62,13 @@ class RoomQuickActionWrite(RoomSchema):
     action: str = Field(pattern="^(all_lights|air_conditioner|curtains)$")
 
 
-class RoomPreferencesWrite(RoomSchema):
-    pin_common_devices: bool = True
-    show_environment: bool = True
-    show_scene_entry: bool = True
-
-
-class RoomWrite(RoomSchema):
+class RoomInput(RoomSchema):
     name: str = Field(min_length=1, max_length=80)
     floor: str = Field(default="1F", min_length=1, max_length=40)
     room_type: str = Field(default="living", min_length=1, max_length=32)
-    icon: str = Field(
-        default="room",
-        pattern="^(room|home|bed|kitchen|study|balcony|bathroom|plug|humidity|illumination)$",
-    )
+    icon: str = Field(default="room")
     theme_color: str = Field(default="#3478f6", pattern=r"^#[0-9A-Fa-f]{6}$")
     device_ids: list[int] = Field(default_factory=list)
-    preferences: RoomPreferencesWrite = Field(default_factory=RoomPreferencesWrite)
-    version: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "floor", mode="before")
     @classmethod
@@ -131,13 +133,10 @@ class RoomLogListRead(BaseModel):
 
 
 class EnvironmentLatestRead(BaseModel):
-    temperature: float
-    humidity: int
-    pm25: int
-    illuminance: int
-    noise: int
-    comfort: int
+    """房间最新环境指标，values 为指标名到数值的映射。"""
+
     sampled_at: datetime
+    values: dict[str, float]
 
 
 class EnvironmentPoint(RoomSchema):

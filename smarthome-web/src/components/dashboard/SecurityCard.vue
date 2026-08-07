@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useHomeStore } from "../../stores/home";
-import { knowledgeItems } from "../../mock/dashboard";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
 const expanded = ref(false);
+
+// 知识库快捷入口列表
+const knowledgeItems = [
+    "门窗传感器校准指南",
+    "摄像头夜视模式设置",
+    "家庭安防布防提醒",
+    "门锁电池更换周期",
+];
 </script>
 
 <template>

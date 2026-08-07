@@ -7,7 +7,7 @@ from app.models.automation import (
     AutomationTrigger,
 )
 from app.models.chat import ChatMessage, ChatSession
-from app.models.device import Device, DeviceGroup, DeviceLog
+from app.models.device import Device, DeviceData, DeviceGroup, DeviceLog
 from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.overview import (
@@ -21,8 +21,6 @@ from app.models.room import (
     RoomActivityLog,
     RoomDevice,
     RoomEnvironmentReport,
-    RoomEnvironmentSample,
-    RoomPreference,
 )
 from app.models.scene import (
     Scene,
@@ -44,6 +42,7 @@ __all__ = [
     "ChatMessage",
     "ChatSession",
     "Device",
+    "DeviceData",
     "DeviceGroup",
     "DeviceLog",
     "DeviceSyncJob",
@@ -57,8 +56,6 @@ __all__ = [
     "RoomActivityLog",
     "RoomDevice",
     "RoomEnvironmentReport",
-    "RoomEnvironmentSample",
-    "RoomPreference",
     "Scene",
     "SceneDraft",
     "SceneExecutionLog",

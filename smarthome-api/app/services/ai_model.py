@@ -7,8 +7,10 @@ from app.models.ai import AIModel
 from app.models.user import User
 from app.schemas.ai import AIModelCreate, AIModelUpdate
 
+# === 模型查询 ===
 
-def get_active_ai_model(db: Session, current_user: User) -> AIModel:
+
+def read_ai_model_service(db: Session, current_user: User) -> AIModel:
     """获取当前用户启用的模型，不允许回退到其他用户或停用模型。"""
     model = db.scalar(
         select(AIModel).where(
@@ -23,7 +25,7 @@ def get_active_ai_model(db: Session, current_user: User) -> AIModel:
     return model
 
 
-def list_ai_models(db: Session, current_user: User) -> list[AIModel]:
+def get_ai_models_service(db: Session, current_user: User) -> list[AIModel]:
     """按启用状态和创建时间列出当前用户的模型。"""
     return list(
         db.scalars(
@@ -32,6 +34,9 @@ def list_ai_models(db: Session, current_user: User) -> list[AIModel]:
             .order_by(AIModel.is_active.desc(), AIModel.created_at.desc())
         ).all()
     )
+
+
+# === 模型管理 ===
 
 
 def deactivate_ai_models(db: Session, user_id: int) -> None:
@@ -57,9 +62,7 @@ def commit_ai_model(db: Session, model: AIModel) -> AIModel:
     return model
 
 
-def create_ai_model(
-    db: Session, current_user: User, payload: AIModelCreate
-) -> AIModel:
+def add_ai_model_service(db: Session, current_user: User, payload: AIModelCreate) -> AIModel:
     """创建模型；新模型启用时自动停用旧模型。"""
     if payload.is_active:
         deactivate_ai_models(db, current_user.id)
@@ -69,7 +72,7 @@ def create_ai_model(
     return commit_ai_model(db, model)
 
 
-def activate_ai_model(db: Session, current_user: User, model_id: int) -> AIModel:
+def activate_model_service(db: Session, current_user: User, model_id: int) -> AIModel:
     """将指定模型设为当前用户唯一的启用模型。"""
     model = db.scalar(
         select(AIModel).where(
@@ -87,18 +90,18 @@ def activate_ai_model(db: Session, current_user: User, model_id: int) -> AIModel
     return commit_ai_model(db, model)
 
 
-def update_active_ai_model(
+def update_ai_model_service(
     db: Session, current_user: User, payload: AIModelUpdate
 ) -> AIModel:
     """仅更新请求中明确提供的当前模型字段。"""
-    model = get_active_ai_model(db, current_user)
+    model = read_ai_model_service(db, current_user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(model, field, value)
     return commit_ai_model(db, model)
 
 
-def delete_active_ai_model(db: Session, current_user: User) -> None:
+def delete_ai_model_service(db: Session, current_user: User) -> None:
     """删除当前用户正在使用的模型。"""
-    model = get_active_ai_model(db, current_user)
+    model = read_ai_model_service(db, current_user)
     db.delete(model)
     db.commit()

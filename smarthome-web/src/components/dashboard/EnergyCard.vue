@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
-import { energyTrend } from "../../mock/dashboard";
 import AnimatedNumber from "../animation/AnimatedNumber.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
+
+// 今日用电趋势（模拟数据）
+const energyTrend = [2.1, 2.4, 2.0, 2.8, 3.1, 2.9, 3.4, 3.2, 2.7, 2.3, 2.5, 2.2];
+
 const chartWidth = 300;
 const chartHeight = 88;
 const chartPadding = 4;

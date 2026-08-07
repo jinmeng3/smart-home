@@ -54,7 +54,9 @@ class DeviceUpdate(BaseModel):
     icon: str | None = Field(default=None, min_length=1, max_length=64)
     image_url: str | None = Field(default=None, max_length=255)
 
-    @field_validator("name", "room", "brand", "firmware", "icon", "image_url", mode="before")
+    @field_validator(
+        "name", "room", "brand", "firmware", "icon", "image_url", mode="before"
+    )
     @classmethod
     def strip_strings(cls, value: str | None) -> str | None:
         return value.strip() if isinstance(value, str) else value
@@ -123,7 +125,9 @@ class DeviceSyncRead(BaseModel):
 
 class DeviceBatchGroup(BaseModel):
     group: str = Field(min_length=1, max_length=80, description="分组名称")
-    device_ids: list[int] = Field(default=[], description="分配到该组的设备，为空则创建分组但不分配")
+    device_ids: list[int] = Field(
+        default=[], description="分配到该组的设备，为空则创建分组但不分配"
+    )
 
 
 class DeviceBatchGroupResult(BaseModel):

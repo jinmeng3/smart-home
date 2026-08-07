@@ -9,8 +9,7 @@ from app.api.exceptions import register_exception_handlers
 from app.api.router import api_router
 from app.api.routes import chat
 from app.core.config import get_settings
-from app.db.init_db import create_tables, seed_demo_data
-from app.db.session import SessionLocal
+from app.db.init_db import create_tables
 
 settings = get_settings()
 Path("db").mkdir(parents=True, exist_ok=True)
@@ -21,9 +20,6 @@ settings.avatar_dir.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
-    if settings.development_mode:
-        with SessionLocal() as db:
-            seed_demo_data(db)
     yield
 
 

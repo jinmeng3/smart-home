@@ -13,6 +13,8 @@ from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest
 
+# === 聊天会话 ===
+
 
 def get_chat_session(
     db: Session, current_user: User, session_id: int | None, messages: list
@@ -45,7 +47,7 @@ def get_chat_session(
     return session
 
 
-def list_user_chat_sessions(db: Session, current_user: User) -> list[ChatSession]:
+def list_chat_sessions_service(db: Session, current_user: User) -> list[ChatSession]:
     """列出当前用户的全部聊天会话。"""
     return list(
         db.scalars(
@@ -56,7 +58,7 @@ def list_user_chat_sessions(db: Session, current_user: User) -> list[ChatSession
     )
 
 
-def list_session_messages(
+def list_chat_messages_service(
     db: Session, current_user: User, session_id: int
 ) -> list[ChatMessage]:
     """列出指定会话下的消息。"""
@@ -68,6 +70,9 @@ def list_session_messages(
             .order_by(ChatMessage.created_at)
         ).all()
     )
+
+
+# === 聊天消息 ===
 
 
 def save_request_messages(
@@ -100,6 +105,9 @@ def save_assistant_message(db: Session, session_id: int, content: str) -> None:
     db.add(ChatMessage(session_id=session_id, role="assistant", content=content))
     session.updated_at = datetime.now(timezone.utc)
     db.commit()
+
+
+# === 对话补全 ===
 
 
 def get_chat_completions_url(api_endpoint: str) -> str:

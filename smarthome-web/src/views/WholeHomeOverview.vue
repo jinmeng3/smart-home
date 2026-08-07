@@ -7,16 +7,11 @@ import StatsCard from "../components/common/StatsCard.vue";
 import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
-import type { HouseholdSchedule } from "../api/overview";
+import type { HouseholdSchedule, ScheduleItem } from "../api/overview";
 import { getHouseholdOverview, getHouseholdDevices } from "../api/overview";
 import { useSettingsStore } from "../stores/settings";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
-import {
-  overviewActivities,
-  overviewScheduleItems,
-} from "../mock/overview";
-import type { ActivityItem } from "../mock/overview";
 import type {
   OverviewSummary,
   HomeStatus,
@@ -104,8 +99,8 @@ const homeStatus = ref<HomeStatus>({
 });
 const rooms = ref<OverviewRoomDisplay[]>([]);
 const devices = ref<OverviewDeviceDisplay[]>([]);
-const activities = ref<ActivityItem[]>(overviewActivities);
-const scheduleItems = ref(overviewScheduleItems);
+const activities = ref<{ time: string; icon: string; title: string; description: string; tone: string }[]>([]);
+const scheduleItems = ref<ScheduleItem[]>([]);
 
 // ── 计算属性 ──────────────────────────────────────────────────────────────────────
 
@@ -223,7 +218,7 @@ const loadOverviewData = async () => {
             favorite: false,
         }));
 
-        // 尝试从后端获取活动数据，降级使用模拟数据
+        // 从后端获取活动数据
         if (overview.activities && overview.activities.length > 0) {
             activities.value = (overview.activities as any[]).map((act: Record<string, unknown>) => ({
                 time: (act.time || act.created_at || "") as string,
@@ -233,14 +228,14 @@ const loadOverviewData = async () => {
                 tone: (act.tone || "blue") as string,
             }));
         } else {
-            activities.value = overviewActivities;
+            activities.value = [];
         }
 
-        // 尝试从后端获取日程数据，降级使用模拟数据
+        // 从后端获取日程数据
         if (overview.schedule && overview.schedule.length > 0) {
             scheduleItems.value = overview.schedule as any;
         } else {
-            scheduleItems.value = overviewScheduleItems;
+            scheduleItems.value = [];
         }
 
         refreshed.value = "刚刚";

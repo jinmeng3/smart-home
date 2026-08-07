@@ -29,32 +29,6 @@ const editingIndex = ref<number | null>(null);
 const editorOpen = ref(false);
 const editor = reactive({ time: "07:00", name: "", detail: "", color: "#3478f6", enabled: true });
 
-const defaultSchedules: ScheduleItem[] = [
-    {
-        time: "07:00",
-        name: "起床模式",
-        detail: "窗帘打开 · 卧室灯亮 · 空调制热 24°C",
-        color: "#ff9418", position: 0, enabled: true,
-    },
-    {
-        time: "19:00",
-        name: "回家模式",
-        detail: "玄关灯亮 · 空调制冷 26°C · 新风开启",
-        color: "#3478f6", position: 1, enabled: true,
-    },
-    {
-        time: "22:00",
-        name: "离家模式",
-        detail: "关闭灯光 · 安防布防 · 监控夜视",
-        color: "#20b86a", position: 2, enabled: true,
-    },
-    {
-        time: "23:00",
-        name: "睡眠模式",
-        detail: "灯光渐暗 · 窗帘关闭 · 安防设防",
-        color: "#825bea", position: 3, enabled: true,
-    },
-];
 const schedules = ref<ScheduleItem[]>([]);
 const dateKey = computed(() => {
     const year = selectedDate.value.getFullYear();
@@ -72,7 +46,7 @@ const load = async () => {
         enabled.value = result?.enabled ?? true;
         repeatDays.value = result?.repeatDays ?? [1, 2, 3, 4, 5];
         version.value = result?.version;
-        schedules.value = (result?.items?.length ? result.items : structuredClone(defaultSchedules)).sort((a, b) => a.time.localeCompare(b.time));
+        schedules.value = (result?.items?.length ? result.items : []).sort((a, b) => a.time.localeCompare(b.time));
     } catch (error) {
         ElMessage.error(error instanceof Error ? error.message : "日程加载失败");
     } finally {

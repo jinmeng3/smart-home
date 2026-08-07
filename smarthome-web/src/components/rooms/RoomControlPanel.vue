@@ -81,7 +81,7 @@ const selectCategory = (name: string) => {
                         class="device-card"
                         :class="{
                             featured: device.key === 'airConditioner',
-                            disabled: !selected.deviceStates[device.key],
+                            disabled: false,
                         }"
                     >
                         <header>
@@ -94,7 +94,7 @@ const selectCategory = (name: string) => {
                             </div>
                             <button
                                 class="switch"
-                                :class="{ enabled: selected.deviceStates[device.key] }"
+                                :class="{ enabled: false }"
                                 :aria-label="`切换${device.name}`"
                                 type="button"
                                 @click="$emit('toggle', device)"
@@ -153,7 +153,7 @@ const selectCategory = (name: string) => {
     min-height: 0;
     grid-template-columns: 164px minmax(0, 1fr);
     align-self: stretch;
-    overflow: hidden;
+    overflow: hidden auto;
     border: 1px solid var(--color-border-subtle);
     border-radius: 18px;
     background: var(--color-card-bg);
@@ -173,7 +173,7 @@ const selectCategory = (name: string) => {
 .room-sidebar h1 {
     margin: 0 10px 16px;
     color: var(--color-text-primary);
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 900;
 }
 
@@ -188,7 +188,7 @@ const selectCategory = (name: string) => {
     border-radius: 9px;
     padding: 0 14px;
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     text-align: left;
     transition: 160ms var(--motion-ease);
@@ -241,7 +241,7 @@ const selectCategory = (name: string) => {
     border-radius: 9px;
     background: var(--color-card-bg);
     color: var(--color-text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 800;
     box-shadow: var(--shadow-card);
     transition: 160ms var(--motion-ease);
@@ -271,7 +271,7 @@ const selectCategory = (name: string) => {
 .control-section h2 {
     margin: 0 2px 10px;
     color: var(--color-text-primary);
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 900;
 }
 
@@ -353,13 +353,13 @@ const selectCategory = (name: string) => {
 
 .device-card strong {
     color: var(--color-text-primary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 900;
 }
 
 .device-card small {
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -398,7 +398,7 @@ const selectCategory = (name: string) => {
     align-items: flex-end;
     gap: 8px;
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -445,7 +445,7 @@ const selectCategory = (name: string) => {
 .temperature-row > b {
     margin-right: auto;
     color: var(--color-text-primary);
-    font-size: 20px;
+    font-size: 22px;
 }
 
 .temperature-row button {
@@ -456,7 +456,7 @@ const selectCategory = (name: string) => {
     border-radius: 8px;
     background: var(--color-primary-50);
     color: var(--color-primary-700);
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 700;
 }
 
@@ -489,14 +489,14 @@ const selectCategory = (name: string) => {
 
 .environment-grid small {
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 750;
 }
 
 .environment-grid strong {
     margin-top: 3px;
     color: var(--color-text-primary);
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 900;
 }
 
@@ -525,11 +525,11 @@ const selectCategory = (name: string) => {
 
 .empty-state {
     display: grid;
-    min-height: 400px;
+    min-height: 100%;
     place-items: center;
     background: var(--color-page-bg);
     color: var(--color-text-tertiary);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
 }
 

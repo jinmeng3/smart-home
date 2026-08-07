@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
-import type { Room } from "../../../types/room";
+import { getRoomDevices } from "../../../api/room";
+import { getDeviceTypeIcon } from "../../device/deviceMeta";
+import type { Room, RoomDeviceListItem } from "../../../types/room";
 
 interface DeviceInfo {
     name: string;
@@ -32,20 +34,8 @@ const description = computed(
     () => `统一管理${props.room?.name ?? "房间"}内的设备状态、分组与快捷控制`,
 );
 
-// Mock data — replace with API call in production
-const devices = ref<DeviceInfo[]>([
-    { name: "吸顶灯", type: "灯光", status: "online", detail: "亮度 80%", updatedAt: "今天 10:25", icon: "light", id: "1" },
-    { name: "落地灯", type: "灯光", status: "online", detail: "亮度 60%", updatedAt: "今天 10:25", icon: "light", id: "2" },
-    { name: "电视", type: "影音", status: "online", detail: "HDMI 1", updatedAt: "今天 10:24", icon: "device-management", id: "3" },
-    { name: "空调", type: "环境", status: "online", detail: "24°C | 制冷", updatedAt: "今天 10:24", icon: "air-conditioner", id: "4" },
-    { name: "窗帘电机", type: "窗帘", status: "online", detail: "打开 70%", updatedAt: "今天 10:24", icon: "curtain", id: "5" },
-    { name: "空气净化器", type: "环境", status: "online", detail: "自动模式 | 优", updatedAt: "今天 10:24", icon: "sensor", id: "6" },
-    { name: "智能插座", type: "电源", status: "online", detail: "功率 35W", updatedAt: "今天 10:24", icon: "plug", id: "7" },
-    { name: "温湿度传感器", type: "传感器", status: "online", detail: "温度 24°C | 湿度 55%", updatedAt: "今天 10:24", icon: "humidity", id: "8" },
-    { name: "烟雾报警器", type: "安防", status: "offline", detail: "离线", updatedAt: "昨天 22:15", icon: "sensor", id: "9" },
-    { name: "智能门锁", type: "安防", status: "warning", detail: "电量不足", updatedAt: "今天 09:30", icon: "lock", id: "10" },
-]);
-
+// 设备数据（从后端加载）
+const devices = ref<DeviceInfo[]>([]);
 const loading = ref(false);
 const deviceTypeOptions = ["灯光", "影音", "环境", "窗帘", "电源", "传感器", "安防"];
 const deviceStatusOptions = [
@@ -54,8 +44,47 @@ const deviceStatusOptions = [
     { value: "warning", label: "告警" },
 ];
 
-const deviceCount = computed(() => props.room?.deviceCount ?? devices.value.length);
-const onlineCount = computed(() => props.room?.onlineCount ?? devices.value.filter((d) => d.status === "online").length);
+// 从后端加载房间设备
+const loadDevices = async () => {
+    if (!props.room) return;
+    loading.value = true;
+    try {
+        const response = await getRoomDevices(props.room.id, {
+            keyword: deviceKeyword.value || undefined,
+            type: deviceTypeFilter.value || undefined,
+            status: deviceStatusFilter.value || undefined,
+        });
+        devices.value = response.items.map(mapToDeviceInfo);
+    } catch (e) {
+        console.error("加载房间设备失败", e);
+        devices.value = [];
+    } finally {
+        loading.value = false;
+    }
+};
+
+const mapToDeviceInfo = (item: RoomDeviceListItem): DeviceInfo => ({
+    id: String(item.id),
+    name: item.name,
+    type: item.group, // 所属分组
+    status: item.status as "online" | "offline" | "warning",
+    detail: item.brand || "",
+    updatedAt: "",
+    icon: getDeviceTypeIcon(item.type),
+});
+
+// 对话框打开时加载设备数据
+watch(
+    () => props.modelValue,
+    (open) => {
+        if (open && props.room) {
+            loadDevices();
+        }
+    },
+);
+
+const deviceCount = computed(() => props.room?.deviceCount ?? 0);
+const onlineCount = computed(() => props.room?.onlineCount ?? 0);
 const groupCount = 6;
 
 const filteredDevices = computed(() => {

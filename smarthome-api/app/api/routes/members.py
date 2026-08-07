@@ -23,6 +23,9 @@ router = APIRouter(prefix="/households/{household_id}/members", tags=["members"]
 HOUSEHOLD_ADMIN_DEPENDENCY = Depends(require_household_admin)
 
 
+# === 辅助函数 ===
+
+
 def member_to_schema(membership: HouseholdMembership) -> MemberRead:
     """将成员关系及关联用户整理为接口响应。"""
     return MemberRead(
@@ -62,6 +65,9 @@ def ensure_not_last_admin(db: Session, membership: HouseholdMembership) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="家庭必须至少保留一名管理员"
         )
+
+
+# === 成员管理 ===
 
 
 @router.get("", response_model=ApiResponse[MemberListResponse])

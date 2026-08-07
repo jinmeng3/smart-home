@@ -1,76 +1,56 @@
-import json
 from datetime import date
-from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
-from app.models.membership import HouseholdMembership
-from app.models.room import Room, RoomDevice, RoomEnvironmentReport
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.room import (
     EnvironmentLatestRead,
     EnvironmentReportRead,
     EnvironmentTrendRead,
+    RoomDetailRead,
     RoomDeviceListRead,
     RoomDeviceMetaWrite,
     RoomDevicesWrite,
     RoomDeviceWrite,
+    RoomInput,
     RoomListRead,
     RoomLogListRead,
     RoomQuickActionWrite,
     RoomRead,
     RoomSceneExecuteWrite,
-    RoomWrite,
+    RoomStatsRead,
 )
 from app.schemas.scene import SceneExecutionRead, SceneListRead, ScenePreviewRead
 from app.services.room import (
-    environment_trends,
-    latest_environment,
-    list_room_devices,
-    list_room_logs,
-    replace_room_devices,
-    save_room,
-    write_activity,
+    add_room_service,
+    create_environment_report_service,
+    delete_room_service,
+    edit_room_device_service,
+    edit_room_service,
+    execute_room_scene_service,
+    get_environment_latest_service,
+    get_environment_report_service,
+    get_environment_trends_service,
+    get_room_detail_service,
+    get_room_devices_service,
+    get_room_logs_service,
+    get_room_scenes_service,
+    list_room_stats_service,
+    list_rooms_service,
+    preview_room_scene_service,
+    quick_action_service,
+    set_room_devices_service,
+    update_device_service,
 )
-from app.services.scene import execute_scene, list_scenes, preview_scene
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 environment_router = APIRouter(prefix="/environment", tags=["rooms"])
 
 
-def serialize(room: Room) -> RoomRead:
-    return RoomRead(
-        id=room.id,
-        name=room.name,
-        floor=room.floor,
-        room_type=room.room_type,
-        image_url=room.image_url,
-        area=room.area,
-        comfort=room.comfort,
-        icon=room.icon,
-        theme_color=room.theme_color,
-        version=room.version,
-        temperature=room.temperature,
-        humidity=room.humidity,
-        pm25=room.pm25,
-        illuminance=room.illuminance,
-        noise=room.noise,
-        device_count=room.device_count,
-        online_count=room.online_count,
-        device_states=json.loads(room.device_states),
-        updated_at=room.updated_at,
-    )
-
-
-def accessible_rooms(db: Session, user: User):
-    household_ids = select(HouseholdMembership.household_id).where(
-        HouseholdMembership.user_id == user.id
-    )
-    return select(Room).where(Room.household_id.in_(household_ids))
+# === 房间 CRUD ===
 
 
 @router.get("", response_model=ApiResponse[RoomListRead])
@@ -80,56 +60,64 @@ def list_rooms(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomListRead]:
-    query = accessible_rooms(db, current_user).order_by(Room.id)
-    if floor:
-        query = query.where(Room.floor == floor)
-    if room_type:
-        query = query.where(Room.room_type == room_type)
-    rooms = list(db.scalars(query))
-    return ApiResponse.ok(
-        RoomListRead(items=[serialize(room) for room in rooms], total=len(rooms))
-    )
+    """按楼层和类型筛选房间列表。"""
+    return ApiResponse.ok(data=list_rooms_service(db, current_user, floor, room_type))
 
 
-def get_room(db: Session, user: User, room_id: int) -> Room:
-    room = db.scalar(accessible_rooms(db, user).where(Room.id == room_id))
-    if not room:
-        raise HTTPException(status_code=404, detail="房间不存在")
-    return room
+@router.get("/stats", response_model=ApiResponse[RoomStatsRead])
+def list_room_stats(
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomStatsRead]:
+    """获取房间统计概览"""
+    return ApiResponse.ok(list_room_stats_service(db, current_user))
 
 
-def default_household_id(db: Session, user: User) -> int:
-    household_id = db.scalar(
-        select(HouseholdMembership.household_id)
-        .where(HouseholdMembership.user_id == user.id)
-        .order_by(HouseholdMembership.id)
-    )
-    if household_id is None:
-        raise HTTPException(status_code=403, detail="当前用户尚未加入家庭")
-    return household_id
+@router.get("/{room_id}/detail", response_model=ApiResponse[RoomDetailRead])
+def get_room_detail(
+    room_id: int,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomDetailRead]:
+    """获取房间详情"""
+    return ApiResponse.ok(get_room_detail_service(db, current_user, room_id))
 
 
 @router.post(
-    "", response_model=ApiResponse[RoomRead], status_code=status.HTTP_201_CREATED
+    "/add", response_model=ApiResponse[RoomRead], status_code=status.HTTP_201_CREATED
 )
 def add_room(
-    payload: RoomWrite,
+    payload: RoomInput,
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomRead]:
-    room = save_room(db, default_household_id(db, current_user), payload)
-    return ApiResponse.ok(serialize(room), "created")
+    """创建房间。"""
+    return ApiResponse.ok(add_room_service(db, current_user, payload), "created")
 
 
 @router.put("/{room_id}", response_model=ApiResponse[RoomRead])
 def edit_room(
     room_id: int,
-    payload: RoomWrite,
+    payload: RoomInput,
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomRead]:
-    room = get_room(db, current_user, room_id)
-    return ApiResponse.ok(serialize(save_room(db, room.household_id, payload, room)))
+    """更新房间信息。"""
+    return ApiResponse.ok(edit_room_service(db, current_user, room_id, payload))
+
+
+@router.delete("/{room_id}", response_model=ApiResponse[RoomRead])
+def delete_room(
+    room_id: int,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomRead]:
+    """删除房间。"""
+    delete_room_service(db, current_user, room_id)
+    return ApiResponse.ok(message="deleted")
+
+
+# === 房间日志 ===
 
 
 @router.get("/{room_id}/logs", response_model=ApiResponse[RoomLogListRead])
@@ -143,17 +131,15 @@ def get_room_logs(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomLogListRead]:
+    """分页查询房间操作日志，支持日期范围和关键字筛选。"""
     return ApiResponse.ok(
-        list_room_logs(
-            db,
-            get_room(db, current_user, room_id),
-            page,
-            page_size,
-            keyword,
-            date_from,
-            date_to,
+        get_room_logs_service(
+            db, current_user, room_id, page, page_size, keyword, date_from, date_to
         )
     )
+
+
+# === 房间设备 ===
 
 
 @router.get("/{room_id}/devices", response_model=ApiResponse[RoomDeviceListRead])
@@ -165,10 +151,9 @@ def get_room_devices(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomDeviceListRead]:
+    """查询房间内设备，支持关键字、类型和状态筛选。"""
     return ApiResponse.ok(
-        list_room_devices(
-            db, get_room(db, current_user, room_id), keyword, type, status
-        )
+        get_room_devices_service(db, current_user, room_id, keyword, type, status)
     )
 
 
@@ -179,9 +164,8 @@ def set_room_devices(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomDeviceListRead]:
-    return ApiResponse.ok(
-        replace_room_devices(db, get_room(db, current_user, room_id), payload)
-    )
+    """整体替换房间的设备绑定关系。"""
+    return ApiResponse.ok(set_room_devices_service(db, current_user, room_id, payload))
 
 
 @router.patch(
@@ -194,21 +178,39 @@ def edit_room_device(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[RoomDeviceListRead]:
-    room = get_room(db, current_user, room_id)
-    binding = db.scalar(
-        select(RoomDevice).where(
-            RoomDevice.room_id == room.id, RoomDevice.device_id == device_id
-        )
+    """修改房间内设备的绑定元信息（分组、收藏、排序等）。"""
+    return ApiResponse.ok(
+        edit_room_device_service(db, current_user, room_id, device_id, payload)
     )
-    if not binding:
-        raise HTTPException(status_code=404, detail="房间设备不存在")
-    changes = payload.model_dump(exclude_unset=True)
-    if "group" in changes:
-        changes["group_name"] = changes.pop("group")
-    for field, value in changes.items():
-        setattr(binding, field, value)
-    db.commit()
-    return ApiResponse.ok(list_room_devices(db, room))
+
+
+@router.patch("/{room_id}/device", response_model=ApiResponse[RoomRead])
+def update_device(
+    room_id: int,
+    payload: RoomDeviceWrite,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomRead]:
+    """更新房间内设备的实时状态值。"""
+    return ApiResponse.ok(
+        update_device_service(db, current_user, room_id, payload), "设备状态已更新"
+    )
+
+
+@router.post("/{room_id}/quick-action", response_model=ApiResponse[RoomRead])
+def quick_action(
+    room_id: int,
+    payload: RoomQuickActionWrite,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomRead]:
+    """执行房间快捷操作（如全开灯、空调、窗帘）。"""
+    return ApiResponse.ok(
+        quick_action_service(db, current_user, room_id, payload), "快捷操作已执行"
+    )
+
+
+# === 房间环境 ===
 
 
 @router.get(
@@ -219,7 +221,8 @@ def get_environment_latest(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[EnvironmentLatestRead]:
-    return ApiResponse.ok(latest_environment(db, get_room(db, current_user, room_id)))
+    """获取房间最新环境数据。"""
+    return ApiResponse.ok(get_environment_latest_service(db, current_user, room_id))
 
 
 @router.get(
@@ -231,13 +234,44 @@ def get_environment_trends(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[EnvironmentTrendRead]:
+    """获取房间环境指标的趋势数据。"""
     return ApiResponse.ok(
-        environment_trends(
+        get_environment_trends_service(
             db,
-            get_room(db, current_user, room_id),
+            current_user,
+            room_id,
             [item.strip() for item in metrics.split(",") if item.strip()],
         )
     )
+
+
+@router.post(
+    "/{room_id}/environment/reports",
+    response_model=ApiResponse[EnvironmentReportRead],
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def create_environment_report(
+    room_id: int,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[EnvironmentReportRead]:
+    """创建环境报告导出任务。"""
+    return ApiResponse.ok(create_environment_report_service(db, current_user, room_id))
+
+
+@environment_router.get(
+    "/reports/{task_id}", response_model=ApiResponse[EnvironmentReportRead]
+)
+def get_environment_report(
+    task_id: str,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[EnvironmentReportRead]:
+    """查询环境报告任务状态及下载地址。"""
+    return ApiResponse.ok(get_environment_report_service(db, current_user, task_id))
+
+
+# === 房间场景 ===
 
 
 @router.get("/{room_id}/scenes", response_model=ApiResponse[SceneListRead])
@@ -246,9 +280,8 @@ def get_room_scenes(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SceneListRead]:
-    room = get_room(db, current_user, room_id)
-    scenes = list_scenes(db, room.name, None, "all")
-    return ApiResponse.ok(scenes)
+    """查询房间关联的场景。"""
+    return ApiResponse.ok(get_room_scenes_service(db, current_user, room_id))
 
 
 @router.post(
@@ -260,8 +293,10 @@ def preview_room_scene(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ScenePreviewRead]:
-    get_room(db, current_user, room_id)
-    return ApiResponse.ok(preview_scene(db, scene_id))
+    """预览房间场景动作链，不实际执行。"""
+    return ApiResponse.ok(
+        preview_room_scene_service(db, current_user, room_id, scene_id)
+    )
 
 
 @router.post(
@@ -275,90 +310,7 @@ def execute_room_scene(
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SceneExecutionRead]:
-    room = get_room(db, current_user, room_id)
-    result = execute_scene(db, scene_id, False, "room")
-    write_activity(db, room, f"执行场景：{scene_id}", "scene")
-    db.commit()
-    return ApiResponse.ok(result)
-
-
-@router.post(
-    "/{room_id}/environment/reports",
-    response_model=ApiResponse[EnvironmentReportRead],
-    status_code=status.HTTP_202_ACCEPTED,
-)
-def create_environment_report(
-    room_id: int,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentReportRead]:
-    room = get_room(db, current_user, room_id)
-    report = RoomEnvironmentReport(id=f"report-{uuid4().hex}", room_id=room.id)
-    db.add(report)
-    db.commit()
+    """执行房间场景并记录活动日志。"""
     return ApiResponse.ok(
-        EnvironmentReportRead(task_id=report.id, status=report.status)
+        execute_room_scene_service(db, current_user, room_id, scene_id, payload)
     )
-
-
-@environment_router.get(
-    "/reports/{task_id}", response_model=ApiResponse[EnvironmentReportRead]
-)
-def get_environment_report(
-    task_id: str,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[EnvironmentReportRead]:
-    accessible = accessible_rooms(db, current_user).subquery()
-    report = db.scalar(
-        select(RoomEnvironmentReport).where(
-            RoomEnvironmentReport.id == task_id,
-            RoomEnvironmentReport.room_id.in_(select(accessible.c.id)),
-        )
-    )
-    if not report:
-        raise HTTPException(status_code=404, detail="环境报告任务不存在")
-    return ApiResponse.ok(
-        EnvironmentReportRead(
-            task_id=report.id, status=report.status, download_url=report.download_url
-        )
-    )
-
-
-@router.patch("/{room_id}/device", response_model=ApiResponse[RoomRead])
-def update_device(
-    room_id: int,
-    payload: RoomDeviceWrite,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[RoomRead]:
-    room = get_room(db, current_user, room_id)
-    states = json.loads(room.device_states)
-    states[payload.device] = payload.value
-    room.device_states = json.dumps(states, ensure_ascii=False)
-    write_activity(db, room, f"{payload.device} 状态更新")
-    db.commit()
-    db.refresh(room)
-    return ApiResponse.ok(serialize(room), "设备状态已更新")
-
-
-@router.post("/{room_id}/quick-action", response_model=ApiResponse[RoomRead])
-def quick_action(
-    room_id: int,
-    payload: RoomQuickActionWrite,
-    db: Session = DB_DEPENDENCY,
-    current_user: User = CURRENT_USER_DEPENDENCY,
-) -> ApiResponse[RoomRead]:
-    room = get_room(db, current_user, room_id)
-    states = json.loads(room.device_states)
-    key_map = {
-        "all_lights": "light",
-        "air_conditioner": "airConditioner",
-        "curtains": "curtain",
-    }
-    states[key_map[payload.action]] = payload.action != "air_conditioner"
-    room.device_states = json.dumps(states, ensure_ascii=False)
-    write_activity(db, room, f"快捷操作：{payload.action}")
-    db.commit()
-    db.refresh(room)
-    return ApiResponse.ok(serialize(room), "快捷操作已执行")

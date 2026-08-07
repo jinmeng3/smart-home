@@ -34,22 +34,21 @@ defineEmits<{
                 </p>
             </div>
         </header>
-        <div class="room-metrics">
-            <span><SvgIcon name="temperature" size="sm" />{{ room.temperature }}°C</span>
-            <span><SvgIcon name="humidity" size="sm" />{{ room.humidity }}%</span>
-            <span class="quality"><SvgIcon name="air-quality" size="sm" />优 {{ room.pm25 }}</span>
-        </div>
         <div class="room-devices">
             <button
                 v-for="device in devices.slice(0, 3)"
                 :key="device.name"
-                :class="{ on: room.deviceStates[device.key] }"
+                :class="{ on: false }"
                 type="button"
                 @click.stop="$emit('select', room); $emit('toggle', device)"
             >
-                <i><SvgIcon :name="device.icon" size="sm" /></i>
-                <span>{{ device.name }}</span>
-                <small>{{ room.deviceStates[device.key] ? "开" : "关" }}</small>
+                <span class="device-icon-row">
+                    <i><SvgIcon :name="device.icon" size="sm" /></i>
+                    <span class="device-info">
+                        <span class="device-name">{{ device.name }}</span>
+                        <small class="device-status">{{ false ? "开" : "关" }}</small>
+                    </span>
+                </span>
             </button>
         </div>
     </article>
@@ -101,7 +100,7 @@ defineEmits<{
     background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
     color: var(--color-primary-700);
     font-weight: 900;
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .room-avatar.is-living {
@@ -143,7 +142,7 @@ defineEmits<{
 .room-card h2 {
     overflow: hidden;
     margin: 0;
-    font-size: 14px;
+    font-size: 16px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -153,14 +152,14 @@ defineEmits<{
     gap: 4px;
     margin: 2px 0 0;
     color: var(--color-text-tertiary);
-    font-size: 10px;
+    font-size: 12px;
 }
 .room-status small {
     border-radius: 999px;
     background: var(--color-success-soft);
     padding: 0 5px;
     color: var(--color-success);
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.5;
 }
 .room-status b {
@@ -186,7 +185,7 @@ defineEmits<{
     background: var(--color-surface-subtle);
     padding: 4px 6px;
     color: var(--color-text-secondary);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
 }
@@ -202,16 +201,16 @@ defineEmits<{
 }
 
 .room-devices button {
-    display: grid;
-    place-items: center;
-    gap: 3px;
-    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
     border: 1px solid transparent;
     border-radius: 8px;
     background: var(--color-surface-subtle);
-    padding: 6px 8px;
+    padding: 6px 10px;
     color: var(--color-text-tertiary);
-    font-size: 9px;
+    font-size: 11px;
     transition: 160ms var(--motion-ease);
 }
 .room-devices button:hover {
@@ -223,25 +222,58 @@ defineEmits<{
     background: var(--color-primary-50);
     color: var(--color-primary-700);
 }
+.room-devices .device-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
 .room-devices i {
     display: grid;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
     place-items: center;
-    border-radius: 6px;
+    border-radius: 7px;
     background: var(--color-card-bg);
     font-style: normal;
 }
-.room-devices span {
+.room-devices .device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.room-devices .device-name {
     overflow: hidden;
     max-width: 100%;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 800;
+    font-size: 12px;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+.room-devices .device-status {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    line-height: 1.2;
+}
+.room-devices .device-status.on {
+    color: var(--color-primary-600);
+}
+.room-devices button.on .device-name {
+    color: var(--color-primary-700);
+}
+.room-devices button.on .device-status {
+    color: var(--color-primary-500);
 }
 .room-devices small {
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 11px;
 }
 .room-devices button.on small {
     color: var(--color-primary-600);

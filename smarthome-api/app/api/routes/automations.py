@@ -1,4 +1,3 @@
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, Query, status
@@ -10,7 +9,7 @@ from app.api.deps import (
     DB_DEPENDENCY,
     HOUSEHOLD_MEMBER_DEPENDENCY,
 )
-from app.models.automation import Automation, AutomationTrigger
+from app.models.automation import Automation
 from app.models.membership import HouseholdMembership
 from app.models.user import User
 from app.schemas.automation import (
@@ -29,14 +28,15 @@ from app.schemas.automation import (
 )
 from app.schemas.common import ApiResponse
 from app.services.automation import (
-    batch_enable,
-    create_automation,
-    execute_automation,
+    batch_enable_service,
+    batch_schedule_automations_service,
+    create_automation_service,
+    execute_automation_service,
     get_automation,
-    list_automations,
-    list_executions,
+    list_automations_service,
+    list_executions_service,
     serialize,
-    update_automation,
+    update_automation_service,
 )
 
 router = APIRouter(tags=["automations"])
@@ -45,6 +45,7 @@ router = APIRouter(tags=["automations"])
 def accessible_automation(
     db: Session, user: User, automation_id: int
 ) -> tuple[Automation, int]:
+    """校验自动化规则归属当前用户所在家庭，返回规则对象及家庭ID。"""
     household_id = db.scalar(
         select(HouseholdMembership.household_id)
         .join(Automation, Automation.household_id == HouseholdMembership.household_id)
@@ -53,6 +54,9 @@ def accessible_automation(
     if household_id is None:
         raise HTTPException(status_code=404, detail="自动化规则不存在")
     return get_automation(db, automation_id, household_id), household_id
+
+
+# === 自动化规则 ===
 
 
 @router.get(
@@ -69,8 +73,9 @@ def get_automations(
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[AutomationListRead]:
+    """分页查询家庭自动化规则，支持关键字、触发类型和启用状态筛选。"""
     return ApiResponse.ok(
-        list_automations(
+        list_automations_service(
             db, household_id, keyword, trigger_type, enabled, page, page_size
         )
     )
@@ -88,8 +93,9 @@ def add_automation(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[AutomationRead]:
+    """在当前家庭下创建自动化规则。"""
     return ApiResponse.ok(
-        create_automation(db, household_id, user.id, payload), "created"
+        create_automation_service(db, household_id, user.id, payload), "created"
     )
 
 
@@ -99,6 +105,7 @@ def read_automation(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[AutomationRead]:
+    """读取单个自动化规则详情。"""
     automation, _ = accessible_automation(db, user, automation_id)
     return ApiResponse.ok(serialize(automation))
 
@@ -112,8 +119,12 @@ def edit_automation(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[AutomationRead]:
+    """更新自动化规则配置。"""
     _, household_id = accessible_automation(db, user, automation_id)
-    return ApiResponse.ok(update_automation(db, automation_id, household_id, payload))
+    return ApiResponse.ok(update_automation_service(db, automation_id, household_id, payload))
+
+
+# === 自动化执行 ===
 
 
 @router.patch(
@@ -125,6 +136,7 @@ def change_automation_enabled(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[EnabledRead]:
+    """启用或停用自动化规则。"""
     automation, _ = accessible_automation(db, user, automation_id)
     automation.enabled = payload.enabled
     automation.version += 1
@@ -144,9 +156,10 @@ def run_automation(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ExecuteRead]:
+    """手动触发执行自动化规则，支持幂等键防止重复执行。"""
     automation, _ = accessible_automation(db, user, automation_id)
     return ApiResponse.ok(
-        execute_automation(db, automation, payload.source, idempotency_key)
+        execute_automation_service(db, automation, payload.source, idempotency_key)
     )
 
 
@@ -162,10 +175,14 @@ def get_automation_executions(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[ExecutionListRead]:
+    """分页查询自动化规则的执行记录。"""
     automation, _ = accessible_automation(db, user, automation_id)
     return ApiResponse.ok(
-        list_executions(db, automation, page, page_size, status_filter)
+        list_executions_service(db, automation, page, page_size, status_filter)
     )
+
+
+# === 批量操作 ===
 
 
 @router.post("/automations/batch-enable", response_model=ApiResponse[BatchEnableRead])
@@ -174,6 +191,7 @@ def batch_enable_automations(
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[BatchEnableRead]:
+    """批量启用或停用自动化规则。"""
     household_id = db.scalar(
         select(HouseholdMembership.household_id)
         .where(HouseholdMembership.user_id == user.id)
@@ -181,15 +199,16 @@ def batch_enable_automations(
     )
     if household_id is None:
         raise HTTPException(status_code=403, detail="当前用户尚未加入家庭")
-    return ApiResponse.ok(batch_enable(db, household_id, payload))
+    return ApiResponse.ok(batch_enable_service(db, household_id, payload))
 
 
 @router.put("/automations/schedules/batch", response_model=ApiResponse[BatchEnableRead])
-def batch_schedule_automations(
+def batch_set_schedule(
     payload: BatchScheduleWrite,
     db: Session = DB_DEPENDENCY,
     user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[BatchEnableRead]:
+    """批量设置自动化规则的定时触发配置。"""
     household_id = db.scalar(
         select(HouseholdMembership.household_id)
         .where(HouseholdMembership.user_id == user.id)
@@ -197,31 +216,4 @@ def batch_schedule_automations(
     )
     if household_id is None:
         raise HTTPException(status_code=403, detail="当前用户尚未加入家庭")
-    rules = list(
-        db.scalars(
-            select(Automation).where(
-                Automation.household_id == household_id,
-                Automation.id.in_(payload.rule_ids),
-            )
-        ).all()
-    )
-    if len(rules) != len(set(payload.rule_ids)):
-        raise HTTPException(
-            status_code=422, detail="部分自动化规则不存在或不属于当前家庭"
-        )
-    config = {
-        "timezone": payload.timezone,
-        "time": payload.time,
-        "weekdays": payload.weekdays,
-        "frequency": payload.frequency,
-        "interval": payload.interval,
-    }
-    for rule in rules:
-        rule.trigger_type = "schedule"
-        rule.triggers = []
-        rule.triggers.append(
-            AutomationTrigger(type="schedule", config_json=json.dumps(config))
-        )
-        rule.version += 1
-    db.commit()
-    return ApiResponse.ok(BatchEnableRead(updated_count=len(rules), unchanged_count=0))
+    return ApiResponse.ok(batch_schedule_automations_service(db, household_id, payload))

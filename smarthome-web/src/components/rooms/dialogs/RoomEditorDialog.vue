@@ -2,7 +2,10 @@
 import { reactive, ref, watch, computed } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import { listDevices } from "../../../api/device";
+import { getDeviceTypeIcon } from "../../device/deviceMeta";
 import type { Room } from "../../../types/room";
+import type { Device } from "../../../types/device";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -24,10 +27,17 @@ const emit = defineEmits<{
 }>();
 
 const roomForm = reactive({ name: "", floor: "1F", roomType: "living" });
+const customRoomType = ref("");
 const selectedIcon = ref("room");
 const selectedColor = ref("#2563eb");
-const selectedDevices = reactive<string[]>([]);
+const selectedDevices = reactive<number[]>([]);
 const nameError = ref("");
+const hoveredIcon = ref("");
+const hoveredColor = ref("");
+
+// 设备列表（从后端加载）
+const deviceList = ref<Device[]>([]);
+const loadingDevices = ref(false);
 
 const roomIcons = [
     "room",
@@ -36,6 +46,26 @@ const roomIcons = [
     "comfort",
     "scene",
     "automation",
+    "light",
+    "air-conditioner",
+    "curtain",
+    "lock",
+    "camera",
+    "sensor",
+    "plug",
+    "temperature",
+    "humidity",
+    "air-quality",
+    "illumination",
+    "noise",
+    "power",
+    "calendar",
+    "clock",
+    "scan",
+    "group",
+    "security",
+    "energy",
+    "location",
 ] as const;
 
 const roomColors = [
@@ -55,24 +85,8 @@ const roomTypes = [
     { value: "kitchen", label: "厨房", icon: "plug" },
     { value: "balcony", label: "阳台", icon: "illumination" },
     { value: "bathroom", label: "卫生间", icon: "humidity" },
+    { value: "custom", label: "自定义", icon: "edit" },
 ] as const;
-
-interface DeviceItem {
-    name: string;
-    icon: string;
-}
-
-const deviceList: DeviceItem[] = [
-    { name: "灯光", icon: "light" },
-    { name: "空调", icon: "air-conditioner" },
-    { name: "窗帘", icon: "curtain" },
-    { name: "插座", icon: "plug" },
-    { name: "电视", icon: "device-management" },
-    { name: "空气净化器", icon: "sensor" },
-    { name: "摄像头", icon: "camera" },
-    { name: "门锁", icon: "lock" },
-    { name: "传感器", icon: "sensor" },
-];
 
 const title = computed(() =>
     props.mode === "edit" ? "编辑房间" : "添加房间",
@@ -88,16 +102,20 @@ const confirmText = computed(() =>
 
 const deviceCount = computed(() => selectedDevices.length);
 
-const previewDevices = computed(() => selectedDevices.slice(0, 3));
+const previewDevices = computed(() => {
+    return selectedDevices.slice(0, 3).map((id) =>
+        deviceList.value.find((d) => d.id === id),
+    ).filter((d): d is Device => d !== undefined);
+});
 
 const dragIndex = ref<number | null>(null);
 
-const toggleDevice = (device: string) => {
-    const idx = selectedDevices.indexOf(device);
+const toggleDevice = (deviceId: number) => {
+    const idx = selectedDevices.indexOf(deviceId);
     if (idx >= 0) {
         selectedDevices.splice(idx, 1);
     } else {
-        selectedDevices.push(device);
+        selectedDevices.push(deviceId);
     }
 };
 
@@ -139,8 +157,27 @@ const validate = (): boolean => {
 
 watch(
     () => [props.modelValue, props.room, props.mode] as const,
-    () => {
+    async () => {
         if (props.modelValue) {
+            // 从后端加载设备列表
+            loadingDevices.value = true;
+            try {
+                const response = await listDevices({
+                    page: 1,
+                    pageSize: 100,
+                    keyword: "",
+                    type: "",
+                    status: "",
+                    room: "",
+                });
+                deviceList.value = response.items;
+            } catch (e) {
+                console.error("加载设备列表失败", e);
+                deviceList.value = [];
+            } finally {
+                loadingDevices.value = false;
+            }
+
             if (props.mode === "edit" && props.room) {
                 roomForm.name = props.room.name;
                 roomForm.floor = props.room.floor;
@@ -162,14 +199,17 @@ const close = () => emit("update:modelValue", false);
 const confirm = () => {
     if (!validate()) return;
 
+    const finalRoomType = roomForm.roomType === "custom" ? customRoomType.value : roomForm.roomType;
+    const formData = { ...roomForm, roomType: finalRoomType };
+
     if (props.mode === "edit" && props.room) {
-        emit("update", { ...props.room, ...roomForm });
+        emit("update", { ...props.room, ...formData });
     } else {
         emit("create", {
-            ...roomForm,
+            ...formData,
             icon: selectedIcon.value,
             themeColor: selectedColor.value,
-            deviceIds: selectedDevices.map((_, i) => i + 1),
+            deviceIds: [...selectedDevices],
         });
     }
     close();
@@ -180,6 +220,24 @@ const preferenceItems = [
     { label: "显示环境卡片", desc: "在房间卡片中显示温湿度等环境数据" },
     { label: "显示场景快捷入口", desc: "在房间卡片中显示场景切换入口" },
 ] as const;
+
+const roomTypeColorMap: Record<string, string> = {
+    living: "var(--color-primary-500)",
+    bedroom: "var(--tone-indigo)",
+    study: "var(--color-teal-600)",
+    kitchen: "var(--color-device-light)",
+    balcony: "var(--color-success)",
+    bathroom: "var(--color-info)",
+};
+
+const roomTypeBgMap: Record<string, string> = {
+    living: "var(--color-primary-50)",
+    bedroom: "var(--tone-indigo-soft)",
+    study: "var(--color-teal-soft)",
+    kitchen: "var(--color-warning-soft)",
+    balcony: "var(--color-success-soft)",
+    bathroom: "var(--color-info-soft)",
+};
 </script>
 
 <template>
@@ -200,14 +258,16 @@ const preferenceItems = [
                 <!-- 基本信息 -->
                 <div class="section-card">
                     <div class="section-head">
-                        <SvgIcon name="room" size="sm" />
+                        <span class="section-head-icon"><SvgIcon name="room" size="sm" /></span>
                         <span>基本信息</span>
                     </div>
                     <div class="field-row">
                         <label class="field">
-                            <span class="field-label">房间名称</span>
+                            <span class="field-label">
+                                <SvgIcon name="edit" size="sm" />
+                                房间名称
+                            </span>
                             <div class="input-wrap" :class="{ 'is-error': nameError }">
-                                <SvgIcon name="edit" size="sm" class="input-icon" />
                                 <input
                                     v-model="roomForm.name"
                                     maxlength="20"
@@ -216,12 +276,16 @@ const preferenceItems = [
                                 />
                                 <span class="field-count">{{ roomForm.name.length }}/20</span>
                             </div>
-                            <span v-if="nameError" class="field-error">{{ nameError }}</span>
+                            <Transition name="field-error-enter">
+                                <span v-if="nameError" class="field-error">{{ nameError }}</span>
+                            </Transition>
                         </label>
                         <label class="field">
-                            <span class="field-label">楼层 / 区域</span>
+                            <span class="field-label">
+                                <SvgIcon name="layers" size="sm" />
+                                楼层 / 区域
+                            </span>
                             <div class="input-wrap">
-                                <SvgIcon name="more" size="sm" class="input-icon" />
                                 <select v-model="roomForm.floor">
                                     <option value="1F">1F</option>
                                     <option value="2F">2F</option>
@@ -229,59 +293,55 @@ const preferenceItems = [
                                 </select>
                             </div>
                         </label>
-                        <label v-if="mode === 'create'" class="field">
-                            <span class="field-label">房间类型</span>
-                            <div class="input-wrap">
-                                <SvgIcon name="comfort" size="sm" class="input-icon" />
-                                <select v-model="roomForm.roomType">
-                                    <option
-                                        v-for="rt in roomTypes"
-                                        :key="rt.value"
-                                        :value="rt.value"
-                                    >
-                                        {{ rt.label }}
-                                    </option>
-                                </select>
-                            </div>
-                        </label>
                     </div>
                 </div>
 
-                <!-- 房间类型快速选择（创建模式） -->
-                <div v-if="mode === 'create'" class="section-card">
+                <!-- 房间类型快速选择 -->
+                <div class="section-card">
                     <div class="section-head">
-                        <SvgIcon name="comfort" size="sm" />
-                        <span>快速选择房间类型</span>
+                        <span class="section-head-icon"><SvgIcon name="comfort" size="sm" /></span>
+                        <span>房间类型</span>
                     </div>
                     <div class="type-grid">
                         <button
                             v-for="rt in roomTypes"
                             :key="rt.value"
                             type="button"
-                            :class="{
-                                active: roomForm.roomType === rt.value,
-                                selected: roomForm.roomType === rt.value,
-                            }"
+                            :class="{ active: roomForm.roomType === rt.value }"
                             :style="{
-                                '--type-color':
-                                    roomForm.roomType === rt.value
-                                        ? selectedColor
-                                        : 'var(--color-text-tertiary)',
+                                '--type-color': roomTypeColorMap[rt.value],
+                                '--type-bg': roomTypeBgMap[rt.value],
                             }"
+                            :title="rt.label"
                             @click="roomForm.roomType = rt.value"
                         >
-                            <span class="type-icon">
+                            <span
+                                class="type-icon"
+                                :style="{ '--icon-bg': roomTypeBgMap[rt.value] }"
+                            >
                                 <SvgIcon :name="rt.icon" size="sm" />
                             </span>
                             <span class="type-label">{{ rt.label }}</span>
+                            <span class="type-check">
+                                <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                                    <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
+                                </svg>
+                            </span>
                         </button>
+                        <div v-if="roomForm.roomType === 'custom'" class="custom-type-field">
+                            <input
+                                v-model="customRoomType"
+                                placeholder="输入自定义类型名称"
+                                maxlength="20"
+                            />
+                        </div>
                     </div>
                 </div>
 
                 <!-- 房间图标 + 主题颜色 -->
                 <div class="section-card">
                     <div class="section-head">
-                        <SvgIcon name="scene" size="sm" />
+                        <span class="section-head-icon"><SvgIcon name="scene" size="sm" /></span>
                         <span>外观设置</span>
                     </div>
                     <div class="appearance-group">
@@ -295,6 +355,8 @@ const preferenceItems = [
                                     type="button"
                                     :title="icon"
                                     @click="selectedIcon = icon"
+                                    @mouseenter="hoveredIcon = icon"
+                                    @mouseleave="hoveredIcon = ''"
                                 >
                                     <SvgIcon :name="icon" />
                                 </button>
@@ -313,6 +375,8 @@ const preferenceItems = [
                                     class="color-dot"
                                     :title="c.label"
                                     @click="selectedColor = c.value"
+                                    @mouseenter="hoveredColor = c.value"
+                                    @mouseleave="hoveredColor = ''"
                                 >
                                     <svg
                                         v-if="selectedColor === c.value"
@@ -337,7 +401,7 @@ const preferenceItems = [
                 <!-- 设备绑定 -->
                 <div class="section-card">
                     <div class="section-head">
-                        <SvgIcon name="device-management" size="sm" />
+                        <span class="section-head-icon"><SvgIcon name="device-management" size="sm" /></span>
                         <span>
                             {{ mode === "edit" ? "已绑定设备" : "绑定设备" }}
                         </span>
@@ -346,33 +410,37 @@ const preferenceItems = [
                     <div class="device-grid">
                         <button
                             v-for="(item, index) in deviceList"
-                            :key="item.name"
+                            :key="item.id"
                             type="button"
                             :class="{
-                                active: selectedDevices.includes(item.name),
-                                dragging: selectedDevices.includes(item.name) && dragIndex === selectedDevices.indexOf(item.name),
+                                active: selectedDevices.includes(item.id),
+                                dragging: selectedDevices.includes(item.id) && dragIndex === selectedDevices.indexOf(item.id),
                             }"
-                            @click="toggleDevice(item.name)"
-                            :draggable="selectedDevices.includes(item.name)"
+                            @click="toggleDevice(item.id)"
+                            :draggable="selectedDevices.includes(item.id)"
                             @dragstart="
-                                selectedDevices.includes(item.name) &&
-                                    handleDragStart(selectedDevices.indexOf(item.name), $event)
+                                selectedDevices.includes(item.id) &&
+                                    handleDragStart(selectedDevices.indexOf(item.id), $event)
                             "
                             @dragover="
-                                selectedDevices.includes(item.name) &&
-                                    handleDragOver(selectedDevices.indexOf(item.name), $event)
+                                selectedDevices.includes(item.id) &&
+                                    handleDragOver(selectedDevices.indexOf(item.id), $event)
                             "
                             @drop="
-                                selectedDevices.includes(item.name) &&
-                                    handleDrop(selectedDevices.indexOf(item.name), $event)
+                                selectedDevices.includes(item.id) &&
+                                    handleDrop(selectedDevices.indexOf(item.id), $event)
                             "
                             @dragend="handleDragEnd"
                         >
                             <span class="device-icon">
-                                <SvgIcon :name="item.icon" size="sm" />
+                                <SvgIcon :name="getDeviceTypeIcon(item.type)" size="sm" />
                             </span>
                             <span class="device-name">{{ item.name }}</span>
-                            <span class="device-check">✓</span>
+                            <span class="device-check">
+                                <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                                    <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
+                                </svg>
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -380,7 +448,7 @@ const preferenceItems = [
                 <!-- 快捷控制偏好（仅编辑模式） -->
                 <section v-if="mode === 'edit'" class="section-card">
                     <div class="section-head">
-                        <SvgIcon name="automation" size="sm" />
+                        <span class="section-head-icon"><SvgIcon name="automation" size="sm" /></span>
                         <span>快捷控制偏好</span>
                     </div>
                     <div class="pref-list">
@@ -416,49 +484,39 @@ const preferenceItems = [
                         <span
                             class="preview-room-avatar"
                             :class="roomForm.roomType ? `is-${roomForm.roomType}` : ''"
+                            :style="{ '--avatar-color': roomTypeColorMap[roomForm.roomType] || 'var(--color-primary-500)' }"
                         >{{ (roomForm.name || '未命名').slice(0, 1) }}</span>
                         <div class="preview-room-title">
                             <h2>{{ roomForm.name || "未命名房间" }}</h2>
                             <p class="preview-room-status">
                                 <small>{{ (room?.comfort ?? 81) >= 84 ? "舒适" : "良好" }}</small>
-                                <b></b>
+                                <span class="status-sep" />
                                 {{
-                                    roomTypes.find((rt) => rt.value === roomForm.roomType)
-                                        ?.label ?? roomForm.roomType
+                                    roomForm.roomType === "custom"
+                                        ? (customRoomType || "自定义")
+                                        : (roomTypes.find((rt) => rt.value === roomForm.roomType)
+                                            ?.label ?? roomForm.roomType)
                                 }}
-                                · {{ roomForm.floor }}
+                                <span class="status-sep" />
+                                {{ roomForm.floor }}
                             </p>
                         </div>
                     </header>
-                    <div class="preview-room-metrics">
-                        <span>
-                            <SvgIcon name="temperature" size="sm" />
-                            {{ room?.temperature ?? "--" }}°C
-                        </span>
-                        <span>
-                            <SvgIcon name="humidity" size="sm" />
-                            {{ room?.humidity ?? "--" }}%
-                        </span>
-                        <span class="quality">
-                            <SvgIcon name="air-quality" size="sm" />
-                            {{ room?.pm25 ?? "--" }}
-                        </span>
-                    </div>
                     <div class="preview-room-devices">
                         <button
-                            v-for="item in previewDevices"
-                            :key="item"
+                            v-for="device in previewDevices"
+                            :key="device.id"
                             type="button"
                             class="on"
                         >
                             <i>
                                 <SvgIcon
-                                    :name="deviceList.find((d) => d.name === item)?.icon ?? 'room'"
+                                    :name="getDeviceTypeIcon(device.type)"
                                     size="sm"
                                 />
                             </i>
-                            <span>{{ item }}</span>
-                            <small>开</small>
+                            <span>{{ device.name }}</span>
+                            <small>{{ device.status === "online" ? "开" : "关" }}</small>
                         </button>
                         <div v-if="deviceCount === 0" class="preview-device-empty">
                             <SvgIcon name="plus" size="sm" />
@@ -502,8 +560,9 @@ const preferenceItems = [
 
 .editor-form-scroll {
     overflow-y: auto;
-    max-height: 460px;
+    max-height: 520px;
     padding-right: 4px;
+    scroll-behavior: smooth;
 }
 
 .editor-form-scroll::-webkit-scrollbar {
@@ -523,30 +582,40 @@ const preferenceItems = [
    分区卡片
    ============================================= */
 .section-card {
-    border: 1.5px solid var(--color-border);
-    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
     background: var(--color-card-bg);
-    padding: 16px;
-    transition: box-shadow 0.2s;
+    padding: 18px;
+    box-shadow: var(--shadow-card);
+    transition: border-color 220ms var(--motion-ease),
+                box-shadow 220ms var(--motion-ease);
 }
 
 .section-card:hover {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-card-hover);
 }
 
 .section-head {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 14px;
-    font-size: 13px;
+    margin-bottom: 16px;
+    font-size: 14px;
     font-weight: 700;
-    color: var(--color-text);
+    color: var(--color-text-primary);
     letter-spacing: 0.01em;
 }
 
-.section-head .section-head-icon {
-    color: var(--color-primary-500);
+.section-head-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--color-primary-50), var(--color-card-bg));
+    color: var(--color-primary-600);
 }
 
 /* =============================================
@@ -554,8 +623,8 @@ const preferenceItems = [
    ============================================= */
 .field-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
 }
 
 .field {
@@ -566,10 +635,19 @@ const preferenceItems = [
 }
 
 .field-label {
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--color-text-secondary);
     letter-spacing: 0.02em;
+}
+
+.field-label svg {
+    width: 14px;
+    height: 14px;
+    color: var(--color-text-muted);
 }
 
 .input-wrap {
@@ -578,32 +656,23 @@ const preferenceItems = [
     align-items: center;
 }
 
-.input-wrap .input-icon {
-    position: absolute;
-    left: 11px;
-    color: var(--color-text-tertiary);
-    pointer-events: none;
-    transition: color 0.2s;
-}
-
-.input-wrap:focus-within .input-icon {
-    color: var(--color-primary-500);
-}
-
 .input-wrap input,
 .input-wrap select {
     width: 100%;
-    height: 40px;
-    padding: 0 12px 0 34px;
+    height: 42px;
+    padding: 0 14px;
     border: 1.5px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-subtle);
-    font-size: 14px;
-    color: var(--color-text-primary);
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-    appearance: none;
-    -webkit-appearance: none;
+    font-size: 15px;
+}
+
+.input-wrap select {
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
 }
 
 .input-wrap select option {
@@ -611,46 +680,48 @@ const preferenceItems = [
     color: var(--color-text-primary);
 }
 
-.input-wrap select {
-    padding-right: 32px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 14px;
+.input-wrap input:hover,
+.input-wrap select:hover {
+    border-color: var(--color-primary-300);
+    background: color-mix(in srgb, var(--color-card-bg) 92%, var(--color-primary-50));
 }
 
 .input-wrap input:focus,
 .input-wrap select:focus {
-    border-color: var(--color-primary-400);
-    box-shadow: 0 0 0 3px var(--color-primary-50);
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
     background: var(--color-card-bg);
 }
 
 .input-wrap.is-error input {
-    border-color: var(--color-danger, #f43f5e);
-    box-shadow: 0 0 0 3px #f43f5e14;
-}
-
-.input-wrap.is-error .input-icon {
-    color: var(--color-danger, #f43f5e);
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 14%, transparent);
 }
 
 .field-error {
-    font-size: 11px;
-    color: var(--color-danger, #f43f5e);
-    position: absolute;
-    bottom: -18px;
-    left: 0;
+    font-size: 12px;
+    color: var(--color-danger);
     font-weight: 600;
+    margin-top: 2px;
+    padding-left: 2px;
+}
+
+.field-error-enter-enter-active {
+    transition: opacity 200ms var(--motion-ease), transform 200ms var(--motion-ease);
+}
+
+.field-error-enter-enter-from {
+    opacity: 0;
+    transform: translateY(-4px);
 }
 
 .field-count {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 11px;
-    color: var(--color-text-tertiary);
+    font-size: 12px;
+    color: var(--color-text-muted);
     pointer-events: none;
     font-weight: 600;
 }
@@ -666,61 +737,133 @@ const preferenceItems = [
 
 .type-grid button {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 10px 6px;
+    gap: 8px;
+    height: 44px;
+    padding: 0 12px;
     border: 1.5px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-subtle);
-    cursor: pointer;
-    transition: all 0.25s ease;
     color: var(--color-text-tertiary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 220ms var(--motion-ease);
+    position: relative;
+    overflow: hidden;
+}
+
+.type-grid button::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--type-color);
+    opacity: 0;
+    transition: opacity 220ms var(--motion-ease);
 }
 
 .type-grid button:hover {
-    border-color: var(--color-primary-300);
-    background: var(--color-primary-50);
-    color: var(--color-primary-600);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: var(--type-color);
+    background: var(--type-bg);
+    color: var(--type-color);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--type-color) 10%, transparent);
 }
 
 .type-grid button.active {
-    border-color: var(--color-primary-500);
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
-    box-shadow: 0 0 0 3px var(--color-primary-100);
+    border-color: var(--type-color);
+    background: linear-gradient(135deg, var(--type-bg), var(--color-card-bg));
+    color: var(--type-color);
+    font-weight: 700;
+}
+
+.type-grid button.active::before {
+    opacity: 1;
 }
 
 .type-icon {
     display: grid;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     place-items: center;
-    border-radius: 8px;
-    background: var(--color-card-bg);
-    border: 1px solid var(--color-border);
-    transition: all 0.25s;
+    border-radius: 7px;
+    background: var(--icon-bg, var(--color-card-bg));
+    border: 1px solid color-mix(in srgb, var(--type-color, var(--color-border)) 20%, transparent);
+    transition: all 220ms var(--motion-ease);
+    flex-shrink: 0;
+    color: var(--type-color, var(--color-text-tertiary));
 }
 
 .type-grid button.active .type-icon {
     border-color: transparent;
-    background: var(--color-primary-100);
+    background: color-mix(in srgb, var(--type-color) 16%, var(--color-card-bg));
+    color: var(--type-color);
 }
 
 .type-label {
-    font-size: 11px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 700;
-    line-height: 1.2;
+    font-size: 14px;
+    text-align: left;
+}
+
+.type-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--type-color);
+    color: #fff;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: opacity 220ms var(--motion-ease),
+                transform 280ms var(--motion-ease);
+    flex-shrink: 0;
+}
+
+.type-grid button.active .type-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.custom-type-field {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+}
+
+.custom-type-field input {
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    outline: none;
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
+}
+
+.custom-type-field input:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
 }
 
 /* =============================================
    外观设置 - 图标 + 颜色
    ============================================= */
 .appearance-group {
-    display: grid;
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 .icon-picker,
@@ -734,7 +877,7 @@ const preferenceItems = [
 .color-picker legend {
     width: 100%;
     margin-bottom: 10px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--color-text-tertiary);
     letter-spacing: 0.02em;
@@ -744,21 +887,21 @@ const preferenceItems = [
 .icon-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
 }
 
 .icon-grid button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 40px;
+    width: 48px;
+    height: 44px;
     border: 1.5px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 200ms var(--motion-ease);
 }
 
 .icon-grid button:hover {
@@ -766,14 +909,14 @@ const preferenceItems = [
     color: var(--color-primary-600);
     background: var(--color-primary-50);
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
 .icon-grid button.active {
     border-color: var(--color-primary-500);
-    background: var(--color-primary-50);
+    background: linear-gradient(135deg, var(--color-primary-50), color-mix(in srgb, var(--color-primary-50) 60%, var(--color-card-bg)));
     color: var(--color-primary-700);
-    box-shadow: 0 0 0 3px var(--color-primary-100);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 /* 颜色网格 */
@@ -781,17 +924,17 @@ const preferenceItems = [
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .color-dot {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border: 3px solid transparent;
     border-radius: 50%;
     background: var(--dot-color);
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 280ms var(--motion-ease);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -800,14 +943,14 @@ const preferenceItems = [
 }
 
 .color-dot:hover {
-    transform: scale(1.2);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+    transform: scale(1.18);
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--dot-color) 40%, transparent);
 }
 
 .color-dot.active {
     border-color: var(--color-border);
-    box-shadow: 0 0 0 2px var(--color-primary-200), 0 3px 12px rgba(0, 0, 0, 0.12);
-    transform: scale(1.15);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--dot-color) 50%, transparent), 0 3px 12px rgba(0, 0, 0, 0.1);
+    transform: scale(1.12);
 }
 
 .color-check {
@@ -818,10 +961,13 @@ const preferenceItems = [
 }
 
 .color-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--color-text-tertiary);
-    margin-left: 2px;
+    margin-left: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--color-surface-subtle);
 }
 
 /* =============================================
@@ -831,16 +977,17 @@ const preferenceItems = [
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
-    background: var(--color-primary-500);
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
     color: #fff;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 800;
     line-height: 1;
-    margin-left: 2px;
+    margin-left: 4px;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary-500) 30%, transparent);
 }
 
 .device-grid {
@@ -853,15 +1000,15 @@ const preferenceItems = [
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 40px;
-    padding: 0 10px;
+    height: 44px;
+    padding: 0 12px;
     border: 1.5px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 220ms var(--motion-ease);
     position: relative;
     overflow: hidden;
 }
@@ -876,7 +1023,7 @@ const preferenceItems = [
     border-radius: 0 2px 2px 0;
     background: var(--color-primary-500);
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 220ms var(--motion-ease);
 }
 
 .device-grid button:hover {
@@ -884,12 +1031,12 @@ const preferenceItems = [
     background: var(--color-primary-50);
     color: var(--color-primary-600);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 }
 
 .device-grid button.active {
     border-color: var(--color-primary-500);
-    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-card-bg) 100%);
+    background: linear-gradient(135deg, var(--color-primary-50), var(--color-card-bg));
     color: var(--color-primary-700);
 }
 
@@ -916,16 +1063,18 @@ const preferenceItems = [
     width: 28px;
     height: 28px;
     place-items: center;
-    border-radius: 6px;
+    border-radius: 7px;
     background: var(--color-card-bg);
     border: 1px solid var(--color-border);
-    transition: all 0.2s;
+    transition: all 220ms var(--motion-ease);
     flex-shrink: 0;
+    color: var(--color-text-tertiary);
 }
 
 .device-grid button.active .device-icon {
     border-color: var(--color-primary-200);
     background: var(--color-primary-100);
+    color: var(--color-primary-600);
 }
 
 .device-name {
@@ -934,23 +1083,28 @@ const preferenceItems = [
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 700;
 }
 
 .device-check {
-    font-weight: 700;
-    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    color: #fff;
     opacity: 0;
-    transition: opacity 0.2s, transform 0.2s;
-    transform: scale(0.5);
-    width: 16px;
-    text-align: center;
+    transform: scale(0.3);
+    transition: opacity 220ms var(--motion-ease),
+                transform 280ms var(--motion-ease);
     flex-shrink: 0;
 }
 
 .device-grid button.active .device-check {
     opacity: 1;
     transform: scale(1);
-    color: var(--color-primary-600);
 }
 
 /* =============================================
@@ -965,12 +1119,10 @@ const preferenceItems = [
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 0;
+    padding: 12px 8px;
     cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.15s;
-    padding-left: 4px;
-    padding-right: 4px;
+    border-radius: 8px;
+    transition: background 180ms var(--motion-ease);
 }
 
 .pref-item + .pref-item {
@@ -978,11 +1130,11 @@ const preferenceItems = [
 }
 
 .pref-item:hover {
-    background: var(--color-surface-subtle);
+    background: var(--color-surface-hover);
 }
 
 .pref-text {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.3;
     user-select: none;
 }
@@ -999,8 +1151,8 @@ const preferenceItems = [
     position: relative;
     display: inline-flex;
     align-items: center;
-    width: 36px;
-    height: 20px;
+    width: 38px;
+    height: 22px;
     flex-shrink: 0;
 }
 
@@ -1014,9 +1166,9 @@ const preferenceItems = [
 .toggle-track {
     width: 100%;
     height: 100%;
-    border-radius: 10px;
+    border-radius: 11px;
     background: var(--color-border);
-    transition: background 0.25s ease;
+    transition: background 250ms var(--motion-ease);
     cursor: pointer;
     position: relative;
 }
@@ -1026,16 +1178,16 @@ const preferenceItems = [
     position: absolute;
     left: 2px;
     top: 2px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #fff;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .toggle-switch input:checked + .toggle-track {
-    background: var(--color-primary-500);
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
 }
 
 .toggle-switch input:checked + .toggle-track::after {
@@ -1049,7 +1201,7 @@ const preferenceItems = [
     display: flex;
     flex-direction: column;
     gap: 14px;
-    border: 1.5px solid var(--color-border);
+    border: 1px solid var(--color-border);
     border-radius: 14px;
     background: linear-gradient(
         180deg,
@@ -1057,16 +1209,26 @@ const preferenceItems = [
         var(--color-surface-subtle) 100%
     );
     padding: 20px;
-    align-self: center;
+    align-self: stretch;
+    justify-content: space-between;
+    transition: border-color 220ms var(--motion-ease);
+}
+
+.room-preview:hover {
+    border-color: var(--color-border-strong);
 }
 
 .preview-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    color: var(--color-text);
+    color: var(--color-text-primary);
+}
+
+.preview-header svg {
+    color: var(--color-primary-600);
 }
 
 /* 预览房间卡片 — 与 RoomControl 页面 RoomCard 一致 */
@@ -1078,7 +1240,8 @@ const preferenceItems = [
     background: var(--color-card-bg);
     padding: 16px;
     box-shadow: var(--shadow-card);
-    transition: 160ms var(--motion-ease);
+    transition: border-color 220ms var(--motion-ease),
+                box-shadow 220ms var(--motion-ease);
     overflow: hidden;
 }
 
@@ -1104,11 +1267,14 @@ const preferenceItems = [
     color: var(--color-primary-700);
     font-weight: 900;
     font-size: 18px;
+    transition: background 300ms var(--motion-ease), color 300ms var(--motion-ease);
+    box-shadow: 0 4px 12px var(--color-focus-ring);
 }
 
 .preview-room-avatar.is-living {
     background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
     color: var(--color-primary-700);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary-500) 18%, transparent);
 }
 .preview-room-avatar.is-bedroom {
     background: linear-gradient(
@@ -1117,22 +1283,27 @@ const preferenceItems = [
         var(--tone-indigo-soft)
     );
     color: var(--color-scene-sleep);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--tone-indigo) 18%, transparent);
 }
 .preview-room-avatar.is-study {
     background: linear-gradient(135deg, var(--color-teal-soft), #f0fdfa);
     color: var(--color-teal-600);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-teal-600) 18%, transparent);
 }
 .preview-room-avatar.is-kitchen {
     background: linear-gradient(135deg, var(--color-warning-soft), #fffbeb);
     color: var(--color-device-light);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-device-light) 18%, transparent);
 }
 .preview-room-avatar.is-bathroom {
     background: linear-gradient(135deg, var(--color-info-soft), #f0f9ff);
     color: var(--color-info);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-info) 18%, transparent);
 }
 .preview-room-avatar.is-balcony {
     background: linear-gradient(135deg, var(--color-success-soft), #f0fdf4);
     color: var(--color-device-air);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-device-air) 18%, transparent);
 }
 
 .preview-room-title {
@@ -1143,7 +1314,9 @@ const preferenceItems = [
 .preview-room-title h2 {
     overflow: hidden;
     margin: 0;
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--color-text-primary);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -1152,26 +1325,28 @@ const preferenceItems = [
     display: flex;
     align-items: center;
     gap: 5px;
-    margin: 4px 0 0;
+    margin: 5px 0 0;
     color: var(--color-text-tertiary);
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .preview-room-status small {
     border-radius: 999px;
     background: var(--color-success-soft);
-    padding: 1px 6px;
+    padding: 1px 7px;
     color: var(--color-success);
-    font-size: 9px;
-    line-height: 1.4;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
 }
 
-.preview-room-status b {
+.status-sep {
     display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 3px;
+    height: 3px;
     border-radius: 50%;
-    background: var(--color-success);
+    background: var(--color-text-muted);
 }
 
 .preview-room-metrics {
@@ -1191,9 +1366,14 @@ const preferenceItems = [
     background: var(--color-surface-subtle);
     padding: 5px 7px;
     color: var(--color-text-secondary);
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 800;
     white-space: nowrap;
+    transition: background 180ms var(--motion-ease);
+}
+
+.preview-room-metrics span:hover {
+    background: var(--color-surface-hover);
 }
 
 .preview-room-metrics .quality {
@@ -1201,10 +1381,14 @@ const preferenceItems = [
     color: var(--color-success);
 }
 
+.preview-room-metrics .quality:hover {
+    background: color-mix(in srgb, var(--color-success-soft) 80%, var(--color-success));
+}
+
 .preview-room-devices {
     display: flex;
     gap: 7px;
-    margin-top: 8px;
+    margin-top: 10px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -1241,12 +1425,16 @@ const preferenceItems = [
     color: var(--color-text-tertiary);
     font-size: 10px;
     scroll-snap-align: start;
-    transition: 160ms var(--motion-ease);
+    transition: border-color 180ms var(--motion-ease),
+                background 180ms var(--motion-ease),
+                color 180ms var(--motion-ease),
+                transform 180ms var(--motion-ease);
 }
 
 .preview-room-devices button:hover {
     border-color: var(--color-primary-200);
     background: var(--color-surface-hover);
+    transform: translateY(-1px);
 }
 
 .preview-room-devices button.on {
@@ -1263,6 +1451,11 @@ const preferenceItems = [
     border-radius: 8px;
     background: var(--color-card-bg);
     font-style: normal;
+    transition: background 180ms var(--motion-ease);
+}
+
+.preview-room-devices button.on i {
+    background: var(--color-primary-100);
 }
 
 .preview-room-devices span {
@@ -1275,7 +1468,7 @@ const preferenceItems = [
 
 .preview-room-devices small {
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 10px;
 }
 
 .preview-room-devices button.on small {
@@ -1292,10 +1485,18 @@ const preferenceItems = [
     border-radius: 10px;
     border: 1.5px dashed var(--color-border);
     background: var(--color-surface-subtle);
-    color: var(--color-text-tertiary);
+    color: var(--color-text-muted);
     font-size: 12px;
     font-weight: 600;
     flex: 1;
+    transition: border-color 180ms var(--motion-ease),
+                background 180ms var(--motion-ease);
+}
+
+.preview-device-empty:hover {
+    border-color: var(--color-primary-300);
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 
 .preview-device-more {
@@ -1312,6 +1513,13 @@ const preferenceItems = [
     border: 1px dashed var(--color-border);
     color: var(--color-text-tertiary);
     scroll-snap-align: start;
+    transition: border-color 180ms var(--motion-ease),
+                background 180ms var(--motion-ease);
+}
+
+.preview-device-more:hover {
+    border-color: var(--color-primary-300);
+    background: var(--color-primary-50);
 }
 
 .preview-device-more span {
@@ -1321,7 +1529,7 @@ const preferenceItems = [
 }
 
 .preview-device-more small {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--color-text-muted);
 }
 
@@ -1330,12 +1538,17 @@ const preferenceItems = [
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px;
+    padding: 8px 12px;
     border-radius: 8px;
-    background: var(--color-primary-50);
-    font-size: 11px;
+    background: linear-gradient(135deg, var(--color-primary-50), color-mix(in srgb, var(--color-primary-50) 60%, var(--color-card-bg)));
+    font-size: 12px;
     color: var(--color-primary-600);
     font-weight: 600;
+    transition: background 180ms var(--motion-ease);
+}
+
+.preview-tip:hover {
+    background: var(--color-primary-50);
 }
 
 /* =============================================

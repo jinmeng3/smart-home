@@ -24,12 +24,15 @@ from app.schemas.automation import (
     AutomationUpdate,
     BatchEnableRead,
     BatchEnableWrite,
+    BatchScheduleWrite,
     ConditionWrite,
     ExecuteRead,
     ExecutionListRead,
     ExecutionRead,
     FlowItem,
 )
+
+# === 自动化规则 ===
 
 
 def automation_query():
@@ -147,7 +150,7 @@ def replace_flow(
         ]
 
 
-def create_automation(
+def create_automation_service(
     db: Session, household_id: int, user_id: int, payload: AutomationCreate
 ) -> AutomationRead:
     validate_devices(db, household_id, payload.actions)
@@ -175,7 +178,7 @@ def create_automation(
     return serialize(get_automation(db, automation.id))
 
 
-def update_automation(
+def update_automation_service(
     db: Session, automation_id: int, household_id: int, payload: AutomationUpdate
 ) -> AutomationRead:
     automation = get_automation(db, automation_id, household_id)
@@ -206,7 +209,7 @@ def update_automation(
     return serialize(get_automation(db, automation.id))
 
 
-def list_automations(
+def list_automations_service(
     db: Session,
     household_id: int,
     keyword: str | None,
@@ -302,7 +305,10 @@ def list_automations(
     )
 
 
-def execute_automation(
+# === 自动化执行 ===
+
+
+def execute_automation_service(
     db: Session, automation: Automation, source: str, idempotency_key: str | None
 ) -> ExecuteRead:
     if idempotency_key:
@@ -327,7 +333,7 @@ def execute_automation(
     return ExecuteRead(execution_id=execution.id, status=execution.status)
 
 
-def list_executions(
+def list_executions_service(
     db: Session,
     automation: Automation,
     page: int,
@@ -366,7 +372,10 @@ def list_executions(
     )
 
 
-def batch_enable(
+# === 批量操作 ===
+
+
+def batch_enable_service(
     db: Session, household_id: int, payload: BatchEnableWrite
 ) -> BatchEnableRead:
     rows = list(
@@ -389,3 +398,37 @@ def batch_enable(
     return BatchEnableRead(
         updated_count=len(rows) - unchanged, unchanged_count=unchanged
     )
+
+
+def batch_schedule_automations_service(
+    db: Session, household_id: int, payload: BatchScheduleWrite
+) -> BatchEnableRead:
+    """批量设置自动化规则的定时触发配置。"""
+    rules = list(
+        db.scalars(
+            select(Automation).where(
+                Automation.household_id == household_id,
+                Automation.id.in_(payload.rule_ids),
+            )
+        ).all()
+    )
+    if len(rules) != len(set(payload.rule_ids)):
+        raise HTTPException(
+            status_code=422, detail="部分自动化规则不存在或不属于当前家庭"
+        )
+    config = {
+        "timezone": payload.timezone,
+        "time": payload.time,
+        "weekdays": payload.weekdays,
+        "frequency": payload.frequency,
+        "interval": payload.interval,
+    }
+    for rule in rules:
+        rule.trigger_type = "schedule"
+        rule.triggers = []
+        rule.triggers.append(
+            AutomationTrigger(type="schedule", config_json=json.dumps(config))
+        )
+        rule.version += 1
+    db.commit()
+    return BatchEnableRead(updated_count=len(rules), unchanged_count=0)

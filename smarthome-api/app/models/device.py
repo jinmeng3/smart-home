@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+
+class DeviceStatus(str, enum.Enum):
+    ONLINE = "online"
+    OFFLINE = "offline"
+    WARNING = "warning"
+    RUNNING = "running"
 
 
 class Device(Base):
@@ -25,8 +33,11 @@ class Device(Base):
         String(32), nullable=False, index=True, comment="设备类型"
     )
     brand: Mapped[str] = mapped_column(String(64), nullable=False, comment="设备品牌")
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, index=True, comment="设备状态"
+    status: Mapped[DeviceStatus] = mapped_column(
+        Enum(DeviceStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        index=True,
+        comment="设备状态",
     )
     connection: Mapped[str] = mapped_column(
         String(32), nullable=False, index=True, comment="连接方式"
@@ -112,3 +123,26 @@ class DeviceLog(Base):
     )
 
     device: Mapped[Device] = relationship(back_populates="logs")
+
+
+class DeviceData(Base):
+    """存储设备/房间的环境指标数据（如温度、湿度、PM2.5等），以 name/value 形式支持任意指标扩展。"""
+
+    __tablename__ = "device_data"
+    __table_args__ = (
+        Index("ix_device_data_room_name_time", "room_id", "name", "sampled_at"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True, comment="主键")
+    room_id: Mapped[int] = mapped_column(
+        ForeignKey("rooms.id", ondelete="CASCADE"), index=True, comment="所属房间ID"
+    )
+    name: Mapped[str] = mapped_column(
+        String(32), nullable=False, comment="指标名称（如temperature/humidity/pm25等）"
+    )
+    value: Mapped[float] = mapped_column(Float, nullable=False, comment="指标数值")
+    sampled_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        index=True,
+        comment="采样时间",
+    )
