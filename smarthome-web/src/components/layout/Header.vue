@@ -6,8 +6,8 @@ import { useAuthStore } from "../../stores/auth";
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const avatarLoadError = ref(false);
-const username = computed(
-    () => authStore.isAuthenticated
+const username = computed(() =>
+    authStore.isAuthenticated
         ? settingsStore.settings.account.username.trim() || "用户"
         : "访客",
 );
@@ -42,7 +42,9 @@ const greeting = computed(() => {
             <p class="date-chip">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M7 3v4M17 3v4M4 9h16" />
-                    <path d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+                    <path
+                        d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+                    />
                     <path d="M8 13h3M8 16h6" />
                 </svg>
                 <span>今天是 {{ today }}</span>
@@ -52,26 +54,44 @@ const greeting = computed(() => {
         <div class="flex items-center gap-3">
             <label class="header-search-native">
                 <span aria-hidden="true">⌕</span>
-                <input :disabled="!authStore.isAuthenticated" type="search" :placeholder="authStore.isAuthenticated ? '搜索设备、场景或房间' : '登录后可搜索'" />
+                <input
+                    :disabled="!authStore.isAuthenticated"
+                    type="search"
+                    :placeholder="
+                        authStore.isAuthenticated
+                            ? '搜索设备、场景或房间'
+                            : '登录后可搜索'
+                    "
+                />
             </label>
-            <button v-if="authStore.isAuthenticated" aria-label="通知，3 条未读" class="notification-button" type="button">
+            <button
+                v-if="authStore.isAuthenticated"
+                aria-label="通知，3 条未读"
+                class="notification-button"
+                type="button"
+            >
                 <span aria-hidden="true">●</span>
                 <small>3</small>
             </button>
-            <button class="rounded-full" type="button" title="登录或查看账户" @click="authStore.openLogin">
-            <img
-                v-if="authStore.isAuthenticated && avatarUrl"
-                class="h-10 w-10 rounded-full border border-[var(--color-border-default)] object-cover"
-                :src="avatarUrl"
-                alt=""
-                @error="avatarLoadError = true"
-            />
-            <div
-                v-else
-                class="grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border-default)] bg-gradient-to-br from-blue-100 to-blue-600 text-sm font-bold text-white"
+            <button
+                class="rounded-full"
+                type="button"
+                title="登录或查看账户"
+                @click="authStore.openLogin"
             >
-                {{ accountInitial }}
-            </div>
+                <img
+                    v-if="authStore.isAuthenticated && avatarUrl"
+                    class="h-10 w-10 rounded-full border border-[var(--color-border-default)] object-cover"
+                    :src="avatarUrl"
+                    alt=""
+                    @error="avatarLoadError = true"
+                />
+                <div
+                    v-else
+                    class="grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border-default)] bg-gradient-to-br from-blue-100 to-blue-600 text-sm font-bold text-white"
+                >
+                    {{ accountInitial }}
+                </div>
             </button>
         </div>
     </header>
@@ -79,82 +99,82 @@ const greeting = computed(() => {
 
 <style scoped>
 .header-search-native {
-  display: flex;
-  width: 240px;
-  height: 34px;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-  padding: 0 11px;
-  color: var(--color-text-tertiary);
-  background: var(--color-panel-background);
+    display: flex;
+    width: 240px;
+    height: 34px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    padding: 0 11px;
+    color: var(--color-text-tertiary);
+    background: var(--color-panel-background);
 }
 
 .date-chip {
-  display: inline-flex;
-  height: 30px;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  border: 1px solid var(--color-border-default);
-  border-radius: 8px;
-  padding: 0 11px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  background: var(--color-card-bg);
-  box-shadow: var(--shadow-card);
+    display: inline-flex;
+    height: 30px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    padding: 0 11px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--color-card-bg);
+    box-shadow: var(--shadow-card);
 }
 
 .date-chip svg {
-  width: 16px;
-  height: 16px;
-  color: var(--color-primary-600);
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary-600);
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
 }
 
 .header-search-native:focus-within {
-  border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .header-search-native input {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  color: var(--color-text-secondary);
-  background: transparent;
-  outline: 0;
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    color: var(--color-text-secondary);
+    background: transparent;
+    outline: 0;
 }
 
 .notification-button {
-  position: relative;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--color-border-default);
-  border-radius: 50%;
-  color: var(--color-primary-600);
-  background: var(--color-panel-background);
+    position: relative;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid var(--color-border-default);
+    border-radius: 50%;
+    color: var(--color-primary-600);
+    background: var(--color-panel-background);
 }
 
 .notification-button small {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 17px;
-  height: 17px;
-  border: 2px solid var(--color-panel-background);
-  border-radius: 999px;
-  color: white;
-  font-size: 9px;
-  line-height: 13px;
-  background: var(--color-danger);
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 17px;
+    height: 17px;
+    border: 2px solid var(--color-panel-background);
+    border-radius: 999px;
+    color: white;
+    font-size: 9px;
+    line-height: 13px;
+    background: var(--color-danger);
 }
 </style>

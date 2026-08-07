@@ -3,6 +3,7 @@ import { onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
 import DeviceList from "../components/device/DeviceList.vue";
@@ -10,8 +11,8 @@ import DeviceQuickActions from "../components/device/DeviceQuickActions.vue";
 import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
 import DeviceToolbar from "../components/device/DeviceToolbar.vue";
 import PlatformStatus from "../components/device/PlatformStatus.vue";
+import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
-import { useAuthStore } from "../stores/auth";
 import { defineAsyncDialog } from "../utils/asyncDialog";
 
 const DeviceEditorDialog = defineAsyncDialog(
@@ -19,17 +20,12 @@ const DeviceEditorDialog = defineAsyncDialog(
 );
 
 const controller = useDeviceManagementController();
-const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
-const loadDevicesIfAuthenticated = () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
-    void controller.loadDevices();
-};
+const loadDevices = useAuthenticatedLoader(controller.loadDevices, {
+    immediate: false,
+});
 
 watch(
     () => [
@@ -41,7 +37,7 @@ watch(
         controller.filters.room,
     ],
     () => {
-        loadDevicesIfAuthenticated();
+        void loadDevices();
     },
 );
 
@@ -51,7 +47,7 @@ onMounted(() => {
     if (view === "frequent" || view === "favorite") {
         controller.setViewMode(view);
     }
-    loadDevicesIfAuthenticated();
+    void loadDevices();
 });
 </script>
 
@@ -173,20 +169,11 @@ onMounted(() => {
                 v-if="controller.deletingDevice.value"
                 class="delete-dialog-body"
             >
-                <div class="delete-device-summary">
-                    <span class="delete-device-thumb" aria-hidden="true">
-                        <SvgIcon name="device-management" />
-                    </span>
-                    <div>
-                        <strong>{{
-                            controller.deletingDevice.value.name
-                        }}</strong>
-                        <p>
-                            {{ controller.deletingDevice.value.room }} ·
-                            {{ controller.deletingDevice.value.brand }}
-                        </p>
-                    </div>
-                </div>
+                <ConfirmEntitySummary
+                    :description="`${controller.deletingDevice.value.room} · ${controller.deletingDevice.value.brand}`"
+                    icon="device-management"
+                    :title="controller.deletingDevice.value.name"
+                />
             </section>
         </ConfirmActionDialog>
 

@@ -25,6 +25,7 @@ import SvgIcon from "../components/common/SvgIcon.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { getErrorMessage } from "../utils/error";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId, SettingsState } from "../types/settings";
 
@@ -182,33 +183,28 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
     event.returnValue = "";
 };
 
-onMounted(() => {
-    if (!authStore.isAuthenticated) {
-        syncAccountForm();
-        syncIntegrationSnapshot();
-        authStore.openLogin();
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return;
-    }
-
-    void settingsStore
+const loadSettings = async () => {
+    await Promise.all([
+        settingsStore
         .loadAccountHome()
         .then(syncAccountForm)
         .catch((error: unknown) => {
-            ElMessage.error(
-                error instanceof Error
-                    ? error.message
-                    : "账户与家庭信息加载失败",
-            );
-        });
-    void settingsStore
+            ElMessage.error(getErrorMessage(error, "账户与家庭信息加载失败"));
+        }),
+        settingsStore
         .loadAIModel()
         .then(syncIntegrationSnapshot)
         .catch((error: unknown) => {
-            ElMessage.error(
-                error instanceof Error ? error.message : "AI 模型配置加载失败",
-            );
-        });
+            ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
+        }),
+    ]);
+};
+
+useAuthenticatedLoader(loadSettings);
+
+onMounted(() => {
+    syncAccountForm();
+    syncIntegrationSnapshot();
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     void nextTick(() => {
@@ -279,7 +275,7 @@ const saveAccountFamily = async () => {
         syncAccountForm();
         ElMessage.success("账户与家庭已保存");
     } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "保存失败");
+        ElMessage.error(getErrorMessage(error, "保存失败"));
     } finally {
         savingAccount.value = false;
     }
@@ -294,7 +290,7 @@ const saveAllSettings = async () => {
         syncIntegrationSnapshot();
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "AI 助手配置保存失败",
+            getErrorMessage(error, "AI 助手配置保存失败"),
         );
     }
 };
@@ -305,7 +301,7 @@ const syncDevices = async () => {
         ElMessage.success("设备同步完成");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "WebSocket 状态刷新失败",
+            getErrorMessage(error, "WebSocket 状态刷新失败"),
         );
     }
 };
@@ -320,7 +316,7 @@ const uploadAvatar = async (file: File) => {
         ElMessage.success("头像已上传");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "头像上传失败",
+            getErrorMessage(error, "头像上传失败"),
         );
     } finally {
         savingAccount.value = false;
@@ -337,7 +333,7 @@ const deleteAvatar = async () => {
         ElMessage.success("头像已删除");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "头像删除失败",
+            getErrorMessage(error, "头像删除失败"),
         );
     } finally {
         savingAccount.value = false;
@@ -357,7 +353,7 @@ const addMember = async (email: string, role: HouseholdRole) => {
         ElMessage.success("成员已添加");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "成员添加失败",
+            getErrorMessage(error, "成员添加失败"),
         );
     } finally {
         addingMember.value = false;
@@ -385,7 +381,7 @@ const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
         ElMessage.success("成员角色已更新");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "成员角色更新失败",
+            getErrorMessage(error, "成员角色更新失败"),
         );
     } finally {
         loadingMemberId.value = null;
@@ -428,7 +424,7 @@ const removeMember = async (membershipId: number) => {
         ElMessage.success("成员已移除");
     } catch (error) {
         ElMessage.error(
-            error instanceof Error ? error.message : "成员移除失败",
+            getErrorMessage(error, "成员移除失败"),
         );
     } finally {
         loadingMemberId.value = null;

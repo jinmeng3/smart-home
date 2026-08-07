@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import SceneDetailPanel from "../components/scenes/SceneDetailPanel.vue";
 import SceneFlow from "../components/scenes/SceneFlow.vue";
@@ -12,9 +13,9 @@ import SceneStats from "../components/scenes/SceneStats.vue";
 import SceneToolbar from "../components/scenes/SceneToolbar.vue";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useSceneModeController } from "../composables/useSceneModeController";
-import { useAuthStore } from "../stores/auth";
 import { useScenesStore } from "../stores/scenes";
 import { defineAsyncDialog } from "../utils/asyncDialog";
+import { getErrorMessage } from "../utils/error";
 
 const SceneCreateDialog = defineAsyncDialog(
     () => import("../components/scenes/SceneCreateDialog.vue"),
@@ -30,7 +31,6 @@ const SceneTemplateDialog = defineAsyncDialog(
 );
 
 const store = useScenesStore();
-const authStore = useAuthStore();
 const {
     filters,
     loading,
@@ -46,20 +46,15 @@ const controller = useSceneModeController(store);
 const sceneGridExpanded = ref(false);
 
 const loadScenes = async () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
-
     try {
         await store.loadScenes();
     } catch (error) {
         if (error instanceof ApiError && error.status === 401) return;
-        ElMessage.error(
-            error instanceof Error ? error.message : "场景数据加载失败",
-        );
+        ElMessage.error(getErrorMessage(error, "场景数据加载失败"));
     }
 };
+
+const reloadScenes = useAuthenticatedLoader(loadScenes);
 
 watch(
     () => [
@@ -68,11 +63,10 @@ watch(
         filters.value.enabled,
     ],
     () => {
-        void loadScenes();
+        void reloadScenes();
     },
 );
 
-useAuthenticatedLoader(() => void loadScenes());
 </script>
 
 <template>
@@ -171,23 +165,12 @@ useAuthenticatedLoader(() => void loadScenes());
                 v-if="controller.deletingScene.value"
                 class="scene-delete-dialog-body"
             >
-                <div class="scene-delete-summary">
-                    <span
-                        class="scene-delete-thumb"
-                        :style="{
-                            '--scene-delete-color': controller.deletingScene.value.color,
-                        }"
-                        aria-hidden="true"
-                    >
-                        <SvgIcon :name="controller.deletingScene.value.icon" />
-                    </span>
-                    <div class="scene-delete-summary-info">
-                        <strong>{{ controller.deletingScene.value.name }}</strong>
-                        <p>
-                            {{ controller.deletingScene.value.description }}
-                        </p>
-                    </div>
-                </div>
+                <ConfirmEntitySummary
+                    :color="controller.deletingScene.value.color"
+                    :description="controller.deletingScene.value.description"
+                    :icon="controller.deletingScene.value.icon"
+                    :title="controller.deletingScene.value.name"
+                />
             </section>
         </ConfirmActionDialog>
 

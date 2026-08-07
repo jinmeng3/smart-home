@@ -62,6 +62,9 @@ export const getDeviceStatusLabel = (status: string) =>
 export const deviceTypeIconMap: Record<string, string> = {
   light: "light",
   air_conditioner: "air-conditioner",
+  airConditioner: "air-conditioner",
+  airPurifier: "sensor",
+  television: "device-management",
   lock: "lock",
   camera: "camera",
   sensor: "sensor",

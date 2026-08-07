@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { ElMessage } from "element-plus";
 import {
@@ -24,6 +23,7 @@ import RoomStatsGrid from "../components/rooms/RoomStatsGrid.vue";
 import RoomCard from "../components/rooms/RoomCard.vue";
 import RoomControlPanel from "../components/rooms/RoomControlPanel.vue";
 import RoomDetailPanel from "../components/rooms/RoomDetailPanel.vue";
+import { getDeviceTypeIcon } from "../components/device/deviceMeta";
 import type {
     Room,
     RoomDeviceCard,
@@ -31,32 +31,20 @@ import type {
     RoomStats,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
-
-const deviceTypeIconMap: Record<string, string> = {
-    light: "light",
-    television: "device-management",
-    airConditioner: "air-conditioner",
-    airPurifier: "sensor",
-    socket: "plug",
-    curtain: "curtain",
-    camera: "camera",
-    lock: "lock",
-};
+import { getErrorMessage } from "../utils/error";
 
 const deriveDevices = (room: Room): RoomDeviceCard[] => {
     if (!room.device || room.device.length === 0) return [];
     return room.device.map((d) => ({
         id: d.id,
         key: d.type,
-        icon: d.icon || deviceTypeIconMap[d.type] || "device-management",
+        icon: d.icon || getDeviceTypeIcon(d.type),
         color: d.color,
         name: d.name,
         detail: d.brand || "",
         status: d.status as RoomDeviceCard["status"],
     }));
 };
-
-const authStore = useAuthStore();
 
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
@@ -113,11 +101,6 @@ const selectedDetail = computed<RoomDetail | null>(() => {
 });
 
 const load = async () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
-
     loading.value = true;
 
     try {
@@ -249,7 +232,7 @@ const handleRoomUpdated = async (room: Room) => {
     replaceRoom(updated);
     ElMessage.success("房间已更新");
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "房间更新失败");
+    ElMessage.error(getErrorMessage(error, "房间更新失败"));
   } finally {
     loading.value = false;
   }
@@ -279,7 +262,7 @@ const handleRoomCreated = async (
     await selectRoom(room);
     ElMessage.success("房间已创建");
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "房间创建失败");
+    ElMessage.error(getErrorMessage(error, "房间创建失败"));
   } finally {
     loading.value = false;
   }
@@ -308,7 +291,7 @@ const confirmDeleteRoom = async () => {
     deleteDialogOpen.value = false;
     deletingRoom.value = null;
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "房间删除失败");
+    ElMessage.error(getErrorMessage(error, "房间删除失败"));
   } finally {
     roomDeleting.value = false;
   }

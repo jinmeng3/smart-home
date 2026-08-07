@@ -13,13 +13,10 @@ const store = useHomeStore();
 const authStore = useAuthStore();
 
 const refreshHomeData = () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
-
-    void store.loadDevices();
-    void store.refreshRecentConversations();
+    return Promise.all([
+        store.loadDevices(),
+        store.refreshRecentConversations(),
+    ]).then(() => undefined);
 };
 
 useAuthenticatedLoader(refreshHomeData);

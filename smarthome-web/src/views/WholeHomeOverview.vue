@@ -4,13 +4,13 @@ import { RouterLink } from "vue-router";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import StatsCard from "../components/common/StatsCard.vue";
+import { getDeviceTypeIcon } from "../components/device/deviceMeta";
 import OverviewDialogs, {
     type OverviewDialog,
 } from "../components/overview/OverviewDialogs.vue";
 import type { HouseholdSchedule, ScheduleItem } from "../api/overview";
 import { getHouseholdOverview, getHouseholdDevices } from "../api/overview";
 import { useSettingsStore } from "../stores/settings";
-import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import type {
   OverviewSummary,
@@ -45,16 +45,6 @@ interface OverviewRoomDisplay {
 
 // ── 设备类型 → 图标/色调映射 ───────────────────────────────────────────────────────
 
-const DEVICE_ICON_MAP: Record<string, string> = {
-  light: "light",
-  air_conditioner: "air-conditioner",
-  lock: "lock",
-  camera: "camera",
-  sensor: "sensor",
-  socket: "plug",
-  curtain: "curtain",
-};
-
 const DEVICE_TONE_MAP: Record<string, string> = {
   light: "orange",
   air_conditioner: "blue",
@@ -65,13 +55,11 @@ const DEVICE_TONE_MAP: Record<string, string> = {
   curtain: "teal",
 };
 
-const deviceIcon = (type: string) => DEVICE_ICON_MAP[type] ?? "device-management";
 const deviceTone = (type: string) => DEVICE_TONE_MAP[type] ?? "blue";
 
 // ── 状态 ──────────────────────────────────────────────────────────────────────────
 
 const settingsStore = useSettingsStore();
-const authStore = useAuthStore();
 
 const selectedTab = ref("全部设备");
 const searchKeyword = ref("");
@@ -171,11 +159,6 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
 // ── 数据加载 ──────────────────────────────────────────────────────────────────────
 
 const loadOverviewData = async () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
-
     loading.value = true;
     try {
         // 先确保账户与家庭信息已加载，再获取 householdId
@@ -212,7 +195,7 @@ const loadOverviewData = async () => {
             status: device.status === "online" || device.status === "running" ? "在线" : "离线",
             detail: device.status === "running" ? "运行中" : device.status === "online" ? "在线" : device.status === "warning" ? "告警" : "离线",
             updatedAt: device.lastOnline || "未知",
-            icon: deviceIcon(device.type),
+            icon: getDeviceTypeIcon(device.type),
             tone: deviceTone(device.type),
             frequent: false,
             favorite: false,

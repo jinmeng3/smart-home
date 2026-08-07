@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "../stores/auth";
 import { useAutomationsStore, buildAutomationSteps } from "../stores/automations";
 import { useAutomationModeController } from "../composables/useAutomationModeController";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import StatsCard from "../components/common/StatsCard.vue";
 
-const authStore = useAuthStore();
 const store = useAutomationsStore();
 const {
     automations,
@@ -45,14 +44,10 @@ const visibleCards = computed(() =>
 );
 
 const loadAutomations = async () => {
-    if (!authStore.isAuthenticated) {
-        authStore.openLogin();
-        return;
-    }
     await store.loadAutomations();
 };
 
-useAuthenticatedLoader(() => void loadAutomations());
+useAuthenticatedLoader(loadAutomations);
 </script>
 
 <template>
@@ -415,19 +410,12 @@ useAuthenticatedLoader(() => void loadAutomations());
                 v-if="controller.deletingRule.value"
                 class="rule-delete-dialog-body"
             >
-                <div class="rule-delete-summary">
-                    <span
-                        class="rule-delete-thumb"
-                        :class="controller.deletingRule.value.tone"
-                        aria-hidden="true"
-                    >
-                        <SvgIcon :name="controller.deletingRule.value.icon" />
-                    </span>
-                    <div class="rule-delete-summary-info">
-                        <strong>{{ controller.deletingRule.value.name }}</strong>
-                        <p>{{ controller.deletingRule.value.description }}</p>
-                    </div>
-                </div>
+                <ConfirmEntitySummary
+                    :description="controller.deletingRule.value.description"
+                    :icon="controller.deletingRule.value.icon"
+                    :title="controller.deletingRule.value.name"
+                    :tone="controller.deletingRule.value.tone"
+                />
             </section>
         </ConfirmActionDialog>
     </div>

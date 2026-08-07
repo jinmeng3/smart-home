@@ -1,19 +1,36 @@
 import { onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 
-/**
- * 在挂载时以及用户变为已登录时执行加载函数。
- * loader 需自行处理未登录分支（如静默返回或打开登录弹窗）。
- */
-export const useAuthenticatedLoader = (loader: () => void) => {
-    const authStore = useAuthStore();
+interface AuthenticatedLoaderOptions {
+    immediate?: boolean;
+    promptLogin?: boolean;
+}
 
-    onMounted(loader);
+export const useAuthenticatedLoader = (
+    loader: () => void | Promise<void>,
+    options: AuthenticatedLoaderOptions = {},
+) => {
+    const authStore = useAuthStore();
+    const immediate = options.immediate ?? true;
+    const promptLogin = options.promptLogin ?? true;
+
+    const run = async () => {
+        if (!authStore.isAuthenticated) {
+            if (promptLogin) authStore.openLogin();
+            return;
+        }
+
+        await loader();
+    };
+
+    if (immediate) onMounted(() => void run());
 
     watch(
         () => authStore.isAuthenticated,
         (authenticated) => {
-            if (authenticated) loader();
+            if (authenticated) void run();
         },
     );
+
+    return run;
 };
