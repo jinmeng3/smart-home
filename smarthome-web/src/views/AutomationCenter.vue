@@ -6,7 +6,7 @@ import { useAutomationsStore, buildAutomationSteps } from "../stores/automations
 import { useAutomationModeController } from "../composables/useAutomationModeController";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
-import BaseSmartModal from "../components/common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import StatsCard from "../components/common/StatsCard.vue";
 
@@ -400,38 +400,17 @@ useAuthenticatedLoader(() => void loadAutomations());
             @scheduled="controller.scheduleRules"
         />
 
-        <BaseSmartModal
-            :closable="!controller.deleting.value"
+        <ConfirmActionDialog
+            v-if="controller.deleteDialogOpen.value"
             :loading="controller.deleting.value"
             :model-value="controller.deleteDialogOpen.value"
-            width="520px"
-            @update:model-value="
-                $event
-                    ? (controller.deleteDialogOpen.value = true)
-                    : controller.cancelRemoveRule()
-            "
+            title="删除自动化"
+            description="此操作将从规则列表中移除该自动化。"
+            warning="删除后无法恢复，关联的触发条件、执行动作与执行日志也会一并清除。"
+            @cancel="controller.cancelRemoveRule"
+            @confirm="controller.confirmRemoveRule"
+            @update:model-value="controller.deleteDialogOpen.value = $event"
         >
-            <template #header>
-                <header class="dialog-header">
-                    <span class="dialog-icon" aria-hidden="true">
-                        <SvgIcon name="warning" />
-                    </span>
-                    <div>
-                        <h2>删除自动化</h2>
-                        <p>此操作将从规则列表中移除该自动化。</p>
-                    </div>
-                    <button
-                        class="close-button"
-                        :disabled="controller.deleting.value"
-                        type="button"
-                        aria-label="关闭"
-                        @click="controller.cancelRemoveRule"
-                    >
-                        <SvgIcon name="close" size="sm" />
-                    </button>
-                </header>
-            </template>
-
             <section
                 v-if="controller.deletingRule.value"
                 class="rule-delete-dialog-body"
@@ -449,44 +428,8 @@ useAuthenticatedLoader(() => void loadAutomations());
                         <p>{{ controller.deletingRule.value.description }}</p>
                     </div>
                 </div>
-                <p class="rule-delete-warning">
-                    <SvgIcon name="warning" />
-                    删除后无法恢复，关联的触发条件、执行动作与执行日志也会一并清除。
-                </p>
             </section>
-
-            <template #footer>
-                <footer class="dialog-footer">
-                    <span>此操作不可撤销</span>
-                    <div>
-                        <button
-                            class="rule-delete-cancel-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.cancelRemoveRule"
-                        >
-                            取消
-                        </button>
-                        <button
-                            class="rule-delete-confirm-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.confirmRemoveRule"
-                        >
-                            <SvgIcon
-                                :name="
-                                    controller.deleting.value
-                                        ? 'refresh'
-                                        : 'warning'
-                                "
-                                size="sm"
-                            />
-                            {{ controller.deleting.value ? "删除中" : "确认删除" }}
-                        </button>
-                    </div>
-                </footer>
-            </template>
-        </BaseSmartModal>
+        </ConfirmActionDialog>
     </div>
 </template>
 

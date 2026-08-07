@@ -10,6 +10,7 @@ import {
     type HouseholdSchedule,
     type ScheduleItem,
 } from "../../../api/overview";
+import { useLatestRequest } from "../../../composables/useLatestRequest";
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -20,7 +21,7 @@ const emit = defineEmits<{
 const today = new Date();
 const selectedDate = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
 const loading = ref(false);
-const loadingSchedule = ref(false);
+const { loading: loadingSchedule, run } = useLatestRequest();
 const enabled = ref(true);
 const repeatDays = ref([1, 2, 3, 4, 5]);
 const version = ref<number>();
@@ -40,18 +41,22 @@ const dateLabel = computed(() => new Intl.DateTimeFormat("zh-CN", { year: "numer
 const isToday = computed(() => dateKey.value === [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-"));
 
 const load = async () => {
-    loadingSchedule.value = true;
-    try {
-        const result = await getSchedule(dateKey.value);
-        enabled.value = result?.enabled ?? true;
-        repeatDays.value = result?.repeatDays ?? [1, 2, 3, 4, 5];
-        version.value = result?.version;
-        schedules.value = (result?.items?.length ? result.items : []).sort((a, b) => a.time.localeCompare(b.time));
-    } catch (error) {
-        ElMessage.error(error instanceof Error ? error.message : "日程加载失败");
-    } finally {
-        loadingSchedule.value = false;
-    }
+    await run(
+        () => getSchedule(dateKey.value),
+        (result) => {
+            enabled.value = result?.enabled ?? true;
+            repeatDays.value = result?.repeatDays ?? [1, 2, 3, 4, 5];
+            version.value = result?.version;
+            schedules.value = (result?.items?.length ? result.items : []).sort(
+                (a, b) => a.time.localeCompare(b.time),
+            );
+        },
+        (error) => {
+            ElMessage.error(
+                error instanceof Error ? error.message : "日程加载失败",
+            );
+        },
+    );
 };
 
 const changeDate = (offset: number) => {

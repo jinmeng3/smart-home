@@ -4,6 +4,7 @@ import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { fetchSceneTemplates } from "../../api/scenes";
 import type { SceneTemplate } from "../../types/scene";
+import { useLatestRequest } from "../../composables/useLatestRequest";
 
 const model = defineModel<boolean>({ required: true });
 
@@ -16,7 +17,7 @@ const sceneTemplates = ref<SceneTemplate[]>([]);
 const selectedId = ref("");
 const keyword = ref("");
 const activeCategory = ref("全部");
-const loading = ref(false);
+const { loading, run } = useLatestRequest();
 const loadError = ref("");
 
 const categories = computed(() => {
@@ -59,17 +60,18 @@ const selectedTemplate = computed(
 );
 
 const loadTemplates = async () => {
-    loading.value = true;
     loadError.value = "";
-    try {
-        sceneTemplates.value = await fetchSceneTemplates(keyword.value, activeCategory.value);
-        selectedId.value = sceneTemplates.value[0]?.id ?? "";
-    } catch (error) {
-        loadError.value =
-            error instanceof Error ? error.message : "模板加载失败";
-    } finally {
-        loading.value = false;
-    }
+    await run(
+        () => fetchSceneTemplates(keyword.value, activeCategory.value),
+        (templates) => {
+            sceneTemplates.value = templates;
+            selectedId.value = templates[0]?.id ?? "";
+        },
+        (error) => {
+            loadError.value =
+                error instanceof Error ? error.message : "模板加载失败";
+        },
+    );
 };
 
 watch(model, (visible) => {

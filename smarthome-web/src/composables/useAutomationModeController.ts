@@ -1,9 +1,12 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
-import type { useAutomationsStore } from "../stores/automations";
-import type { AutomationRule } from "../mock/automations";
+import type {
+    AutomationDisplayRule,
+    useAutomationsStore,
+} from "../stores/automations";
 
 type AutomationsStore = ReturnType<typeof useAutomationsStore>;
+type AutomationRule = AutomationDisplayRule;
 type DialogKey = "create" | "edit" | "import" | "logs" | "schedule" | "batch";
 type QuickActionKey = "batch" | "schedule" | "sort" | "logs";
 

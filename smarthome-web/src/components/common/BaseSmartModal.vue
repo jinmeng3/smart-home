@@ -1,8 +1,32 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, shallowRef, watch } from "vue";
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    shallowRef,
+    useId,
+    watch,
+} from "vue";
 import { ElButton } from "element-plus";
 import SvgIcon from "./SvgIcon.vue";
 import "element-plus/theme-chalk/el-button.css";
+
+const modalStack: symbol[] = [];
+let bodyOverflow = "";
+
+const registerModal = (id: symbol) => {
+    if (!modalStack.length) {
+        bodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+    }
+    if (!modalStack.includes(id)) modalStack.push(id);
+};
+
+const unregisterModal = (id: symbol) => {
+    const index = modalStack.indexOf(id);
+    if (index >= 0) modalStack.splice(index, 1);
+    if (!modalStack.length) document.body.style.overflow = bodyOverflow;
+};
 
 type SmartModalWidth = "small" | "medium" | "large" | string | number;
 
@@ -56,7 +80,8 @@ const emit = defineEmits<{
 
 const dialogRef = shallowRef<HTMLElement | null>(null);
 const lastFocusedElement = shallowRef<HTMLElement | null>(null);
-const titleId = `smart-modal-title-${Math.random().toString(16).slice(2)}`;
+const modalId = Symbol("smart-modal");
+const titleId = `smart-modal-title-${useId()}`;
 const isPresetWidth = computed(
     () =>
         props.width === "small" ||
@@ -103,7 +128,7 @@ const focusDialog = async () => {
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-    if (!props.modelValue) return;
+    if (!props.modelValue || modalStack.at(-1) !== modalId) return;
 
     if (event.key === "Escape") {
         event.preventDefault();
@@ -157,11 +182,13 @@ watch(
             lastFocusedElement.value =
                 document.activeElement as HTMLElement | null;
             document.addEventListener("keydown", handleKeydown);
+            registerModal(modalId);
             void focusDialog();
             return;
         }
 
         document.removeEventListener("keydown", handleKeydown);
+        unregisterModal(modalId);
         lastFocusedElement.value?.focus();
         lastFocusedElement.value = null;
     },
@@ -169,6 +196,7 @@ watch(
 
 onBeforeUnmount(() => {
     document.removeEventListener("keydown", handleKeydown);
+    unregisterModal(modalId);
 });
 </script>
 
@@ -294,7 +322,7 @@ onBeforeUnmount(() => {
     place-items: center;
     padding: 24px;
     background: var(--color-overlay);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(2px);
 }
 
 .smart-modal {

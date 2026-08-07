@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
 import { getRoomDevices, updateRoomDevice } from "../../../api/room";
 import type { Room, RoomDeviceListItem } from "../../../types/room";
+import { useLatestRequest } from "../../../composables/useLatestRequest";
 
 const router = useRouter();
 
@@ -30,7 +31,7 @@ const description = computed(
 // 设备数据（从后端加载）
 const devices = ref<RoomDeviceListItem[]>([]);
 const togglingIds = ref<Set<number>>(new Set());
-const loading = ref(false);
+const { invalidate, loading, run } = useLatestRequest();
 const deviceStatusOptions = [
     { value: "", label: "全部状态" },
     { value: "online", label: "在线" },
@@ -41,19 +42,20 @@ const deviceStatusOptions = [
 // 从后端加载房间设备（仅发送 keyword 和 status，分组筛选由前端处理）
 const loadDevices = async () => {
     if (!props.room) return;
-    loading.value = true;
-    try {
-        const response = await getRoomDevices(props.room.id, {
-            keyword: deviceKeyword.value || undefined,
-            status: deviceStatusFilter.value || undefined,
-        });
-        devices.value = response.items;
-    } catch (e) {
-        console.error("加载房间设备失败", e);
-        devices.value = [];
-    } finally {
-        loading.value = false;
-    }
+    const roomId = props.room.id;
+    await run(
+        () =>
+            getRoomDevices(roomId, {
+                keyword: deviceKeyword.value || undefined,
+                status: deviceStatusFilter.value || undefined,
+            }),
+        (response) => {
+            devices.value = response.items;
+        },
+        () => {
+            devices.value = [];
+        },
+    );
 };
 
 // 对话框打开时加载设备数据
@@ -79,6 +81,11 @@ watch(
         }, 300);
     },
 );
+
+onBeforeUnmount(() => {
+    clearTimeout(searchTimer);
+    invalidate();
+});
 
 const deviceCount = computed(() => devices.value.length);
 const onlineCount = computed(() => devices.value.filter((d) => d.status === "online" || d.status === "running").length);

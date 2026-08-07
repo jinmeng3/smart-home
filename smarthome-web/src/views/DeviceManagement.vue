@@ -2,9 +2,9 @@
 import { onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceDetail from "../components/device/DeviceDetail.vue";
-import DeviceEditorDialog from "../components/device/DeviceEditorDialog.vue";
 import DeviceList from "../components/device/DeviceList.vue";
 import DeviceQuickActions from "../components/device/DeviceQuickActions.vue";
 import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
@@ -12,6 +12,11 @@ import DeviceToolbar from "../components/device/DeviceToolbar.vue";
 import PlatformStatus from "../components/device/PlatformStatus.vue";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
 import { useAuthStore } from "../stores/auth";
+import { defineAsyncDialog } from "../utils/asyncDialog";
+
+const DeviceEditorDialog = defineAsyncDialog(
+    () => import("../components/device/DeviceEditorDialog.vue"),
+);
 
 const controller = useDeviceManagementController();
 const authStore = useAuthStore();
@@ -145,44 +150,25 @@ onMounted(() => {
         </aside>
 
         <DeviceEditorDialog
+            v-if="controller.editorOpen.value"
             v-model="controller.editorOpen.value"
             :device="controller.editingDevice.value"
             :loading="controller.saving.value"
             @submit="controller.saveDevice"
         />
 
-        <BaseSmartModal
-            :closable="!controller.deleting.value"
+        <ConfirmActionDialog
+            v-if="controller.deleteDialogOpen.value"
             :loading="controller.deleting.value"
             :model-value="controller.deleteDialogOpen.value"
-            width="520px"
-            @update:model-value="
-                $event
-                    ? (controller.deleteDialogOpen.value = true)
-                    : controller.cancelRemoveDevice()
-            "
+            title="删除设备"
+            description="此操作会从设备管理中移除该设备。"
+            warning="删除后将无法在设备列表、智能对话设备清单和快捷操作中继续管理该设备。"
+            footer-hint="确认后会立即调用后端删除接口。"
+            @cancel="controller.cancelRemoveDevice"
+            @confirm="controller.confirmRemoveDevice"
+            @update:model-value="controller.deleteDialogOpen.value = $event"
         >
-            <template #header>
-                <header class="delete-dialog-header">
-                    <span class="delete-dialog-icon" aria-hidden="true">
-                        <SvgIcon name="warning" />
-                    </span>
-                    <div>
-                        <h2>删除设备</h2>
-                        <p>此操作会从设备管理中移除该设备。</p>
-                    </div>
-                    <button
-                        class="delete-dialog-close"
-                        :disabled="controller.deleting.value"
-                        type="button"
-                        aria-label="关闭"
-                        @click="controller.cancelRemoveDevice"
-                    >
-                        <SvgIcon name="close" size="sm" />
-                    </button>
-                </header>
-            </template>
-
             <section
                 v-if="controller.deletingDevice.value"
                 class="delete-dialog-body"
@@ -201,80 +187,21 @@ onMounted(() => {
                         </p>
                     </div>
                 </div>
-                <p class="delete-dialog-warning">
-                    删除后将无法在设备列表、智能对话设备清单和快捷操作中继续管理该设备。
-                </p>
             </section>
+        </ConfirmActionDialog>
 
-            <template #footer>
-                <footer class="delete-dialog-footer">
-                    <span>确认后会立即调用后端删除接口。</span>
-                    <div>
-                        <button
-                            class="delete-cancel-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.cancelRemoveDevice"
-                        >
-                            取消
-                        </button>
-                        <button
-                            class="delete-confirm-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.confirmRemoveDevice"
-                        >
-                            <SvgIcon
-                                :name="
-                                    controller.deleting.value
-                                        ? 'refresh'
-                                        : 'warning'
-                                "
-                                size="sm"
-                            />
-                            {{
-                                controller.deleting.value
-                                    ? "删除中"
-                                    : "确认删除"
-                            }}
-                        </button>
-                    </div>
-                </footer>
-            </template>
-        </BaseSmartModal>
-
-        <BaseSmartModal
-            :closable="!controller.batchDeleting.value"
+        <ConfirmActionDialog
+            v-if="controller.batchDeleteDialogOpen.value"
             :loading="controller.batchDeleting.value"
             :model-value="controller.batchDeleteDialogOpen.value"
-            width="540px"
-            @update:model-value="
-                $event
-                    ? (controller.batchDeleteDialogOpen.value = true)
-                    : controller.cancelBatchDelete()
-            "
+            title="批量删除设备"
+            description="此操作会从设备管理中移除所选设备，不可撤销。"
+            warning="所选设备的信息、关联日志及绑定关系会被一并删除。"
+            footer-hint="确认后会立即调用后端删除接口。"
+            @cancel="controller.cancelBatchDelete"
+            @confirm="controller.confirmBatchDelete"
+            @update:model-value="controller.batchDeleteDialogOpen.value = $event"
         >
-            <template #header>
-                <header class="batch-delete-header">
-                    <span class="batch-delete-icon" aria-hidden="true">
-                        <SvgIcon name="warning" />
-                    </span>
-                    <div>
-                        <h2>批量删除设备</h2>
-                        <p>此操作会从设备管理中移除所选设备，不可撤销。</p>
-                    </div>
-                    <button
-                        class="batch-delete-close"
-                        :disabled="controller.batchDeleting.value"
-                        type="button"
-                        aria-label="关闭"
-                        @click="controller.cancelBatchDelete"
-                    >
-                        <SvgIcon name="close" size="sm" />
-                    </button>
-                </header>
-            </template>
-
             <section class="batch-delete-body">
                 <div class="batch-delete-summary">
                     <div class="batch-delete-count">
@@ -307,44 +234,10 @@ onMounted(() => {
                 </div>
             </section>
 
-            <template #footer>
-                <footer class="batch-delete-footer">
-                    <span>确认后会立即调用后端删除接口。</span>
-                    <div>
-                        <button
-                            class="batch-delete-cancel"
-                            :disabled="controller.batchDeleting.value"
-                            type="button"
-                            @click="controller.cancelBatchDelete"
-                        >
-                            取消
-                        </button>
-                        <button
-                            class="batch-delete-confirm"
-                            :disabled="controller.batchDeleting.value"
-                            type="button"
-                            @click="controller.confirmBatchDelete"
-                        >
-                            <SvgIcon
-                                :name="
-                                    controller.batchDeleting.value
-                                        ? 'refresh'
-                                        : 'warning'
-                                "
-                                size="sm"
-                            />
-                            {{
-                                controller.batchDeleting.value
-                                    ? "删除中"
-                                    : "确认删除"
-                            }}
-                        </button>
-                    </div>
-                </footer>
-            </template>
-        </BaseSmartModal>
+        </ConfirmActionDialog>
 
         <BaseSmartModal
+            v-if="controller.logDialogOpen.value"
             :model-value="controller.logDialogOpen.value"
             width="640px"
             @update:model-value="!$event && controller.closeLogDialog()"

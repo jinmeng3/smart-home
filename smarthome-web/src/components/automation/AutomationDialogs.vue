@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import AutomationFormDialog, {
-    type AutomationRule,
-} from "./dialogs/AutomationFormDialog.vue";
-import AutomationImportDialog from "./dialogs/AutomationImportDialog.vue";
-import AutomationLogsDialog from "./dialogs/AutomationLogsDialog.vue";
-import AutomationScheduleDialog from "./dialogs/AutomationScheduleDialog.vue";
-import AutomationBatchDialog from "./dialogs/AutomationBatchDialog.vue";
+import type { AutomationRule } from "./dialogs/AutomationFormDialog.vue";
+import { defineAsyncDialog } from "../../utils/asyncDialog";
+
+const AutomationFormDialog = defineAsyncDialog(
+    () => import("./dialogs/AutomationFormDialog.vue"),
+);
+const AutomationImportDialog = defineAsyncDialog(
+    () => import("./dialogs/AutomationImportDialog.vue"),
+);
+const AutomationLogsDialog = defineAsyncDialog(
+    () => import("./dialogs/AutomationLogsDialog.vue"),
+);
+const AutomationScheduleDialog = defineAsyncDialog(
+    () => import("./dialogs/AutomationScheduleDialog.vue"),
+);
+const AutomationBatchDialog = defineAsyncDialog(
+    () => import("./dialogs/AutomationBatchDialog.vue"),
+);
 
 export type { AutomationRule } from "./dialogs/AutomationFormDialog.vue";
 

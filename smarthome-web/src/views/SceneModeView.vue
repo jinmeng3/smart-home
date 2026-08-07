@@ -3,21 +3,31 @@ import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
-import BaseSmartModal from "../components/common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
-import SceneCreateDialog from "../components/scenes/SceneCreateDialog.vue";
 import SceneDetailPanel from "../components/scenes/SceneDetailPanel.vue";
 import SceneFlow from "../components/scenes/SceneFlow.vue";
 import SceneGrid from "../components/scenes/SceneGrid.vue";
-import HighRiskConfirmDialog from "../components/scenes/HighRiskConfirmDialog.vue";
-import ScenePreviewDialog from "../components/scenes/ScenePreviewDialog.vue";
 import SceneStats from "../components/scenes/SceneStats.vue";
-import SceneTemplateDialog from "../components/scenes/SceneTemplateDialog.vue";
 import SceneToolbar from "../components/scenes/SceneToolbar.vue";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useSceneModeController } from "../composables/useSceneModeController";
 import { useAuthStore } from "../stores/auth";
 import { useScenesStore } from "../stores/scenes";
+import { defineAsyncDialog } from "../utils/asyncDialog";
+
+const SceneCreateDialog = defineAsyncDialog(
+    () => import("../components/scenes/SceneCreateDialog.vue"),
+);
+const HighRiskConfirmDialog = defineAsyncDialog(
+    () => import("../components/scenes/HighRiskConfirmDialog.vue"),
+);
+const ScenePreviewDialog = defineAsyncDialog(
+    () => import("../components/scenes/ScenePreviewDialog.vue"),
+);
+const SceneTemplateDialog = defineAsyncDialog(
+    () => import("../components/scenes/SceneTemplateDialog.vue"),
+);
 
 const store = useScenesStore();
 const authStore = useAuthStore();
@@ -133,6 +143,7 @@ useAuthenticatedLoader(() => void loadScenes());
         />
 
         <SceneCreateDialog
+            v-if="controller.createDialogOpen.value"
             v-model="controller.createDialogOpen.value"
             :scene="controller.editingScene.value"
             @create="controller.createScene"
@@ -140,42 +151,22 @@ useAuthenticatedLoader(() => void loadScenes());
             @draft="controller.saveDraft"
         />
         <SceneTemplateDialog
+            v-if="controller.templateDialogOpen.value"
             v-model="controller.templateDialogOpen.value"
             @import="controller.importTemplate"
         />
 
-        <BaseSmartModal
-            :closable="!controller.deleting.value"
+        <ConfirmActionDialog
+            v-if="controller.deleteDialogOpen.value"
             :loading="controller.deleting.value"
             :model-value="controller.deleteDialogOpen.value"
-            width="520px"
-            @update:model-value="
-                $event
-                    ? (controller.deleteDialogOpen.value = true)
-                    : controller.cancelRemoveScene()
-            "
+            title="删除场景"
+            description="此操作将从场景列表中移除该场景。"
+            warning="删除后将从场景列表中移除，关联的执行步骤与日志也会一并清除。"
+            @cancel="controller.cancelRemoveScene"
+            @confirm="controller.confirmRemoveScene"
+            @update:model-value="controller.deleteDialogOpen.value = $event"
         >
-            <template #header>
-                <header class="dialog-header">
-                    <span class="dialog-icon" aria-hidden="true">
-                        <SvgIcon name="warning" />
-                    </span>
-                    <div>
-                        <h2>删除场景</h2>
-                        <p>此操作将从场景列表中移除该场景。</p>
-                    </div>
-                    <button
-                        class="close-button"
-                        :disabled="controller.deleting.value"
-                        type="button"
-                        aria-label="关闭"
-                        @click="controller.cancelRemoveScene"
-                    >
-                        <SvgIcon name="close" size="sm" />
-                    </button>
-                </header>
-            </template>
-
             <section
                 v-if="controller.deletingScene.value"
                 class="scene-delete-dialog-body"
@@ -197,50 +188,11 @@ useAuthenticatedLoader(() => void loadScenes());
                         </p>
                     </div>
                 </div>
-                <p class="scene-delete-warning">
-                    <SvgIcon name="warning" />
-                    删除后将从场景列表中移除，关联的执行步骤与日志也会一并清除。
-                </p>
             </section>
-
-            <template #footer>
-                <footer class="dialog-footer">
-                    <span>此操作不可撤销</span>
-                    <div>
-                        <button
-                            class="scene-delete-cancel-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.cancelRemoveScene"
-                        >
-                            取消
-                        </button>
-                        <button
-                            class="scene-delete-confirm-button"
-                            :disabled="controller.deleting.value"
-                            type="button"
-                            @click="controller.confirmRemoveScene"
-                        >
-                            <SvgIcon
-                                :name="
-                                    controller.deleting.value
-                                        ? 'refresh'
-                                        : 'warning'
-                                "
-                                size="sm"
-                            />
-                            {{
-                                controller.deleting.value
-                                    ? "删除中"
-                                    : "确认删除"
-                            }}
-                        </button>
-                    </div>
-                </footer>
-            </template>
-        </BaseSmartModal>
+        </ConfirmActionDialog>
 
         <HighRiskConfirmDialog
+            v-if="controller.riskConfirmOpen.value"
             :model-value="controller.riskConfirmOpen.value"
             :scene="controller.riskScene.value"
             @confirm="controller.resolveRiskConfirm(true)"
@@ -248,6 +200,7 @@ useAuthenticatedLoader(() => void loadScenes());
         />
 
         <ScenePreviewDialog
+            v-if="controller.previewOpen.value"
             v-model="controller.previewOpen.value"
             :loading="controller.previewLoading.value"
             :preview="controller.previewResult.value"

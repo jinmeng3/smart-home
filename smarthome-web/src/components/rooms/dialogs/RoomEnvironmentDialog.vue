@@ -4,6 +4,7 @@ import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
 import { getRoomEnvironmentLatest } from "../../../api/room";
 import type { Room, RoomEnvironmentLatest } from "../../../types/room";
+import { useLatestRequest } from "../../../composables/useLatestRequest";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -24,16 +25,21 @@ const close = () => emit("update:modelValue", false);
 // ── 环境指标获取 ──────────────────────────────────────────────────────────────────
 
 const env = ref<RoomEnvironmentLatest>();
+const { run } = useLatestRequest();
 watch(
     () => props.room?.id,
-    async (id) => {
+    (id) => {
         env.value = undefined;
         if (id) {
-            try {
-                env.value = await getRoomEnvironmentLatest(id);
-            } catch {
-                env.value = undefined;
-            }
+            void run(
+                () => getRoomEnvironmentLatest(id),
+                (result) => {
+                    env.value = result;
+                },
+                () => {
+                    env.value = undefined;
+                },
+            );
         }
     },
     { immediate: true },

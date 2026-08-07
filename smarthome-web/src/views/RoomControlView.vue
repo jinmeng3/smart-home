@@ -14,7 +14,7 @@ import {
   updateRoom,
   updateRoomDevice,
 } from "../api/room";
-import BaseSmartModal from "../components/common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
 import RoomControlDialogs, {
@@ -70,6 +70,7 @@ const activeDialog = ref<RoomDialog>(null);
 const roomStats = ref<RoomStats | null>(null);
 const roomDetailMap = ref<Record<number, RoomDetail>>({});
 const environmentData = ref<RoomEnvironmentItem[]>([]);
+const detailRequests = new Map<number, Promise<RoomDetail>>();
 const deleteDialogOpen = ref(false);
 const deletingRoom = ref<Room | null>(null);
 const roomDeleting = ref(false);
@@ -129,18 +130,14 @@ const load = async () => {
         selectedId.value = result.items[0]?.id;
         temperature.value = 24;
         
-        // 加载所有房间的详情
-        const detailPromises = result.items.map((room) =>
-            fetchRoomDetail(room.id).then((detail) => ({ id: room.id, detail })),
-        );
-        const details = await Promise.all(detailPromises);
-        roomDetailMap.value = Object.fromEntries(
-            details.map(({ id, detail }) => [id, detail]),
-        );
-        
-        // 加载选中房间的环境数据
-        if (result.items[0]) {
-            await loadEnvironment(result.items[0].id);
+        const firstRoom = result.items[0];
+        if (firstRoom) {
+            await Promise.all([
+                loadRoomDetail(firstRoom.id),
+                loadEnvironment(firstRoom.id),
+            ]);
+        } else {
+            environmentData.value = [];
         }
     } finally {
         loading.value = false;
@@ -153,6 +150,25 @@ const metricConfig: Record<string, { name: string; unit: string; tone: string }>
     pm25: { name: "PM2.5", unit: " μg/m³", tone: "green" },
     illuminance: { name: "光照", unit: " lux", tone: "orange" },
     noise: { name: "噪音", unit: " dB", tone: "purple" },
+};
+
+const loadRoomDetail = async (roomId: number, refresh = false) => {
+    if (!refresh && roomDetailMap.value[roomId]) return;
+
+    let request = detailRequests.get(roomId);
+    if (!request || refresh) {
+        request = fetchRoomDetail(roomId);
+        detailRequests.set(roomId, request);
+    }
+
+    try {
+        const detail = await request;
+        roomDetailMap.value = { ...roomDetailMap.value, [roomId]: detail };
+    } finally {
+        if (detailRequests.get(roomId) === request) {
+            detailRequests.delete(roomId);
+        }
+    }
 };
 
 const loadEnvironment = async (roomId: number) => {
@@ -170,9 +186,13 @@ const loadEnvironment = async (roomId: number) => {
                 });
             }
         }
-        environmentData.value = items;
+        if (selectedId.value === roomId) {
+            environmentData.value = items;
+        }
     } catch {
-        environmentData.value = [];
+        if (selectedId.value === roomId) {
+            environmentData.value = [];
+        }
     }
 };
 
@@ -186,16 +206,10 @@ const selectRoom = async (room: Room) => {
     selectedId.value = room.id;
     temperature.value = 24;
     
-    // 加载房间详情
-    try {
-        const detail = await fetchRoomDetail(room.id);
-        roomDetailMap.value = { ...roomDetailMap.value, [room.id]: detail };
-    } catch {
-        // 忽略详情加载失败
-    }
-    
-    // 加载环境数据
-    await loadEnvironment(room.id);
+    await Promise.all([
+        loadRoomDetail(room.id).catch(() => undefined),
+        loadEnvironment(room.id),
+    ]);
 };
 
 const replaceRoom = (room: Room) => {
@@ -262,7 +276,7 @@ const handleRoomCreated = async (
       device_ids: payload.deviceIds,
     });
     rooms.value = [...rooms.value, room];
-    selectRoom(room);
+    await selectRoom(room);
     ElMessage.success("房间已创建");
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "房间创建失败");
@@ -399,38 +413,18 @@ useAuthenticatedLoader(load);
             @update="handleRoomUpdated"
         />
 
-        <BaseSmartModal
-            :closable="!roomDeleting"
-            :loading="roomDeleting"
+        <ConfirmActionDialog
+            v-if="deleteDialogOpen"
             :model-value="deleteDialogOpen"
-            width="520px"
-            @update:model-value="
-                $event
-                    ? (deleteDialogOpen = true)
-                    : cancelDeleteRoom()
-            "
+            :loading="roomDeleting"
+            title="删除房间"
+            description="此操作将删除房间及其关联的设备绑定。"
+            warning="删除后将无法在房间控制、设备管理和快捷操作中继续管理该房间及其设备。"
+            footer-hint="确认后会立即调用后端删除接口。"
+            @cancel="cancelDeleteRoom"
+            @confirm="confirmDeleteRoom"
+            @update:model-value="deleteDialogOpen = $event"
         >
-            <template #header>
-                <header class="delete-dialog-header">
-                    <span class="delete-dialog-icon" aria-hidden="true">
-                        <SvgIcon name="warning" />
-                    </span>
-                    <div>
-                        <h2>删除房间</h2>
-                        <p>此操作将删除房间及其关联的设备绑定。</p>
-                    </div>
-                    <button
-                        class="delete-dialog-close"
-                        :disabled="roomDeleting"
-                        type="button"
-                        aria-label="关闭"
-                        @click="cancelDeleteRoom"
-                    >
-                        <SvgIcon name="close" size="sm" />
-                    </button>
-                </header>
-            </template>
-
             <section v-if="deletingRoom" class="delete-dialog-body">
                 <div class="delete-device-summary">
                     <span class="delete-device-thumb" aria-hidden="true">
@@ -445,39 +439,8 @@ useAuthenticatedLoader(load);
                         </p>
                     </div>
                 </div>
-                <p class="delete-dialog-warning">
-                    删除后将无法在房间控制、设备管理和快捷操作中继续管理该房间及其设备。
-                </p>
             </section>
-
-            <template #footer>
-                <footer class="delete-dialog-footer">
-                    <span>确认后会立即调用后端删除接口。</span>
-                    <div>
-                        <button
-                            class="delete-cancel-button"
-                            :disabled="roomDeleting"
-                            type="button"
-                            @click="cancelDeleteRoom"
-                        >
-                            取消
-                        </button>
-                        <button
-                            class="delete-confirm-button"
-                            :disabled="roomDeleting"
-                            type="button"
-                            @click="confirmDeleteRoom"
-                        >
-                            <SvgIcon
-                                :name="roomDeleting ? 'refresh' : 'warning'"
-                                size="sm"
-                            />
-                            {{ roomDeleting ? "删除中" : "确认删除" }}
-                        </button>
-                    </div>
-                </footer>
-            </template>
-        </BaseSmartModal>
+        </ConfirmActionDialog>
     </div>
 </template>
 

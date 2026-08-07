@@ -2,10 +2,16 @@
 import { ref } from "vue";
 import type { SecuritySettings } from "../../types/settings";
 import BaseSwitch from "../BaseSwitch.vue";
-import ChangePasswordDialog from "./ChangePasswordDialog.vue";
-import DeviceManagementDialog from "./DeviceManagementDialog.vue";
-import SecurityLogsDialog from "./SecurityLogsDialog.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import { defineAsyncDialog, preloadDialog } from "../../utils/asyncDialog";
+
+const loadChangePasswordDialog = () => import("./ChangePasswordDialog.vue");
+const loadDeviceManagementDialog = () => import("./DeviceManagementDialog.vue");
+const loadSecurityLogsDialog = () => import("./SecurityLogsDialog.vue");
+
+const ChangePasswordDialog = defineAsyncDialog(loadChangePasswordDialog);
+const DeviceManagementDialog = defineAsyncDialog(loadDeviceManagementDialog);
+const SecurityLogsDialog = defineAsyncDialog(loadSecurityLogsDialog);
 
 defineProps<{
     security: SecuritySettings;
@@ -23,6 +29,8 @@ const logsDialogVisible = ref(false);
             <button
                 class="secondary-button"
                 type="button"
+                @focus="preloadDialog(loadChangePasswordDialog)"
+                @mouseenter="preloadDialog(loadChangePasswordDialog)"
                 @click="passwordDialogVisible = true"
             >
                 修改
@@ -37,6 +45,8 @@ const logsDialogVisible = ref(false);
             <button
                 class="secondary-button"
                 type="button"
+                @focus="preloadDialog(loadDeviceManagementDialog)"
+                @mouseenter="preloadDialog(loadDeviceManagementDialog)"
                 @click="devicesDialogVisible = true"
             >
                 管理
@@ -47,14 +57,25 @@ const logsDialogVisible = ref(false);
             <button
                 class="secondary-button"
                 type="button"
+                @focus="preloadDialog(loadSecurityLogsDialog)"
+                @mouseenter="preloadDialog(loadSecurityLogsDialog)"
                 @click="logsDialogVisible = true"
             >
                 查看
             </button>
         </div>
 
-        <ChangePasswordDialog v-model="passwordDialogVisible" />
-        <DeviceManagementDialog v-model="devicesDialogVisible" />
-        <SecurityLogsDialog v-model="logsDialogVisible" />
+        <ChangePasswordDialog
+            v-if="passwordDialogVisible"
+            v-model="passwordDialogVisible"
+        />
+        <DeviceManagementDialog
+            v-if="devicesDialogVisible"
+            v-model="devicesDialogVisible"
+        />
+        <SecurityLogsDialog
+            v-if="logsDialogVisible"
+            v-model="logsDialogVisible"
+        />
     </SettingsSectionCard>
 </template>

@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import type { Room } from "../../types/room";
-import RoomEditorDialog from "./dialogs/RoomEditorDialog.vue";
-import RoomLogsDialog from "./dialogs/RoomLogsDialog.vue";
-import RoomSceneDialog from "./dialogs/RoomSceneDialog.vue";
-import RoomDevicesDialog from "./dialogs/RoomDevicesDialog.vue";
-import RoomEnvironmentDialog from "./dialogs/RoomEnvironmentDialog.vue";
+import { defineAsyncDialog } from "../../utils/asyncDialog";
+
+const RoomEditorDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomEditorDialog.vue"),
+);
+const RoomLogsDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomLogsDialog.vue"),
+);
+const RoomSceneDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomSceneDialog.vue"),
+);
+const RoomDevicesDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomDevicesDialog.vue"),
+);
+const RoomEnvironmentDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomEnvironmentDialog.vue"),
+);
 
 export type RoomDialog =
     | "edit"

@@ -17,7 +17,7 @@ export const useModalConfirm = (
   options: ModalConfirmOptions = {},
 ) => {
   const loading = ref(false);
-  const minDuration = options.minDuration ?? 450;
+  const minDuration = options.minDuration ?? 0;
 
   const confirm = async () => {
     if (loading.value) {
@@ -27,7 +27,7 @@ export const useModalConfirm = (
     try {
       loading.value = true;
       await options.prepare?.();
-      await sleep(minDuration);
+      if (minDuration > 0) await sleep(minDuration);
       await onConfirm();
     } finally {
       loading.value = false;

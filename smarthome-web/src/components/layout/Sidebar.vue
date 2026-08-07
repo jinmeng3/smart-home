@@ -4,6 +4,10 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { useHomeStore } from "../../stores/home";
 import { useSettingsStore } from "../../stores/settings";
+import {
+    navigationItems,
+    type NavigationItem,
+} from "../../router/navigation";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
@@ -13,51 +17,12 @@ const route = useRoute();
 const router = useRouter();
 const avatarLoadError = ref(false);
 
-interface MenuItem {
-    icon: string;
-    label: string;
-    path?: string;
-    tone: string;
-    soft: string;
-}
-
-const menuItems: MenuItem[] = [
-    { icon: "chat", label: "智能对话", path: "/", tone: "var(--tone-purple)", soft: "var(--tone-purple-soft)" },
-    { icon: "home", label: "全屋总览", path: "/overview", tone: "var(--color-primary-600)", soft: "var(--color-primary-50)" },
-    { icon: "room", label: "房间控制", path: "/rooms", tone: "var(--color-teal-600)", soft: "var(--color-teal-soft)" },
-    { icon: "device-management", label: "设备管理", path: "/devices", tone: "var(--color-device-light)", soft: "var(--color-warning-soft)" },
-    { icon: "scene", label: "场景模式", path: "/scenes", tone: "var(--color-success)", soft: "var(--color-success-soft)" },
-    { icon: "automation", label: "自动化", path: "/automations", tone: "var(--tone-indigo)", soft: "var(--tone-indigo-soft)" },
-    { icon: "settings", label: "设置", path: "/settings", tone: "var(--color-info)", soft: "var(--color-info-soft)" },
-];
-
-const activeLabel = computed(() => {
-    if (route.path === "/rooms") {
-        return "房间控制";
-    }
-
-    if (route.path === "/settings") {
-        return "设置";
-    }
-
-    if (route.path === "/devices") {
-        return "设备管理";
-    }
-
-    if (route.path === "/scenes") {
-        return "场景模式";
-    }
-
-    if (route.path === "/overview") {
-        return "全屋总览";
-    }
-
-    if (route.path === "/automations") {
-        return "自动化";
-    }
-
-    return "智能对话";
-});
+const menuItems = navigationItems;
+const activeLabel = computed(
+    () =>
+        menuItems.find((item) => item.path === route.path)?.label ??
+        "智能对话",
+);
 
 const account = computed(() => settingsStore.settings.account);
 const accountInitial = computed(() =>
@@ -66,7 +31,7 @@ const accountInitial = computed(() =>
         : "访",
 );
 
-const selectMenu = async (item: MenuItem) => {
+const selectMenu = async (item: NavigationItem) => {
     store.setActiveMenu(item.label);
 
     if (item.path === "/" && !authStore.isAuthenticated) {
@@ -81,6 +46,12 @@ const selectMenu = async (item: MenuItem) => {
         }
 
         await router.push(item.path);
+    }
+};
+
+const preloadMenu = (item: NavigationItem) => {
+    if (item.path !== route.path) {
+        void item.loadComponent();
     }
 };
 
@@ -170,6 +141,8 @@ const openConversation = async (sessionId: string) => {
                 ]"
                 type="button"
                 :title="item.label"
+                @focus="preloadMenu(item)"
+                @mouseenter="preloadMenu(item)"
                 @click="selectMenu(item)"
             >
                 <span

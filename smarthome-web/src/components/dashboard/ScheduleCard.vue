@@ -2,8 +2,11 @@
 import { computed, ref } from "vue";
 import { useHomeStore } from "../../stores/home";
 import BaseSwitch from "../BaseSwitch.vue";
-import ScheduleDialog from "../overview/dialogs/ScheduleDialog.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { defineAsyncDialog, preloadDialog } from "../../utils/asyncDialog";
+
+const loadScheduleDialog = () => import("../overview/dialogs/ScheduleDialog.vue");
+const ScheduleDialog = defineAsyncDialog(loadScheduleDialog);
 
 const store = useHomeStore();
 const dialogVisible = ref(false);
@@ -41,6 +44,8 @@ const automationTone = (id: string): string => {
             <button
                 class="more-button"
                 type="button"
+                @focus="preloadDialog(loadScheduleDialog)"
+                @mouseenter="preloadDialog(loadScheduleDialog)"
                 @click="dialogVisible = true"
             >
                 更多
@@ -82,7 +87,7 @@ const automationTone = (id: string): string => {
             <span>已开启 <b>{{ store.enabledAutomationCount }}</b> 个</span>
         </footer>
 
-        <ScheduleDialog v-model="dialogVisible" />
+        <ScheduleDialog v-if="dialogVisible" v-model="dialogVisible" />
     </section>
 </template>
 

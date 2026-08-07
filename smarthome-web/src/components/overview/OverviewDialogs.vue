@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import ModeDialog from "./dialogs/ModeDialog.vue";
-import RoomDialog from "./dialogs/RoomDialog.vue";
-import InspectionDialog from "./dialogs/InspectionDialog.vue";
-import ScheduleDialog from "./dialogs/ScheduleDialog.vue";
-import SyncDialog from "./dialogs/SyncDialog.vue";
-import RoomDistributionDialog from "./dialogs/RoomDistributionDialog.vue";
-import ActivityDialog from "./dialogs/ActivityDialog.vue";
 import type { HouseholdSchedule } from "../../api/overview";
+import { defineAsyncDialog } from "../../utils/asyncDialog";
+
+const ModeDialog = defineAsyncDialog(() => import("./dialogs/ModeDialog.vue"));
+const RoomDialog = defineAsyncDialog(() => import("./dialogs/RoomDialog.vue"));
+const InspectionDialog = defineAsyncDialog(
+    () => import("./dialogs/InspectionDialog.vue"),
+);
+const ScheduleDialog = defineAsyncDialog(
+    () => import("./dialogs/ScheduleDialog.vue"),
+);
+const SyncDialog = defineAsyncDialog(() => import("./dialogs/SyncDialog.vue"));
+const RoomDistributionDialog = defineAsyncDialog(
+    () => import("./dialogs/RoomDistributionDialog.vue"),
+);
+const ActivityDialog = defineAsyncDialog(
+    () => import("./dialogs/ActivityDialog.vue"),
+);
 
 export type OverviewDialog =
     | "mode"

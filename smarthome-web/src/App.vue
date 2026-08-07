@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watchEffect } from "vue";
 import Sidebar from "./components/layout/Sidebar.vue";
-import LoginDialog from "./components/account/LoginDialog.vue";
 import ModalTransition from "./components/common/ModalTransition.vue";
 import SvgSprite from "./components/common/SvgSprite.vue";
 import { useAuthStore } from "./stores/auth";
 import { useHomeStore } from "./stores/home";
 import { useSettingsStore } from "./stores/settings";
+import { defineAsyncDialog } from "./utils/asyncDialog";
+
+const LoginDialog = defineAsyncDialog(
+    () => import("./components/account/LoginDialog.vue"),
+);
 
 const store = useHomeStore();
 const settingsStore = useSettingsStore();
@@ -73,10 +77,10 @@ onUnmounted(() => {
             <Sidebar />
             <RouterView v-slot="{ Component, route }">
                 <ModalTransition name="slide-up" mode="out-in">
-                    <component :is="Component" :key="route.fullPath" />
+                    <component :is="Component" :key="route.path" />
                 </ModalTransition>
             </RouterView>
-            <LoginDialog />
+            <LoginDialog v-if="authStore.loginVisible" />
         </div>
     </main>
 </template>
