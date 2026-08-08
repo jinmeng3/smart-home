@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { ElInput, ElMessage } from "element-plus";
+import { computed, reactive, ref } from "vue";
+import { ElInput, ElInputNumber, ElMessage } from "element-plus";
 import type {
     AiAssistantSettings,
     HomeAssistantSettings,
 } from "../../types/settings";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
+import BaseSwitch from "../BaseSwitch.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import { useSettingsStore } from "../../stores/settings";
 import "element-plus/theme-chalk/el-input.css";
 import "element-plus/theme-chalk/el-message.css";
 
@@ -16,6 +18,7 @@ const props = defineProps<{
     ai: AiAssistantSettings;
     homeAssistant: HomeAssistantSettings;
 }>();
+const settingsStore = useSettingsStore();
 
 const emit = defineEmits<{
     sync: [];
@@ -23,7 +26,18 @@ const emit = defineEmits<{
 
 const showApiKey = ref(false);
 const dialogVisible = ref(false);
-const parametersDraft = ref("{}");
+const saving = ref(false);
+const draft = reactive({
+    name: "",
+    provider: "",
+    endpoint: "",
+    apiKey: "",
+    parameters: "{}",
+    temperature: 0.7,
+    maxTokens: 4096,
+    active: true,
+    description: "",
+});
 const provider = computed({
     get: () =>
         props.ai.model.split(" · ")[1] ?? props.ai.model.split(" ")[0] ?? "",
@@ -43,26 +57,52 @@ const modelName = computed({
 const connected = computed(
     () => props.homeAssistant.websocketStatus === "connected",
 );
-const statusClass = computed(() =>
-    connected.value ? "status-online" : "status-offline",
-);
-const statusText = computed(() => (connected.value ? "已启用" : "未启用"));
-
 const openParametersDialog = () => {
-    parametersDraft.value = props.homeAssistant.parameters || "{}";
+    Object.assign(draft, {
+        name: modelName.value,
+        provider: provider.value,
+        endpoint: props.homeAssistant.serviceUrl,
+        apiKey: "",
+        parameters: props.homeAssistant.parameters || "{}",
+        temperature: props.ai.temperature,
+        maxTokens: props.ai.maxTokens,
+        active: connected.value,
+        description: props.ai.language,
+    });
     dialogVisible.value = true;
 };
 
-const applyParameters = () => {
+const applyParameters = async () => {
+    if (!draft.name.trim() || !draft.provider.trim() || !draft.endpoint.trim()) {
+        ElMessage.warning("请完整填写模型名称、供应商和 API 地址");
+        return;
+    }
     try {
-        JSON.parse(parametersDraft.value || "{}");
+        JSON.parse(draft.parameters || "{}");
     } catch {
         ElMessage.warning("扩展参数必须是合法 JSON");
         return;
     }
 
-    props.homeAssistant.parameters = parametersDraft.value || "{}";
-    dialogVisible.value = false;
+    modelName.value = draft.name;
+    provider.value = draft.provider;
+    props.homeAssistant.serviceUrl = draft.endpoint;
+    props.homeAssistant.accessToken = draft.apiKey;
+    props.homeAssistant.parameters = draft.parameters || "{}";
+    props.homeAssistant.websocketStatus = draft.active ? "connected" : "disconnected";
+    props.ai.temperature = draft.temperature;
+    props.ai.maxTokens = draft.maxTokens;
+    props.ai.language = draft.description === "en-US" || draft.description === "auto" ? draft.description : "zh-CN";
+    saving.value = true;
+    try {
+        await settingsStore.saveAIModel();
+        dialogVisible.value = false;
+        ElMessage.success("模型配置已保存到后端");
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "模型保存失败");
+    } finally {
+        saving.value = false;
+    }
 };
 </script>
 
@@ -92,13 +132,15 @@ const applyParameters = () => {
                 placeholder="https://api.example.com/v1/chat/completions"
             />
         </label>
-        <div class="mt-3 flex justify-center">
+        <div class="mt-3">
             <button
-                class="secondary-button"
+                class="model-entry-button"
                 type="button"
                 @click="openParametersDialog"
             >
-                模型配置
+                <span><SvgIcon name="platform" /></span>
+                <span><strong>模型配置</strong><small>配置连接、密钥与推理参数</small></span>
+                <SvgIcon name="chevron-right" size="sm" />
             </button>
         </div>
     </SettingsSectionCard>
@@ -107,17 +149,23 @@ const applyParameters = () => {
         v-model="dialogVisible"
         width="760px"
         title="模型配置"
-        description="状态、连接测试和厂商扩展参数"
+        description="按照模型服务商参数配置连接与推理能力"
         icon="platform"
+        tone="orange"
     >
 
         <section class="model-config-layout">
             <div class="model-config-main">
+                <div class="model-basic-grid">
+                    <label class="modal-field"><span>模型名称 *</span><input v-model="draft.name" class="settings-input" placeholder="例如 gpt-4.1-mini" /></label>
+                    <label class="modal-field"><span>供应商 *</span><input v-model="draft.provider" class="settings-input" placeholder="例如 OpenAI" /></label>
+                </div>
+                <label class="modal-field"><span>API 地址 *</span><input v-model="draft.endpoint" class="settings-input" placeholder="https://api.example.com/v1" /></label>
                 <label class="modal-field">
                     <span>API Key</span>
                     <div class="relative">
                         <input
-                            v-model="homeAssistant.accessToken"
+                            v-model="draft.apiKey"
                             class="settings-input w-full pr-10"
                             :placeholder="
                                 homeAssistant.tokenConfigured
@@ -135,42 +183,50 @@ const applyParameters = () => {
                         </button>
                     </div>
                 </label>
+                <div class="model-basic-grid">
+                    <label class="modal-field"><span>温度（0–2）</span><ElInputNumber v-model="draft.temperature" :min="0" :max="2" :step="0.1" /></label>
+                    <label class="modal-field"><span>最大 Token</span><ElInputNumber v-model="draft.maxTokens" :min="1" :max="131072" :step="512" /></label>
+                </div>
                 <label class="modal-field">
                     <span>扩展参数 JSON</span>
                     <ElInput
-                        v-model="parametersDraft"
-                        :autosize="{ minRows: 9, maxRows: 14 }"
+                        v-model="draft.parameters"
+                        :autosize="{ minRows: 5, maxRows: 10 }"
                         placeholder='{"deployment":"smart-home-chat","api_version":"2026-01-01"}'
                         type="textarea"
                     />
                 </label>
             </div>
             <aside class="model-config-actions">
+                <div class="active-setting">
+                    <span><strong>启用模型</strong><small>保存后设为当前使用模型</small></span>
+                    <BaseSwitch v-model="draft.active" />
+                </div>
                 <div class="model-config-status">
                     <span>模型状态</span>
                     <strong
                         class="device-status-label rounded-lg px-3 py-1 text-sm font-semibold"
-                        :class="statusClass"
-                        >{{ statusText }}</strong
+                        :class="draft.active ? 'status-online' : 'status-offline'"
+                        >{{ draft.active ? "保存后启用" : "保持停用" }}</strong
                     >
                 </div>
                 <div class="model-config-status">
                     <span>供应商</span>
-                    <strong>{{ provider || "未填写" }}</strong>
+                    <strong>{{ draft.provider || "未填写" }}</strong>
                 </div>
                 <div class="model-config-status">
                     <span>API 地址</span>
                     <strong>{{
-                        homeAssistant.serviceUrl || "尚未填写"
+                        draft.endpoint || "尚未填写"
                     }}</strong>
                 </div>
                 <div class="action-stack">
-                    <BaseButton :disabled="!connected" @click="emit('sync')">
+                    <BaseButton :disabled="!draft.endpoint" @click="emit('sync')">
                         测试连接
                     </BaseButton>
-                    <BaseButton @click="dialogVisible = false">取消</BaseButton>
-                    <BaseButton variant="primary" @click="applyParameters">
-                        应用配置
+                    <BaseButton :disabled="saving" @click="dialogVisible = false">取消</BaseButton>
+                    <BaseButton :loading="saving" variant="primary" @click="applyParameters">
+                        保存模型
                     </BaseButton>
                 </div>
             </aside>
@@ -178,7 +234,7 @@ const applyParameters = () => {
 
         <template #footer>
             <footer class="dialog-footer">
-                <span>保存页面更改时会写入模型配置</span>
+                <span>带 * 的字段为后端必填项；API Key 不会在页面中回显</span>
             </footer>
         </template>
     </BaseSmartModal>
@@ -198,6 +254,26 @@ const applyParameters = () => {
     flex: 1;
 }
 
+.model-entry-button {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 40px minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid color-mix(in srgb, var(--tone-orange) 28%, var(--color-border));
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--tone-orange-soft));
+    padding: 11px 14px;
+    text-align: left;
+    transition: transform 160ms var(--motion-ease), border-color 160ms, box-shadow 160ms;
+}
+.model-entry-button:hover { transform: translateY(-2px); border-color: var(--tone-orange); box-shadow: 0 9px 22px color-mix(in srgb, var(--tone-orange) 14%, transparent); }
+.model-entry-button > span:first-child { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: var(--tone-orange); color: white; }
+.model-entry-button > span:nth-child(2) { display: grid; gap: 2px; }
+.model-entry-button strong { color: var(--color-text-primary); font-size: 14px; }
+.model-entry-button small { color: var(--color-text-tertiary); font-size: 12px; }
+.model-entry-button > svg { color: var(--tone-orange); }
+
 .model-config-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 220px;
@@ -210,6 +286,28 @@ const applyParameters = () => {
     align-content: start;
     gap: 14px;
 }
+
+.model-basic-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.model-basic-grid :deep(.el-input-number) { width: 100%; }
+
+.active-setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 14px;
+    background: var(--color-primary-50);
+    padding: 12px;
+}
+.active-setting > span { display: grid; gap: 2px; }
+.active-setting strong { color: var(--color-text-primary); font-size: 13px; }
+.active-setting small { color: var(--color-text-tertiary); font-size: 10px; }
 
 .model-config-actions {
     border-left: 1px solid var(--color-border-subtle);
@@ -282,6 +380,8 @@ const applyParameters = () => {
     .model-config-layout {
         grid-template-columns: 1fr;
     }
+
+    .model-basic-grid { grid-template-columns: 1fr; }
 
     .model-config-actions {
         border-left: 0;

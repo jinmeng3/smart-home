@@ -10,15 +10,15 @@ from app.api.deps import (
     DB_DEPENDENCY,
     HOUSEHOLD_MEMBER_DEPENDENCY,
 )
-from app.models.automation import Automation
-from app.models.device import Device
+from app.models.automation import Automation, AutomationExecution
+from app.models.device import Device, DeviceLog
 from app.models.overview import (
     DeviceSyncJob,
     HouseholdSchedule,
     InspectionJob,
     OverviewExecution,
 )
-from app.models.room import Room, RoomDevice
+from app.models.room import Room, RoomActivityLog, RoomDevice
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.device import DeviceListRead, DeviceRead
@@ -99,7 +99,7 @@ def get_overview(
                 light_total=len(lights),
                 temperature=0,
                 device_summaries=[
-                    f"{item.name} {item.status}" for item in room_devices[:2]
+                    f"{item.name} {item.status.value}" for item in room_devices[:2]
                 ],
             )
         )
@@ -113,6 +113,74 @@ def get_overview(
             "updated_at": item.updated_at,
         }
         for item in devices[:10]
+    ]
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    activity_items: list[tuple[datetime, dict]] = []
+
+    room_logs = db.execute(
+        select(RoomActivityLog, Room.name)
+        .join(Room, Room.id == RoomActivityLog.room_id)
+        .where(
+            Room.household_id == household_id,
+            RoomActivityLog.occurred_at >= today_start,
+        )
+        .order_by(RoomActivityLog.occurred_at.desc())
+        .limit(20)
+    ).all()
+    for log, room_name in room_logs:
+        activity_items.append((log.occurred_at, {
+            "id": f"room-{log.id}",
+            "time": log.occurred_at.strftime("%H:%M"),
+            "created_at": log.occurred_at.isoformat(),
+            "icon": "room",
+            "title": log.event,
+            "description": f"{room_name} · {log.source} · {'成功' if log.result == 'success' else '失败'}",
+            "tone": "blue" if log.result == "success" else "red",
+        }))
+
+    device_logs = db.execute(
+        select(DeviceLog, Device)
+        .join(Device, Device.id == DeviceLog.device_id)
+        .where(
+            Device.household_id == household_id,
+            DeviceLog.created_at >= today_start,
+        )
+        .order_by(DeviceLog.created_at.desc())
+        .limit(20)
+    ).all()
+    for log, device in device_logs:
+        activity_items.append((log.created_at, {
+            "id": f"device-{log.id}",
+            "time": log.created_at.strftime("%H:%M"),
+            "created_at": log.created_at.isoformat(),
+            "icon": device.icon or "device-management",
+            "title": log.message,
+            "description": f"{device.room} · {device.name}",
+            "tone": "orange" if device.type == "light" else "teal",
+        }))
+
+    automation_logs = db.execute(
+        select(AutomationExecution, Automation.name)
+        .join(Automation, Automation.id == AutomationExecution.automation_id)
+        .where(
+            Automation.household_id == household_id,
+            AutomationExecution.started_at >= today_start,
+        )
+        .order_by(AutomationExecution.started_at.desc())
+        .limit(20)
+    ).all()
+    for execution, automation_name in automation_logs:
+        activity_items.append((execution.started_at, {
+            "id": f"automation-{execution.id}",
+            "time": execution.started_at.strftime("%H:%M"),
+            "created_at": execution.started_at.isoformat(),
+            "icon": "automation",
+            "title": f"自动化“{automation_name}”已执行",
+            "description": execution.error_message or f"{execution.source} · {execution.status}",
+            "tone": "green" if execution.status == "success" else "purple",
+        }))
+    activities = [
+        item for _, item in sorted(activity_items, key=lambda entry: entry[0], reverse=True)[:30]
     ]
     return ApiResponse.ok(
         OverviewRead(
@@ -130,6 +198,7 @@ def get_overview(
             ),
             rooms=room_items,
             recent_devices=recent,
+            activities=activities,
         )
     )
 

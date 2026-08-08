@@ -14,7 +14,6 @@ import { useSettingsStore } from "../stores/settings";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import type {
   OverviewSummary,
-  HomeStatus,
   OverviewRoom,
 } from "../types/overview";
 
@@ -56,6 +55,22 @@ const DEVICE_TONE_MAP: Record<string, string> = {
 };
 
 const deviceTone = (type: string) => DEVICE_TONE_MAP[type] ?? "blue";
+const formatDeviceTime = (value: string) => {
+    if (!value) return "未知";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value.replace("T", " ").slice(0, 16);
+    const parts = new Intl.DateTimeFormat("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).formatToParts(date);
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((part) => part.type === type)?.value ?? "";
+    return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+};
 
 // ── 状态 ──────────────────────────────────────────────────────────────────────────
 
@@ -74,16 +89,6 @@ const summary = ref<OverviewSummary>({
   alert_count: 0,
   monthly_energy_kwh: 0,
   energy_saving_rate: 0,
-});
-const homeStatus = ref<HomeStatus>({
-  status: "normal",
-  people_home: 0,
-  temperature: 0,
-  humidity: 0,
-  air_quality: "excellent",
-  pm25: 0,
-  locked_count: 0,
-  lock_total: 0,
 });
 const rooms = ref<OverviewRoomDisplay[]>([]);
 const devices = ref<OverviewDeviceDisplay[]>([]);
@@ -173,17 +178,19 @@ const loadOverviewData = async () => {
         // 概览摘要
         summary.value = overview.summary;
 
-        // 家庭状态
-        homeStatus.value = overview.home_status;
-
         // 房间卡片
+        const formatDeviceSummary = (value: string) => value
+            .replace(/DeviceStatus\.ONLINE|\bonline\b/gi, "在线")
+            .replace(/DeviceStatus\.OFFLINE|\boffline\b/gi, "离线")
+            .replace(/DeviceStatus\.RUNNING|\brunning\b/gi, "运行中")
+            .replace(/DeviceStatus\.WARNING|\bwarning\b/gi, "告警");
         rooms.value = overview.rooms.map((room: OverviewRoom) => ({
             name: room.name,
             icon: "room",
             count: room.device_count,
             light: `${room.light_on}/${room.light_total} 开`,
-            air: room.device_summaries[0] ?? `${room.temperature}°C`,
-            extra: room.device_summaries[1] ?? "",
+            air: formatDeviceSummary(room.device_summaries[0] ?? `${room.temperature}°C`),
+            extra: formatDeviceSummary(room.device_summaries[1] ?? "暂无更多设备"),
             tone: "blue",
         }));
 
@@ -194,7 +201,7 @@ const loadOverviewData = async () => {
             room: device.room,
             status: device.status === "online" || device.status === "running" ? "在线" : "离线",
             detail: device.status === "running" ? "运行中" : device.status === "online" ? "在线" : device.status === "warning" ? "告警" : "离线",
-            updatedAt: device.lastOnline || "未知",
+            updatedAt: formatDeviceTime(device.lastOnline),
             icon: getDeviceTypeIcon(device.type),
             tone: deviceTone(device.type),
             frequent: false,
@@ -235,7 +242,13 @@ useAuthenticatedLoader(loadOverviewData);</script>
 <template>
     <div class="app-page-layout">
         <main class="overview page-shell page-enter">
-            <PageHeader title="全屋总览" description="查看家庭运行状态、房间分布与设备总览">
+            <PageHeader
+                title="全屋总览"
+                description="查看家庭运行状态、房间分布与设备总览"
+                icon="home"
+                tone="var(--color-primary-600)"
+                soft="var(--color-primary-50)"
+            >
                 <label class="search"
                     ><SvgIcon name="search" size="sm" /><input
                         v-model="searchKeyword"
@@ -277,46 +290,6 @@ useAuthenticatedLoader(loadOverviewData);</script>
                     tone="purple"
                 />
             </section>
-            <section class="panel home-status">
-
-                <div class="status-row">
-                    <div>
-                        <i class="green"><SvgIcon name="security" /></i
-                        ><span
-                            >家庭状态<b class="ok">{{ homeStatus.status === "normal" ? "一切正常" : "异常" }}</b
-                            ><small>系统运行良好</small></span
-                        >
-                    </div>
-                    <div>
-                        <i class="blue"><SvgIcon name="members" /></i
-                        ><span
-                            >在家人数<b>{{ homeStatus.people_home }} 人</b><small>家庭成员</small></span
-                        >
-                    </div>
-                    <div>
-                        <i class="blue"><SvgIcon name="temperature" /></i
-                        ><span>室内温度<b>{{ homeStatus.temperature }}°C</b><small>{{ homeStatus.temperature > 28 ? "偏热" : homeStatus.temperature > 18 ? "舒适" : "偏冷" }}</small></span>
-                    </div>
-                    <div>
-                        <i class="blue"><SvgIcon name="humidity" /></i
-                        ><span>室内湿度<b>{{ homeStatus.humidity }}%</b><small>{{ homeStatus.humidity > 70 ? "偏湿" : homeStatus.humidity > 30 ? "舒适" : "偏干" }}</small></span>
-                    </div>
-                    <div>
-                        <i class="green"><SvgIcon name="air-quality" /></i
-                        ><span
-                            >空气质量<b :class="homeStatus.air_quality === 'excellent' ? 'ok' : ''">{{ homeStatus.air_quality === "excellent" ? "优" : "一般" }} {{ homeStatus.pm25 }}</b
-                            ><small>PM2.5</small></span
-                        >
-                    </div>
-                    <div>
-                        <i class="gray"><SvgIcon name="lock" /></i
-                        ><span
-                            >门锁状态<b>{{ homeStatus.locked_count === homeStatus.lock_total ? "全部上锁" : "部分未锁" }}</b
-                            ><small>{{ homeStatus.locked_count }}/{{ homeStatus.lock_total }} 已上锁</small></span
-                        >
-                    </div>
-                </div>
-            </section>
             <section class="panel rooms">
                 <header>
                     <h2>房间概览</h2>
@@ -357,6 +330,7 @@ useAuthenticatedLoader(loadOverviewData);</script>
                             {{ tab }}
                         </button>
                     </nav>
+                    <div class="device-table-scroll">
                     <table>
                         <thead>
                             <tr>
@@ -370,7 +344,7 @@ useAuthenticatedLoader(loadOverviewData);</script>
                         </thead>
                         <tbody>
                             <tr
-                                v-for="device in visibleDevices.slice(0, 5)"
+                                v-for="device in visibleDevices"
                                 :key="device.id"
                             >
                                 <td class="device-cell">
@@ -397,6 +371,7 @@ useAuthenticatedLoader(loadOverviewData);</script>
                             </tr>
                         </tbody>
                     </table>
+                    </div>
                     <RouterLink v-if="selectedTab === '全部设备'" class="view-all" to="/devices">
                         查看全部设备（{{ summary.device_total }}）→
                     </RouterLink>
@@ -520,6 +495,10 @@ useAuthenticatedLoader(loadOverviewData);</script>
                         ><small>{{ item.description }}</small></span
                     >
                 </p>
+                <div v-if="!activities.length" class="activity-empty">
+                    <SvgIcon name="log" />
+                    <span>今日暂无设备、房间或自动化动态</span>
+                </div>
             </section>
         </div>
         <OverviewDialogs
@@ -2214,5 +2193,60 @@ useAuthenticatedLoader(loadOverviewData);</script>
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* 设备概览使用独立滚动区，底部入口始终保留在可视区域。 */
+.overview {
+    grid-template-rows: auto auto 132px minmax(180px, 1fr);
+}
+.bottom-grid > .device-list {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) 38px;
+    overflow: hidden;
+    padding-bottom: 0;
+}
+.device-table-scroll {
+    min-height: 0;
+    overflow: auto;
+    scrollbar-color: var(--color-border-strong) transparent;
+    scrollbar-width: thin;
+}
+.device-table-scroll table {
+    width: 100%;
+}
+.device-table-scroll thead {
+    position: sticky;
+    top: 0;
+    background: var(--color-card-bg);
+    box-shadow: 0 1px 0 var(--color-border-subtle);
+    z-index: 1;
+}
+.device-list .view-all {
+    position: relative;
+    height: 38px;
+    border-top: 1px solid var(--color-border-subtle);
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-primary-50));
+    color: var(--color-primary-600);
+    font-weight: 900;
+    z-index: 2;
+}
+.device-list .view-all:hover {
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+.activity-empty {
+    display: flex;
+    min-height: 110px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    text-align: center;
+}
+.activity-empty svg {
+    color: var(--color-primary-300);
 }
 </style>

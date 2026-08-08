@@ -44,6 +44,7 @@ interface SmartModalProps {
     showDraft?: boolean;
     beforeClose?: () => boolean | Promise<boolean>;
     closeButtonDisabled?: boolean;
+    tone?: "primary" | "indigo" | "orange" | "teal" | "green" | "purple" | "red";
 }
 
 const focusableSelector = [
@@ -68,6 +69,7 @@ const props = withDefaults(defineProps<SmartModalProps>(), {
     draftText: "保存草稿",
     showDraft: false,
     closeButtonDisabled: false,
+    tone: "primary",
 });
 
 const emit = defineEmits<{
@@ -211,7 +213,7 @@ onBeforeUnmount(() => {
                     <article
                         ref="dialogRef"
                         class="smart-modal"
-                        :class="widthClass"
+                        :class="[widthClass, `tone-${tone}`]"
                         :style="widthStyle"
                         role="dialog"
                         aria-modal="true"
@@ -325,6 +327,9 @@ onBeforeUnmount(() => {
 }
 
 .smart-modal {
+    position: relative;
+    --modal-accent: var(--color-primary-600);
+    --modal-accent-soft: var(--color-primary-50);
     display: flex;
     width: min(100%, 720px);
     max-width: min(980px, calc(100vw - 48px));
@@ -336,6 +341,20 @@ onBeforeUnmount(() => {
     background: var(--color-card-bg);
     box-shadow: var(--shadow-card-hover);
 }
+.smart-modal::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, var(--modal-accent), color-mix(in srgb, var(--modal-accent) 28%, transparent));
+    content: "";
+    z-index: 2;
+}
+.smart-modal.tone-indigo { --modal-accent: var(--tone-purple); --modal-accent-soft: var(--tone-purple-soft); }
+.smart-modal.tone-orange { --modal-accent: var(--tone-orange); --modal-accent-soft: var(--tone-orange-soft); }
+.smart-modal.tone-teal { --modal-accent: var(--tone-teal); --modal-accent-soft: var(--tone-teal-soft); }
+.smart-modal.tone-green { --modal-accent: var(--color-success); --modal-accent-soft: var(--color-success-soft); }
+.smart-modal.tone-purple { --modal-accent: var(--tone-purple); --modal-accent-soft: var(--tone-purple-soft); }
+.smart-modal.tone-red { --modal-accent: var(--color-danger); --modal-accent-soft: var(--color-danger-soft); }
 
 .smart-modal.is-small {
     width: min(100%, 560px);
@@ -403,6 +422,8 @@ onBeforeUnmount(() => {
     overflow-y: auto;
     padding: 22px 24px;
     background: var(--color-surface-subtle);
+    scrollbar-color: var(--color-border-strong) transparent;
+    scrollbar-width: thin;
 }
 
 .smart-modal-content {
@@ -485,6 +506,24 @@ onBeforeUnmount(() => {
     background: var(--color-card-bg);
 }
 
+.smart-modal :deep(.settings-input) {
+    transition: border-color 160ms var(--motion-ease), box-shadow 160ms var(--motion-ease), background-color 160ms;
+}
+.smart-modal :deep(.settings-input:hover:not(:disabled)) {
+    border-color: color-mix(in srgb, var(--modal-accent) 45%, var(--color-border));
+}
+.smart-modal :deep(.modal-field > span),
+.smart-modal :deep(.account-field > span) {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+.smart-modal :deep(.device-status-label),
+.smart-modal :deep(.role-badge) {
+    border: 1px solid color-mix(in srgb, var(--modal-accent) 22%, transparent);
+}
+
 .smart-modal :deep(input:not(.el-input__inner):focus),
 .smart-modal :deep(select:focus),
 .smart-modal :deep(textarea:focus),
@@ -502,7 +541,7 @@ onBeforeUnmount(() => {
     background: linear-gradient(
         135deg,
         var(--color-card-bg),
-        var(--color-primary-50)
+        var(--modal-accent-soft)
     ) !important;
 }
 
@@ -517,10 +556,10 @@ onBeforeUnmount(() => {
     color: var(--color-text-on-primary) !important;
     background: linear-gradient(
         135deg,
-        var(--color-primary-600),
-        var(--color-primary-500)
+        color-mix(in srgb, var(--modal-accent) 88%, white),
+        var(--modal-accent)
     ) !important;
-    box-shadow: 0 6px 16px var(--color-focus-ring);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--modal-accent) 22%, transparent);
 }
 
 .smart-modal :deep(.dialog-header h2) {
@@ -553,8 +592,8 @@ onBeforeUnmount(() => {
 }
 
 .smart-modal :deep(.close-button:hover) {
-    color: var(--color-text-primary);
-    background: var(--color-surface-hover);
+    color: var(--modal-accent);
+    background: var(--modal-accent-soft);
 }
 
 .smart-modal :deep(.close-button:active) {
@@ -684,6 +723,24 @@ onBeforeUnmount(() => {
     }
 
     .smart-modal-actions {
+        justify-content: flex-end;
+    }
+
+    .smart-modal :deep(.dialog-header) {
+        padding: 18px 20px !important;
+    }
+
+    .smart-modal-body {
+        padding: 18px;
+    }
+
+    .smart-modal :deep(.dialog-footer) {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 14px 18px !important;
+    }
+
+    .smart-modal :deep(.dialog-footer > div) {
         justify-content: flex-end;
     }
 }

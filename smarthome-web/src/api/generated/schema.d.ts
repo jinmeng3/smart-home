@@ -603,6 +603,7 @@ export interface DeviceLogRead {
 
 export interface DeviceRead {
   id: number;
+  device_id: string;
   name: string;
   room: string;
   type: string;

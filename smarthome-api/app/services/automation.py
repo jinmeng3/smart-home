@@ -207,6 +207,15 @@ def update_automation_service(
     return serialize(get_automation(db, automation.id))
 
 
+def delete_automation_service(
+    db: Session, automation_id: int, household_id: int
+) -> None:
+    """删除自动化规则及其触发器、条件、动作和执行记录。"""
+    automation = get_automation(db, automation_id, household_id)
+    db.delete(automation)
+    db.commit()
+
+
 def list_automations_service(
     db: Session,
     household_id: int,

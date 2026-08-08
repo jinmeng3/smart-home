@@ -85,23 +85,27 @@ const updateEnabled = (enabled: boolean) => {
                 type="button"
                 @click.stop="$emit('run', scene)"
             >
-                <SvgIcon :name="running ? 'refresh' : 'power'" />
+                <SvgIcon name="automation" />
                 {{ running ? "执行中" : "执行" }}
             </button>
-            <BaseSwitch
-                :model-value="scene.enabled"
-                small
-                @update:model-value="updateEnabled"
-                @click.stop
-            />
-            <button
-                class="scene-delete-button"
-                type="button"
-                title="删除场景"
-                @click.stop="$emit('remove', scene)"
-            >
-                <SvgIcon name="delete" size="sm" />
-            </button>
+            <div class="scene-footer-actions" @click.stop>
+                <label class="scene-enabled-control">
+                    <span>{{ scene.enabled ? "已启用" : "已停用" }}</span>
+                    <BaseSwitch
+                        :model-value="scene.enabled"
+                        small
+                        @update:model-value="updateEnabled"
+                    />
+                </label>
+                <button
+                    class="scene-delete-button"
+                    type="button"
+                    title="删除场景"
+                    @click="$emit('remove', scene)"
+                >
+                    <SvgIcon name="delete" size="sm" />
+                </button>
+            </div>
         </footer>
     </article>
 </template>
@@ -269,6 +273,7 @@ dd {
 footer {
     justify-content: space-between;
     gap: 10px;
+    padding-top: 2px;
 }
 
 .scene-run-button {
@@ -276,7 +281,8 @@ footer {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 34px;
+    min-width: 92px;
+    height: 36px;
     border: 1px solid var(--color-primary-200);
     border-radius: 8px;
     background: var(--color-primary-50);
@@ -288,6 +294,26 @@ footer {
         transform 160ms var(--motion-ease),
         background-color 160ms var(--motion-ease),
         border-color 160ms var(--motion-ease);
+}
+
+.scene-footer-actions,
+.scene-enabled-control {
+    display: flex;
+    align-items: center;
+}
+
+.scene-footer-actions {
+    min-width: 0;
+    gap: 10px;
+}
+
+.scene-enabled-control {
+    gap: 7px;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .scene-run-button:not(:disabled):hover {
@@ -303,9 +329,9 @@ footer {
 
 .scene-delete-button {
     display: grid;
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
     place-items: center;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -317,6 +343,14 @@ footer {
     border-color: var(--color-danger);
     background: var(--color-danger-soft);
     color: var(--color-danger);
+}
+
+.scene-delete-button svg {
+    transition: transform 160ms var(--motion-ease);
+}
+
+.scene-delete-button:hover svg {
+    transform: rotate(90deg);
 }
 
 button:disabled {

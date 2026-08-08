@@ -27,7 +27,6 @@ const defaultSettings: SettingsState = {
     themeMode: "light",
     fontSize: "medium",
     animationsEnabled: true,
-    sidebarCollapsed: false,
     performanceMode: false,
   },
   aiAssistant: {

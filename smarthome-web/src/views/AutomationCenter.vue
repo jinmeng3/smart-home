@@ -17,6 +17,8 @@ const {
     runningId,
     selectedId,
     selectedAutomation: selected,
+    selectedDetail,
+    executions,
     stats,
     stepStatuses,
     visible,
@@ -24,17 +26,22 @@ const {
 const controller = useAutomationModeController(store);
 
 const flowSteps = computed(() =>
-    selected.value ? buildAutomationSteps(selected.value) : [],
+    selected.value ? buildAutomationSteps(selected.value, selectedDetail.value) : [],
 );
 
 const records = computed(() =>
-    automations.value.slice(0, 4).map((rule, index) => ({
-        time: ["今天 18:36", "今天 07:00", "昨天 22:30", "昨天 12:15"][
-            index
-        ],
-        name: rule.name,
-        result: "成功",
-        duration: `${(1.9 + index * 0.4).toFixed(1)}s`,
+    executions.value.slice(0, 4).map((record) => ({
+        id: record.id,
+        time: new Intl.DateTimeFormat("zh-CN", {
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(new Date(record.startedAt)),
+        name: selected.value?.name ?? "自动化",
+        result: record.status === "success" ? "成功" : record.status === "failed" ? "失败" : "执行中",
+        success: record.status === "success",
+        duration: record.durationMs === null ? "--" : `${(record.durationMs / 1000).toFixed(1)}s`,
     })),
 );
 
@@ -55,8 +62,17 @@ useAuthenticatedLoader(loadAutomations);
         <main class="automation page-shell page-enter">
             <header class="automation-page-header">
                 <div class="automation-page-title">
-                    <h1>自动化</h1>
-                    <p>管理家庭自动化规则、触发条件与执行状态</p>
+                    <span
+                        class="page-header-icon"
+                        style="background: var(--tone-indigo-soft); color: var(--tone-indigo)"
+                        aria-hidden="true"
+                    >
+                        <SvgIcon name="automation" />
+                    </span>
+                    <div>
+                        <h1>自动化</h1>
+                        <p>管理家庭自动化规则、触发条件与执行状态</p>
+                    </div>
                 </div>
                 <div class="filters">
                     <label class="filters-search"
@@ -100,7 +116,7 @@ useAuthenticatedLoader(loadAutomations);
                         icon="calendar"
                         label="今日执行次数"
                         :value="`${stats.executionsToday} 次`"
-                        detail="较昨日 ↑ 15%"
+                            detail="来自后端执行记录"
                         tone="orange"
                     />
                     <StatsCard
@@ -197,54 +213,52 @@ useAuthenticatedLoader(loadAutomations);
             </div>
             <section class="panel flow">
                 <header>
-                    <h2>自动化流程</h2>
+                    <div class="flow-heading">
+                        <span class="flow-heading-icon"><SvgIcon name="automation" /></span>
+                        <span>
+                            <h2>自动化流程</h2>
+                            <small>{{ selected ? `${selected.name} · ${flowSteps.length} 个步骤` : "选择规则后查看执行链路" }}</small>
+                        </span>
+                    </div>
                     <a @click="controller.openLogsDialog()">查看更多 ›</a>
                 </header>
                 <div class="flow-body">
-                    <div class="steps">
+                    <div v-if="flowSteps.length" class="steps">
                         <div
                             v-for="(step, index) in flowSteps"
                             :key="step.id"
                             :class="`is-${stepStatuses[step.id] ?? 'pending'}`"
                         >
                             <div class="step-card">
+                                <span class="step-index">{{ String(index + 1).padStart(2, "0") }}</span>
                                 <i :class="`is-${step.tone}`">
                                     <SvgIcon :name="step.icon" />
                                     <span v-if="index === 0" class="step-trigger-badge">触发</span>
                                 </i>
                                 <b>{{ step.name }}</b>
                                 <small>{{ step.description }}</small>
+                                <span class="step-status">
+                                    {{ (stepStatuses[step.id] ?? "pending") === "completed" ? "已完成" : (stepStatuses[step.id] ?? "pending") === "running" ? "执行中" : "等待执行" }}
+                                </span>
                             </div>
                             <div v-if="index < flowSteps.length - 1" class="step-connector">
                                 <SvgIcon name="chevron-right" size="sm" />
                             </div>
                         </div>
                     </div>
+                    <div v-else class="flow-empty">
+                        <span><SvgIcon name="automation" /></span>
+                        <strong>暂无可展示的自动化流程</strong>
+                        <small>请选择一条规则，或创建包含执行动作的自动化</small>
+                    </div>
                     <div class="records">
                         <h3>最近执行</h3>
-                        <div class="records-growth">
-                            <span class="growth-item">
-                                <em>今日</em>
-                                <strong>12</strong>
-                                <small class="growth-up">↑ 25%</small>
-                            </span>
-                            <span class="growth-item">
-                                <em>本周</em>
-                                <strong>68</strong>
-                                <small class="growth-up">↑ 12%</small>
-                            </span>
-                            <span class="growth-item">
-                                <em>成功率</em>
-                                <strong>98%</strong>
-                                <small class="growth-neutral">持平</small>
-                            </span>
-                        </div>
                         <div class="records-list">
-                            <div v-for="row in records" :key="row.time" class="record-row">
+                            <div v-for="row in records" :key="row.id" class="record-row">
                                 <time>{{ row.time }}</time>
                                 <span class="record-name">{{ row.name }}</span>
-                                <span class="record-result is-success">
-                                    <SvgIcon name="check-circle" size="sm" />{{ row.result }}
+                                <span class="record-result" :class="{ 'is-success': row.success }">
+                                    <SvgIcon :name="row.success ? 'check-circle' : 'warning'" size="sm" />{{ row.result }}
                                 </span>
                                 <em class="record-duration">{{ row.duration }}</em>
                             </div>
@@ -267,7 +281,7 @@ useAuthenticatedLoader(loadAutomations);
                         ><span
                             ><h3>{{ selected.name }}</h3>
                             <em>{{ selected.enabled ? "已启用" : "已停用" }}</em>
-                            <p>当您回到家附近，自动执行舒适回家流程</p></span
+                            <p>{{ selected.description }}</p></span
                         >
                     </div>
                     <dl>
@@ -277,11 +291,11 @@ useAuthenticatedLoader(loadAutomations);
                         </div>
                         <div>
                             <dt>执行方式</dt>
-                            <dd>自动执行</dd>
+                            <dd>{{ selectedDetail?.triggers[0]?.type === "manual" ? "手动执行" : "自动执行" }}</dd>
                         </div>
                         <div>
                             <dt>关联房间</dt>
-                            <dd>玄关、客厅、餐厅、主卧</dd>
+                            <dd>{{ selectedDetail?.note || "未设置" }}</dd>
                         </div>
                         <div>
                             <dt>关联设备</dt>
@@ -289,11 +303,11 @@ useAuthenticatedLoader(loadAutomations);
                         </div>
                         <div>
                             <dt>创建时间</dt>
-                            <dd>2026-06-15 10:30</dd>
+                            <dd>{{ selectedDetail?.createdAt ? new Date(selectedDetail.createdAt).toLocaleString('zh-CN') : '--' }}</dd>
                         </div>
                         <div>
                             <dt>更新时间</dt>
-                            <dd>2026-08-01 10:15</dd>
+                            <dd>{{ selectedDetail?.updatedAt ? new Date(selectedDetail.updatedAt).toLocaleString('zh-CN') : '--' }}</dd>
                         </div>
                     </dl>
                     <footer>
@@ -389,6 +403,8 @@ useAuthenticatedLoader(loadAutomations);
             v-model="controller.activeDialog.value"
             :rule="selected ?? undefined"
             :rules="automations"
+            :executions="executions"
+            :selected-rule-name="selected?.name"
             @save="controller.saveRule"
             @batch="controller.batchEnable"
             @imported="controller.importRules"
@@ -437,6 +453,22 @@ useAuthenticatedLoader(loadAutomations);
     gap: 18px;
     align-items: start;
 }
+.automation-page-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.automation-page-title .page-header-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
+}
+
 .automation-page-title h1 {
     margin: 0;
     color: var(--color-text-primary);
@@ -552,7 +584,7 @@ useAuthenticatedLoader(loadAutomations);
 }
 .stats {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
 }
 .cards header > i,
@@ -803,7 +835,31 @@ useAuthenticatedLoader(loadAutomations);
 }
 .panel header {
     display: flex;
+    align-items: center;
     justify-content: space-between;
+}
+.flow-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.flow-heading > span:last-child {
+    display: grid;
+    gap: 2px;
+}
+.flow-heading small {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+}
+.flow-heading-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+    color: white;
+    box-shadow: 0 6px 16px var(--color-focus-ring);
 }
 .panel a,
 .link {
@@ -821,12 +877,15 @@ useAuthenticatedLoader(loadAutomations);
 .steps {
     display: flex;
     align-items: center;
-    padding: 8px 4px;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 12px 6px 16px;
     gap: 0;
+    scrollbar-width: thin;
 }
 .steps > div {
     display: flex;
-    min-width: 0;
+    min-width: 150px;
     flex: 1;
     align-items: center;
     gap: 0;
@@ -854,18 +913,35 @@ useAuthenticatedLoader(loadAutomations);
 }
 
 .step-card {
+    position: relative;
     display: flex;
+    min-height: 156px;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 12px 8px;
+    border: 1px solid var(--color-border-subtle);
+    padding: 17px 10px 12px;
     border-radius: 12px;
+    background: linear-gradient(180deg, var(--color-card-bg), var(--color-surface-subtle));
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--color-text-primary) 5%, transparent);
     transition: background-color 180ms;
     width: 100%;
 }
 
 .step-card:hover {
-    background: var(--color-surface-subtle);
+    border-color: var(--color-primary-200);
+    box-shadow: 0 9px 20px color-mix(in srgb, var(--color-primary-600) 10%, transparent);
+    transform: translateY(-2px);
+}
+
+.step-index {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
 }
 
 .step-card i {
@@ -925,12 +1001,62 @@ useAuthenticatedLoader(loadAutomations);
     max-width: 100%;
 }
 
+.step-status {
+    margin-top: auto;
+    border-radius: 999px;
+    background: var(--color-workspace-background);
+    padding: 3px 8px;
+    color: var(--color-text-tertiary);
+    font-size: 10px;
+    font-weight: 800;
+}
+.steps > div.is-running .step-status {
+    background: var(--color-info-soft);
+    color: var(--color-info);
+}
+.steps > div.is-completed .step-status {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
 .step-connector {
     flex-shrink: 0;
-    color: var(--color-text-muted);
-    opacity: 0.35;
-    padding: 0 2px;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    margin: 0 -2px;
+    border: 1px solid var(--color-primary-100);
+    border-radius: 50%;
+    background: var(--color-card-bg);
+    color: var(--color-primary-500);
+    box-shadow: var(--shadow-card);
+    z-index: 1;
 }
+
+.flow-empty {
+    display: flex;
+    min-height: 172px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px dashed var(--color-border-default);
+    border-radius: 13px;
+    color: var(--color-text-tertiary);
+    text-align: center;
+}
+.flow-empty > span {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 13px;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+.flow-empty strong { color: var(--color-text-secondary); font-size: 13px; }
+.flow-empty small { font-size: 11px; }
 
 .records {
     border-left: 1px solid var(--color-border-subtle);

@@ -84,18 +84,13 @@ const openConversation = async (sessionId: string) => {
 
 <template>
     <aside
-        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] py-5 shadow-soft transition-[padding] duration-500 ease-out"
-        :class="store.sidebarCollapsed ? 'px-2' : 'px-4'"
+        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] px-4 py-5 shadow-soft"
     >
-        <div
-            class="mb-6 flex shrink-0 items-center"
-            :class="store.sidebarCollapsed ? 'justify-center' : 'gap-3'"
-        >
+        <div class="mb-6 flex shrink-0 items-center gap-3">
             <button
                 class="motion-button grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 shadow-lg shadow-blue-500/20 ring-1 ring-blue-100"
                 type="button"
                 title="Orion Home"
-                @click="store.sidebarCollapsed && store.toggleSidebar()"
             >
                 <img
                     class="h-full w-full object-cover"
@@ -103,7 +98,7 @@ const openConversation = async (sessionId: string) => {
                     alt="Orion Home"
                 />
             </button>
-            <div v-show="!store.sidebarCollapsed" class="min-w-0">
+            <div class="min-w-0">
                 <strong
                     class="block truncate text-xl font-extrabold text-blue-700"
                 >
@@ -115,15 +110,6 @@ const openConversation = async (sessionId: string) => {
                     Home Assistant
                 </span>
             </div>
-            <button
-                v-show="!store.sidebarCollapsed"
-                class="motion-button ml-auto grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-700"
-                type="button"
-                title="折叠菜单"
-                @click="store.toggleSidebar"
-            >
-                ‹
-            </button>
         </div>
 
         <nav class="grid shrink-0 gap-1">
@@ -131,14 +117,7 @@ const openConversation = async (sessionId: string) => {
                 v-for="item in menuItems"
                 :key="item.label"
                 class="motion-button relative flex h-11 items-center rounded-lg text-sm font-bold text-slate-700 transition duration-200 hover:bg-blue-50 hover:text-blue-700"
-                :class="[
-                    activeLabel === item.label
-                        ? 'bg-[var(--color-primary-100)] text-[var(--color-primary-700)] shadow-sm'
-                        : '',
-                    store.sidebarCollapsed
-                        ? 'justify-center px-0'
-                        : 'gap-3 px-3',
-                ]"
+                :class="activeLabel === item.label ? 'gap-3 bg-[var(--color-primary-100)] px-3 text-[var(--color-primary-700)] shadow-sm' : 'gap-3 px-3'"
                 type="button"
                 :title="item.label"
                 @focus="preloadMenu(item)"
@@ -146,7 +125,7 @@ const openConversation = async (sessionId: string) => {
                 @click="selectMenu(item)"
             >
                 <span
-                    v-if="activeLabel === item.label && !store.sidebarCollapsed"
+                    v-if="activeLabel === item.label"
                     class="absolute left-0 h-6 w-1 rounded-full bg-[var(--color-primary-600)]"
                 ></span>
                 <span
@@ -160,14 +139,14 @@ const openConversation = async (sessionId: string) => {
                 >
                     <SvgIcon :name="item.icon" />
                 </span>
-                <span v-show="!store.sidebarCollapsed" class="truncate">
+                <span class="truncate">
                     {{ item.label }}
                 </span>
             </button>
         </nav>
 
         <section
-            v-show="route.path === '/' && !store.sidebarCollapsed"
+            v-show="route.path === '/'"
             class="conversation-panel"
         >
             <div class="conversation-heading">
@@ -196,12 +175,7 @@ const openConversation = async (sessionId: string) => {
         </section>
 
         <button
-            class="mt-auto flex shrink-0 items-center overflow-hidden border border-[var(--color-border)] bg-[var(--color-card-bg)] shadow-sm transition-[width,height,transform,border-radius,padding] duration-500 ease-out"
-            :class="
-                store.sidebarCollapsed
-                    ? 'h-11 w-11 self-center justify-center gap-0 rounded-full p-0'
-                    : 'h-[74px] w-full justify-start gap-3 rounded-xl p-3'
-            "
+            class="mt-auto flex h-[74px] w-full shrink-0 items-center justify-start gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-sm"
             type="button"
             @click="authStore.openLogin"
         >
@@ -222,7 +196,7 @@ const openConversation = async (sessionId: string) => {
             >
                 {{ accountInitial }}
             </div>
-            <div v-show="!store.sidebarCollapsed" class="min-w-0">
+            <div class="min-w-0">
                 <strong class="block truncate text-sm">
                     {{
                         authStore.isAuthenticated
@@ -239,7 +213,6 @@ const openConversation = async (sessionId: string) => {
                 </span>
             </div>
             <span
-                v-show="!store.sidebarCollapsed"
                 class="ml-auto text-slate-400"
             >
                 ˅

@@ -27,7 +27,7 @@ import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { getErrorMessage } from "../utils/error";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
-import type { SettingsSectionId, SettingsState } from "../types/settings";
+import type { SettingsSectionId } from "../types/settings";
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
@@ -38,6 +38,7 @@ const addingMember = ref(false);
 const loadingMemberId = ref<number | null>(null);
 const initialAccountSnapshot = ref("");
 const initialIntegrationSnapshot = ref("");
+const initialPreferencesSnapshot = ref("");
 
 // 滚动监听
 const scrollContainer = ref<HTMLElement | null>(null);
@@ -114,8 +115,24 @@ const integrationSnapshot = computed(() =>
 const integrationDirty = computed(
     () => integrationSnapshot.value !== initialIntegrationSnapshot.value,
 );
+const preferencesSnapshot = computed(() =>
+    JSON.stringify({
+        appearance: settings.value.appearance,
+        aiAssistant: {
+            detailLevel: settings.value.aiAssistant.detailLevel,
+            autoExecuteLowRisk: settings.value.aiAssistant.autoExecuteLowRisk,
+            confirmHighRisk: settings.value.aiAssistant.confirmHighRisk,
+        },
+        notifications: settings.value.notifications,
+        security: settings.value.security,
+        autoBackup: settings.value.backup.autoBackup,
+    }),
+);
+const preferencesDirty = computed(
+    () => preferencesSnapshot.value !== initialPreferencesSnapshot.value,
+);
 const settingsDirty = computed(
-    () => accountDirty.value || integrationDirty.value,
+    () => accountDirty.value || integrationDirty.value || preferencesDirty.value,
 );
 const householdMembers = computed(() => settings.value.account.members ?? []);
 const members = computed<FamilyMember[]>(() =>
@@ -167,6 +184,10 @@ const syncIntegrationSnapshot = () => {
     initialIntegrationSnapshot.value = integrationSnapshot.value;
 };
 
+const syncPreferencesSnapshot = () => {
+    initialPreferencesSnapshot.value = preferencesSnapshot.value;
+};
+
 const selectSection = (section: SettingsSectionId) => {
     activeSection.value = section;
     document
@@ -197,6 +218,12 @@ const loadSettings = async () => {
         .catch((error: unknown) => {
             ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
         }),
+        settingsStore
+            .loadUserPreferences()
+            .then(syncPreferencesSnapshot)
+            .catch((error: unknown) => {
+                ElMessage.error(getErrorMessage(error, "用户偏好加载失败"));
+            }),
     ]);
 };
 
@@ -205,6 +232,7 @@ useAuthenticatedLoader(loadSettings);
 onMounted(() => {
     syncAccountForm();
     syncIntegrationSnapshot();
+    syncPreferencesSnapshot();
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     void nextTick(() => {
@@ -232,28 +260,12 @@ onBeforeRouteLeave(() => {
         return true;
     }
 
-    return window.confirm("账户与家庭信息有未保存修改，确定离开吗？");
+    return window.confirm("设置中心有未保存修改，确定离开吗？");
 });
 
-const exportSettings = () => {
-    const blob = new Blob(
-        [JSON.stringify(settingsStore.getExportSettings(), null, 2)],
-        { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
 
-    link.href = url;
-    link.download = `smart-home-settings-${Date.now()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    settingsStore.updateBackupTime();
-    ElMessage.success("配置已导出");
-};
 
-const importSettings = (nextSettings: SettingsState) => {
-    settingsStore.importSettings(nextSettings);
-};
+
 
 const saveAccountFamily = async () => {
     if (!emailPattern.test(accountForm.email.trim())) {
@@ -271,8 +283,9 @@ const saveAccountFamily = async () => {
             accountForm.address.trim() || null;
         settings.value.account.householdTimezone = accountForm.timezone;
         await settingsStore.saveAccountHome();
-        settingsStore.saveSettings();
+        await settingsStore.saveSettings();
         syncAccountForm();
+        syncPreferencesSnapshot();
         ElMessage.success("账户与家庭已保存");
     } catch (error) {
         ElMessage.error(getErrorMessage(error, "保存失败"));
@@ -286,8 +299,9 @@ const saveAllSettings = async () => {
 
     try {
         await settingsStore.saveAIModel();
-        settingsStore.saveSettings();
+        await settingsStore.saveSettings();
         syncIntegrationSnapshot();
+        syncPreferencesSnapshot();
     } catch (error) {
         ElMessage.error(
             getErrorMessage(error, "AI 助手配置保存失败"),
@@ -445,12 +459,10 @@ const removeMember = async (membershipId: number) => {
             >
                 <div class="flex items-center gap-3">
                     <span
-                        class="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-primary-600)] to-[var(--color-ai)] text-white shadow-sm"
+                        class="grid h-10 w-10 place-items-center rounded-xl text-[var(--color-info)] shadow-sm"
+                        style="background: var(--color-info-soft)"
                     >
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
+                        <SvgIcon name="settings" />
                     </span>
                     <div>
                         <h1
@@ -505,8 +517,6 @@ const removeMember = async (membershipId: number) => {
                     <SecuritySettingsCard :security="settings.security" />
                     <BackupSettingsCard
                         :backup="settings.backup"
-                        @export="exportSettings"
-                        @import="importSettings"
                     />
                 </div>
             </div>

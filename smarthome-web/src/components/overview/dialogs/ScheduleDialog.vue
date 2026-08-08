@@ -11,8 +11,14 @@ import {
     type ScheduleItem,
 } from "../../../api/overview";
 import { useLatestRequest } from "../../../composables/useLatestRequest";
+import { fetchScenes } from "../../../api/scenes";
+import { listAutomations } from "../../../api/automation";
+import { useSettingsStore } from "../../../stores/settings";
+import type { Scene } from "../../../types/scene";
+import type { AutomationListItem } from "../../../types/automation";
 
 const props = defineProps<{ modelValue: boolean }>();
+const settingsStore = useSettingsStore();
 const emit = defineEmits<{
     "update:modelValue": [value: boolean];
     saved: [value: HouseholdSchedule];
@@ -26,6 +32,10 @@ const enabled = ref(true);
 const repeatDays = ref([1, 2, 3, 4, 5]);
 const version = ref<number>();
 const selectedTargets = ref(["客厅", "玄关", "主卧"]);
+const availableScenes = ref<Scene[]>([]);
+const availableAutomations = ref<AutomationListItem[]>([]);
+const selectedSceneIds = ref<string[]>([]);
+const selectedAutomationIds = ref<number[]>([]);
 const editingIndex = ref<number | null>(null);
 const editorOpen = ref(false);
 const editor = reactive({ time: "07:00", name: "", detail: "", color: "#3478f6", enabled: true });
@@ -47,6 +57,8 @@ const load = async () => {
             enabled.value = result?.enabled ?? true;
             repeatDays.value = result?.repeatDays ?? [1, 2, 3, 4, 5];
             version.value = result?.version;
+            selectedSceneIds.value = result?.targets.scene_ids ?? [];
+            selectedAutomationIds.value = result?.targets.automation_ids ?? [];
             schedules.value = (result?.items?.length ? result.items : []).sort(
                 (a, b) => a.time.localeCompare(b.time),
             );
@@ -58,6 +70,18 @@ const load = async () => {
         },
     );
 };
+const loadAssociations = async () => {
+    const householdId = settingsStore.settings.account.householdId;
+    if (!householdId) return;
+    const [scenes, automations] = await Promise.all([
+        fetchScenes({ keyword: "", triggerType: "", enabled: "all" }),
+        listAutomations(householdId, { pageSize: 100 }),
+    ]);
+    availableScenes.value = scenes;
+    availableAutomations.value = automations.items;
+};
+const toggleScene = (id: string) => selectedSceneIds.value = selectedSceneIds.value.includes(id) ? selectedSceneIds.value.filter((item) => item !== id) : [...selectedSceneIds.value, id];
+const toggleAutomation = (id: number) => selectedAutomationIds.value = selectedAutomationIds.value.includes(id) ? selectedAutomationIds.value.filter((item) => item !== id) : [...selectedAutomationIds.value, id];
 
 const changeDate = (offset: number) => {
     selectedDate.value = new Date(selectedDate.value.getFullYear(), selectedDate.value.getMonth(), selectedDate.value.getDate() + offset);
@@ -84,7 +108,7 @@ const confirm = async () => {
     if (!repeatDays.value.length) return ElMessage.warning("请至少选择一个重复日期");
     loading.value = true;
     try {
-        const result = await saveSchedule(dateKey.value, { enabled: enabled.value, repeatDays: repeatDays.value, targets: {}, items: schedules.value.map((item, position) => ({ ...item, position })), ...(version.value ? { version: version.value } : {}) });
+        const result = await saveSchedule(dateKey.value, { enabled: enabled.value, repeatDays: repeatDays.value, targets: { scene_ids: selectedSceneIds.value, automation_ids: selectedAutomationIds.value }, items: schedules.value.map((item, position) => ({ ...item, position })), ...(version.value ? { version: version.value } : {}) });
         version.value = result.version;
         emit("saved", result);
         ElMessage.success("家庭日程已保存并同步到后端");
@@ -94,7 +118,7 @@ const confirm = async () => {
     } finally { loading.value = false; }
 };
 
-watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load(); }, { immediate: true });
+watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) { void load(); void loadAssociations(); } }, { immediate: true });
 </script>
 
 <template>
@@ -102,6 +126,8 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
         :model-value="modelValue"
         title="编辑家庭日程"
         description="管理家庭日程与自动化计划"
+        icon="calendar"
+        tone="orange"
         :width="860"
         :loading="loading"
         confirm-text="保存计划"
@@ -115,9 +141,11 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
                     <SvgIcon name="chevron-left" size="sm" />
                 </button>
                 <div class="date-info">
+                    <span class="date-calendar-icon"><SvgIcon name="calendar" /></span>
                     <strong>{{ dateLabel }}</strong>
                     <span v-if="isToday" class="today-badge"><i></i>今天</span>
                 </div>
+                <button v-if="!isToday" class="today-button" type="button" @click="selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())">回到今天</button>
                 <button class="date-arrow" type="button" aria-label="下一个日期" @click="changeDate(1)">
                     <SvgIcon name="chevron-right" size="sm" />
                 </button>
@@ -136,6 +164,17 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
                         <span class="count-badge">{{ schedules.length }} 个计划</span>
                     </header>
 
+                    <section v-if="editorOpen" class="plan-editor inline-editor">
+                        <header><div><b>{{ editingIndex === null ? "添加计划" : "编辑计划" }}</b><small>设置执行时间、名称与动作摘要</small></div><button type="button" @click="editorOpen = false"><SvgIcon name="close" size="sm" /></button></header>
+                        <div class="editor-grid">
+                            <label>执行时间<input v-model="editor.time" type="time" /></label>
+                            <label>计划名称<input v-model="editor.name" maxlength="30" placeholder="例如：回家模式" /></label>
+                            <label class="detail-field">动作摘要<input v-model="editor.detail" maxlength="100" placeholder="例如：玄关灯亮 · 空调制冷 26°C" /></label>
+                            <label>标记颜色<input v-model="editor.color" class="color-input" type="color" /></label>
+                        </div>
+                        <footer><button type="button" @click="editorOpen = false">取消</button><button class="save-editor" type="button" @click="saveEditor">保存计划</button></footer>
+                    </section>
+                    <template v-else>
                     <button class="add-plan" type="button" @click="openEditor()">
                         <SvgIcon name="plus" size="sm" /> 添加日程计划
                     </button>
@@ -153,6 +192,7 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
                                 <b>{{ item.name }}</b>
                                 <small>{{ item.detail }}</small>
                             </div>
+                            <span class="plan-state" :class="{ disabled: !item.enabled }">{{ item.enabled ? "启用" : "停用" }}</span>
                             <div class="row-actions">
                                 <button class="icon-btn" type="button" title="编辑" @click="openEditor(schedules.indexOf(item))">
                                     <SvgIcon name="edit" size="sm" />
@@ -162,7 +202,13 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
                                 </button>
                             </div>
                         </article>
+                        <div v-if="!loadingSchedule && !schedules.length" class="timeline-empty">
+                            <span><SvgIcon name="calendar" /></span>
+                            <b>当天暂无日程计划</b>
+                            <small>添加后将按照执行时间显示在这里</small>
+                        </div>
                     </div>
+                    </template>
                 </section>
 
                 <!-- 右栏：运行设置 -->
@@ -253,20 +299,28 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
                                 <i aria-hidden="true">✓</i>
                             </button>
                         </div>
+                        <div class="association-group">
+                            <div class="association-title"><SvgIcon name="scene" size="sm" /><span>场景模式</span><small>{{ selectedSceneIds.length }} 已选</small></div>
+                            <div class="association-options">
+                                <button v-for="scene in availableScenes" :key="scene.id" type="button" :class="{ active: selectedSceneIds.includes(scene.id) }" @click="toggleScene(scene.id)">
+                                    <SvgIcon :name="scene.icon || 'scene'" size="sm" />{{ scene.name }}
+                                </button>
+                                <span v-if="!availableScenes.length">暂无可用场景</span>
+                            </div>
+                        </div>
+                        <div class="association-group">
+                            <div class="association-title"><SvgIcon name="automation" size="sm" /><span>自动化规则</span><small>{{ selectedAutomationIds.length }} 已选</small></div>
+                            <div class="association-options">
+                                <button v-for="rule in availableAutomations" :key="rule.id" type="button" :class="{ active: selectedAutomationIds.includes(rule.id) }" @click="toggleAutomation(rule.id)">
+                                    <SvgIcon name="automation" size="sm" />{{ rule.name }}
+                                </button>
+                                <span v-if="!availableAutomations.length">暂无可用自动化</span>
+                            </div>
+                        </div>
                     </section>
                 </aside>
             </div>
 
-            <section v-if="editorOpen" class="plan-editor">
-                <header><div><b>{{ editingIndex === null ? "添加计划" : "编辑计划" }}</b><small>设置执行时间、场景名称与动作摘要</small></div><button type="button" @click="editorOpen = false"><SvgIcon name="close" size="sm" /></button></header>
-                <div class="editor-grid">
-                    <label>执行时间<input v-model="editor.time" type="time" /></label>
-                    <label>计划名称<input v-model="editor.name" maxlength="30" placeholder="例如：回家模式" /></label>
-                    <label class="detail-field">动作摘要<input v-model="editor.detail" maxlength="100" placeholder="例如：玄关灯亮 · 空调制冷 26°C" /></label>
-                    <label>标记颜色<input v-model="editor.color" class="color-input" type="color" /></label>
-                </div>
-                <footer><button type="button" @click="editorOpen = false">取消</button><button class="save-editor" type="button" @click="saveEditor">保存计划</button></footer>
-            </section>
         </div>
     </BaseSmartModal>
 </template>
@@ -280,6 +334,7 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
 
 /* ---------- 顶部日期导航 ---------- */
 .date-nav {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -293,6 +348,26 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
     );
     padding: 12px 16px;
     box-shadow: 0 8px 18px rgb(37 99 235 / 8%);
+}
+.date-calendar-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
+}
+.today-button {
+    position: absolute;
+    right: 54px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 8px;
+    background: var(--color-primary-50);
+    padding: 5px 9px;
+    color: var(--color-primary-600);
+    font-size: 11px;
+    font-weight: 800;
 }
 .date-arrow {
     display: grid;
@@ -344,7 +419,7 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
     display: grid;
     grid-template-columns: 1.25fr 1fr;
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
 }
 .panel-head {
     display: flex;
@@ -395,6 +470,9 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
 
 /* ---------- 左栏：计划时间线 ---------- */
 .timeline-panel {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
     border: 1px solid var(--color-border-default);
     border-radius: 14px;
     background: var(--color-panel-background);
@@ -403,6 +481,11 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
 .timeline {
     position: relative;
     display: grid;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-color: var(--color-border-strong) transparent;
+    scrollbar-width: thin;
 }
 .timeline::before {
     content: "";
@@ -416,13 +499,50 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
 }
 .timeline-row {
     display: grid;
-    grid-template-columns: 64px 24px minmax(0, 1fr) auto;
+    grid-template-columns: 64px 24px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 8px;
     padding: 10px 0;
     border-radius: 10px;
     transition: background 0.2s ease;
 }
+.timeline-panel > .timeline,
+.timeline-panel > .inline-editor {
+    flex: 1;
+}
+.plan-state {
+    border-radius: 999px;
+    background: var(--color-success-soft);
+    padding: 3px 7px;
+    color: var(--color-success);
+    font-size: 10px;
+    font-weight: 800;
+}
+.plan-state.disabled {
+    background: var(--color-workspace-background);
+    color: var(--color-text-muted);
+}
+.timeline-empty {
+    display: flex;
+    min-height: 190px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--color-text-tertiary);
+    text-align: center;
+}
+.timeline-empty > span {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 14px;
+    background: var(--tone-orange-soft);
+    color: var(--tone-orange);
+}
+.timeline-empty b { color: var(--color-text-secondary); font-size: 13px; }
+.timeline-empty small { font-size: 11px; }
 .timeline-row:hover {
     background: var(--color-surface-hover);
 }
@@ -497,12 +617,33 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
 }
 
 .plan-editor {
+    position: relative;
     border: 1px solid var(--color-primary-200);
     border-radius: 14px;
     background: linear-gradient(135deg, var(--color-card-bg), var(--tone-primary-soft));
     padding: 14px;
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--color-primary-600) 14%, transparent);
+    animation: editor-enter 180ms var(--motion-ease) both;
 }
+.inline-editor {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-color: var(--tone-orange);
+    background: linear-gradient(145deg, var(--color-card-bg), var(--tone-orange-soft));
+    box-shadow: none;
+}
+.inline-editor .editor-grid {
+    grid-template-columns: 130px minmax(0, 1fr);
+}
+.inline-editor .detail-field {
+    grid-column: 1 / -1;
+}
+.inline-editor .color-input {
+    min-height: 42px;
+}
+@keyframes editor-enter { from { opacity: 0; transform: translateY(8px); } }
 .plan-editor header,
 .plan-editor footer {
     display: flex;
@@ -720,6 +861,50 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
     color: white;
     background: var(--tone-primary);
 }
+.association-group {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+    border-top: 1px dashed var(--color-border-subtle);
+    padding-top: 11px;
+}
+.association-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+}
+.association-title svg { color: var(--color-primary-600); }
+.association-title small { margin-left: auto; color: var(--color-text-tertiary); font-size: 10px; }
+.association-options {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: thin;
+}
+.association-options button {
+    display: inline-flex;
+    min-width: max-content;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 9px;
+    background: var(--color-card-bg);
+    padding: 6px 9px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 800;
+}
+.association-options button.active {
+    border-color: var(--color-primary-500);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+    box-shadow: inset 3px 0 0 var(--color-primary-600);
+}
+.association-options > span { color: var(--color-text-muted); font-size: 11px; }
 
 /* ---------- 响应式 ---------- */
 @media (max-width: 760px) {
@@ -729,10 +914,15 @@ watch([() => props.modelValue, dateKey], ([visible]) => { if (visible) void load
     .timeline-row {
         grid-template-columns: 56px 20px minmax(0, 1fr) auto;
     }
+    .plan-state { display: none; }
+    .today-button { position: static; }
     .timeline::before {
         left: calc(56px + 8px + 5px);
     }
     .editor-grid {
+        grid-template-columns: 1fr;
+    }
+    .inline-editor .editor-grid {
         grid-template-columns: 1fr;
     }
     .editor-grid .detail-field {

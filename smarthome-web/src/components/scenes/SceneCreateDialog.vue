@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
+import { ElMessage } from "element-plus";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { listDevices } from "../../api/device";
+import { fetchRooms } from "../../api/room";
+import { getDeviceTypeIcon } from "../device/deviceMeta";
+import type { Device } from "../../types/device";
+import type { Room } from "../../types/room";
 import type { Scene, SceneInput, SceneTriggerType } from "../../types/scene";
 
 interface ActionItem {
@@ -54,6 +60,67 @@ const form = reactive<FormState>({ ...defaultForm });
 const defaultActions: ActionItem[] = [];
 
 const actions = ref<ActionItem[]>(defaultActions.map((action) => ({ ...action })));
+const availableRooms = ref<Room[]>([]);
+const availableDevices = ref<Device[]>([]);
+const optionsLoading = ref(false);
+const roomPickerOpen = ref(false);
+const devicePickerOpen = ref(false);
+
+const visibleDevices = computed(() =>
+    form.rooms.length
+        ? availableDevices.value.filter((device) => form.rooms.includes(device.room))
+        : availableDevices.value,
+);
+
+const loadAssociationOptions = async () => {
+    optionsLoading.value = true;
+    try {
+        const [roomResult, deviceResult] = await Promise.all([
+            fetchRooms(),
+            listDevices({
+                page: 1,
+                pageSize: 100,
+                keyword: "",
+                type: "",
+                status: "",
+                room: "",
+            }),
+        ]);
+        availableRooms.value = roomResult.items;
+        availableDevices.value = deviceResult.items;
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "房间与设备加载失败");
+    } finally {
+        optionsLoading.value = false;
+    }
+};
+
+const toggleRoom = (room: Room) => {
+    form.rooms = form.rooms.includes(room.name)
+        ? form.rooms.filter((name) => name !== room.name)
+        : [...form.rooms, room.name];
+};
+
+const removeRoom = (roomName: string) => {
+    form.rooms = form.rooms.filter((name) => name !== roomName);
+};
+
+const toggleDevice = (device: Device) => {
+    const deviceId = device.deviceId ?? String(device.id);
+    if (actions.value.some((action) => action.id === deviceId)) {
+        actions.value = actions.value.filter((action) => action.id !== deviceId);
+        return;
+    }
+    actions.value = [
+        ...actions.value,
+        {
+            id: deviceId,
+            icon: device.icon || getDeviceTypeIcon(device.type),
+            name: device.name,
+            target: `${device.room} · 执行设备动作`,
+        },
+    ];
+};
 
 const iconOptions = [
     { value: "home", label: "回家" },
@@ -133,6 +200,9 @@ watch(
         if (!open) return;
         if (props.scene) populateScene(props.scene);
         else resetForm();
+        roomPickerOpen.value = false;
+        devicePickerOpen.value = false;
+        void loadAssociationOptions();
     },
     { immediate: true },
 );
@@ -365,20 +435,52 @@ const dialogFooterHint = computed(() =>
                             <div class="chips">
                                 <em v-for="room in form.rooms" :key="room">
                                     {{ room }}
-                                    <button type="button" class="chip-remove" title="移除">×</button>
+                                    <button type="button" class="chip-remove" title="移除" @click="removeRoom(room)">×</button>
                                 </em>
-                                <button type="button" class="chip-add">+ 添加房间</button>
+                                <button type="button" class="chip-add" @click="roomPickerOpen = !roomPickerOpen">+ 添加房间</button>
+                            </div>
+                            <div v-if="roomPickerOpen" class="association-picker">
+                                <span v-if="optionsLoading" class="picker-empty">正在加载房间...</span>
+                                <span v-else-if="availableRooms.length === 0" class="picker-empty">暂无可关联房间</span>
+                                <button
+                                    v-for="room in availableRooms"
+                                    v-else
+                                    :key="room.id"
+                                    type="button"
+                                    :class="{ active: form.rooms.includes(room.name) }"
+                                    @click="toggleRoom(room)"
+                                >
+                                    <SvgIcon name="room" size="sm" />
+                                    <span>{{ room.name }}</span>
+                                    <small>{{ room.deviceCount }} 个设备</small>
+                                </button>
                             </div>
                         </label>
                         <label class="form-field">
                             <span class="field-label">关联设备</span>
-                            <button class="select-device" type="button">
+                            <button class="select-device" type="button" @click="devicePickerOpen = !devicePickerOpen">
                                 <span class="device-count">
                                     <SvgIcon name="device-management" size="sm" />
                                     共 {{ actions.length }} 个设备
                                 </span>
                                 <SvgIcon name="chevron-right" size="sm" />
                             </button>
+                            <div v-if="devicePickerOpen" class="association-picker device-picker">
+                                <span v-if="optionsLoading" class="picker-empty">正在加载设备...</span>
+                                <span v-else-if="visibleDevices.length === 0" class="picker-empty">当前房间暂无设备</span>
+                                <button
+                                    v-for="device in visibleDevices"
+                                    v-else
+                                    :key="device.id"
+                                    type="button"
+                                    :class="{ active: actions.some((action) => action.id === (device.deviceId ?? String(device.id))) }"
+                                    @click="toggleDevice(device)"
+                                >
+                                    <SvgIcon :name="device.icon || getDeviceTypeIcon(device.type)" size="sm" />
+                                    <span>{{ device.name }}</span>
+                                    <small>{{ device.room }}</small>
+                                </button>
+                            </div>
                         </label>
                     </div>
                 </section>
@@ -400,12 +502,12 @@ const dialogFooterHint = computed(() =>
                                 <strong>{{ action.name }}</strong>
                                 <small>{{ action.target }}</small>
                             </div>
-                            <button type="button" class="action-more" title="更多操作">
-                                <SvgIcon name="more" size="sm" />
+                            <button type="button" class="action-more" title="移除动作" @click="actions = actions.filter((item) => item.id !== action.id)">
+                                ×
                             </button>
                         </li>
                     </ol>
-                    <button class="add-action" type="button">
+                    <button class="add-action" type="button" @click="devicePickerOpen = true">
                         <SvgIcon name="plus" size="sm" />
                         添加执行动作
                     </button>
@@ -607,6 +709,15 @@ const dialogFooterHint = computed(() =>
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+.room-device-row {
+    align-items: start;
+}
+
+.room-device-row .form-field {
+    min-width: 0;
+    align-content: start;
 }
 
 .form-field {
@@ -841,6 +952,8 @@ textarea {
 /* ── 房间标签 ── */
 .chips {
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
     flex-wrap: wrap;
     gap: 6px;
     min-height: 36px;
@@ -926,6 +1039,64 @@ textarea {
     align-items: center;
     gap: 6px;
     color: var(--color-text-secondary);
+}
+
+.association-picker {
+    display: grid;
+    width: 100%;
+    box-sizing: border-box;
+    max-height: 180px;
+    gap: 5px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    background: var(--color-card-bg);
+    padding: 6px;
+    box-shadow: var(--shadow-card);
+}
+
+.association-picker button {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    border-radius: 7px;
+    padding: 7px 8px;
+    color: var(--color-text-secondary);
+    text-align: left;
+    transition: background 160ms var(--motion-ease), color 160ms var(--motion-ease), box-shadow 160ms var(--motion-ease);
+}
+
+.association-picker button:hover,
+.association-picker button.active {
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.association-picker button.active {
+    box-shadow: inset 0 0 0 1px var(--color-primary-200);
+}
+
+.association-picker button span {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.association-picker button small,
+.picker-empty {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.picker-empty {
+    padding: 12px;
+    text-align: center;
 }
 
 /* ── 执行动作列表 ── */

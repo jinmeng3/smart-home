@@ -64,8 +64,17 @@ onMounted(() => {
         <section class="device-management-page page-shell page-enter">
             <header class="device-page-header">
                 <div class="device-page-title">
-                    <h1>设备管理</h1>
-                    <p>统一管理家庭设备、状态、分组与接入平台</p>
+                    <span
+                        class="page-header-icon"
+                        style="background: var(--color-warning-soft); color: var(--color-device-light)"
+                        aria-hidden="true"
+                    >
+                        <SvgIcon name="device-management" />
+                    </span>
+                    <div>
+                        <h1>设备管理</h1>
+                        <p>统一管理家庭设备、状态、分组与接入平台</p>
+                    </div>
                 </div>
 
                 <DeviceToolbar
@@ -320,6 +329,19 @@ onMounted(() => {
 
 .device-page-title {
     position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.device-page-title .page-header-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
 }
 
 .device-page-title::after {

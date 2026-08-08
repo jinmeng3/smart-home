@@ -1,5 +1,9 @@
 import { apiRequest } from "./client";
-import type { HouseholdMember, HouseholdRole } from "../types/settings";
+import type {
+  HouseholdMember,
+  HouseholdRole,
+  UserPreferences,
+} from "../types/settings";
 
 // ── DTO 类型 ──────────────────────────────────────────────────────────────────────
 
@@ -135,4 +139,13 @@ export const updateMemberRole = async (
 export const deleteMember = (householdId: number, membershipId: number) =>
   apiRequest<void>(`/api/households/${householdId}/members/${membershipId}`, {
     method: "DELETE",
+  });
+
+export const getUserPreferences = () =>
+  apiRequest<UserPreferences>("/api/account/me/preferences");
+
+export const updateUserPreferences = (payload: UserPreferences) =>
+  apiRequest<UserPreferences>("/api/account/me/preferences", {
+    method: "PUT",
+    body: JSON.stringify(payload),
   });

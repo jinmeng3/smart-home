@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AutomationRule } from "./dialogs/AutomationFormDialog.vue";
+import type { ExecutionRecord } from "../../types/automation";
 import { defineAsyncDialog } from "../../utils/asyncDialog";
 
 const AutomationFormDialog = defineAsyncDialog(
@@ -33,6 +34,8 @@ const props = defineProps<{
     modelValue: AutomationDialog;
     rule?: AutomationRule;
     rules: AutomationRule[];
+    executions?: ExecutionRecord[];
+    selectedRuleName?: string;
 }>();
 
 const emit = defineEmits<{
@@ -43,6 +46,10 @@ const emit = defineEmits<{
             name: string;
             description: string;
             trigger: string;
+            deviceIds: number[];
+            rooms: string[];
+            delay: number;
+            note: string;
         },
     ];
     batch: [ids: number[]];
@@ -74,6 +81,8 @@ const close = () => emit("update:modelValue", null);
     <AutomationLogsDialog
         v-else-if="modelValue === 'logs'"
         :model-value="true"
+        :executions="executions ?? []"
+        :rule-name="selectedRuleName ?? ''"
         @update:model-value="close"
     />
     <AutomationScheduleDialog

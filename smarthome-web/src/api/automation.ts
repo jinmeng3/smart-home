@@ -63,6 +63,11 @@ export const updateAutomation = (automationId: number, payload: AutomationUpdate
     body: JSON.stringify(payload),
   });
 
+export const deleteAutomation = (automationId: number) =>
+  apiRequest<void>(`/api/automations/${automationId}`, {
+    method: "DELETE",
+  });
+
 export const toggleAutomationEnabled = (automationId: number, enabled: boolean) =>
   apiRequest<EnabledRead>(`/api/automations/${automationId}/enabled`, {
     method: "PATCH",

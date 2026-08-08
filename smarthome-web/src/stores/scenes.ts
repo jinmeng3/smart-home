@@ -106,12 +106,7 @@ export const useScenesStore = defineStore("scenes", () => {
         scenes.value = scenes.value.map((item) =>
             item.id === sceneId ? { ...item, ...updated } : item,
         );
-        if (summary.value) {
-            summary.value = {
-                ...summary.value,
-                enabled: summary.value.enabled + (enabled ? 1 : -1),
-            };
-        }
+        summary.value = await fetchSceneSummary();
     };
 
     const runScene = async (scene: Scene, confirmHighRisk: boolean) => {

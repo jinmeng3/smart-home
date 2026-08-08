@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -6,7 +8,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
 from app.core.config import Settings, get_settings
 from app.models.user import User
-from app.schemas.account import AccountRead, AccountUpdate, AvatarResponse
+from app.models.user_preferences import UserPreferences
+from app.schemas.account import (
+    AccountRead,
+    AccountUpdate,
+    AvatarResponse,
+    UserPreferencesWrite,
+)
 from app.schemas.common import ApiResponse
 from app.services.avatar import delete_avatar_file, save_avatar_file
 
@@ -60,6 +68,37 @@ def update_me(
         ) from exc
     db.refresh(current_user)
     return ApiResponse(data=current_user)
+
+
+@router.get("/me/preferences", response_model=ApiResponse[UserPreferencesWrite])
+def read_preferences(
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[UserPreferencesWrite]:
+    preferences = db.get(UserPreferences, current_user.id)
+    if not preferences:
+        return ApiResponse(data=UserPreferencesWrite())
+    try:
+        data = json.loads(preferences.preferences_json)
+    except json.JSONDecodeError:
+        data = {}
+    return ApiResponse(data=UserPreferencesWrite.model_validate(data))
+
+
+@router.put("/me/preferences", response_model=ApiResponse[UserPreferencesWrite])
+def update_preferences(
+    payload: UserPreferencesWrite,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[UserPreferencesWrite]:
+    preferences = db.get(UserPreferences, current_user.id)
+    serialized = json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)
+    if preferences:
+        preferences.preferences_json = serialized
+    else:
+        db.add(UserPreferences(user_id=current_user.id, preferences_json=serialized))
+    db.commit()
+    return ApiResponse(data=payload, message="saved")
 
 
 # === 头像 ===

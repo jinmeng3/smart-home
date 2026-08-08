@@ -4,12 +4,21 @@ import {
     listAutomations as apiListAutomations,
     createAutomation as apiCreateAutomation,
     updateAutomation as apiUpdateAutomation,
+    deleteAutomation as apiDeleteAutomation,
     toggleAutomationEnabled as apiToggleEnabled,
     executeAutomation as apiExecuteAutomation,
     batchEnableAutomations as apiBatchEnable,
     batchSetAutomationSchedule as apiBatchSchedule,
+    getAutomation as apiGetAutomation,
+    listAutomationExecutions as apiListExecutions,
 } from "../api/automation";
-import type { AutomationCreate, AutomationUpdate } from "../types/automation";
+import type {
+    AutomationCreate,
+    AutomationRule,
+    AutomationSummary,
+    AutomationUpdate,
+    ExecutionRecord,
+} from "../types/automation";
 import type { LoadingState } from "../types/loading";
 import { sleep } from "../utils/async";
 
@@ -47,6 +56,10 @@ export interface AutomationInput {
     name: string;
     description: string;
     trigger: string;
+    deviceIds: number[];
+    rooms: string[];
+    delay: number;
+    note: string;
 }
 
 /** 触发类型映射：后端 triggerType → 前端显示文字 / 图标 / 色调 */
@@ -64,24 +77,12 @@ const DEFAULT_TRIGGER_META = { label: "手动触发", icon: "automation", tone: 
 
 /** 触发显示标签 → 图标/色调 */
 const TRIGGER_DISPLAY_META: Record<string, { icon: string; tone: string }> = {
+    "设备状态变化": { icon: "sensor", tone: "orange" },
     "位置触发": { icon: "location", tone: "blue" },
     "时间触发": { icon: "clock", tone: "purple" },
     "设备状态": { icon: "sensor", tone: "orange" },
     "手动触发": { icon: "automation", tone: "green" },
 };
-
-/** 设备动作模板（按顺序生成执行步骤） */
-const DEVICE_ACTIONS: Array<{
-    icon: string;
-    tone: string;
-    name: string;
-    description: string;
-}> = [
-    { icon: "light", tone: "orange", name: "打开灯光", description: "客厅灯、玄关灯" },
-    { icon: "curtain", tone: "teal", name: "关闭窗帘", description: "客厅窗帘" },
-    { icon: "air-conditioner", tone: "blue", name: "设置空调", description: "制冷 26°C" },
-    { icon: "security", tone: "purple", name: "安防模式", description: "回家模式" },
-];
 
 /** 模板规则池：导入与推荐模板共用 */
 const TEMPLATE_POOL: Array<Omit<AutomationDisplayRule, "id" | "enabled">> = [
@@ -114,20 +115,28 @@ const toDisplayRule = (item: {
 };
 
 /** 根据规则生成流程步骤：触发条件 + 设备动作 */
-export const buildAutomationSteps = (rule: AutomationDisplayRule): AutomationStep[] => {
+export const buildAutomationSteps = (
+    rule: AutomationDisplayRule,
+    detail?: AutomationRule | null,
+): AutomationStep[] => {
     const trigger = TRIGGER_DISPLAY_META[rule.trigger] ?? { icon: "automation", tone: "blue" };
-    const steps: AutomationStep[] = [
-        {
-            id: `trigger-${rule.id}`,
-            name: rule.trigger,
-            description: rule.description,
-            icon: trigger.icon,
-            tone: trigger.tone,
-        },
-    ];
-    const count = Math.min(Math.max(rule.devices, 1), DEVICE_ACTIONS.length);
-    DEVICE_ACTIONS.slice(0, count).forEach((action, index) => {
-        steps.push({ id: `action-${rule.id}-${index}`, ...action });
+    const triggerConfig = detail?.triggers[0]?.config ?? {};
+    const steps: AutomationStep[] = [{
+        id: `trigger-${rule.id}`,
+        name: rule.trigger,
+        description: String(triggerConfig.description ?? rule.description),
+        icon: trigger.icon,
+        tone: trigger.tone,
+    }];
+    detail?.actions.forEach((action, index) => {
+        const config = action.config;
+        steps.push({
+            id: `action-${rule.id}-${index}`,
+            name: String(config.name ?? config.command ?? `执行动作 ${index + 1}`),
+            description: String(config.deviceName ?? config.description ?? `设备 #${action.deviceId ?? "未指定"}`),
+            icon: "device-management",
+            tone: index % 2 ? "teal" : "orange",
+        });
     });
     return steps;
 };
@@ -144,6 +153,9 @@ export const useAutomationsStore = defineStore("automations", () => {
     const loading = ref<LoadingState>("idle");
     const runningId = ref<number | null>(null);
     const selectedId = ref<number | null>(null);
+    const selectedDetail = ref<AutomationRule | null>(null);
+    const executions = ref<ExecutionRecord[]>([]);
+    const backendSummary = ref<AutomationSummary | null>(null);
     const stepStatuses = ref<Record<string, AutomationStepStatus>>({});
 
     const selectedAutomation = computed(() =>
@@ -162,20 +174,14 @@ export const useAutomationsStore = defineStore("automations", () => {
         ),
     );
 
-    const stats = computed(() => ({
-        enabled: automations.value.filter((item) => item.enabled).length,
-        total: automations.value.length,
-        running: runningId.value
-            ? automations.value.filter((item) => item.id === runningId.value).length
-            : 0,
-        executionsToday: 36,
-        abnormal: 1,
+    const stats = computed(() => backendSummary.value ?? ({
+        enabled: 0, total: 0, running: 0, executionsToday: 0, abnormal: 0,
     }));
 
     const resetStepStatuses = () => {
         const rule = selectedAutomation.value;
         stepStatuses.value = rule
-            ? buildAutomationSteps(rule).reduce<Record<string, AutomationStepStatus>>(
+            ? buildAutomationSteps(rule, selectedDetail.value).reduce<Record<string, AutomationStepStatus>>(
                   (record, step) => {
                       record[step.id] = "pending";
                       return record;
@@ -183,6 +189,23 @@ export const useAutomationsStore = defineStore("automations", () => {
                   {},
               )
             : {};
+    };
+
+    const loadSelectedAutomation = async () => {
+        if (!selectedId.value) {
+            selectedDetail.value = null;
+            executions.value = [];
+            return;
+        }
+        const ruleId = selectedId.value;
+        const [detail, history] = await Promise.all([
+            apiGetAutomation(ruleId),
+            apiListExecutions(ruleId, { pageSize: 10 }),
+        ]);
+        if (selectedId.value !== ruleId) return;
+        selectedDetail.value = detail;
+        executions.value = history.items;
+        resetStepStatuses();
     };
 
     const loadAutomations = async () => {
@@ -197,6 +220,7 @@ export const useAutomationsStore = defineStore("automations", () => {
                         : filters.enabled === "true",
             });
             automations.value = result.items.map(toDisplayRule);
+            backendSummary.value = result.summary;
             if (
                 !selectedId.value ||
                 !automations.value.some((item) => item.id === selectedId.value)
@@ -204,6 +228,7 @@ export const useAutomationsStore = defineStore("automations", () => {
                 selectedId.value = automations.value[0]?.id ?? null;
             }
             resetStepStatuses();
+            await loadSelectedAutomation();
             loading.value = "success";
         } catch (error) {
             loading.value = "error";
@@ -213,13 +238,17 @@ export const useAutomationsStore = defineStore("automations", () => {
 
     const selectAutomation = (ruleId: number) => {
         selectedId.value = ruleId;
+        selectedDetail.value = null;
+        executions.value = [];
         resetStepStatuses();
+        void loadSelectedAutomation().catch(() => undefined);
     };
 
     const setAutomationEnabled = async (ruleId: number, enabled: boolean) => {
         await apiToggleEnabled(ruleId, enabled);
         const rule = automations.value.find((item) => item.id === ruleId);
         if (rule) rule.enabled = enabled;
+        if (backendSummary.value) backendSummary.value.enabled += enabled ? 1 : -1;
     };
 
     const runAutomation = async (rule: AutomationDisplayRule) => {
@@ -229,7 +258,7 @@ export const useAutomationsStore = defineStore("automations", () => {
         resetStepStatuses();
         try {
             const next = { ...stepStatuses.value };
-            for (const step of buildAutomationSteps(rule)) {
+            for (const step of buildAutomationSteps(rule, selectedDetail.value)) {
                 next[step.id] = "running";
                 stepStatuses.value = next;
                 await sleep(220);
@@ -237,6 +266,8 @@ export const useAutomationsStore = defineStore("automations", () => {
                 stepStatuses.value = next;
             }
             await apiExecuteAutomation(rule.id);
+            await loadSelectedAutomation();
+            await loadAutomations();
         } finally {
             runningId.value = null;
         }
@@ -249,8 +280,13 @@ export const useAutomationsStore = defineStore("automations", () => {
         const createPayload: AutomationCreate = {
             name: payload.name,
             description: payload.description,
-            triggers: [{ type: meta?.[0] ?? "manual", config: {} }],
-            actions: [{ type: "device_command", position: 0, deviceId: null, config: {} }],
+            triggers: [{ type: payload.trigger === "设备状态变化" ? "device" : meta?.[0] ?? "manual", config: {} }],
+            actions: payload.deviceIds.map((deviceId, position) => ({
+                type: "device_command", position, deviceId,
+                config: { command: "turn_on" },
+            })),
+            delaySeconds: payload.delay,
+            note: payload.note || payload.rooms.join("、"),
         };
         const created = await apiCreateAutomation(1, createPayload);
         const rule = toDisplayRule(created);
@@ -270,7 +306,13 @@ export const useAutomationsStore = defineStore("automations", () => {
         const updatePayload: AutomationUpdate = {
             name: payload.name,
             description: payload.description,
-            triggers: [{ type: meta?.[0] ?? "manual", config: {} }],
+            triggers: [{ type: payload.trigger === "设备状态变化" ? "device" : meta?.[0] ?? "manual", config: {} }],
+            actions: payload.deviceIds.map((deviceId, position) => ({
+                type: "device_command", position, deviceId,
+                config: { command: "turn_on" },
+            })),
+            delaySeconds: payload.delay,
+            note: payload.note || payload.rooms.join("、"),
         };
         const updated = await apiUpdateAutomation(rule.id, updatePayload);
         Object.assign(rule, {
@@ -282,13 +324,8 @@ export const useAutomationsStore = defineStore("automations", () => {
     };
 
     const removeAutomation = async (rule: AutomationDisplayRule) => {
-        // 后端没有 delete 前端用 PATCH 停用代替
-        await apiToggleEnabled(rule.id, false);
-        automations.value = automations.value.filter((item) => item.id !== rule.id);
-        if (selectedId.value === rule.id) {
-            selectedId.value = automations.value[0]?.id ?? null;
-        }
-        resetStepStatuses();
+        await apiDeleteAutomation(rule.id);
+        await loadAutomations();
     };
 
     const duplicateAutomation = async (rule: AutomationDisplayRule) => {
@@ -380,10 +417,13 @@ export const useAutomationsStore = defineStore("automations", () => {
         runningId,
         selectedId,
         selectedAutomation,
+        selectedDetail,
+        executions,
         stepStatuses,
         visible,
         stats,
         loadAutomations,
+        loadSelectedAutomation,
         selectAutomation,
         setAutomationEnabled,
         runAutomation,

@@ -12,7 +12,7 @@ defineProps<{
 </script>
 
 <template>
-    <article class="stats-card" :class="tone">
+    <article class="stats-card" :class="`stats-card--${tone}`">
         <i><SvgIcon :name="icon" /></i>
         <span>
             {{ label }}
@@ -52,27 +52,27 @@ defineProps<{
     background: var(--color-primary-100);
 }
 
-.stats-card.blue i {
+.stats-card--blue i {
     background: var(--color-primary-100);
     color: var(--color-primary-700);
 }
 
-.stats-card.green i {
+.stats-card--green i {
     background: var(--color-success-soft);
     color: var(--color-success);
 }
 
-.stats-card.orange i {
+.stats-card--orange i {
     background: var(--color-warning-soft);
     color: var(--color-warning);
 }
 
-.stats-card.purple i {
+.stats-card--purple i {
     background: var(--color-secondary-soft);
     color: var(--color-secondary-600);
 }
 
-.stats-card.red i {
+.stats-card--red i {
     background: var(--color-danger-soft);
     color: var(--color-danger);
 }
@@ -109,11 +109,11 @@ defineProps<{
     color: var(--color-text-tertiary);
 }
 
-.stats-card.green em {
+.stats-card--green em {
     color: var(--color-success);
 }
 
-.stats-card.orange em {
+.stats-card--orange em {
     color: var(--color-warning);
 }
 

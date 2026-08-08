@@ -83,7 +83,10 @@ onMounted(() => {
     systemThemeQuery.addEventListener("change", systemThemeHandler);
 
     if (authStore.isAuthenticated) {
-        void settingsStore.loadAccountHome().catch(() => undefined);
+        void Promise.all([
+            settingsStore.loadAccountHome(),
+            settingsStore.loadUserPreferences(),
+        ]).catch(() => undefined);
     }
 });
 
@@ -100,12 +103,7 @@ onUnmounted(() => {
         <SvgCore />
         <component :is="SvgSprite" v-if="extrasLoaded" />
         <div
-            class="app-shell grid h-full gap-2 bg-[radial-gradient(circle_at_20%_10%,var(--color-brand-glow),transparent_28%),linear-gradient(135deg,var(--color-page-bg)_0%,var(--color-sidebar-bg)_100%)] p-2 transition-[grid-template-columns] duration-500 ease-out"
-            :class="
-                store.sidebarCollapsed
-                    ? 'grid-cols-[72px_minmax(0,1fr)_330px]'
-                    : 'grid-cols-[240px_minmax(0,1fr)_330px]'
-            "
+            class="app-shell grid h-full grid-cols-[240px_minmax(0,1fr)_330px] gap-2 bg-[radial-gradient(circle_at_20%_10%,var(--color-brand-glow),transparent_28%),linear-gradient(135deg,var(--color-page-bg)_0%,var(--color-sidebar-bg)_100%)] p-2"
         >
             <Sidebar />
             <RouterView v-slot="{ Component, route }">

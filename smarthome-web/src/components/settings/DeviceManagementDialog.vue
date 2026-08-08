@@ -60,6 +60,7 @@ const revokeDevice = async (deviceId: number) => {
         title="登录设备管理"
         description="管理当前账户已记录的登录设备"
         icon="device-management"
+        tone="teal"
         @update:model-value="emit('update:modelValue', $event)"
     >
 

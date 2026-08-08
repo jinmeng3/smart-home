@@ -91,6 +91,7 @@ class DeviceSync(BaseModel):
 
 class DeviceRead(DeviceSchema):
     id: int
+    device_id: str
     name: str
     room: str
     type: str
@@ -113,7 +114,6 @@ class DeviceLogRead(DeviceSchema):
 
 
 class DeviceDetailRead(DeviceRead):
-    device_id: str
     created_at: datetime
     updated_at: datetime
 

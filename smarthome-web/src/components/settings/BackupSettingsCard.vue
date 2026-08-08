@@ -4,26 +4,17 @@ import { ElMessage } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import { useSettingsStore } from "../../stores/settings";
-import type { BackupSettings, SettingsState } from "../../types/settings";
+import type { BackupSettings } from "../../types/settings";
 import BaseSwitch from "../BaseSwitch.vue";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 
 defineProps<{
     backup: BackupSettings;
 }>();
 
-const emit = defineEmits<{
-    export: [];
-    import: [settings: SettingsState];
-}>();
-
 const settingsStore = useSettingsStore();
-const fileInput = ref<HTMLInputElement | null>(null);
 const historyVisible = ref(false);
-
-const selectBackupFile = () => {
-    fileInput.value?.click();
-};
 
 const runBackup = (type: "manual" | "auto") => {
     settingsStore.recordBackup(
@@ -33,74 +24,30 @@ const runBackup = (type: "manual" | "auto") => {
     ElMessage.success(type === "auto" ? "自动备份已完成" : "备份已完成");
 };
 
-const readBackupFile = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
 
-    if (!file) {
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-        try {
-            emit("import", JSON.parse(String(reader.result)) as SettingsState);
-            ElMessage.success("配置已导入");
-        } catch {
-            ElMessage.error("备份文件格式不正确");
-        } finally {
-            target.value = "";
-        }
-    };
-
-    reader.readAsText(file);
-};
 </script>
 
 <template>
     <SettingsSectionCard id="backup" icon="backup" title="备份恢复" tone="success">
-        <div class="settings-field">
-            <span>导出配置</span>
-            <button
-                class="secondary-button"
-                type="button"
-                @click="emit('export')"
-            >
-                导出
-            </button>
-        </div>
-        <div class="settings-field">
-            <span>导入备份</span>
-            <button
-                class="secondary-button"
-                type="button"
-                @click="selectBackupFile"
-            >
-                导入
-            </button>
-            <input
-                ref="fileInput"
-                class="hidden"
-                accept="application/json"
-                type="file"
-                @change="readBackupFile"
-            />
-        </div>
-        <div class="settings-field">
-            <span>自动备份</span>
+        <div class="backup-feature-list">
+
+        <div class="backup-feature-row">
+            <span class="backup-feature-icon"><SvgIcon name="refresh" /></span>
+            <span class="backup-feature-copy"><strong>自动备份</strong><small>{{ backup.autoBackup ? "保存设置时自动生成记录" : "自动备份当前已关闭" }}</small></span>
             <BaseSwitch v-model="backup.autoBackup" />
         </div>
-        <div class="settings-field">
-            <span>最近备份时间</span>
+        <div class="backup-feature-row backup-time-row">
+            <span class="backup-feature-icon"><SvgIcon name="clock" /></span>
+            <span class="backup-feature-copy"><strong>最近备份</strong><small>最后一次成功生成备份的时间</small></span>
             <strong
                 class="text-sm font-semibold text-[var(--color-text-secondary)]"
             >
                 {{ backup.lastBackupTime }}
             </strong>
         </div>
-        <div class="settings-field">
-            <span>备份历史</span>
+        <div class="backup-feature-row">
+            <span class="backup-feature-icon"><SvgIcon name="backup" /></span>
+            <span class="backup-feature-copy"><strong>备份历史</strong><small>共 {{ settingsStore.backupHistory.length }} 条本地记录</small></span>
             <div class="flex gap-2">
                 <button
                     class="secondary-button"
@@ -114,10 +61,10 @@ const readBackupFile = (event: Event) => {
                     type="button"
                     @click="historyVisible = true"
                 >
-                    查看
+                    查看历史
                 </button>
             </div>
-        </div>
+        </div></div>
 
         <BaseSmartModal
             v-model="historyVisible"
@@ -125,6 +72,7 @@ const readBackupFile = (event: Event) => {
             title="备份历史"
             description="查看最近生成的本地备份记录"
             icon="backup"
+            tone="green"
         >
 
             <div class="backup-dialog-body">
@@ -149,14 +97,6 @@ const readBackupFile = (event: Event) => {
                         >
                             <strong>模拟自动备份</strong>
                             <span>按自动备份状态写入记录</span>
-                        </button>
-                        <button
-                            class="backup-action"
-                            type="button"
-                            @click="selectBackupFile"
-                        >
-                            <strong>导入备份</strong>
-                            <span>从本地 JSON 恢复配置</span>
                         </button>
                     </div>
                 </section>
@@ -212,6 +152,17 @@ const readBackupFile = (event: Event) => {
 </template>
 
 <style scoped>
+.backup-feature-list { display: grid; gap: 8px; }
+.backup-feature-row { display: grid; min-height: 62px; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 1px solid var(--color-border-subtle); border-radius: 13px; background: var(--color-surface-subtle); padding: 10px 12px; transition: border-color 160ms, transform 160ms, box-shadow 160ms; }
+.backup-feature-row:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--color-success) 32%, var(--color-border)); box-shadow: var(--shadow-card); }
+.backup-feature-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--color-success-soft); color: var(--color-success); }
+.backup-feature-copy { display: grid; min-width: 0; gap: 2px; }
+.backup-feature-copy strong { color: var(--color-text-primary); font-size: 13px; font-weight: 850; }
+.backup-feature-copy small { overflow: hidden; color: var(--color-text-tertiary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.backup-feature-row .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.backup-time-row > strong { border-radius: 9px; background: var(--color-card-bg); padding: 6px 9px; font-variant-numeric: tabular-nums; }
+.backup-feature-row > .flex { flex-wrap: wrap; justify-content: flex-end; }
+
 .backup-dialog-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 220px;

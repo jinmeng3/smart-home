@@ -107,6 +107,7 @@ export interface SceneLog {
   id: string;
   sceneId: string;
   status: string;
+  source: string;
   startedAt: string;
   finishedAt: string | null;
   message: string | null;

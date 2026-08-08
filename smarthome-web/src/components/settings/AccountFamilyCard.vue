@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { ElMessageBox } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { AccountForm } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import "element-plus/theme-chalk/el-message-box.css";
@@ -136,11 +137,16 @@ const deleteAvatar = async () => {
         </div>
 
         <button
-            class="secondary-button mt-4 w-full"
+            class="settings-entry-button account-entry"
             type="button"
             @click="openDialog"
         >
-            查看与编辑账户信息
+            <span class="entry-icon"><SvgIcon name="account" /></span>
+            <span class="entry-copy">
+                <strong>账户信息</strong>
+                <small>查看与编辑个人资料、家庭及所在时区</small>
+            </span>
+            <SvgIcon class="entry-arrow" name="chevron-right" />
         </button>
     </SettingsSectionCard>
 
@@ -150,6 +156,7 @@ const deleteAvatar = async () => {
         title="账户与家庭"
         description="查看当前账户信息并管理所属家庭"
         icon="account"
+        tone="primary"
         :close-button-disabled="loading"
     >
         <section class="current-account">
@@ -293,6 +300,50 @@ const deleteAvatar = async () => {
     align-items: center;
     gap: 14px;
 }
+
+.settings-entry-button {
+    display: grid;
+    width: 100%;
+    min-height: 68px;
+    grid-template-columns: 40px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--color-card-bg), var(--color-primary-50));
+    padding: 12px 14px;
+    text-align: left;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary-600) 8%, transparent);
+    transition: transform 160ms var(--motion-ease), border-color 160ms, box-shadow 160ms;
+}
+
+.settings-entry-button:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-primary-400);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary-600) 14%, transparent);
+}
+
+.entry-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--color-primary-600);
+    color: white;
+}
+
+.entry-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.entry-copy strong { color: var(--color-text-primary); font-size: 14px; }
+.entry-copy small { overflow: hidden; color: var(--color-text-tertiary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.entry-arrow { color: var(--color-primary-500); transition: transform 160ms; }
+.settings-entry-button:hover .entry-arrow { transform: translateX(3px); }
 
 .account-summary > div,
 .current-account > div:first-of-type {

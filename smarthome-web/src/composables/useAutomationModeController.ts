@@ -51,6 +51,10 @@ export const useAutomationModeController = (store: AutomationsStore) => {
             name: string;
             description: string;
             trigger: string;
+            deviceIds: number[];
+            rooms: string[];
+            delay: number;
+            note: string;
         }) => {
             if (payload.mode === "edit") {
                 const rule = store.selectedAutomation;

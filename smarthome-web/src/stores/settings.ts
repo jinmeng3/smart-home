@@ -3,10 +3,12 @@ import { defineStore } from "pinia";
 import {
   createHousehold as apiCreateHousehold,
   getAccount,
+  getUserPreferences as apiGetUserPreferences,
   getHouseholdDetail,
   listHouseholds,
   listMembers,
   updateAccount as apiUpdateAccount,
+  updateUserPreferences as apiUpdateUserPreferences,
   updateHousehold as apiUpdateHousehold,
   addMember as apiAddMember,
   updateMemberRole as apiUpdateMemberRole,
@@ -91,7 +93,36 @@ export const useSettingsStore = defineStore("settings", () => {
   let accountHomePromise: Promise<void> | null = null;
   let saveStatusTimer = 0;
 
-  const saveSettings = () => {
+  const getUserPreferencesPayload = () => ({
+    appearance: { ...settings.value.appearance },
+    aiAssistant: {
+      detailLevel: settings.value.aiAssistant.detailLevel,
+      autoExecuteLowRisk: settings.value.aiAssistant.autoExecuteLowRisk,
+      confirmHighRisk: settings.value.aiAssistant.confirmHighRisk,
+    },
+    notifications: { ...settings.value.notifications },
+    security: { ...settings.value.security },
+    backup: { autoBackup: settings.value.backup.autoBackup },
+  });
+
+  const loadUserPreferences = async () => {
+    const preferences = await apiGetUserPreferences();
+    settings.value.appearance = preferences.appearance;
+    settings.value.aiAssistant = {
+      ...settings.value.aiAssistant,
+      ...preferences.aiAssistant,
+    };
+    settings.value.notifications = preferences.notifications;
+    settings.value.security = preferences.security;
+    settings.value.backup = {
+      ...settings.value.backup,
+      ...preferences.backup,
+    };
+    persistSettings(settings.value);
+  };
+
+  const saveSettings = async () => {
+    await apiUpdateUserPreferences(getUserPreferencesPayload());
     if (settings.value.backup.autoBackup) {
       recordBackup("auto", "设置已保存时执行自动备份");
     } else {
@@ -266,21 +297,16 @@ export const useSettingsStore = defineStore("settings", () => {
       max_tokens: settings.value.aiAssistant.maxTokens,
       parameters,
       is_active: Boolean(
+        homeAssistant.websocketStatus === "connected" &&
         homeAssistant.serviceUrl &&
         (homeAssistant.tokenConfigured || homeAssistant.accessToken),
       ),
       description: settings.value.aiAssistant.language,
     };
-    let response;
-
-    try {
-      response = await apiUpdateAIModel(payload);
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) {
-        throw error;
-      }
-      response = await apiCreateAIModel(payload);
-    }
+    const models = await apiListAIModels();
+    const response = models.length
+      ? await apiUpdateAIModel(payload)
+      : await apiCreateAIModel(payload);
 
     settings.value.aiAssistant = {
       ...settings.value.aiAssistant,
@@ -487,7 +513,7 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const getExportSettings = (): SettingsState => ({
-    ...structuredClone(settings.value),
+    ...JSON.parse(JSON.stringify(settings.value)) as SettingsState,
     homeAssistant: {
       ...settings.value.homeAssistant,
       accessToken: "",
@@ -505,6 +531,7 @@ export const useSettingsStore = defineStore("settings", () => {
     getExportSettings,
     importSettings,
     loadAIModel,
+    loadUserPreferences,
     loadAccountHome,
     loading,
     resetSettings,

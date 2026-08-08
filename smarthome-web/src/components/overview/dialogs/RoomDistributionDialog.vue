@@ -135,13 +135,13 @@ const close = () => emit("update:modelValue", false);
                         </div>
                         <div class="room-detail-row">
                             <span class="detail-label">
-                                <SvgIcon name="air-conditioner" size="sm" /> 设备
+                                <SvgIcon name="device-management" size="sm" /> 设备 1
                             </span>
                             <span class="detail-value">{{ room.air }}</span>
                         </div>
                         <div class="room-detail-row">
                             <span class="detail-label">
-                                <SvgIcon name="sensor" size="sm" /> 状态
+                                <SvgIcon name="device-management" size="sm" /> 设备 2
                             </span>
                             <span class="detail-value">{{ room.extra }}</span>
                         </div>

@@ -158,6 +158,7 @@ const applySettings = async () => {
         confirm-text="应用设置"
         description="调整回复的创造性和长度上限。"
         icon="ai"
+        tone="indigo"
         title="模型高级设置"
         width="medium"
         @cancel="requestClose"
@@ -238,30 +239,35 @@ const applySettings = async () => {
                     <div>
                         <strong>回复长度上限</strong><span>Max tokens</span>
                     </div>
-                    <output>{{ draft.maxTokens.toLocaleString() }}</output>
+                    <output class="token-current">当前 {{ draft.maxTokens.toLocaleString() }}</output>
                 </div>
                 <p class="setting-copy">
                     控制单次回复最多可生成的 token 数量。
                 </p>
-                <ElInputNumber
-                    v-model="draft.maxTokens"
-                    :max="32768"
-                    :min="1"
-                    :step="256"
-                    class="full-width max-token-input"
-                    controls-position="right"
-                    size="large"
-                />
+                <div class="token-input-row">
+                    <span class="token-input-icon"><SvgIcon name="message" size="sm" /></span>
+                    <ElInputNumber
+                        v-model="draft.maxTokens"
+                        :max="32768"
+                        :min="1"
+                        :step="256"
+                        class="max-token-input"
+                        controls-position="right"
+                    />
+                    <span class="token-unit">tokens</span>
+                </div>
                 <div class="token-presets">
-                    <BaseButton
+                    <button
                         v-for="value in tokenPresets"
                         :key="value"
                         :class="{ active: draft.maxTokens === value }"
+                        type="button"
                         @click="draft.maxTokens = value"
-                        plain
                     >
-                        {{ value.toLocaleString() }}
-                    </BaseButton>
+                        <span>{{ value.toLocaleString() }}</span>
+                        <small>{{ value === 2048 ? "精简" : value === 4096 ? "推荐" : "长回复" }}</small>
+                        <SvgIcon v-if="draft.maxTokens === value" name="check-circle" size="sm" />
+                    </button>
                 </div>
             </ModalSection>
         </div>
@@ -373,6 +379,16 @@ const applySettings = async () => {
     white-space: nowrap;
 }
 
+.setting-title .token-current {
+    min-width: auto;
+    align-self: flex-start;
+    border: 1px solid var(--color-primary-200);
+    border-radius: 999px;
+    background: var(--color-primary-50);
+    padding: 5px 10px;
+    font-size: 13px;
+}
+
 .setting-copy {
     min-height: 38px;
     margin: 7px 0 9px;
@@ -403,7 +419,47 @@ const applySettings = async () => {
 :deep(.max-token-input .el-input),
 :deep(.max-token-input .el-input__wrapper) {
     width: 100%;
-    min-height: 44px;
+    min-height: 42px;
+}
+
+.token-input-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    border: 1px solid var(--color-border-default);
+    border-radius: 12px;
+    background: var(--color-surface-subtle);
+    padding: 5px 10px 5px 7px;
+    transition: border-color 160ms, box-shadow 160ms;
+}
+.token-input-row:focus-within {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+.token-input-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+.token-unit {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+:deep(.token-input-row .el-input__wrapper) {
+    background: transparent;
+    box-shadow: none !important;
+}
+:deep(.token-input-row .el-input__inner) {
+    padding-left: 4px;
+    font-size: 16px;
+    font-weight: 800;
 }
 
 :deep(.smart-modal-section .el-slider) {
@@ -461,33 +517,38 @@ const applySettings = async () => {
 }
 
 .token-presets {
-    display: flex;
-    gap: 7px;
-    margin-top: 9px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.token-presets :deep(.el-button) {
-    flex: 1;
-    height: 36px;
-    margin-left: 0;
-    padding: 0 8px;
-    border-color: var(--color-border-default);
+.token-presets button {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    gap: 1px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 11px;
+    padding: 8px 7px;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 700;
-    background: var(--color-panel-background);
+    background: var(--color-card-bg);
+    text-align: left;
+    transition: transform 150ms, border-color 150ms, background-color 150ms;
 }
-
-.token-presets :deep(.el-button:hover) {
+.token-presets button span { font-size: 13px; font-weight: 900; }
+.token-presets button small { color: var(--color-text-tertiary); font-size: 10px; }
+.token-presets button svg { position: absolute; top: 7px; right: 7px; }
+.token-presets button:hover {
+    transform: translateY(-1px);
     border-color: var(--color-primary-300);
     color: var(--color-primary-700);
 }
-
-.token-presets :deep(.el-button.active) {
+.token-presets button.active {
     border-color: var(--color-primary-500);
-    color: var(--color-text-on-primary);
-    background: var(--color-primary-600);
-    box-shadow: 0 4px 10px var(--color-focus-ring);
+    color: var(--color-primary-700);
+    background: var(--color-primary-50);
+    box-shadow: 0 3px 10px var(--color-focus-ring);
 }
 
 .dialog-footer {

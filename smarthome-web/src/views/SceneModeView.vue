@@ -29,6 +29,15 @@ const ScenePreviewDialog = defineAsyncDialog(
 const SceneTemplateDialog = defineAsyncDialog(
     () => import("../components/scenes/SceneTemplateDialog.vue"),
 );
+const SceneLogsDialog = defineAsyncDialog(
+    () => import("../components/scenes/SceneLogsDialog.vue"),
+);
+const SceneBatchEnabledDialog = defineAsyncDialog(
+    () => import("../components/scenes/SceneBatchEnabledDialog.vue"),
+);
+const SceneSortDialog = defineAsyncDialog(
+    () => import("../components/scenes/SceneSortDialog.vue"),
+);
 
 const store = useScenesStore();
 const {
@@ -74,8 +83,17 @@ watch(
         <section class="scene-mode-page page-shell page-enter">
             <header class="scene-page-header">
                 <div class="scene-page-title">
-                    <h1>场景模式</h1>
-                    <p>一键管理家庭场景与智能联动</p>
+                    <span
+                        class="page-header-icon"
+                        style="background: var(--color-success-soft); color: var(--color-success)"
+                        aria-hidden="true"
+                    >
+                        <SvgIcon name="scene" />
+                    </span>
+                    <div>
+                        <h1>场景模式</h1>
+                        <p>一键管理家庭场景与智能联动</p>
+                    </div>
                 </div>
                 <SceneToolbar
                     v-model:enabled="filters.enabled"
@@ -149,6 +167,27 @@ watch(
             v-model="controller.templateDialogOpen.value"
             @import="controller.importTemplate"
         />
+        <SceneLogsDialog
+            v-if="controller.logDialogOpen.value"
+            :logs="controller.sceneLogs.value"
+            :model-value="controller.logDialogOpen.value"
+            :scene-name="controller.logSceneName.value"
+            @update:model-value="!$event && controller.closeLogDialog()"
+        />
+        <SceneBatchEnabledDialog
+            v-if="controller.batchDialogOpen.value"
+            :model-value="controller.batchDialogOpen.value"
+            :scenes="scenes"
+            @apply="controller.applyBatchEnabled"
+            @update:model-value="controller.batchDialogOpen.value = $event"
+        />
+        <SceneSortDialog
+            v-if="controller.sortDialogOpen.value"
+            :model-value="controller.sortDialogOpen.value"
+            :scenes="scenes"
+            @apply="controller.applySceneOrder"
+            @update:model-value="controller.sortDialogOpen.value = $event"
+        />
 
         <ConfirmActionDialog
             v-if="controller.deleteDialogOpen.value"
@@ -156,7 +195,8 @@ watch(
             :model-value="controller.deleteDialogOpen.value"
             title="删除场景"
             description="此操作将从场景列表中移除该场景。"
-            warning="删除后将从场景列表中移除，关联的执行步骤与日志也会一并清除。"
+            warning="删除后无法恢复，关联的执行步骤与日志也会一并清除。"
+            footer-hint="确认后会立即调用后端删除接口。"
             @cancel="controller.cancelRemoveScene"
             @confirm="controller.confirmRemoveScene"
             @update:model-value="controller.deleteDialogOpen.value = $event"
@@ -209,6 +249,22 @@ watch(
     grid-template-columns: minmax(210px, auto) minmax(0, 1fr);
     gap: 18px;
     align-items: start;
+}
+
+.scene-page-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.scene-page-title .page-header-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
 }
 
 .scene-page-title h1 {

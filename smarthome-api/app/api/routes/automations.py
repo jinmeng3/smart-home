@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Query, status
+from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,7 @@ from app.services.automation import (
     batch_enable_service,
     batch_schedule_automations_service,
     create_automation_service,
+    delete_automation_service,
     execute_automation_service,
     get_automation,
     list_automations_service,
@@ -122,6 +123,20 @@ def edit_automation(
     """更新自动化规则配置。"""
     _, household_id = accessible_automation(db, user, automation_id)
     return ApiResponse.ok(update_automation_service(db, automation_id, household_id, payload))
+
+
+@router.delete(
+    "/automations/{automation_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_automation(
+    automation_id: int,
+    db: Session = DB_DEPENDENCY,
+    user: User = CURRENT_USER_DEPENDENCY,
+) -> Response:
+    """删除当前家庭下的自动化规则及其关联数据。"""
+    _, household_id = accessible_automation(db, user, automation_id)
+    delete_automation_service(db, automation_id, household_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # === 自动化执行 ===

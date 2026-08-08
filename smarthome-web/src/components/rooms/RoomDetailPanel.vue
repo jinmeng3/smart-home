@@ -9,6 +9,19 @@ export interface RoomEnvironmentItem {
     points: string;
 }
 
+const statusLabels: Record<string, string> = {
+    ONLINE: "在线",
+    OFFLINE: "离线",
+    RUNNING: "运行中",
+    WARNING: "异常",
+};
+
+const formatRecentActivity = (activity?: string) =>
+    activity?.replace(
+        /DeviceStatus\.(ONLINE|OFFLINE|RUNNING|WARNING)/g,
+        (_, status: string) => statusLabels[status] ?? status,
+    ) ?? "";
+
 defineProps<{
     room: Room | null;
     environment: RoomEnvironmentItem[];
@@ -60,9 +73,13 @@ defineEmits<{
                         <dt><SvgIcon name="scene" size="sm" />当前场景</dt>
                         <dd class="tone-purple">{{ currentScene || '休闲模式' }}</dd>
                     </div>
-                    <div class="field-row">
+                    <div class="field-row recent-activity-row">
                         <dt><SvgIcon name="clock" size="sm" />最近活动</dt>
-                        <dd class="tone-orange">{{ recentActivityTime ? `${recentActivityTime}（${recentActivity}）` : '暂无活动记录' }}</dd>
+                        <dd v-if="recentActivityTime" class="recent-activity tone-orange">
+                            <small>{{ recentActivityTime }}</small>
+                            <span>{{ formatRecentActivity(recentActivity) }}</span>
+                        </dd>
+                        <dd v-else class="recent-activity-empty">暂无活动记录</dd>
                     </div>
                 </dl>
                 <div class="detail-actions">
@@ -292,6 +309,45 @@ defineEmits<{
 }
 .room-detail dd.tone-orange {
     color: var(--tone-orange);
+}
+.room-detail dl .recent-activity-row {
+    align-items: flex-start;
+}
+.recent-activity-row dt {
+    flex: 0 0 auto;
+    padding-top: 4px;
+    white-space: nowrap;
+}
+.recent-activity,
+.recent-activity-empty {
+    min-width: 0;
+    max-width: 68%;
+}
+.recent-activity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+.recent-activity small {
+    border-radius: 999px;
+    background: var(--tone-orange-soft);
+    padding: 2px 7px;
+    color: var(--tone-orange);
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.recent-activity span {
+    max-width: 100%;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.recent-activity-empty {
+    color: var(--color-text-tertiary);
+    font-size: 13px;
 }
 .detail-actions {
     display: grid;

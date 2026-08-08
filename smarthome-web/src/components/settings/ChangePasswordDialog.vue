@@ -167,6 +167,7 @@ const savePassword = async () => {
         title="修改密码"
         description="更新当前账户的本地安全记录"
         icon="lock"
+        tone="purple"
         @update:model-value="emit('update:modelValue', $event)"
     >
         <div class="password-dialog-body">

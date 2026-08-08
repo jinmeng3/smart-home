@@ -1,6 +1,5 @@
 import { computed, shallowRef, ref } from "vue";
 import { defineStore } from "pinia";
-import { useSettingsStore } from "./settings";
 import {
   useBatchedDeviceUpdates,
   type DeviceUpdate,
@@ -22,10 +21,6 @@ const buildDeviceMap = (devices: DashboardDevice[]) => ({
 
 export const useHomeStore = defineStore("home", () => {
   const activeMenu = ref("智能对话");
-  const settingsStore = useSettingsStore();
-  const sidebarCollapsed = computed(
-    () => settingsStore.settings.appearance.sidebarCollapsed,
-  );
   const selectedDeviceId = ref<string | null>(null);
   const deviceDrawerOpen = ref(false);
   const { ids: initialIds, byId: initialById } = buildDeviceMap([]);
@@ -91,11 +86,6 @@ export const useHomeStore = defineStore("home", () => {
 
   const setActiveMenu = (menu: string) => {
     activeMenu.value = menu;
-  };
-
-  const toggleSidebar = () => {
-    settingsStore.settings.appearance.sidebarCollapsed =
-      !settingsStore.settings.appearance.sidebarCollapsed;
   };
 
   const loadDevices = async () => {
@@ -211,9 +201,7 @@ export const useHomeStore = defineStore("home", () => {
     sendMessage: chat.sendMessage,
     setActiveMenu,
     startNewConversation: chat.startNewConversation,
-    sidebarCollapsed,
     stopGenerating: chat.stopGenerating,
     toggleAutomation,
-    toggleSidebar,
   };
 });

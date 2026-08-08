@@ -1,15 +1,41 @@
 <script setup lang="ts">
-defineProps<{
-    title: string;
-    description?: string;
-}>();
+import SvgIcon from "./SvgIcon.vue";
+
+withDefaults(
+    defineProps<{
+        title: string;
+        description?: string;
+        icon?: string;
+        tone?: string;
+        soft?: string;
+    }>(),
+    {
+        description: "",
+        icon: "",
+        tone: "",
+        soft: "",
+    },
+);
 </script>
 
 <template>
     <header class="page-header">
         <div class="page-title">
-            <h1>{{ title }}</h1>
-            <p v-if="description">{{ description }}</p>
+            <span
+                v-if="icon"
+                class="page-header-icon"
+                :style="{
+                    background: soft || 'var(--color-surface-subtle)',
+                    color: tone || 'var(--color-text-tertiary)',
+                }"
+                aria-hidden="true"
+            >
+                <SvgIcon :name="icon" />
+            </span>
+            <div class="page-heading">
+                <h1>{{ title }}</h1>
+                <p v-if="description">{{ description }}</p>
+            </div>
         </div>
         <div class="page-actions">
             <slot />
@@ -25,7 +51,30 @@ defineProps<{
     gap: 18px;
 }
 
-.page-title h1 {
+.page-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-header-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 12px;
+    transition:
+        background-color 180ms var(--motion-ease),
+        color 180ms var(--motion-ease);
+}
+
+.page-heading {
+    min-width: 0;
+}
+
+.page-heading h1 {
     margin: 0;
     font-size: 24px;
     font-weight: 900;
@@ -33,7 +82,7 @@ defineProps<{
     line-height: 1.15;
 }
 
-.page-title p {
+.page-heading p {
     margin: 8px 0 0;
     color: var(--color-text-tertiary);
     font-size: 14px;

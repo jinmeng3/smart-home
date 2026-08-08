@@ -80,7 +80,7 @@ class InspectionWrite(OverviewSchema):
 class ScheduleWrite(OverviewSchema):
     enabled: bool = True
     repeat_days: list[int] = Field(default_factory=list)
-    targets: dict[str, list[int]] = Field(default_factory=dict)
+    targets: dict[str, list[int | str]] = Field(default_factory=dict)
     items: list[dict[str, Any]] = Field(default_factory=list)
     version: int | None = Field(default=None, ge=1)
 

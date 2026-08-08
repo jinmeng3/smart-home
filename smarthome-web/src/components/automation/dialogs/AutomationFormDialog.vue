@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { reactive, ref, computed, watch } from "vue";
+import { reactive, ref, computed, watch, onMounted } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
 import { toggleValue } from "../../../utils/array";
+import { fetchRooms } from "../../../api/room";
+import { listDevices } from "../../../api/device";
+import type { Device } from "../../../types/device";
 
 export interface AutomationRule {
     id: number;
@@ -29,6 +32,10 @@ const emit = defineEmits<{
             name: string;
             description: string;
             trigger: string;
+            deviceIds: number[];
+            rooms: string[];
+            delay: number;
+            note: string;
         },
     ];
 }>();
@@ -40,7 +47,7 @@ const form = reactive({
     triggerDevice: "门磁传感器",
     triggerState: "打开",
     rooms: ["玄关", "客厅", "餐厅"] as string[],
-    devices: ["玄关灯", "客厅灯带", "空调"] as string[],
+    devices: [] as number[],
     delay: 0,
     priority: "中（默认）",
     repeat: "不限制",
@@ -58,9 +65,21 @@ const triggerOptions = [
     { value: "手动触发", icon: "automation", desc: "通过语音或手动方式触发" },
 ];
 
-const roomOptions = ["玄关", "客厅", "餐厅", "主卧", "次卧", "书房", "厨房", "阳台", "卫生间"];
+const roomOptions = ref<string[]>([]);
+const deviceOptions = ref<Device[]>([]);
+const deviceName = (id: number) => deviceOptions.value.find((item) => item.id === id)?.name ?? `设备 #${id}`;
+
+onMounted(async () => {
+    const [rooms, devices] = await Promise.all([
+        fetchRooms(),
+        listDevices({ page: 1, pageSize: 100, keyword: "", type: "", status: "", room: "" }),
+    ]);
+    roomOptions.value = rooms.items.map((room) => room.name);
+    deviceOptions.value = devices.items;
+});
 
 const nameError = ref(false);
+const actionError = ref(false);
 
 const triggerIconMap: Record<string, string> = {
     "设备状态变化": "device-management",
@@ -100,7 +119,12 @@ const submitForm = () => {
         nameError.value = true;
         return;
     }
+    if (!form.devices.length) {
+        actionError.value = true;
+        return;
+    }
     nameError.value = false;
+    actionError.value = false;
     emit("save", {
         mode: props.mode,
         name: form.name.trim(),
@@ -108,6 +132,10 @@ const submitForm = () => {
             form.description.trim() ||
             `${form.trigger} · ${form.triggerDevice}${form.triggerState}`,
         trigger: form.trigger,
+        deviceIds: [...form.devices],
+        rooms: [...form.rooms],
+        delay: form.delay,
+        note: form.note,
     });
     close();
 };
@@ -294,17 +322,18 @@ const submitForm = () => {
                             <label>关联设备（可选）</label>
                             <div class="chip-group">
                                 <button
-                                    v-for="device in ['玄关灯', '客厅灯带', '空调', '窗帘']"
-                                    :key="device"
+                                    v-for="device in deviceOptions"
+                                    :key="device.id"
                                     type="button"
-                                    class="chip active"
+                                    class="chip"
+                                    :class="{ active: form.devices.includes(device.id) }"
+                                    @click="toggleValue(form.devices, device.id)"
                                 >
-                                    {{ device }}
+                                    {{ device.name }}
                                 </button>
-                                <button class="chip chip-add" type="button">
-                                    <SvgIcon name="plus" size="sm" />添加设备
-                                </button>
+                                <span v-if="!deviceOptions.length" class="chip">暂无可用设备</span>
                             </div>
+                            <span v-if="actionError" class="error-msg">请至少选择一个执行设备</span>
                         </div>
                     </div>
                 </section>
@@ -332,7 +361,7 @@ const submitForm = () => {
                                     <SvgIcon :name="index === 2 ? 'air-conditioner' : 'light'" />
                                 </span>
                                 <div class="action-info">
-                                    <strong>{{ device }}</strong>
+                                    <strong>{{ deviceName(device) }}</strong>
                                     <span>{{
                                         index === 2
                                             ? "开启 · 制冷 · 26°C"
@@ -353,9 +382,6 @@ const submitForm = () => {
                                 <span>暂无执行动作，点击下方按钮添加</span>
                             </div>
                         </div>
-                        <button class="add-btn" type="button" @click="form.devices.push('智能设备')">
-                            <SvgIcon name="plus" />添加动作
-                        </button>
                         <div class="field">
                             <label>执行延迟（可选）</label>
                             <div class="suffix-input">

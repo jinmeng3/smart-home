@@ -19,7 +19,6 @@ export interface AppearanceSettings {
   themeMode: ThemeMode
   fontSize: FontSize
   animationsEnabled: boolean
-  sidebarCollapsed: boolean
   performanceMode: boolean
 }
 
@@ -87,6 +86,14 @@ export interface SettingsState {
   backup: BackupSettings
   summary: SettingsSummary
   suggestions: SettingsSuggestionItem[]
+}
+
+export interface UserPreferences {
+  appearance: AppearanceSettings
+  aiAssistant: Pick<AiAssistantSettings, 'detailLevel' | 'autoExecuteLowRisk' | 'confirmHighRisk'>
+  notifications: NotificationSettings
+  security: SecuritySettings
+  backup: Pick<BackupSettings, 'autoBackup'>
 }
 
 export type HouseholdRole = 'admin' | 'member'

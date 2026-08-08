@@ -17,6 +17,7 @@ export type DevicePlatform = "Home Assistant" | "Matter" | "Zigbee" | "MQTT";
 
 export interface Device {
   id: number;
+  deviceId?: string;
   name: string;
   room: string;
   type: DeviceType;

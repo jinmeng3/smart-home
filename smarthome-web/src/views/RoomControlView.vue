@@ -309,7 +309,13 @@ useAuthenticatedLoader(load);
 <template>
     <div class="app-page-layout">
         <main class="workspace page-shell page-enter">
-            <PageHeader title="房间控制" description="按房间查看设备状态、环境数据与快捷控制">
+            <PageHeader
+                title="房间控制"
+                description="按房间查看设备状态、环境数据与快捷控制"
+                icon="room"
+                tone="var(--color-teal-600)"
+                soft="var(--color-teal-soft)"
+            >
                 <div class="page-tools">
                     <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间、设备或场景" /></label>
                     <select v-model="floor" @change="load">

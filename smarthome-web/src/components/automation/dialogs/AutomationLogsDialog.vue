@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
+import type { ExecutionRecord } from "../../../types/automation";
 
-defineProps<{
+const props = defineProps<{
     modelValue: boolean;
+    executions: ExecutionRecord[];
+    ruleName: string;
 }>();
 
 const emit = defineEmits<{
@@ -13,40 +16,14 @@ const emit = defineEmits<{
 
 const expandedLog = ref<number | null>(null);
 
-const logs = [
-    {
-        id: 1,
-        time: "2026-08-08 10:15:23",
-        name: "回家联动",
-        source: "位置触发",
-        result: "成功",
-        duration: "2.4s",
-    },
-    {
-        id: 2,
-        time: "2026-08-08 07:00:11",
-        name: "晨间唤醒联动",
-        source: "定时触发",
-        result: "成功",
-        duration: "3.1s",
-    },
-    {
-        id: 3,
-        time: "2026-08-07 23:00:05",
-        name: "夜间回家照明",
-        source: "手动触发",
-        result: "成功",
-        duration: "1.8s",
-    },
-    {
-        id: 4,
-        time: "2026-08-07 19:42:12",
-        name: "离家安防联动",
-        source: "位置触发",
-        result: "失败",
-        duration: "0.9s",
-    },
-];
+const logs = computed(() => props.executions.map((record) => ({
+    ...record,
+    time: new Date(record.startedAt).toLocaleString("zh-CN"),
+    name: props.ruleName || "自动化规则",
+    source: record.source === "manual" ? "手动触发" : record.source,
+    result: record.status === "success" ? "成功" : record.status === "failed" ? "失败" : "执行中",
+    duration: record.durationMs === null ? "--" : `${(record.durationMs / 1000).toFixed(1)}s`,
+})));
 
 const close = () => emit("update:modelValue", false);
 </script>
@@ -135,55 +112,18 @@ const close = () => emit("update:modelValue", false);
                                 触发详情
                             </div>
                             <div class="detail-card">
-                                <SvgIcon name="location" size="sm" />
-                                <span>设备"小明的手机"到达"家"半径 100m</span>
-                            </div>
-                            <div class="detail-section-title" style="margin-top: 10px;">
-                                <span class="detail-dot is-condition"></span>
-                                条件检查
-                            </div>
-                            <div class="condition-list">
-                                <span class="condition-item is-pass">
-                                    <SvgIcon name="check-circle" size="sm" />时间条件
-                                </span>
-                                <span class="condition-item is-pass">
-                                    <SvgIcon name="check-circle" size="sm" />设备在线
-                                </span>
-                                <span class="condition-item is-pass">
-                                    <SvgIcon name="check-circle" size="sm" />位置条件
-                                </span>
+                                <SvgIcon name="automation" size="sm" />
+                                <span>{{ Object.keys(log.triggerSnapshot).length ? JSON.stringify(log.triggerSnapshot) : "后端未记录触发快照" }}</span>
                             </div>
                         </div>
                         <div class="detail-section">
                             <div class="detail-section-title">
                                 <span class="detail-dot is-action"></span>
-                                执行动作（共 4 个）
+                                执行结果
                             </div>
-                            <div class="action-list-detail">
-                                <div class="action-item-detail">
-                                    <span class="action-step">1</span>
-                                    <SvgIcon name="light" size="sm" />
-                                    <span>玄关灯开启</span>
-                                    <span class="action-status is-done">✓</span>
-                                </div>
-                                <div class="action-item-detail">
-                                    <span class="action-step">2</span>
-                                    <SvgIcon name="light" size="sm" />
-                                    <span>客厅灯带开启</span>
-                                    <span class="action-status is-done">✓</span>
-                                </div>
-                                <div class="action-item-detail">
-                                    <span class="action-step">3</span>
-                                    <SvgIcon name="air-conditioner" size="sm" />
-                                    <span>空调 26°C</span>
-                                    <span class="action-status is-done">✓</span>
-                                </div>
-                                <div class="action-item-detail">
-                                    <span class="action-step">4</span>
-                                    <SvgIcon name="curtain" size="sm" />
-                                    <span>客厅窗帘打开</span>
-                                    <span class="action-status is-done">✓</span>
-                                </div>
+                            <div class="detail-card">
+                                <SvgIcon :name="log.errorMessage ? 'warning' : 'check-circle'" size="sm" />
+                                <span>{{ log.errorMessage || `执行完成，耗时 ${log.duration}` }}</span>
                             </div>
                         </div>
                     </div>

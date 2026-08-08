@@ -112,6 +112,7 @@ class SceneLogRead(SceneSchema):
     id: str
     scene_id: str
     status: str
+    source: str
     started_at: datetime
     finished_at: datetime | None
     message: str | None

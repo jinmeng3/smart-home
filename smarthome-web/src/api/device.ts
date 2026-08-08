@@ -49,6 +49,7 @@ interface ApiDeviceListResponse {
 
 export const mapDevice = (device: ApiDevice): Device => ({
   id: device.id,
+  deviceId: device.device_id,
   name: device.name,
   room: device.room,
   type: device.type,

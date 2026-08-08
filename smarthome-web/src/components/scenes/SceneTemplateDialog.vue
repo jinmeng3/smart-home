@@ -2,15 +2,14 @@
 import { computed, ref, watch } from "vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import { fetchSceneTemplates } from "../../api/scenes";
-import type { SceneTemplate } from "../../types/scene";
+import { fetchSceneTemplates, previewSceneTemplate } from "../../api/scenes";
+import type { SceneTemplate, SceneTemplatePreview } from "../../types/scene";
 import { useLatestRequest } from "../../composables/useLatestRequest";
 
 const model = defineModel<boolean>({ required: true });
 
 const emit = defineEmits<{
     import: [template: SceneTemplate];
-    preview: [template: SceneTemplate];
 }>();
 
 const sceneTemplates = ref<SceneTemplate[]>([]);
@@ -19,6 +18,8 @@ const keyword = ref("");
 const activeCategory = ref("全部");
 const { loading, run } = useLatestRequest();
 const loadError = ref("");
+const templatePreview = ref<SceneTemplatePreview | null>(null);
+const previewLoading = ref(false);
 
 const categories = computed(() => {
     const found = Array.from(
@@ -34,6 +35,10 @@ const categoryCounts = computed(() => {
     }
     return counts;
 });
+
+const recommendedCount = computed(
+    () => sceneTemplates.value.filter((template) => template.recommended).length,
+);
 
 const filteredTemplates = computed(() => {
     const normalizedKeyword = keyword.value.trim();
@@ -66,6 +71,7 @@ const loadTemplates = async () => {
         (templates) => {
             sceneTemplates.value = templates;
             selectedId.value = templates[0]?.id ?? "";
+            if (templates[0]) void loadTemplatePreview(templates[0]);
         },
         (error) => {
             loadError.value =
@@ -74,13 +80,30 @@ const loadTemplates = async () => {
     );
 };
 
-watch(model, (visible) => {
-    if (visible) void loadTemplates();
-});
+watch(
+    model,
+    (visible) => {
+        if (visible) void loadTemplates();
+    },
+    { immediate: true },
+);
+
+const loadTemplatePreview = async (template: SceneTemplate) => {
+    previewLoading.value = true;
+    try {
+        const preview = await previewSceneTemplate(template.id);
+        if (selectedId.value === template.id) templatePreview.value = preview;
+    } catch {
+        if (selectedId.value === template.id) templatePreview.value = null;
+    } finally {
+        if (selectedId.value === template.id) previewLoading.value = false;
+    }
+};
 
 const selectTemplate = (template: SceneTemplate) => {
     selectedId.value = template.id;
-    emit("preview", template);
+    templatePreview.value = null;
+    void loadTemplatePreview(template);
 };
 
 const importSelectedTemplate = () => {
@@ -128,42 +151,42 @@ const importSelectedTemplate = () => {
                     </div>
                 </div>
 
-                <!-- 特征快捷入口 -->
-                <div class="template-feature-row">
+                <!-- 后端模板概览 -->
+                <div class="template-summary-row">
                     <article>
                         <span class="feature-icon is-purple">
-                            <SvgIcon name="clock" size="sm" />
+                            <SvgIcon name="layers" size="sm" />
                         </span>
                         <div class="feature-body">
-                            <strong>最近使用</strong>
-                            <span>3 个模板</span>
+                            <strong>{{ sceneTemplates.length }}</strong>
+                            <span>可用模板</span>
                         </div>
                     </article>
                     <article>
                         <span class="feature-icon is-blue">
-                            <SvgIcon name="light" size="sm" />
+                            <SvgIcon name="room" size="sm" />
                         </span>
                         <div class="feature-body">
-                            <strong>编辑推荐</strong>
-                            <span>官方精选模板</span>
+                            <strong>{{ Math.max(categories.length - 1, 0) }}</strong>
+                            <span>模板分类</span>
                         </div>
                     </article>
                     <article>
                         <span class="feature-icon is-orange">
-                            <SvgIcon name="warning" size="sm" />
+                            <SvgIcon name="check-circle" size="sm" />
                         </span>
                         <div class="feature-body">
-                            <strong>热门模板</strong>
-                            <span>大家都在用</span>
+                            <strong>{{ recommendedCount }}</strong>
+                            <span>后端推荐</span>
                         </div>
                     </article>
                     <article>
                         <span class="feature-icon is-green">
-                            <SvgIcon name="energy" size="sm" />
+                            <SvgIcon name="device-management" size="sm" />
                         </span>
                         <div class="feature-body">
-                            <strong>节能环保</strong>
-                            <span>绿色生活</span>
+                            <strong>{{ templatePreview?.matchedDeviceCount ?? 0 }}</strong>
+                            <span>已匹配本地设备</span>
                         </div>
                     </article>
                 </div>
@@ -284,14 +307,19 @@ const importSelectedTemplate = () => {
                         </div>
                     </div>
                     <div class="preview-steps">
-                        <h4>执行动作（共 {{ selectedTemplate.steps.length }} 步）</h4>
-                        <ol>
-                            <li v-for="step in selectedTemplate.steps" :key="step.id">
-                                <span class="step-num">{{ step.order }}</span>
+                        <h4>设备匹配（{{ templatePreview?.matchedDeviceCount ?? 0 }}/{{ selectedTemplate.steps.length }}）</h4>
+                        <p v-if="previewLoading" class="preview-loading">正在检查家庭设备...</p>
+                        <ol v-else>
+                            <li v-for="(step, index) in (templatePreview?.steps ?? selectedTemplate.steps)" :key="`${step.deviceId}-${index}`">
+                                <span class="step-num">{{ index + 1 }}</span>
                                 <div class="step-body">
                                     <strong>{{ step.name }}</strong>
                                     <p>{{ step.description }}</p>
                                 </div>
+                                <em
+                                    v-if="'matched' in step"
+                                    :class="step.matched ? 'is-matched' : 'is-missing'"
+                                >{{ step.matched ? '已匹配' : '待映射' }}</em>
                             </li>
                         </ol>
                     </div>
@@ -312,7 +340,7 @@ const importSelectedTemplate = () => {
                             </li>
                             <li>
                                 <SvgIcon name="check" size="sm" />
-                                设备映射：根据您的设备自动匹配
+                                设备映射：{{ templatePreview?.matchedDeviceCount ?? 0 }} 个已匹配，{{ templatePreview?.missingDeviceCount ?? selectedTemplate.steps.length }} 个待调整
                             </li>
                         </ul>
                     </div>
@@ -332,6 +360,7 @@ const importSelectedTemplate = () => {
     grid-template-columns: minmax(0, 1fr) 340px;
     gap: 20px;
     align-items: start;
+    font-size: 14px;
 }
 
 .template-main {
@@ -376,14 +405,20 @@ const importSelectedTemplate = () => {
 }
 
 .search-bar input {
+    width: 0;
     min-width: 0;
+    height: 100%;
     flex: 1;
-    border: 0;
-    background: transparent;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    padding: 0 !important;
     color: var(--color-text-primary);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     outline: 0;
+    box-shadow: none !important;
+    appearance: none;
 }
 
 .search-bar input::placeholder {
@@ -444,13 +479,13 @@ const importSelectedTemplate = () => {
 }
 
 /* ── 特征快捷入口 ── */
-.template-feature-row {
+.template-summary-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
-.template-feature-row article {
+.template-summary-row article {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -461,7 +496,7 @@ const importSelectedTemplate = () => {
     transition: border-color 180ms, box-shadow 180ms;
 }
 
-.template-feature-row article:hover {
+.template-summary-row article:hover {
     border-color: var(--color-primary-300);
     box-shadow: 0 2px 8px var(--color-shadow-sm);
 }
@@ -843,6 +878,37 @@ const importSelectedTemplate = () => {
     transition: background 150ms;
 }
 
+.preview-steps li em {
+    align-self: center;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.preview-steps li em.is-matched {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.preview-steps li em.is-missing {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+
+.preview-loading {
+    margin: 0;
+    border-radius: 8px;
+    background: var(--color-surface-subtle);
+    padding: 12px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+}
+
 .preview-steps li:hover {
     background: var(--color-primary-50);
 }
@@ -918,6 +984,45 @@ const importSelectedTemplate = () => {
     flex-shrink: 0;
 }
 
+/* 弹窗阅读性：主要信息使用不小于 13px 的字号。 */
+.category-filters button {
+    font-size: 13px;
+}
+
+.category-count {
+    font-size: 11px;
+}
+
+.feature-body strong,
+.template-card-body h3,
+.preview-title strong {
+    font-size: 15px;
+}
+
+.feature-body span,
+.template-card-body p,
+.meta-tag,
+.template-card-action,
+.preview-title p,
+.preview-meta-item dt,
+.preview-meta-item dd,
+.step-body strong,
+.preview-benefits li {
+    font-size: 13px;
+}
+
+.preview-header,
+.preview-steps h4,
+.preview-benefits h4,
+.template-state {
+    font-size: 14px;
+}
+
+.step-body p,
+.preview-loading {
+    font-size: 12px;
+}
+
 /* ── 响应式 ── */
 @media (max-width: 980px) {
     .template-dialog {
@@ -928,13 +1033,13 @@ const importSelectedTemplate = () => {
         position: static;
     }
 
-    .template-feature-row {
+    .template-summary-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 680px) {
-    .template-feature-row,
+    .template-summary-row,
     .template-grid {
         grid-template-columns: 1fr;
     }

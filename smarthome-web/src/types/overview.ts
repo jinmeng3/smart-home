@@ -6,6 +6,7 @@ export interface ScheduleItem {
   name: string;
   detail: string;
   scene_id?: string;
+  automation_id?: number;
   position: number;
   enabled: boolean;
   color: string;
@@ -16,7 +17,7 @@ export interface HouseholdSchedule {
   scheduleDate: string;
   enabled: boolean;
   repeatDays: number[];
-  targets: { room_ids?: number[]; device_ids?: number[] };
+  targets: { room_ids?: number[]; device_ids?: number[]; scene_ids?: string[]; automation_ids?: number[] };
   items: ScheduleItem[];
   version: number;
   updatedAt: string;
@@ -25,7 +26,7 @@ export interface HouseholdSchedule {
 export interface ScheduleWrite {
   enabled: boolean;
   repeatDays: number[];
-  targets: { room_ids?: number[]; device_ids?: number[] };
+  targets: { room_ids?: number[]; device_ids?: number[]; scene_ids?: string[]; automation_ids?: number[] };
   items: ScheduleItem[];
   version?: number;
 }

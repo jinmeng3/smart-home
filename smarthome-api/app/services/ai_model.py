@@ -93,8 +93,16 @@ def activate_model_service(db: Session, current_user: User, model_id: int) -> AI
 def update_ai_model_service(
     db: Session, current_user: User, payload: AIModelUpdate
 ) -> AIModel:
-    """仅更新请求中明确提供的当前模型字段。"""
-    model = read_ai_model_service(db, current_user)
+    """更新当前模型；没有启用模型时更新该用户最近创建的配置。"""
+    model = db.scalar(
+        select(AIModel)
+        .where(AIModel.user_id == current_user.id)
+        .order_by(AIModel.is_active.desc(), AIModel.created_at.desc())
+    )
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Model not found"
+        )
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(model, field, value)
     return commit_ai_model(db, model)

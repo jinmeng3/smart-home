@@ -25,6 +25,11 @@ export const useSceneModeController = (store: ScenesStore) => {
     const previewOpen = ref(false);
     const previewLoading = ref(false);
     const previewResult = ref<ScenePreview | null>(null);
+    const logDialogOpen = ref(false);
+    const logSceneName = ref("");
+    const sceneLogs = ref<Awaited<ReturnType<ScenesStore["loadSceneLogs"]>>>([]);
+    const batchDialogOpen = ref(false);
+    const sortDialogOpen = ref(false);
 
     const openCreateDialog = () => {
         editingScene.value = null;
@@ -171,8 +176,7 @@ export const useSceneModeController = (store: ScenesStore) => {
     const runAction = useAsyncAction(
         async (key: QuickActionKey) => {
             if (key === "batch") {
-                await store.batchSetEnabled([], true);
-                ElMessage.success("已批量启用全部场景");
+                batchDialogOpen.value = true;
             } else if (key === "schedule") {
                 await store.batchSetSchedule(
                     [],
@@ -181,17 +185,13 @@ export const useSceneModeController = (store: ScenesStore) => {
                 );
                 ElMessage.success("已批量设置场景定时");
             } else if (key === "sort") {
-                const items = store.scenes.map((scene, index) => ({
-                    id: scene.id,
-                    sort_order: index,
-                }));
-                await store.reorderScenes(items);
-                ElMessage.success("场景排序已更新");
+                sortDialogOpen.value = true;
             } else if (key === "logs") {
                 const scene = store.selectedScene;
                 if (scene) {
-                    const logs = await store.loadSceneLogs(scene.id);
-                    ElMessage.success(`已加载 ${scene.name} 的 ${logs.length} 条日志`);
+                    sceneLogs.value = await store.loadSceneLogs(scene.id);
+                    logSceneName.value = scene.name;
+                    logDialogOpen.value = true;
                 } else {
                     ElMessage.warning("请先选择一个场景");
                 }
@@ -204,6 +204,34 @@ export const useSceneModeController = (store: ScenesStore) => {
                 ),
         },
     ).run;
+
+    const applyBatchEnabled = async (sceneIds: string[], enabled: boolean) => {
+        try {
+            const result = await store.batchSetEnabled(sceneIds, enabled);
+            batchDialogOpen.value = false;
+            ElMessage.success(`已${enabled ? "启用" : "停用"} ${result.updatedCount} 个场景`);
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "批量操作失败");
+        }
+    };
+
+    const applySceneOrder = async (sceneIds: string[]) => {
+        try {
+            await store.reorderScenes(
+                sceneIds.map((id, index) => ({ id, sort_order: (index + 1) * 10 })),
+            );
+            sortDialogOpen.value = false;
+            ElMessage.success("场景排序已保存");
+        } catch (error) {
+            ElMessage.error(error instanceof Error ? error.message : "场景排序保存失败");
+        }
+    };
+
+    const closeLogDialog = () => {
+        logDialogOpen.value = false;
+        logSceneName.value = "";
+        sceneLogs.value = [];
+    };
 
     const copyScene = useAsyncAction(
         async (scene: Scene) => {
@@ -272,9 +300,17 @@ export const useSceneModeController = (store: ScenesStore) => {
 
     return {
         cancelRemoveScene,
+        applyBatchEnabled,
+        applySceneOrder,
+        batchDialogOpen,
         confirmRemoveScene,
         copyScene,
+        closeLogDialog,
         createDialogOpen,
+        logDialogOpen,
+        logSceneName,
+        sceneLogs,
+        sortDialogOpen,
         createScene,
         deleting,
         deleteDialogOpen,

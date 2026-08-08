@@ -267,7 +267,10 @@ def get_room_detail_service(db: Session, user: User, room_id: int) -> RoomDetail
     if recent_log:
         recent_activity = recent_log.event
         now = datetime.now(timezone.utc)
-        diff = now - recent_log.occurred_at
+        occurred_at = recent_log.occurred_at
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+        diff = now - occurred_at
         minutes = int(diff.total_seconds() / 60)
         if minutes < 1:
             recent_activity_time = "刚刚"
@@ -506,7 +509,7 @@ def update_device_service(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在")
     device.status = DeviceStatus(payload.status)
     device.updated_at = datetime.now(timezone.utc)
-    write_activity(db, room, f"{device.name} 状态更新为 {payload.status}")
+    write_activity(db, room, f"{device.name} 状态更新为 {payload.status.value}")
     db.commit()
     db.refresh(room)
     return _load_room_devices(db, RoomRead.model_validate(room), room.id)

@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 from uuid import uuid4
 
@@ -402,18 +402,35 @@ def get_summary_service(db: Session, household_id: int) -> SceneSummaryRead:
         ).where(Scene.household_id == household_id)
     ).one()
     automation = total - manual
-    month_start = now_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    monthly = (
-        db.scalar(
-            select(func.count())
-            .select_from(SceneExecutionLog)
-            .join(Scene, Scene.id == SceneExecutionLog.scene_id)
-            .where(
-                Scene.household_id == household_id,
+    now = now_utc()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month_start = (
+        month_start.replace(year=month_start.year + 1, month=1)
+        if month_start.month == 12
+        else month_start.replace(month=month_start.month + 1)
+    )
+    previous_month_start = (month_start - timedelta(days=1)).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    monthly, previous_monthly = db.execute(
+        select(
+            func.count().filter(
                 SceneExecutionLog.started_at >= month_start,
-            )
+                SceneExecutionLog.started_at < next_month_start,
+            ),
+            func.count().filter(
+                SceneExecutionLog.started_at >= previous_month_start,
+                SceneExecutionLog.started_at < month_start,
+            ),
         )
-        or 0
+        .select_from(SceneExecutionLog)
+        .join(Scene, Scene.id == SceneExecutionLog.scene_id)
+        .where(Scene.household_id == household_id)
+    ).one()
+    monthly_growth_rate = (
+        round((monthly - previous_monthly) * 100 / previous_monthly, 1)
+        if previous_monthly
+        else (100.0 if monthly else 0.0)
     )
     return SceneSummaryRead(
         enabled=enabled,
@@ -423,7 +440,7 @@ def get_summary_service(db: Session, household_id: int) -> SceneSummaryRead:
         enabled_rate=round(enabled * 100 / total, 1) if total else 0,
         automation_rate=round(automation * 100 / total, 1) if total else 0,
         manual_rate=round(manual * 100 / total, 1) if total else 0,
-        monthly_growth_rate=0,
+        monthly_growth_rate=monthly_growth_rate,
     )
 
 
@@ -504,6 +521,13 @@ def get_execution_service(
 
 def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
     raw_steps = parse_json_list(template.steps_json)
+    valid_steps = [
+        step
+        for step in raw_steps
+        if isinstance(step, dict)
+        and step.get("name")
+        and (step.get("deviceId") or step.get("device_id"))
+    ]
     return SceneTemplateRead(
         id=template.id,
         name=template.name,
@@ -521,10 +545,10 @@ def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
                 "id": step.get("id", f"{template.id}-{index}"),
                 "name": step["name"],
                 "description": step.get("description", ""),
-                "device_id": step["deviceId"],
+                "device_id": step.get("deviceId") or step["device_id"],
                 "order": step.get("order", index),
             }
-            for index, step in enumerate(raw_steps, 1)
+            for index, step in enumerate(valid_steps, 1)
         ],
     )
 
