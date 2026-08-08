@@ -95,8 +95,10 @@
 
 body {
     margin: 0;
-    min-width: 1180px;
+    min-width: 320px;
     min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
 }
 
 button,

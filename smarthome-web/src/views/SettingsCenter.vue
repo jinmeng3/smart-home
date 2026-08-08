@@ -452,7 +452,7 @@ const removeMember = async (membershipId: number) => {
         :disabled="!authStore.isAuthenticated"
     >
         <section
-            class="page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
+            class="settings-main page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
             <header
                 class="mb-4 shrink-0 border-b border-[var(--color-divider)] pb-4"
@@ -588,6 +588,8 @@ const removeMember = async (membershipId: number) => {
 
 <style scoped>
 .settings-scroll-area {
+    container-name: settings-content;
+    container-type: inline-size;
     contain: layout paint;
     overscroll-behavior: contain;
     scroll-behavior: smooth;
@@ -734,6 +736,38 @@ const removeMember = async (membershipId: number) => {
     .settings-reset-button,
     .settings-save-button {
         min-width: auto;
+    }
+}
+
+@container settings-content (max-width: 900px) {
+    .settings-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .settings-main {
+        padding: 12px;
+    }
+
+    .settings-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+        flex-wrap: wrap;
+    }
+
+    .settings-saved-at,
+    .settings-action-buttons {
+        margin-left: 0;
+    }
+
+    .settings-action-buttons > button {
+        flex: 1 1 0;
     }
 }
 

@@ -263,7 +263,7 @@ const viewMode = ref<"list" | "grid">("list");
 <style scoped>
 .device-list-panel {
     display: flex;
-    min-height: 0;
+    min-height: 400px;
     flex: 1 1 auto;
     flex-direction: column;
     border: 1px solid var(--color-border);
@@ -345,6 +345,27 @@ const viewMode = ref<"list" | "grid">("list");
 
     .device-list-tools {
         width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .device-list-panel {
+        min-height: 460px;
+    }
+
+    .device-list-header,
+    .device-type-tabs,
+    .device-pagination {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .device-list-tools {
+        justify-content: flex-start;
+    }
+
+    .device-pagination {
+        flex-wrap: wrap;
     }
 }
 

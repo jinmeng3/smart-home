@@ -45,6 +45,7 @@
 | [07-overview-schedules.md](./07-overview-schedules.md) | 总览、模式执行、巡检、日程、设备同步任务 |
 | [08-ai-chat.md](./08-ai-chat.md) | AI 模型管理、聊天 |
 | [09-inferred-backend.md](./09-inferred-backend.md) | 前端推断后端接口规范（完整清单） |
+| [10-langchain-agent.md](./10-langchain-agent.md) | LangChain 智能家居智能体设计方案 |
 
 ---
 

@@ -438,7 +438,10 @@ useAuthenticatedLoader(load);
 .workspace {
     min-height: 0;
     flex: 1;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -509,16 +512,16 @@ useAuthenticatedLoader(load);
 }
 
 .room-panel-wrapper {
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
+    min-height: max-content;
     display: flex;
     flex-direction: column;
 }
 
 .room-panel-wrapper:deep(.quick-control) {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
+    flex: 0 0 auto;
+    min-height: max-content;
+    overflow: visible;
 }
 
 .room-empty-state {

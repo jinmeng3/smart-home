@@ -10,6 +10,19 @@ import {
 } from "../../router/navigation";
 import SvgIcon from "../common/SvgIcon.vue";
 
+const props = withDefaults(
+    defineProps<{
+        mode?: "full" | "compact" | "drawer";
+    }>(),
+    {
+        mode: "full",
+    },
+);
+
+const emit = defineEmits<{
+    close: [];
+}>();
+
 const store = useHomeStore();
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
@@ -47,6 +60,8 @@ const selectMenu = async (item: NavigationItem) => {
 
         await router.push(item.path);
     }
+
+    if (props.mode === "drawer") emit("close");
 };
 
 const preloadMenu = (item: NavigationItem) => {
@@ -66,6 +81,7 @@ const startConversation = async () => {
     }
 
     await store.startNewConversation();
+    if (props.mode === "drawer") emit("close");
 };
 
 const openConversation = async (sessionId: string) => {
@@ -79,13 +95,24 @@ const openConversation = async (sessionId: string) => {
     }
 
     await store.loadConversation(sessionId);
+    if (props.mode === "drawer") emit("close");
 };
 </script>
 
 <template>
     <aside
+        :class="[`is-${mode}`]"
         class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] px-4 py-5 shadow-soft"
     >
+        <button
+            v-if="mode === 'drawer'"
+            class="drawer-close"
+            type="button"
+            aria-label="关闭导航"
+            @click="emit('close')"
+        >
+            <SvgIcon name="close" size="sm" />
+        </button>
         <div class="mb-6 flex shrink-0 items-center gap-3">
             <button
                 class="motion-button grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 shadow-lg shadow-blue-500/20 ring-1 ring-blue-100"
@@ -222,6 +249,53 @@ const openConversation = async (sessionId: string) => {
 </template>
 
 <style scoped>
+.is-compact {
+    padding: 14px 10px;
+}
+
+.is-compact > div:first-of-type {
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.is-compact > div:first-of-type > div,
+.is-compact nav button > span:last-child,
+.is-compact .conversation-panel,
+.is-compact > button:last-of-type > div:last-of-type,
+.is-compact > button:last-of-type > span:last-child {
+    display: none;
+}
+
+.is-compact nav button {
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+}
+
+.is-compact nav button > span:first-child {
+    left: -10px;
+}
+
+.is-compact > button:last-of-type {
+    height: 52px;
+    justify-content: center;
+    padding: 6px;
+}
+
+.drawer-close {
+    position: absolute;
+    z-index: 1;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+}
+
 .menu-icon {
     display: grid;
     width: 28px;

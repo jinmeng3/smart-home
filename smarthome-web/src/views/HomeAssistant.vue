@@ -35,7 +35,7 @@ useAuthenticatedLoader(refreshHomeData);
         <div
             :inert="!authStore.isAuthenticated"
             :aria-disabled="!authStore.isAuthenticated"
-            class="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto"
+            class="assistant-rail flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto"
         >
             <ScheduleCard />
             <DeviceListCard />
@@ -46,3 +46,17 @@ useAuthenticatedLoader(refreshHomeData);
         </div>
     </div>
 </template>
+
+<style scoped>
+@media (max-width: 1279px) {
+    .assistant-rail {
+        overflow-y: visible;
+    }
+}
+
+@media (max-width: 767px) {
+    .assistant-rail > div:last-child {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+</style>

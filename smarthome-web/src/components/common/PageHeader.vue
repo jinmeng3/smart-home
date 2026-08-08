@@ -101,4 +101,32 @@ withDefaults(
         display: grid;
     }
 }
+
+@media (max-width: 767px) {
+    .page-header {
+        gap: 12px;
+    }
+
+    .page-header-icon {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+        border-radius: 10px;
+    }
+
+    .page-heading h1 {
+        font-size: 20px;
+    }
+
+    .page-heading p {
+        margin-top: 5px;
+        font-size: 12px;
+    }
+
+    .page-actions {
+        width: 100%;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+}
 </style>

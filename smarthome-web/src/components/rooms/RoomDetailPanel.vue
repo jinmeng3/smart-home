@@ -144,6 +144,8 @@ defineEmits<{
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     border: 1px solid var(--color-border);
     border-radius: 18px;
     background: var(--color-page-bg);

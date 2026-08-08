@@ -1311,6 +1311,15 @@ useAuthenticatedLoader(loadOverviewData);</script>
 }
 
 @media (max-width: 760px) {
+    .overview {
+        padding: 12px;
+    }
+    .device-list {
+        overflow-x: auto;
+    }
+    .device-list table {
+        min-width: 620px;
+    }
     .device-list nav h2 {
         width: 100%;
     }

@@ -240,7 +240,10 @@ watch(
     flex: 1;
     flex-direction: column;
     gap: 14px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     padding: 18px;
 }
 
@@ -294,13 +297,14 @@ watch(
 }
 
 .scene-grid-wrapper.is-expanded {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+    flex: 0 0 auto;
+    min-height: 360px;
+    overflow: visible;
 }
 
 .scene-grid-wrapper.is-expanded:deep(.scene-grid-panel) {
-    height: 100%;
+    min-height: 360px;
+    height: auto;
 }
 
 .scene-flow-wrapper {
