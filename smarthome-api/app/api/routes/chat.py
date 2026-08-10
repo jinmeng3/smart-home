@@ -10,21 +10,15 @@ from app.schemas.chat import (
     ChatSessionRead,
 )
 from app.schemas.common import ApiResponse
-from app.services.ai_model import read_ai_model_service
 from app.services.chat import (
-    build_chat_request,
-    create_chat_completion,
-    extract_assistant_content,
+    create_chat_service,
+    create_chat_service_stream,
     get_chat_session,
     list_chat_messages_service,
     list_chat_sessions_service,
-    save_assistant_message,
-    save_request_messages,
-    stream_chat_response,
 )
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-codex_router = APIRouter(tags=["chat"])
 
 
 # === 聊天会话 ===
@@ -73,7 +67,6 @@ def list_chat_messages(
 # === 对话补全 ===
 
 
-@codex_router.post("/v1/chat/completions")
 @router.post("/completions")
 def create_chat(
     payload: ChatCompletionRequest,
@@ -81,17 +74,10 @@ def create_chat(
     db: Session = DB_DEPENDENCY,
 ):
     """转发聊天请求，并根据 stream 参数返回普通或流式响应。"""
-    model = read_ai_model_service(db, current_user)
-    session = get_chat_session(db, current_user, payload.session_id, payload.messages)
-    save_request_messages(db, session, payload)
-    request = build_chat_request(model, payload)
-
     if payload.stream:
         return StreamingResponse(
-            stream_chat_response(request, db, session.id),
+            create_chat_service_stream(payload, current_user, db),
             media_type="text/event-stream",
         )
-
-    response_data = create_chat_completion(request)
-    save_assistant_message(db, session.id, extract_assistant_content(response_data))
-    return response_data
+    else:
+        return ApiResponse.ok(data=create_chat_service(payload, current_user, db))

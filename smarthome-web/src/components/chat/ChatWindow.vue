@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useAutoScroll } from "../../composables/useAutoScroll";
 import { useHomeStore } from "../../stores/home";
 import AgentExecutionSteps from "../animation/AgentExecutionSteps.vue";
@@ -12,6 +12,8 @@ const store = useHomeStore();
 const authStore = useAuthStore();
 const inputValue = ref("");
 const chatScrollRef = ref<HTMLElement | null>(null);
+const modelMenuOpen = ref(false);
+const modelMenuRef = ref<HTMLElement | null>(null);
 
 const messageCount = computed(() => store.messages.length);
 const visibleMessages = computed(() => store.messages.slice(-30));
@@ -28,6 +30,29 @@ const { scrollToBottom, updateStickiness } = useAutoScroll(
     chatScrollRef,
     messageCount,
 );
+
+const onClickOutside = (event: MouseEvent) => {
+    if (
+        modelMenuRef.value &&
+        !modelMenuRef.value.contains(event.target as Node)
+    ) {
+        modelMenuOpen.value = false;
+    }
+};
+
+onMounted(() => {
+    void store.fetchModels();
+    document.addEventListener("click", onClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener("click", onClickOutside);
+});
+
+const selectModel = (name: string) => {
+    store.activeModel = name;
+    modelMenuOpen.value = false;
+};
 
 const send = () => {
     if (generating.value) {
@@ -154,6 +179,39 @@ const starterPrompts = [
             <div
                 class="mt-5 flex items-center gap-4 text-[var(--color-primary-600)]"
             >
+                <div class="relative" ref="modelMenuRef">
+                    <button
+                        :disabled="!authStore.isAuthenticated"
+                        class="motion-button flex items-center gap-1"
+                        type="button"
+                        @click="modelMenuOpen = !modelMenuOpen"
+                    >
+                        <span class="text-xs">
+                            {{ store.activeModel || "选择模型" }}
+                        </span>
+                        <span class="text-[10px]">▾</span>
+                    </button>
+                    <div
+                        v-if="modelMenuOpen"
+                        class="absolute bottom-full left-0 z-20 mb-2 max-h-60 min-w-40 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card-bg)] p-1 shadow-soft"
+                    >
+                        <button
+                            v-for="model in store.availableModels"
+                            :key="model.id"
+                            class="block w-full rounded-md px-3 py-2 text-left text-xs text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
+                            type="button"
+                            @click="selectModel(model.name)"
+                        >
+                            {{ model.name }}
+                        </button>
+                        <div
+                            v-if="store.availableModels.length === 0"
+                            class="px-3 py-2 text-xs text-[var(--color-text-disabled)]"
+                        >
+                            暂无可用模型
+                        </div>
+                    </div>
+                </div>
                 <button
                     :disabled="!authStore.isAuthenticated"
                     class="motion-button grid h-8 w-8 place-items-center rounded-full bg-[var(--color-surface-hover)] text-lg"

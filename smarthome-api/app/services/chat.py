@@ -1,13 +1,16 @@
 import json
-from collections.abc import Iterator
+import re
+from collections.abc import Generator
 from datetime import datetime, timezone
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from fastapi import HTTPException, status
+from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_model_cache
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User
@@ -72,122 +75,7 @@ def list_chat_messages_service(
     )
 
 
-# === 聊天消息 ===
-
-
-def save_request_messages(
-    db: Session, session: ChatSession, payload: ChatCompletionRequest
-) -> None:
-    """保存本次请求中的消息。"""
-    saved_messages = [
-        ChatMessage(
-            session_id=session.id,
-            role=message.role,
-            content=message.content,
-        )
-        for message in payload.messages
-    ]
-    db.add_all(saved_messages)
-    # 新增关联消息不会自动触发会话行的 onupdate，需要显式更新时间。
-    session.updated_at = datetime.now(timezone.utc)
-    db.commit()
-
-
-def save_assistant_message(db: Session, session_id: int, content: str) -> None:
-    """保存助手回复，空内容直接跳过。"""
-    if not content.strip():
-        return
-
-    session = db.get(ChatSession, session_id)
-    if not session:
-        return
-
-    db.add(ChatMessage(session_id=session_id, role="assistant", content=content))
-    session.updated_at = datetime.now(timezone.utc)
-    db.commit()
-
-
-# === 对话补全 ===
-
-
-def get_chat_completions_url(api_endpoint: str) -> str:
-    """规范化上游 chat completions 地址。"""
-    endpoint = api_endpoint.strip().rstrip("/")
-    if endpoint.endswith("/chat/completions"):
-        return endpoint
-    return f"{endpoint}/v1/chat/completions"
-
-
-def build_chat_payload(model: AIModel, payload: ChatCompletionRequest) -> dict:
-    chat_payload = {
-        "model": model.name,
-        "messages": [message.model_dump() for message in payload.messages],
-        "stream": payload.stream,
-        "temperature": model.temperature,
-        "max_tokens": model.max_tokens,
-    }
-
-    return chat_payload
-
-
-def build_chat_headers(model: AIModel) -> dict:
-    return {
-        "Authorization": f"Bearer {model.api_key.strip()}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "User-Agent": "SmartHomeAPI/0.1",
-    }
-
-
-def build_chat_request(model: AIModel, payload: ChatCompletionRequest) -> Request:
-    """构造上游请求对象。"""
-    if not model.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Model is disabled"
-        )
-
-    if not model.api_endpoint or not model.api_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Model endpoint or api key is missing",
-        )
-
-    return Request(
-        get_chat_completions_url(model.api_endpoint),
-        data=json.dumps(build_chat_payload(model, payload)).encode("utf-8"),
-        headers=build_chat_headers(model),
-        method="POST",
-    )
-
-
-def build_non_stream_request(request: Request) -> Request:
-    data = request.data
-    if not isinstance(data, bytes):
-        data = b"{}"
-
-    payload = json.loads(data.decode("utf-8"))
-    payload["stream"] = False
-
-    return Request(
-        request.full_url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers=dict(request.header_items()),
-        method="POST",
-    )
-
-
-def read_upstream_error(error: HTTPError) -> str:
-    """读取并解析上游错误信息。"""
-    raw_body = error.read().decode("utf-8", errors="ignore")
-    try:
-        data = json.loads(raw_body)
-    except json.JSONDecodeError:
-        return raw_body.strip() or error.reason
-
-    detail = data.get("error", data)
-    if isinstance(detail, dict):
-        return detail.get("message") or json.dumps(detail, ensure_ascii=False)
-    return str(detail)
+# === SSE 格式化 ===
 
 
 def format_stream_error(error: str) -> bytes:
@@ -203,97 +91,89 @@ def format_stream_done() -> bytes:
     return b"data: [DONE]\n\n"
 
 
-def extract_delta_content(payload: dict) -> str:
-    choice = payload.get("choices", [{}])[0]
-    delta = choice.get("delta") or {}
-    message = choice.get("message") or {}
+# === 对话补全 ===
 
-    return (
-        delta.get("content")
-        or message.get("content")
-        or payload.get("content")
-        or payload.get("text")
-        or ""
+
+def create_chat_service(
+    payload: ChatCompletionRequest,
+    current_user: User,
+    db: Session,
+) -> str:
+    model_config = db.scalar(select(AIModel).where(AIModel.name == payload.model))
+    if model_config is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+    session = get_chat_session(db, current_user, payload.session_id, payload.messages)
+
+    # 用户消息
+    user_message = ChatMessage(
+        session_id=session.id,
+        content=payload.messages[-1].content,
+        role=payload.messages[-1].role,
     )
+    db.add(user_message)
 
+    model_cache = get_model_cache()
+    model = model_cache.get(model_config)
+    agent = create_agent(model=model)
+    config: RunnableConfig = {"configurable": {"thread_id": str(session.id)}}
 
-def parse_stream_delta(chunk: bytes) -> str:
-    """从流式 chunk 中提取增量内容。"""
-    content = ""
-    for line in chunk.decode("utf-8", errors="ignore").splitlines():
-        if not line.startswith("data: "):
-            continue
+    result = agent.invoke(
+        input={"messages": [HumanMessage(content=payload.messages[-1].content)]},
+        config=config,
+    )
+    content = result["messages"][-1].content
 
-        data = line[6:].strip()
-        if not data or data == "[DONE]":
-            continue
-
-        try:
-            payload = json.loads(data)
-        except json.JSONDecodeError:
-            continue
-
-        content += extract_delta_content(payload)
+    db.add(ChatMessage(session_id=session.id, content=content, role="assistant"))
+    session.updated_at = datetime.now(timezone.utc)
+    db.commit()
     return content
 
 
-def stream_chat_response(
-    request: Request, db: Session | None = None, session_id: int | None = None
-) -> Iterator[bytes]:
-    """流式转发上游响应，并在结束后保存助手消息。"""
-    assistant_chunks = []
-    done_seen = False
-    stream_tail = b""
+def create_chat_service_stream(
+    payload: ChatCompletionRequest,
+    current_user: User,
+    db: Session,
+) -> Generator[bytes, None, None]:
+    model_config = db.scalar(select(AIModel).where(AIModel.name == payload.model))
+    if model_config is None:
+        yield format_stream_error("Model not found")
+        return
+    session = get_chat_session(db, current_user, payload.session_id, payload.messages)
 
+    # 先提交用户消息，避免异常时丢失
+    db.add(
+        ChatMessage(
+            session_id=session.id,
+            content=payload.messages[-1].content,
+            role=payload.messages[-1].role,
+        )
+    )
+    session.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    model_cache = get_model_cache()
+    model = model_cache.get(model_config)
+    agent = create_agent(model=model)
+    config: RunnableConfig = {"configurable": {"thread_id": str(session.id)}}
+
+    collected = ""
     try:
-        with urlopen(request, timeout=60) as response:
-            while True:
-                chunk = response.read(4096)
-                if not chunk:
-                    break
+        for msg_chunk, _metadata in agent.stream(
+            input={"messages": [HumanMessage(content=payload.messages[-1].content)]},
+            config=config,
+            stream_mode="messages",
+        ):
+            if hasattr(msg_chunk, "content") and msg_chunk.content:
+                chunk_text = str(msg_chunk.content)
+                collected += chunk_text
+                yield format_stream_content(chunk_text)
 
-                assistant_chunks.append(parse_stream_delta(chunk))
-                done_seen = done_seen or b"data: [DONE]" in stream_tail + chunk
-                stream_tail = (stream_tail + chunk)[-32:]
-                yield chunk
-            if not done_seen:
-                yield format_stream_done()
-    except HTTPError as exc:
-        yield format_stream_error(read_upstream_error(exc))
-    except URLError as exc:
-        if "UNEXPECTED_EOF_WHILE_READING" in str(exc.reason):
-            try:
-                response_data = create_chat_completion(
-                    build_non_stream_request(request)
-                )
-                content = extract_assistant_content(response_data)
-                assistant_chunks.append(content)
-                yield format_stream_content(content)
-                yield format_stream_done()
-            except HTTPException as fallback_exc:
-                yield format_stream_error(str(fallback_exc.detail))
-        else:
-            yield format_stream_error(str(exc.reason))
-    finally:
-        if db is not None and session_id is not None:
-            save_assistant_message(db, session_id, "".join(assistant_chunks))
+    except Exception as e:  # noqa: BLE001
+        yield format_stream_error(str(e))
+        return
 
-
-def create_chat_completion(request: Request) -> dict:
-    """发起非流式聊天请求并返回解析结果。"""
-    try:
-        with urlopen(request, timeout=60) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        raise HTTPException(
-            status_code=exc.code, detail=read_upstream_error(exc)
-        ) from exc
-    except URLError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc.reason)
-        ) from exc
-
-
-def extract_assistant_content(response_data: dict) -> str:
-    """提取非流式响应里的助手内容。"""
-    return response_data.get("choices", [{}])[0].get("message", {}).get("content") or ""
+    content = re.sub(r"<think>.*?</think>", "", collected, flags=re.DOTALL).strip()
+    if content.strip():
+        db.add(ChatMessage(session_id=session.id, content=content, role="assistant"))
+        session.updated_at = datetime.now(timezone.utc)
+        db.commit()

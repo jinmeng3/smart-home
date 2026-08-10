@@ -27,6 +27,12 @@ class Settings(BaseSettings):
         ]
     )
 
+    # 模型
+    supported_ai_providers: list[str] = Field(
+        default_factory=lambda: ["openai", "anthropic", "cohere", "gemini", "deepseek"]
+    )
+    max_cache_size: int = Field(default=100, ge=1)
+
     # 文件上传
     upload_dir: str = "app/uploads"
     max_avatar_size: int = 2 * 1024 * 1024
@@ -51,6 +57,8 @@ class Settings(BaseSettings):
     @property
     def device_image_dir(self) -> Path:
         return Path(self.upload_dir) / "devices"
+
+
 
 
 @lru_cache

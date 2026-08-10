@@ -6,6 +6,7 @@ import {
   streamChatCompletion as apiStreamChatCompletion,
   type ChatCompletionMessage,
 } from "../api/chat";
+import { listAIModels, type AIModelRead } from "../api/aiModel";
 import type { AgentExecutionStep, AgentStatus } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
@@ -40,6 +41,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   const messages = ref<ChatMessage[]>(initialMessages);
   const recentConversations = ref<RecentConversation[]>([]);
   const activeSessionId = ref<string | null>(null);
+  const activeModel = ref<string | null>(null);
+  const availableModels = ref<AIModelRead[]>([]);
   const agentStatus = ref<AgentStatus>("idle");
   const executionSteps = ref<AgentExecutionStep[]>(createExecutionSteps());
   let replyTimerIds: number[] = [];
@@ -97,6 +100,21 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       recentConversations.value = await apiListChatSessions();
     } catch {
       recentConversations.value = [];
+    }
+  };
+
+  const fetchModels = async () => {
+    try {
+      const models = await listAIModels();
+      availableModels.value = models;
+      if (!activeModel.value && models.length > 0) {
+        const first = models[0];
+        if (first) {
+          activeModel.value = first.name;
+        }
+      }
+    } catch {
+      availableModels.value = [];
     }
   };
 
@@ -188,6 +206,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       await apiStreamChatCompletion(
         contextMessages,
         activeSessionId.value,
+        activeModel.value,
         (delta) => {
           queueContent(delta);
           if (!streamStarted) {
@@ -259,8 +278,11 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
   return {
     activeSessionId,
+    activeModel,
     agentStatus,
+    availableModels,
     executionSteps,
+    fetchModels,
     loadConversation,
     messages,
     recentConversations,

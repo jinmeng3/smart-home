@@ -1,17 +1,21 @@
 from collections.abc import Generator
+from functools import lru_cache
 
 from fastapi import Depends, HTTPException, Path, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
+from app.agents.factory import ModelCache
 from app.core.config import Settings, get_settings
 from app.db.session import get_db as session_get_db
 from app.models.household import Household
 from app.models.membership import HouseholdMembership, HouseholdRole
 from app.models.user import User
 from app.services.auth import parse_token
-from app.services.household import get_default_household_id as resolve_default_household_id
+from app.services.household import (
+    get_default_household_id as resolve_default_household_id,
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -128,3 +132,9 @@ def count_admins(db: Session, household_id: int) -> int:
         )
         or 0
     )
+
+
+@lru_cache
+def get_model_cache():
+    setting = get_settings()
+    return ModelCache(setting.max_cache_size)

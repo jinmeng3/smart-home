@@ -81,6 +81,7 @@ const streamCompletions = async (
   url: string,
   messages: ChatCompletionMessage[],
   sessionId: string | null,
+  model: string | null,
   onDelta: (content: string) => void,
   signal: AbortSignal,
 ) => {
@@ -92,7 +93,7 @@ const streamCompletions = async (
     },
     {
       method: "POST",
-      body: JSON.stringify({ messages, session_id: sessionId, stream: true }),
+      body: JSON.stringify({ messages, session_id: sessionId, model, stream: true }),
     },
     signal,
   );
@@ -123,10 +124,11 @@ export const listChatMessages = async (sessionId: string) => {
 export const streamChatCompletion = (
   messages: ChatCompletionMessage[],
   sessionId: string | null,
+  model: string | null,
   onDelta: (content: string) => void,
   signal: AbortSignal,
 ) =>
-  streamCompletions("/api/chat/completions", messages, sessionId, onDelta, signal);
+  streamCompletions("/api/chat/completions", messages, sessionId, model, onDelta, signal);
 
 // ── OpenAI 兼容接口 ────────────────────────────────────────────────────────────────
 
@@ -151,6 +153,7 @@ const streamOpenAICompletions = (
     "/api/v1/chat/completions",
     payload.messages as ChatCompletionMessage[],
     (payload.sessionId as string | null) ?? null,
+    (payload.model as string | null) ?? null,
     onDelta,
     signal,
   );

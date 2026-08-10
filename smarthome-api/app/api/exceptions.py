@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.agents.errors import AgentError
 from app.schemas.common import ApiResponse, AppCode
 
 logger = logging.getLogger(__name__)
@@ -31,11 +32,14 @@ def error_response(
     """将 HTTP 状态码映射为统一的业务错误响应。"""
     app_code = HTTP_TO_APP_CODE.get(status_code, AppCode.INTERNAL_SERVER_ERROR)
     payload = ApiResponse.fail(code=int(app_code), message=message, data=data)
-    return JSONResponse(status_code=status_code, content=payload.model_dump(mode="json"))
+    return JSONResponse(
+        status_code=status_code, content=payload.model_dump(mode="json")
+    )
 
 
 def register_exception_handlers(app: FastAPI) -> None:
     """注册全局异常处理器，统一返回结构化错误响应。"""
+
     @app.exception_handler(HTTPException)
     async def http_exception_handler(
         _request: Request, exc: HTTPException
@@ -43,6 +47,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         if isinstance(exc.detail, str):
             return error_response(exc.status_code, exc.detail)
         return error_response(exc.status_code, "请求处理失败", exc.detail)
+
+    @app.exception_handler(AgentError)
+    async def agent_error_handler(_request: Request, exc: AgentError) -> JSONResponse:
+        return error_response(
+            exc.http_status,
+            str(exc),
+            {"code": exc.code, "retryable": exc.retryable},
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(

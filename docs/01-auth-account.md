@@ -148,3 +148,54 @@
   ```
 - **数据库**: `users`（清空 `avatar_url` 字段）
 - **实现状态**: ✅ 后端已实现 — ✅ 前端已实现
+
+### 2.5 获取用户偏好
+
+- **方法**: `GET /api/account/me/preferences`
+- **功能**: 获取当前用户的界面、AI、通知、安全与备份偏好；尚未保存时返回默认值
+- **输入**: 无（需认证）
+- **输出**:
+  ```json
+  {
+    "code": 0,
+    "message": "ok",
+    "data": {
+      "appearance": {
+        "themeMode": "light",
+        "fontSize": "medium",
+        "animationsEnabled": true,
+        "sidebarCollapsed": false,
+        "performanceMode": false
+      },
+      "aiAssistant": {
+        "detailLevel": 70,
+        "autoExecuteLowRisk": true,
+        "confirmHighRisk": true
+      },
+      "notifications": {
+        "deviceOffline": true,
+        "securityAlerts": true,
+        "automationResults": true,
+        "quietStart": "23:00",
+        "quietEnd": "07:00"
+      },
+      "security": { "twoFactorEnabled": true },
+      "backup": { "autoBackup": true }
+    }
+  }
+  ```
+- **数据库**: `user_preferences`
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现
+
+### 2.6 保存用户偏好
+
+- **方法**: `PUT /api/account/me/preferences`
+- **功能**: 创建或覆盖当前用户的完整偏好配置
+- **输入**: 与 2.5 的 `data` 字段结构相同
+- **输出**: 返回保存后的完整偏好，`message` 为 `saved`
+- **校验**:
+  - `detailLevel`: `0-100`
+  - `quietStart`、`quietEnd`: `HH:mm` 24 小时格式
+  - 主题、字号等枚举值必须符合 Schema
+- **数据库**: `user_preferences`，以当前用户 ID 为主键
+- **实现状态**: ✅ 后端已实现 — ✅ 前端已实现

@@ -1,92 +1,70 @@
-# Smart Home API 文档总览
+# Smart Home 后端文档
 
-> 本文档整理了 smart-home 前后端项目的所有 API 接口，按模块分类。
->
-> - ✅ 后端已实现 — ✅ 前端已实现：前后端均已对接完成
-> - ✅ 后端已实现 — ❌ 前端未对接：后端已实现，但前端尚未调用
-> - ❌ 后端未实现 — ✅ 前端已调用：前端有调用代码，但后端无对应路由
+本目录以 `smarthome-api/app/api/router.py` 注册的 FastAPI 路由为准，描述当前已经实现的后端能力。交互式接口定义以运行时生成的 OpenAPI 为最终来源。
 
-> 各模块涉及的数据库表已分散到对应模块文档中，详见下方文件索引。
+## 快速入口
 
----
+- [后端开发指南](./00-backend-development.md)：安装、配置、启动、架构、认证、响应协议和数据存储。
+- 启动服务后访问 `http://127.0.0.1:8000/docs` 查看 Swagger UI。
+- 访问 `http://127.0.0.1:8000/openapi.json` 获取可用于类型生成的 OpenAPI 文档。
 
-## 接口统计
+## 当前路由概览
 
-| 模块 | 接口总数 | 前后端已完成 | 后端未对接前端 | 前端未对接后端 |
-|------|---------|------------|--------------|---------------|
-| 认证 (Auth) | 3 | 3 | 0 | 0 |
-| 账户 (Account) | 4 | 4 | 0 | 0 |
-| 家庭 (Household) | 4 | 2 | 2 | 0 |
-| 成员 (Members) | 4 | 4 | 0 | 0 |
-| 房间 (Rooms) | 16 | 3 | 13 | 0 |
-| 设备 (Devices) | 9 | 9 | 0 | 2 |
-| 场景 (Scenes) | 17 | 9 | 8 | 0 |
-| 自动化 (Automations) | 9 | 9 | 0 | 0 |
-| 总览/模式/巡检/同步 | 8 | 0 | 8 | 0 |
-| 日程 (Schedules) | 2 | 2 | 0 | 0 |
-| AI 模型 | 6 | 5 | 1 | 0 |
-| 聊天 (Chat) | 5 | 4 | 1 | 0 |
-| **总计** | **87** | **54** | **33** | **2** |
+后端当前注册 **95 个 HTTP 路由操作**，所有业务路由默认位于 `/api` 下。
 
-> 后端共有 **87** 个路由接口，其中 **54** 个已前后端对接完成，**33** 个仅后端实现。前端另有 **2** 个接口调用但后端未实现（`/api/devices/scan`、`/api/devices/firmware`）。
+| 模块 | 路由操作数 | 文档 |
+|------|-----------:|------|
+| 认证 | 3 | [01-auth-account.md](./01-auth-account.md) |
+| 账户与偏好 | 6 | [01-auth-account.md](./01-auth-account.md) |
+| 家庭 | 4 | [02-household-members.md](./02-household-members.md) |
+| 家庭成员 | 4 | [02-household-members.md](./02-household-members.md) |
+| 房间 | 18 | [03-rooms.md](./03-rooms.md) |
+| 设备 | 11 | [04-devices.md](./04-devices.md) |
+| 场景 | 18 | [05-scenes.md](./05-scenes.md) |
+| 自动化 | 10 | [06-automations.md](./06-automations.md) |
+| 总览、模式、巡检、日程与同步任务 | 10 | [07-overview-schedules.md](./07-overview-schedules.md) |
+| AI 模型 | 6 | [08-ai-chat.md](./08-ai-chat.md) |
+| 聊天 | 5 | [08-ai-chat.md](./08-ai-chat.md) |
 
----
+> 同一处理函数可以注册多个兼容路径，例如设备和房间的创建、更新接口，以及聊天补全接口；表中按实际 HTTP 路由操作计数。
 
-## 模块文件索引
+## 专题文档
 
-| 文件 | 包含模块 |
-|------|---------|
-| [01-auth-account.md](./01-auth-account.md) | 认证 (Auth)、账户 (Account) |
-| [02-household-members.md](./02-household-members.md) | 家庭 (Household)、成员 (Members) |
-| [03-rooms.md](./03-rooms.md) | 房间管理、房间日志、设备绑定、环境、场景 |
-| [04-devices.md](./04-devices.md) | 设备管理、图片上传、分组 |
-| [05-scenes.md](./05-scenes.md) | 场景管理、模板、执行查询 |
-| [06-automations.md](./06-automations.md) | 自动化规则管理 |
-| [07-overview-schedules.md](./07-overview-schedules.md) | 总览、模式执行、巡检、日程、设备同步任务 |
-| [08-ai-chat.md](./08-ai-chat.md) | AI 模型管理、聊天 |
-| [09-inferred-backend.md](./09-inferred-backend.md) | 前端推断后端接口规范（完整清单） |
-| [10-langchain-agent.md](./10-langchain-agent.md) | LangChain 智能家居智能体设计方案 |
+| 文件 | 用途 | 状态 |
+|------|------|------|
+| [09-inferred-backend.md](./09-inferred-backend.md) | 从前端调用侧核对接口需求；状态可能随前后端对接进度变化，不替代 OpenAPI。 | 历史需求分析 |
+| [10-langchain-agent.md](./10-langchain-agent.md) | LangChain 智能家居智能体的目标架构设计：目标、架构、工具、风险策略与 API 协议。 | 📝 设计稿，实现进度见 12 |
+| [11-langchain-agent-guidance.md](./11-langchain-agent-guidance.md) | LangChain 实施方向与开发指导：基于当前项目能力的可落地方向、工具设计、阶段与验收。 | 🚧 实施路线指导 |
+| [12-agent-review-and-roadmap.md](./12-agent-review-and-roadmap.md) | Agent 现状审查与演进路线：对照代码盘点实现差距、风险与修复建议、扩展方向、上线检查清单。 | 📋 现状审查 |
 
----
+> Agent 相关文档关系：`10` 描述“目标设计”，`11` 给出“如何落地”，`12` 盘点“现状与差距”。
+> 阅读 agent 相关文档前，请先阅读 `12` 的现状盘点，避免把设计稿当成已实现能力。
 
-## 数据库表一览
+## Agent 现状提示
 
-数据库表的具体说明已分散到各模块文档中，不再集中列出。
+- `smarthome-api/app/agents/` 目前包含 `AgentContext`、system prompt、模型工厂、异常与 checkpointer 等基础设施雏形，但完整的 agent 运行链路（工具注册、LangGraph 图、人工确认 API、SSE 事件协议）尚未实现。
+- 现有 `/api/chat/completions` 和 `/api/v1/chat/completions` 仍为普通模型转发接口，不是 agent 工具调用接口。
+- 详细差距、风险与建议见 [12-agent-review-and-roadmap.md](./12-agent-review-and-roadmap.md)。
 
-### 按模块的数据库表分布
+## 数据库模型
 
-| 模块 | 涉及的表 | 详见文档 |
-|------|---------|---------|
-| 认证/账户 | `users`, `auth_sessions` | [01-auth-account.md](./01-auth-account.md) |
-| 家庭/成员 | `households`, `household_memberships`, `users` | [02-household-members.md](./02-household-members.md) |
-| 房间 | `rooms`, `room_devices`, `room_preferences`, `room_activity_logs`, `room_environment_samples`, `room_environment_reports`, `devices`, `scenes`, `scene_steps`, `scene_execution_logs`, `scene_execution_steps` | [03-rooms.md](./03-rooms.md) |
-| 设备 | `devices`, `device_group`, `device_logs` | [04-devices.md](./04-devices.md) |
-| 场景 | `scenes`, `scene_steps`, `scene_templates`, `scene_execution_logs`, `scene_execution_steps`, `scene_drafts`, `devices` | [05-scenes.md](./05-scenes.md) |
-| 自动化 | `automations`, `automation_triggers`, `automation_conditions`, `automation_actions`, `automation_executions` | [06-automations.md](./06-automations.md) |
-| 总览/模式/巡检/同步 | `rooms`, `devices`, `automations`, `overview_executions`, `inspection_jobs`, `device_sync_jobs` | [07-overview-schedules.md](./07-overview-schedules.md) |
-| 日程 | `household_schedules` | [07-overview-schedules.md](./07-overview-schedules.md) |
-| AI 模型 | `ai_models` | [08-ai-chat.md](./08-ai-chat.md) |
-| 聊天 | `chat_sessions`, `chat_messages` | [08-ai-chat.md](./08-ai-chat.md) |
+当前 SQLAlchemy 模型包含以下 29 张表：
 
----
+| 领域 | 表 |
+|------|----|
+| 用户与设置 | `users`, `user_preferences`, `ai_models` |
+| 家庭与成员 | `households`, `household_memberships` |
+| 房间与设备 | `rooms`, `room_devices`, `room_activity_logs`, `devices`, `device_group`, `device_logs` |
+| 场景 | `scenes`, `scene_steps`, `scene_rooms`, `scene_templates`, `scene_execution_logs`, `scene_execution_steps`, `scene_drafts` |
+| 自动化 | `automations`, `automation_triggers`, `automation_conditions`, `automation_actions`, `automation_executions` |
+| 总览与任务 | `overview_executions`, `inspection_jobs`, `household_schedules`, `device_sync_jobs` |
+| 聊天 | `chat_sessions`, `chat_messages` |
 
-## 前端已调用但后端未实现的接口
+应用启动时通过 `Base.metadata.create_all()` 创建缺失表；当前没有在启动流程中自动执行 Alembic 迁移。
 
-| 方法 | 路径 | 前端函数 | 说明 |
-|------|------|---------|------|
-| POST | `/api/devices/scan` | `scanDevices` | 扫描发现设备 |
-| POST | `/api/devices/firmware` | `batchUpdateFirmware` | 批量更新设备固件 |
+## 文档维护约定
 
-## 注意事项
-
-1. **设备总数**: 后端有 9 个设备路由，前端额外调用了 `scan` 和 `firmware` 两个路由（后端未实现）。
-2. **总览路由**: 后端 `overview.py` 包含了总览、模式执行、巡检、日程、设备同步任务共 10 个路由，其中日程 2 个已对接，其余 8 个尚未对接。
-3. **AI 模型删除**: 后端 `DELETE /api/ai_model/model` 已实现，前端未调用。
-4. **兼容路由**: 后端 `POST /api/v1/chat/completions` 是 OpenAI 兼容格式路由，前端未调用。
-
-## 后续建议
-
-1. **房间模块**: 后端有大量接口（环境数据、设备绑定、日志、场景操作）前端尚未对接，建议优先对接 `GET /api/rooms` 的筛选参数和 `GET /api/rooms/{id}/devices`。
-2. **自动化模块**: 后端 9 个接口已有 7 个前端对接完成（列表、创建、更新、启停、执行、批量启用、批量定时），剩余 `GET /api/automations/{id}` 和 `GET /api/automations/{id}/executions` 暂未对接。
-3. **总览模块**: `GET /api/households/{id}/overview` 可用于替换首页的 mock 数据。
-4. **后端补全**: 实现 `POST /api/devices/scan` 和 `POST /api/devices/firmware` 两个接口，或前端移除相关调用。
+1. 新增或修改接口时，以路由装饰器、Pydantic Schema 和 `/openapi.json` 为准同步模块文档。
+2. 请求和响应示例应保留真实字段命名；部分 Schema 使用 alias generator 输出 camelCase。
+3. 已实现能力与未来设计必须明确区分，规划内容不要写入当前接口清单。
+4. 删除或增加兼容路由时同步更新上方路由操作数。
