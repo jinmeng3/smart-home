@@ -53,8 +53,8 @@ def agent_context(
         try:
             data = json.loads(user_preferences.preferences_json)
             ai = data.get("ai", {})
-            auto_execute_low_risk = ai.get("auto_execute_low_risk", False)
-            confirm_high_risk = ai.get("confirm_high_risk", False)
+            auto_execute_low_risk = bool(ai.get("auto_execute_low_risk", False))
+            confirm_high_risk = bool(ai.get("confirm_high_risk", True))
         except (json.JSONDecodeError, AttributeError):
             auto_execute_low_risk = False
             confirm_high_risk = True

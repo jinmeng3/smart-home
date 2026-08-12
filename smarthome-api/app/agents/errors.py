@@ -3,14 +3,7 @@ class AgentError(Exception):
     http_status = 500
     retryable = False
 
-    def __init__(
-        self,
-        message: str,
-        *,
-        code: str | None = None,
-        http_status: int | None = None,
-        retryable: bool | None = None,
-    ):
+    def __init__(self, message, *, code=None, http_status=None, retryable=None):
         super().__init__(message)
         if code is not None:
             self.code = code
@@ -33,3 +26,34 @@ class ModelCredentialsMissing(AgentError):
 class ModelToolCallingUnsupported(AgentError):
     code = "MODEL_TOOL_CALLING_UNSUPPORTED"
     http_status = 400
+
+
+class AgentContextError(AgentError):
+    code = "AGENT_CONTEXT_UNAUTHORIZED"
+    http_status = 403
+    retryable = False
+
+
+class AgentSessionNotFound(AgentError):
+    code = "AGENT_SESSION_NOT_FOUND"
+    http_status = 404
+
+
+class AgentModelNotFound(AgentError):
+    code = "AGENT_MODEL_NOT_FOUND"
+    http_status = 404
+
+
+class AgentModelInactive(AgentError):
+    code = "AGENT_MODEL_INACTIVE"
+    http_status = 400
+
+
+class AgentCheckpointerError(AgentError):
+    code = "AGENT_CHECKPOINTER_ERROR"
+    http_status = 500
+
+
+class AgentToolExecutionError(AgentError):
+    code = "AGENT_TOOL_EXECUTION_ERROR"
+    http_status = 500

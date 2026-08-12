@@ -218,6 +218,133 @@ Vue Chat UI
 
 只使用 LangChain AgentExecutor 也能完成简单工具调用，但当前项目需要人工确认、恢复、幂等和多步状态，长期更适合使用显式 LangGraph 状态图。
 
+### 2.3 推荐目录结构
+
+本节把前述分层、LangGraph 节点、工具分类、API 与 SSE、Provider 适配落地为具体文件布局，便于开发时按图实施。整体划分为后端 `agents` 包、agent API 路由、Schema 与现有业务接入层，以及前端聊天状态流。
+
+#### 后端：`smarthome-api/app/`
+
+```text
+app/
+├─ agents/                          # agent 核心包
+│  ├─ __init__.py                   # 聚合导出：get_agent_graph、工具注册、异常
+│  ├─ context.py                    # AgentContext 与可信上下文组装（已有雏形）
+│  ├─ prompts.py                    # Prompt Builder：系统提示注入家庭概况与运行规则
+│  ├─ errors.py                     # AgentError 与各类业务/模型/工具异常（已有雏形）
+│  ├─ factory.py                    # Model Factory：模型创建 + Provider 适配 + 缓存
+│  ├─ checkpointer.py               # Checkpointer：Agent 运行状态与中断恢复（已有雏形）
+│  ├─ graph/                        # LangGraph 状态图
+│  │  ├─ __init__.py
+│  │  ├─ state.py                   # AgentState：消息、上下文、工具调用、确认等状态字段
+│  │  ├─ nodes.py                   # load_context / load_history / model / finalize 节点
+│  │  ├─ tool_router.py             # tool_router / read_tool 节点与工具循环边界
+│  │  ├─ risk_node.py               # risk_check 节点：写操作后端风险判定
+│  │  ├─ approval.py                # approval_interrupt 节点：创建并等待确认
+│  │  └─ execute.py                 # write_tool 节点：执行已批准写操作
+│  ├─ tools/                        # Tool 层，只做参数适配，复用现有 Service
+│  │  ├─ __init__.py                # 工具注册表：按启用的阶段注册工具集合
+│  │  ├─ base.py                    # 工具基类：注入上下文、归属校验、超时、脱敏、审计
+│  │  ├─ query/                     # 只读查询工具
+│  │  │  ├─ rooms.py                # list_rooms
+│  │  │  ├─ devices.py              # list_devices / get_device
+│  │  │  ├─ scenes.py               # list_scenes / get_scene
+│  │  │  ├─ automations.py          # list_automations / get_automation
+│  │  │  └─ executions.py           # list_execution_logs
+│  │  ├─ preview/                   # 预览分析工具（只读、不执行）
+│  │  │  ├─ scenes.py               # preview_scene
+│  │  │  ├─ automations.py          # preview_automation_change / detect_automation_conflicts
+│  │  │  └─ household.py            # 状态巡检 / 节能建议
+│  │  └─ execute/                   # 写工具（进入风险与确认流程）
+│  │     ├─ scenes.py               # execute_scene
+│  │     ├─ automations.py          # create / update / set_enabled / delete
+│  │     └─ low_risk.py             # 低风险设备动作（后期按阶段开放）
+│  ├─ risk/                         # 风险策略
+│  │  ├─ __init__.py
+│  │  ├─ policy.py                  # 风险接口与枚举：只读/低风险/高风险/配置变更/未知
+│  │  ├─ classifier.py              # 按目标设备/场景/自动化展开判定风险
+│  │  └─ profile.py                 # 综合系统策略∩家庭策略∩用户偏好计算最终策略
+│  ├─ agentservice/                 # Agent Service：创建图、注入上下文、运行与恢复
+│  │  ├─ __init__.py
+│  │  ├─ runner.py                  # run：绑定工具与模型，接受流式事件回调
+│  │  ├─ resumer.py                 # resume：处理 approve / edit / reject 决策
+│  │  └─ context_builder.py         # 组装 AgentContext 并持久化为审计快照
+│  ├─ events/                       # Event Publisher：agent/SSE 事件模型与分发
+│  │  ├─ __init__.py
+│  │  ├─ models.py                  # run_*, tool_*, approval_required, error 事件结构
+│  │  ├─ sse.py                     # 将 agent 事件编码为 SSE 帧（text/event-stream）
+│  │  └─ publisher.py               # 事件分发给当前连接/会话订阅者
+│  └─ audit/                        # Agent 审计
+│     ├─ __init__.py
+│     ├─ recorder.py                # 记录运行、工具调用、参数、风险判定和确认决策
+│     └─ policy.py                  # 审计保留期、脱敏规则与事件 schema 版本
+├─ api/
+│  ├─ routes/
+│  │  └─ agent.py                   # /api/agent/* 路由：认证、校验、SSE 与决策入口
+├─ schemas/
+│  ├─ agent.py                      # Runs 请求/响应、Decision 请求、Pending 响应
+│  └─ sse.py                        # SSE 事件 Pydantic 模型（与 events/models 对应）
+```
+
+#### 后端：现有业务接入（不动现有 Service，只新增薄适配）
+
+```text
+app/services/
+├─ agent_service/
+│  ├─ __init__.py
+│  ├─ room_agent.py                 # 复用房间查询能力
+│  ├─ device_agent.py               # 复用设备列表/详情/日志
+│  ├─ scene_agent.py                # 复用场景列表/详情/预览/执行
+│  └─ automation_agent.py           # 复用自动化查询/预览/写入/冲突检测
+```
+
+> 这些文件只是“胶水”：把 `AgentContext` 与既有 Service、家庭归属、事务组合成工具可调用的函数，不复制业务逻辑。
+
+#### 前端：`smarthome-web/src/`
+
+```text
+src/
+├─ api/
+│  ├─ agent.ts                      # agent API 请求：run、decision、pending
+│  └─ agentSse.ts                   # agent SSE 解析：按事件类型分发到回调
+├─ composables/
+│  ├─ useAgentChat.ts               # 基于结构化 SSE 事件驱动消息与执行状态（替代固定四步）
+│  └─ useAgentConfirmation.ts       # 待确认状态：拉取 pending、展示确认卡片、提交决策
+├─ stores/
+│  └─ agent.ts                      # Pinia：agent 状态、运行步骤、待确认队列、活跃会话
+├─ types/
+│  └─ agent.ts                      # AgentEvent、AgentExecutionStep、AgentStatus、Decision 类型
+└─ components/
+   └─ chat/
+      ├─ AgentConfirmationCard.vue  # approve / edit / reject 确认卡片
+      └─ AgentExecutionPanel.vue    # 真实工具执行进度面板
+```
+
+#### 目录对应关系
+
+| 指导内容 | 落位 |
+|---|---|
+| AgentContext | `agents/context.py`、`agents/agentservice/context_builder.py` |
+| LangGraph 图 | `agents/graph/`（state / nodes / tool_router / risk_node / approval / execute） |
+| Model Factory + Provider | `agents/factory.py` |
+| Prompt Builder | `agents/prompts.py` |
+| Checkpointer | `agents/checkpointer.py` |
+| Tool 层与工具分类 | `agents/tools/query|preview|execute` |
+| 风险策略 | `agents/risk/`（policy / classifier / profile） |
+| Agent Service | `agents/agentservice/`（runner / resumer） |
+| Event Publisher / SSE | `agents/events/`、`schemas/sse.py`、前端 `api/agentSse.ts` |
+| 审计 | `agents/audit/` |
+| Agent API | `api/routes/agent.py`、`schemas/agent.py` |
+| 复用业务 Service | `services/agent_service/` 薄适配、`agents/tools/` 调用层 |
+| 前端状态流 | `composables/useAgentChat.ts`、`stores/agent.ts`、`components/chat/*` |
+
+#### 实施顺序对应的目录推进
+
+- **阶段一**：`agents/factory.py`、`agents/context.py`、`agents/checkpointer.py`、`agents/errors.py`、`schemas/agent.py`、`schemas/sse.py`、`api/routes/agent.py`。
+- **阶段二**：`agents/tools/query/` 全部 + `agents/graph/{state,nodes,tool_router}.py` + `agents/events/` + `agents/audit/` + 前端 `agentSse.ts`、`useAgentChat.ts`。
+- **阶段三**：`agents/tools/preview/scenes.py` + `agents/tools/execute/scenes.py` + `agents/risk/` + `agents/agentservice/resumer.py` + `agents/graph/{risk_node,approval,execute}.py` + 前端确认卡片。
+- **阶段四**：`agents/tools/preview/automations.py` + `agents/tools/execute/automations.py` + 审计补全。
+- **阶段五**：`agents/checkpointer.py` 生产化、真实设备接入与状态回读（不在本目录新增业务模型，由既有服务扩展）。
+
 ---
 
 ## 3. AgentContext 的接入方式

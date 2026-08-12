@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.agents.checkpointer import close_checkpointer, init_checkpointer
 from app.api.exceptions import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -19,7 +20,9 @@ settings.avatar_dir.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    init_checkpointer()
     yield
+    close_checkpointer()
 
 
 app = FastAPI(lifespan=lifespan, title=settings.app_name)
