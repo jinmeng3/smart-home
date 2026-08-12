@@ -1,34 +1,73 @@
-from collections.abc import Generator
+import asyncio
+from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
 
+from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
+from app.agents.checkpointer import get_checkpointer
+from app.agents.context import AgentContext
 from app.agents.events.models import (
     Error,
-    MessageDelta,
     RunCompleted,
     RunStarted,
-    ToolCompleted,
-    ToolStarted,
 )
 from app.agents.events.sse import encode_sse_event
+from app.agents.events.stream_tracker import StreamTracker
+from app.agents.graph import build_graph
 from app.agents.prompts import system_prompt
 from app.agents.redaction import redact_text
 from app.agents.tools import get_household_tools
 from app.api.deps import get_model_cache
+from app.core.config import get_settings
+from app.models.ai import AIModel
 from app.models.chat import ChatMessage
-from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph.state import CompiledStateGraph
+from sqlalchemy.orm import Session
 
 
-def run_agent(
-    context, household_name, message, model_config, db
-) -> Generator[str, None, None]:
-    run_id = f"run-{uuid4().hex}"
-    cache = get_model_cache()
-    model = cache.get(model_config)
+# === Agent 装配 ===
+async def _create_graph_runner(
+    context: AgentContext, db: Session, model_config: AIModel
+) -> tuple[CompiledStateGraph, AuditRecorder]:
+    model = get_model_cache().get(model_config)
     tools = get_household_tools(context, db)
-    agent = create_agent(model=model, tools=tools)
+    audit = get_audit_recorder()
+    graph = build_graph(
+        model=model,
+        tools=tools,
+        audit=audit,
+        checkpointer=await get_checkpointer(),
+    )
+    return graph, audit
 
+
+def _init_state(
+    context: AgentContext,
+    household_name: str,
+    message: str,
+    run_id: str,
+    db: Session,
+) -> dict[str, Any]:
+    sys_prompt = system_prompt(context, household_name, db)
+    return {
+        "messages": [SystemMessage(content=sys_prompt), HumanMessage(content=message)],
+        "context": context,
+        "run_id": run_id,
+        "rounds": 0,
+    }
+
+
+async def run_agent(
+    context: AgentContext,
+    household_name: str,
+    message: str,
+    model_config: AIModel,
+    db: Session,
+) -> AsyncGenerator[str, None]:
+    run_id = f"run-{uuid4().hex}"
+    graph, audit = await _create_graph_runner(context, db, model_config)
+    track = StreamTracker(run_id)
     yield encode_sse_event(
         RunStarted(
             event_id=f"{run_id}-start",
@@ -37,56 +76,51 @@ def run_agent(
             household_id=context.household_id,
         )
     )
-    sys_prompt = system_prompt(context, household_name, db)
 
     db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
     db.commit()
 
-    collected = ""
-    call_id = 0
-    messages = [SystemMessage(content=sys_prompt), HumanMessage(content=message)]
+    audit.record_run_start(context, run_id)
+
+    initial = _init_state(context, household_name, message, run_id, db)
+    thread_id = (
+        f"user:{context.user_id}:household:{context.household_id}:"
+        f"session:{context.session_id}"
+    )
     try:
-        for chunk, _metadata in agent.stream(
-            input={"messages": messages}, stream_mode="messages"
+        async for chunk, metadata in graph.astream(
+            initial,
+            config={
+                "configurable": {"thread_id": thread_id},
+                "recursion_limit": get_settings().graph_recursion_limit,
+            },
+            stream_mode="messages",
         ):
             msg = cast(Any, chunk)
-            tool_calls = getattr(msg, "tool_calls", None) or []
-            for tool_call in tool_calls:
-                call_id += 1
-                tc = (
-                    tool_call if isinstance(tool_call, dict) else tool_call.model_dump()
-                )
-                yield encode_sse_event(
-                    ToolStarted(
-                        event_id=f"{run_id}-tool{call_id}",
-                        run_id=run_id,
-                        call_id=str(tc.get("id", call_id)),
-                        tool=str(tc.get("name", "unknown")),
-                        summary=f"正在调用 {tc.get('name', 'unknown')}",
-                    )
-                )
+            meta = cast(dict[str, Any], metadata)
+            node = str(meta.get("langgraph_node", ""))
+
+            for tool_call in getattr(msg, "tool_calls", None) or []:
+                sse = track.emit_tool_start(tool_call)
+                if sse:
+                    yield sse
+
             name = getattr(msg, "name", None)
             content = getattr(msg, "content", None)
-            if name and content:
-                yield encode_sse_event(
-                    ToolCompleted(
-                        event_id=f"{run_id}-result{call_id}",
-                        run_id=run_id,
-                        call_id=str(call_id),
-                        tool=str(name),
-                        result=redact_text(str(content))[:500],
-                    )
-                )
-            elif content:
-                collected += str(content)
-                yield encode_sse_event(
-                    MessageDelta(
-                        event_id=f"{run_id}-{len(collected)}",
-                        run_id=run_id,
-                        content=str(content),
-                    )
-                )
+            if node == "tool" and name and content:
+                call_id = str(getattr(msg, "tool_call_id", ""))
+                yield track.emit_tool_result(call_id, name, content)
+            elif content and node == "model":
+                yield track.emit_model_text(content)
+
+    except asyncio.CancelledError:
+        audit.record_run_end(run_id, status="cancelled", message="客户端取消运行")
+        raise
+    except GeneratorExit:
+        audit.record_run_end(run_id, status="cancelled", message="客户端关闭连接")
+        raise
     except Exception as e:  # noqa: BLE001
+        audit.record_run_end(run_id, status="failed", message=str(e))
         yield encode_sse_event(
             Error(
                 event_id=f"{run_id}-error",
@@ -97,6 +131,7 @@ def run_agent(
         )
         return
 
+    collected = track.collected
     if collected.strip():
         db.add(
             ChatMessage(
@@ -106,6 +141,7 @@ def run_agent(
             )
         )
         db.commit()
+    audit.record_run_end(run_id, status="completed")
     yield encode_sse_event(
         RunCompleted(
             event_id=f"{run_id}-done", run_id=run_id, session_id=context.session_id

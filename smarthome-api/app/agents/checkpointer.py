@@ -1,24 +1,21 @@
-import sqlite3
-import threading
+import asyncio
 from pathlib import Path
 
+import aiosqlite
 from app.agents.errors import AgentCheckpointerError
 from app.core.config import get_settings
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-_connection: sqlite3.Connection | None = None
-_saver: SqliteSaver | None = None
-
-_lock = threading.Lock()
-_connection: sqlite3.Connection | None = None
-_saver: SqliteSaver | None = None
+_lock = asyncio.Lock()
+_connection: aiosqlite.Connection | None = None
+_saver: AsyncSqliteSaver | None = None
 
 
-def get_checkpointer() -> SqliteSaver:
+async def get_checkpointer() -> AsyncSqliteSaver:
     global _saver, _connection
     if _saver is not None:
         return _saver
-    with _lock:
+    async with _lock:
         if _saver is not None:
             return _saver
         database_url = get_settings().database_url
@@ -31,12 +28,12 @@ def get_checkpointer() -> SqliteSaver:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            _connection = sqlite3.connect(db_path, check_same_thread=False)
-            _saver = SqliteSaver(_connection)
-            _saver.setup()
+            _connection = await aiosqlite.connect(db_path)
+            _saver = AsyncSqliteSaver(_connection)
+            await _saver.setup()
         except Exception as exc:
             if _connection is not None:
-                _connection.close()
+                await _connection.close()
                 _connection = None
             raise AgentCheckpointerError(
                 f"检查点初始化失败: {exc.__class__.__name__}"
@@ -44,14 +41,14 @@ def get_checkpointer() -> SqliteSaver:
     return _saver
 
 
-def init_checkpointer() -> None:
-    get_checkpointer()
+async def init_checkpointer() -> None:
+    await get_checkpointer()
 
 
-def close_checkpointer() -> None:
+async def close_checkpointer() -> None:
     global _saver, _connection
-    with _lock:
+    async with _lock:
         if _connection is not None:
-            _connection.close()
+            await _connection.close()
             _connection = None
         _saver = None

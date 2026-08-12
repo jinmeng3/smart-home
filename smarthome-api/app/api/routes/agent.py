@@ -16,7 +16,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 
 @router.post("/runs")
-def agent_run(
+async def agent_run(
     payload: AgentRunRequest,
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,

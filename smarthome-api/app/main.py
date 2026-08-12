@@ -20,9 +20,9 @@ settings.avatar_dir.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
-    init_checkpointer()
+    await init_checkpointer()
     yield
-    close_checkpointer()
+    await close_checkpointer()
 
 
 app = FastAPI(lifespan=lifespan, title=settings.app_name)

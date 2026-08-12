@@ -44,11 +44,24 @@ class Settings(BaseSettings):
         default_factory=lambda: {"image/jpeg", "image/png", "image/webp"}
     )
 
+    # Agent 审计日志
+    audit_dir: str = "app/agent_audit"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    # Agent 工具
+    agent_max_rounds: int = Field(default=6, ge=1)
+    tool_timeout_seconds: float = Field(default=15.0, gt=0)
+    tool_result_max_length: int = Field(default=4000, ge=1)
+    tool_error_prefix: str = "[tool_error] "
+
+    graph_recursion_limit: int = Field(default=10, ge=1)
+
+    agent_tool_result_max_length: int = Field(default=100, ge=1)
 
     @property
     def avatar_dir(self) -> Path:
@@ -58,7 +71,9 @@ class Settings(BaseSettings):
     def device_image_dir(self) -> Path:
         return Path(self.upload_dir) / "devices"
 
-
+    @property
+    def audit_path(self) -> Path:
+        return Path(self.audit_dir)
 
 
 @lru_cache

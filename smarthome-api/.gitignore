@@ -29,6 +29,7 @@ app/uploads/
 # Logs
 logs/
 *.log
+app/agent_audit/
 
 # Build artifacts
 build/
