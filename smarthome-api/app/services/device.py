@@ -101,8 +101,7 @@ def list_devices_service(
     query = accessible_devices(user).where(*filters)
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     devices = db.scalars(
-        query
-        .order_by(Device.updated_at.desc())
+        query.order_by(Device.updated_at.desc())
         .offset((params.page - 1) * params.page_size)
         .limit(params.page_size)
     ).all()
@@ -114,9 +113,7 @@ def list_devices_service(
     )
 
 
-def get_device_service(
-    db: Session, user: User, device_id: int
-) -> DeviceDetailWithLogs:
+def get_device_service(db: Session, user: User, device_id: int) -> DeviceDetailWithLogs:
     """返回设备详情及最近二十条操作日志。"""
     device = get_device_or_404(db, user, device_id)
     logs = db.scalars(
@@ -129,6 +126,71 @@ def get_device_service(
     return DeviceDetailWithLogs(
         **data, logs=[DeviceLogRead.model_validate(log) for log in logs]
     )
+
+
+def list_devices_by_household_service(
+    db: Session,
+    household_id: int,
+    room: str | None,
+    device_type: str | None,
+    device_status: str | None,
+    limit: int,
+) -> list[dict]:
+    """返回指定家庭的精简设备列表，供可信上下文调用。"""
+    query = select(Device).where(Device.household_id == household_id)
+    if room:
+        query = query.where(Device.room == room)
+    if device_type:
+        query = query.where(Device.type == device_type)
+    if device_status:
+        query = query.where(Device.status == device_status)
+    rows = db.scalars(query.order_by(Device.updated_at.desc()).limit(limit)).all()
+    return [
+        {
+            "id": item.id,
+            "name": item.name,
+            "room": item.room,
+            "type": item.type,
+            "brand": item.brand,
+            "connection": item.connection,
+            "status": item.status.value
+            if isinstance(item.status, DeviceStatus)
+            else item.status,
+        }
+        for item in rows
+    ]
+
+
+def get_device_by_household_service(
+    db: Session,
+    household_id: int,
+    *,
+    device_id: int | None = None,
+    name: str | None = None,
+) -> dict | None:
+    """返回指定家庭的精简设备详情。"""
+    query = select(Device).where(Device.household_id == household_id)
+    query = (
+        query.where(Device.id == device_id)
+        if device_id is not None
+        else query.where(Device.name == name)
+    )
+    device = db.scalar(query)
+    if device is None:
+        return None
+    return {
+        "id": device.id,
+        "name": device.name,
+        "room": device.room,
+        "type": device.type,
+        "brand": device.brand,
+        "status": device.status.value
+        if isinstance(device.status, DeviceStatus)
+        else device.status,
+        "connection": device.connection,
+        "firmware": device.firmware,
+        "last_online": device.last_online,
+    }
 
 
 def add_device_service(db: Session, user: User, payload: DeviceCreate) -> Device:

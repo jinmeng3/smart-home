@@ -142,6 +142,90 @@ def list_rooms_service(
     return RoomListRead(items=items, total=len(items))
 
 
+def list_rooms_by_household_service(
+    db: Session,
+    household_id: int,
+    floor: str | None,
+    room_type: str | None,
+    limit: int,
+) -> list[dict]:
+    """返回指定家庭的精简房间列表，供可信上下文调用。"""
+    query = select(Room).where(Room.household_id == household_id)
+    if floor:
+        query = query.where(Room.floor == floor)
+    if room_type:
+        query = query.where(Room.room_type == room_type)
+    rooms = db.scalars(query.order_by(Room.id).limit(limit)).all()
+    counts = {
+        room_id: count
+        for room_id, count in db.execute(
+            select(RoomDevice.room_id, func.count())
+            .where(RoomDevice.room_id.in_([room.id for room in rooms]))
+            .group_by(RoomDevice.room_id)
+        ).all()
+    }
+    return [
+        {
+            "id": room.id,
+            "name": room.name,
+            "floor": room.floor,
+            "room_type": room.room_type,
+            "area": room.area,
+            "comfort": room.comfort,
+            "device_count": counts.get(room.id, 0),
+        }
+        for room in rooms
+    ]
+
+
+def get_room_by_household_service(
+    db: Session,
+    household_id: int,
+    *,
+    room_id: int | None = None,
+    room_name: str | None = None,
+) -> dict | None:
+    """返回指定家庭的精简房间详情及同家庭设备。"""
+    query = select(Room).where(Room.household_id == household_id)
+    query = (
+        query.where(Room.id == room_id)
+        if room_id is not None
+        else query.where(Room.name == room_name)
+    )
+    room = db.scalar(query)
+    if room is None:
+        return None
+    rows = db.execute(
+        select(RoomDevice, Device)
+        .join(Device)
+        .where(
+            RoomDevice.room_id == room.id,
+            Device.household_id == household_id,
+        )
+        .order_by(RoomDevice.sort_order, Device.id)
+    ).all()
+    return {
+        "id": room.id,
+        "name": room.name,
+        "floor": room.floor,
+        "room_type": room.room_type,
+        "area": room.area,
+        "comfort": room.comfort,
+        "devices": [
+            {
+                "id": device.id,
+                "name": device.name,
+                "type": device.type,
+                "brand": device.brand,
+                "status": device.status.value
+                if isinstance(device.status, DeviceStatus)
+                else device.status,
+            }
+            for _binding, device in rows
+        ],
+    }
+
+
 def list_room_stats_service(db: Session, user: User) -> RoomStatsRead:
     """获取当前用户所有房间的统计概览。"""
     room_ids = accessible_rooms(db, user).with_only_columns(Room.id).subquery()

@@ -1,3 +1,5 @@
+import json
+
 from app.agents.events.models import (
     MessageDelta,
     ToolCompleted,
@@ -33,18 +35,19 @@ class StreamTracker:
         )
 
     def emit_tool_result(self, call_id: str, name: str, content):
-        from app.core.config import get_settings
-
-        error_prefix = get_settings().tool_error_prefix or "[tool_error] "
         text = str(content)
-        if text.startswith(error_prefix):
+        try:
+            payload = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            payload = {"ok": True, "data": text}
+        if payload.get("ok") is False:
             event: ToolCompleted | ToolFailed = ToolFailed(
                 event_id=f"{self.run_id}-fail{self.call_seq}",
                 run_id=self.run_id,
                 call_id=call_id,
                 tool=str(name),
                 code="AGENT_TOOL_EXECUTION_ERROR",
-                error=redact_text(text[len(error_prefix) :])[:500],
+                error=redact_text(str(payload.get("error", "工具执行失败")))[:500],
             )
         else:
             event = ToolCompleted(
@@ -52,7 +55,9 @@ class StreamTracker:
                 run_id=self.run_id,
                 call_id=call_id,
                 tool=str(name),
-                result=redact_text(text)[:500],
+                result=redact_text(
+                    json.dumps(payload.get("data"), ensure_ascii=False, default=str)
+                )[:500],
             )
         return encode_sse_event(event)
 

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 
 from app.agents.graph.state import AgentState
@@ -46,9 +47,15 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
                 ok = False
 
         duration_ms = int((time.perf_counter() - started) * 1000)
+        payload = (
+            {"ok": True, "data": content}
+            if ok
+            else {"ok": False, "error": str(content).removeprefix(error_prefix)}
+        )
+        serialized = json.dumps(payload, ensure_ascii=False, default=str)
         tool_messages.append(
             ToolMessage(
-                content=str(content)[: settings.tool_result_max_length],
+                content=serialized[: settings.tool_result_max_length],
                 tool_call_id=call_id,
             )
         )
