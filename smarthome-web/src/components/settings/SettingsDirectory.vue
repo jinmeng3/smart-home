@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { settingsGroups } from "../../constants/settingsSections";
+import { settingsGroups, settingsSections } from "../../constants/settingsSections";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { SettingsSectionId } from "../../types/settings";
 
 const props = defineProps<{
     active: SettingsSectionId;
+    compact?: boolean;
     totalItems?: number;
     completedItems?: number;
 }>();
@@ -33,7 +34,27 @@ const progressPercent = computed(() => {
 </script>
 
 <template>
-    <nav class="settings-directory" aria-label="设置分区导航">
+    <nav
+        v-if="compact"
+        class="settings-directory-compact"
+        aria-label="设置分区导航"
+    >
+        <button
+            v-for="item in settingsSections"
+            :key="item.id"
+            class="compact-directory-item"
+            :class="{ 'is-active': active === item.id }"
+            type="button"
+            :title="item.label"
+            :aria-label="item.label"
+            @click="emit('select', item.id)"
+        >
+            <span class="compact-accent" :class="`is-${item.tone}`"></span>
+            <SvgIcon :name="item.icon" size="sm" />
+        </button>
+    </nav>
+
+    <nav v-else class="settings-directory" aria-label="设置分区导航">
         <div class="directory-header">
             <SvgIcon name="settings" size="sm" />
             <span>设置目录</span>
@@ -81,6 +102,55 @@ const progressPercent = computed(() => {
 </template>
 
 <style scoped>
+.settings-directory-compact {
+    display: grid;
+    width: 46px;
+    gap: 5px;
+    justify-items: center;
+    padding: 2px 8px 10px;
+}
+
+.compact-directory-item {
+    position: relative;
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+    transition:
+        background-color 160ms var(--motion-ease),
+        color 160ms var(--motion-ease);
+}
+
+.compact-directory-item:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.compact-directory-item.is-active {
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.compact-accent {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: -8px;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--color-primary-600);
+    opacity: 0;
+    transform: scaleY(0.5);
+    transition: opacity 160ms ease, transform 180ms var(--motion-ease);
+}
+
+.compact-directory-item.is-active .compact-accent {
+    opacity: 1;
+    transform: scaleY(1);
+}
+
 .settings-directory {
     display: flex;
     flex-direction: column;
