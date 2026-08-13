@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Room } from "../../types/room";
 
@@ -7,6 +8,7 @@ export interface RoomEnvironmentItem {
     value: string;
     tone: string;
     points: string;
+    statusLabel?: string;
 }
 
 const statusLabels: Record<string, string> = {
@@ -22,7 +24,7 @@ const formatRecentActivity = (activity?: string) =>
         (_, status: string) => statusLabels[status] ?? status,
     ) ?? "";
 
-defineProps<{
+const props = defineProps<{
     room: Room | null;
     environment: RoomEnvironmentItem[];
     currentScene?: string;
@@ -30,453 +32,784 @@ defineProps<{
     recentActivityTime?: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     quick: [action: string];
     open: [dialog: "edit" | "devices" | "environment" | "logs"];
+    send: [content: string];
 }>();
+
+/* ── 输入框 ── */
+const inputValue = ref("");
+const inputRef = ref<HTMLTextAreaElement | null>(null);
+
+const submitInput = () => {
+    const trimmed = inputValue.value.trim();
+    if (!trimmed) return;
+    emit("send", trimmed);
+    inputValue.value = "";
+    if (inputRef.value) {
+        inputRef.value.style.height = "auto";
+    }
+};
+
+const onInputKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        submitInput();
+    }
+};
+
+const autoResize = () => {
+    const el = inputRef.value;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
+};
+
+/* ── 房间摘要文本 ── */
+const roomSummary = computed(() => {
+    if (!props.room) return "";
+    const name = props.room.name;
+    const online = props.room.onlineCount;
+    const total = props.room.deviceCount;
+    const comfort = props.room.comfort >= 84 ? "舒适" : "良好";
+    return `${name}环境整体${comfort}，${online}/${total} 台设备在线。`;
+});
+
+/* ── 环境指标摘要 ── */
+const envSummary = computed(() => {
+    const parts: string[] = [];
+    for (const item of props.environment) {
+        if (item.statusLabel) {
+            parts.push(`${item.name} ${item.statusLabel}`);
+        }
+    }
+    return parts.length > 0 ? parts.join("，") + "。" : "";
+});
+
+/* ── 建议 ── */
+interface Suggestion {
+    text: string;
+    action: string;
+    label: string;
+    secondary?: { label: string; action: string };
+}
+
+const suggestions = computed<Suggestion[]>(() => {
+    const list: Suggestion[] = [];
+    for (const item of props.environment) {
+        if (item.name === "温度" && item.statusLabel === "偏热") {
+            list.push({
+                text: "温度偏高，是否开启空调降温？",
+                action: "air_conditioner",
+                label: "开启空调",
+                secondary: { label: "暂不处理", action: "" },
+            });
+        }
+        if (item.name === "光照" && item.statusLabel === "明亮") {
+            list.push({
+                text: "光照较强，是否关闭窗帘？",
+                action: "curtains",
+                label: "关闭窗帘",
+                secondary: { label: "暂不处理", action: "" },
+            });
+        }
+        if (item.name === "PM2.5" && (item.statusLabel === "良" || item.statusLabel === "差")) {
+            list.push({
+                text: "空气质量需要关注，是否开启空气净化器？",
+                action: "all_lights",
+                label: "开启净化",
+                secondary: { label: "忽略", action: "" },
+            });
+        }
+        if (item.name === "湿度" && item.statusLabel === "干燥") {
+            list.push({
+                text: "空气偏干，建议开启加湿器。",
+                action: "all_lights",
+                label: "开启加湿",
+                secondary: { label: "知道了", action: "" },
+            });
+        }
+    }
+    return list.slice(0, 2);
+});
+
+const quickActions = [
+    { label: "全开灯光", icon: "light", action: "all_lights" },
+    { label: "关闭全部", icon: "power", action: "all_off" },
+    { label: "离家模式", icon: "scene", action: "away_mode" },
+];
+
+const hasRecentActivity = computed(
+    () => props.recentActivityTime && props.recentActivity,
+);
+
+/* ── 环境指标颜色 ── */
+const envCardColors: Record<string, [string, string]> = {
+    "温度": ["#f97316", "#fff7ed"],
+    "湿度": ["#0ea5e9", "#f0f9ff"],
+    "PM2.5": ["#10b981", "#ecfdf5"],
+    "光照": ["#f59e0b", "#fffbeb"],
+    "噪音": ["#8b5cf6", "#f5f3ff"],
+};
+
+const getEnvStyle = (name: string) => {
+    const colors = envCardColors[name];
+    return colors ? { '--mc': colors[0], '--ms': colors[1] } : {};
+};
+
+/* ── 暴露给父组件用于 collapsed 状态 ── */
+const envFirst = computed(() => props.environment[0]);
+const envSecond = computed(() => props.environment[1]);
+const alertCount = computed(() => {
+    let count = 0;
+    for (const item of props.environment) {
+        if (item.statusLabel === "差" || item.statusLabel === "偏热" || item.statusLabel === "潮湿") {
+            count++;
+        }
+    }
+    return count;
+});
 </script>
 
 <template>
-    <aside class="room-detail">
-        <section>
-            <h2><SvgIcon name="room" size="sm" />房间详情</h2>
-            <template v-if="room">
-                <div class="detail-heading">
-                    <span class="detail-avatar">{{ room.name.slice(0, 1) }}</span>
-                    <div>
-                        <h3>
-                            {{ room.name }}
-                            <small
-                                class="comfort-badge"
-                                :class="room.comfort >= 84 ? 'is-comfort' : 'is-good'"
-                            >
-                                {{ room.comfort >= 84 ? "舒适" : "良好" }}
-                            </small>
-                        </h3>
-                        <p class="online-status"><span class="status-pulse" />在线</p>
-                    </div>
+    <div class="ra-content">
+        <template v-if="room">
+            <!-- 助手状态卡 -->
+            <section class="assistant-card" :key="'card-' + room.id">
+                <p class="ac-summary">{{ roomSummary }}</p>
+                <p v-if="envSummary" class="ac-env">{{ envSummary }}</p>
+                <div class="ac-metrics">
+                    <article
+                        v-for="item in environment"
+                        :key="item.name"
+                        class="ac-metric"
+                        :style="getEnvStyle(item.name)"
+                        role="button"
+                        tabindex="0"
+                        @click="$emit('open', 'environment')"
+                        @keydown.enter="$emit('open', 'environment')"
+                    >
+                        <span class="ac-metric-value">{{ item.value }}</span>
+                        <span v-if="item.statusLabel" class="ac-metric-label">{{ item.statusLabel }}</span>
+                    </article>
                 </div>
-                <dl>
-                    <div class="field-row">
-                        <dt><SvgIcon name="home" size="sm" />所在楼层</dt>
-                        <dd class="tone-primary">{{ room.floor }}</dd>
-                    </div>
-                    <div class="field-row">
-                        <dt><SvgIcon name="scan" size="sm" />面积</dt>
-                        <dd class="tone-teal">{{ room.area }} m²</dd>
-                    </div>
-                    <div class="field-row">
-                        <dt><SvgIcon name="online-device" size="sm" />在线设备</dt>
-                        <dd class="tone-success">{{ room.onlineCount }} / {{ room.deviceCount }} 个</dd>
-                    </div>
-                    <div class="field-row">
-                        <dt><SvgIcon name="scene" size="sm" />当前场景</dt>
-                        <dd class="tone-purple">{{ currentScene || '休闲模式' }}</dd>
-                    </div>
-                    <div class="field-row recent-activity-row">
-                        <dt><SvgIcon name="clock" size="sm" />最近活动</dt>
-                        <dd v-if="recentActivityTime" class="recent-activity tone-orange">
-                            <small>{{ recentActivityTime }}</small>
-                            <span>{{ formatRecentActivity(recentActivity) }}</span>
-                        </dd>
-                        <dd v-else class="recent-activity-empty">暂无活动记录</dd>
-                    </div>
-                </dl>
-                <div class="detail-actions">
-                    <button class="primary" type="button" @click="$emit('open', 'devices')">
-                        <SvgIcon name="power" size="sm" />进入控制
+            </section>
+
+            <!-- 建议卡 -->
+            <section
+                v-for="(sug, idx) in suggestions"
+                :key="'sug-' + idx"
+                class="suggestion-card"
+                :style="{ '--sug-delay': `${idx * 80}ms` }"
+            >
+                <p class="sug-text">{{ sug.text }}</p>
+                <div class="sug-actions">
+                    <button
+                        class="action-btn"
+                        type="button"
+                        @click="sug.action ? $emit('quick', sug.action) : undefined"
+                    >
+                        {{ sug.label }}
                     </button>
-                    <button type="button" @click="$emit('open', 'edit')">
-                        <SvgIcon name="edit" size="sm" />编辑房间
+                    <button
+                        v-if="sug.secondary"
+                        class="action-btn is-secondary"
+                        type="button"
+                    >
+                        {{ sug.secondary.label }}
                     </button>
                 </div>
-            </template>
-            <div v-else class="section-empty">
-                <SvgIcon name="room" size="lg" />
-                <p>暂无房间数据</p>
-            </div>
-        </section>
-        <section class="environment-overview" @click="room && $emit('open', 'environment')">
-            <h2><SvgIcon name="sensor" size="sm" />环境概览 <small>实时更新</small></h2>
-            <template v-if="room">
-                <div class="detail-environment">
-                    <p v-for="item in environment" :key="item.name">
-                        <span>{{ item.name }}</span><strong>{{ item.value }}</strong>
-                    </p>
-                </div>
-            </template>
-            <div v-else class="section-empty">
-                <SvgIcon name="sensor" size="lg" />
-                <p>暂无环境数据</p>
-            </div>
-        </section>
-        <section>
-            <h2><SvgIcon name="scene" size="sm" />快捷操作</h2>
-            <template v-if="room">
-                <div class="detail-quick">
-                    <button type="button" @click="$emit('quick', 'all_lights')">
-                        <SvgIcon name="light" />全开灯光
+            </section>
+
+            <!-- 快捷指令 -->
+            <section class="quick-section">
+                <h4 class="qs-title"><span class="title-icon is-orange"><SvgIcon name="light" size="sm" /></span>快捷指令</h4>
+                <div class="qs-grid">
+                    <button
+                        v-for="act in quickActions"
+                        :key="act.action"
+                        class="qs-btn"
+                        :class="`qs-btn-${act.action}`"
+                        type="button"
+                        @click="$emit('quick', act.action)"
+                    >
+                        <SvgIcon :name="act.icon" size="sm" />
+                        <span>{{ act.label }}</span>
                     </button>
-                    <button type="button" @click="$emit('quick', 'air_conditioner')">
-                        <SvgIcon name="air-conditioner" />关闭空调
-                    </button>
-                    <button type="button" @click="$emit('quick', 'curtains')">
-                        <SvgIcon name="curtain" />打开窗帘
-                    </button>
-                    <button type="button" @click="$emit('open', 'logs')">
-                        <SvgIcon name="log" />查看日志
+                    <button
+                        class="qs-btn qs-btn-edit"
+                        type="button"
+                        @click="$emit('open', 'edit')"
+                    >
+                        <SvgIcon name="edit" size="sm" />
+                        <span>编辑房间</span>
                     </button>
                 </div>
-            </template>
-            <div v-else class="section-empty">
-                <SvgIcon name="scene" size="lg" />
-                <p>请先添加房间后操作</p>
-            </div>
-        </section>
-    </aside>
+            </section>
+
+            <!-- 最近执行 -->
+            <section v-if="hasRecentActivity" class="recent-section" :key="'recent-' + room.id">
+                <h4 class="qs-title"><span class="title-icon is-green"><SvgIcon name="clock" size="sm" /></span>最近执行</h4>
+                <div class="recent-row">
+                    <span class="recent-check">
+                        <SvgIcon name="check-circle" size="sm" />
+                    </span>
+                    <span class="recent-time">{{ recentActivityTime }}</span>
+                    <span class="recent-desc">{{ formatRecentActivity(recentActivity) }}</span>
+                </div>
+            </section>
+        </template>
+
+        <!-- 空状态 -->
+        <div v-else class="ra-empty">
+            <SvgIcon name="room" size="lg" />
+            <p>暂无房间数据</p>
+        </div>
+
+        <!-- 输入区（sticky 固定于底部） -->
+        <div class="ra-composer">
+            <form class="composer-form" @submit.prevent="submitInput">
+                <textarea
+                    ref="inputRef"
+                    v-model="inputValue"
+                    rows="1"
+                    class="composer-input"
+                    :placeholder="room ? `问问${room.name}助手……` : '暂无房间'"
+                    :disabled="!room"
+                    @keydown="onInputKeydown"
+                    @input="autoResize"
+                ></textarea>
+                <button
+                    class="composer-send"
+                    type="submit"
+                    :disabled="!inputValue.trim() || !room"
+                    :aria-label="inputValue.trim() ? '发送' : '输入问题'"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
 </template>
 
 <style scoped>
-.room-detail {
+.ra-content {
     display: flex;
-    min-width: 0;
-    min-height: 0;
     flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    border: 1px solid var(--color-border);
-    border-radius: 18px;
-    background: var(--color-page-bg);
+    gap: 10px;
     padding: 12px;
+    min-height: 100%;
 }
-.room-detail > section {
+
+/* ── 助手状态卡 ── */
+.assistant-card {
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-card-bg);
+    padding: 16px 18px;
+    animation: card-enter 220ms var(--motion-ease-out) both;
+}
+
+@keyframes card-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ac-summary {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.ac-env {
+    margin: 6px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.ac-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.ac-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 88px;
+    border: 1px solid color-mix(in srgb, var(--mc, var(--color-primary-500)) 20%, transparent);
+    border-radius: 12px;
+    background: var(--ms, var(--color-surface-subtle));
+    padding: 12px 8px;
+    cursor: pointer;
+    transition: border-color 120ms var(--motion-ease), transform 120ms var(--motion-ease);
+}
+
+.ac-metric:hover {
+    border-color: var(--mc, var(--color-primary-300));
+    transform: translateY(-1px);
+}
+
+.ac-metric:focus-visible {
+    outline: 2px solid var(--mc, var(--color-primary-500));
+    outline-offset: 1px;
+}
+
+.ac-metric-value {
+    color: var(--mc, var(--color-text-primary));
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.ac-metric-label {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ── 建议卡 ── */
+.suggestion-card {
+    border: 1px solid color-mix(in srgb, #8b5cf6 20%, transparent);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgb(239 246 255 / 95%), rgb(245 243 255 / 95%));
+    padding: 14px 16px;
+    animation: sug-enter 240ms var(--motion-ease-out) both;
+    animation-delay: var(--sug-delay, 0ms);
+}
+
+@keyframes sug-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.sug-text {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.sug-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    animation: actions-fade-in 200ms var(--motion-ease) both;
+}
+
+@keyframes actions-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.action-btn {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    gap: 6px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, #8b5cf6 30%, transparent);
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    padding: 0 14px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+        background-color 120ms var(--motion-ease),
+        border-color 120ms var(--motion-ease),
+        transform 120ms var(--motion-ease);
+}
+
+.action-btn:hover {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    transform: translateY(-1px);
+}
+
+.action-btn:active {
+    transform: scale(0.97);
+}
+
+.action-btn:focus-visible {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 1px;
+}
+
+.action-btn.is-secondary {
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+}
+
+.action-btn.is-secondary:hover {
+    border-color: var(--color-border-strong);
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
+}
+
+/* ── 快捷指令 ── */
+.quick-section {
     border: 1px solid var(--color-border);
     border-radius: 14px;
     background: var(--color-card-bg);
-    padding: 16px;
-    box-shadow: var(--shadow-card);
-    transition:
-        border-color 160ms var(--motion-ease),
-        box-shadow 160ms var(--motion-ease);
+    padding: 14px 16px;
+    animation: card-enter 240ms var(--motion-ease-out) both;
 }
-.room-detail h2 {
+
+.qs-title {
     display: flex;
     align-items: center;
-    gap: 7px;
-    margin: 0 0 14px;
+    gap: 8px;
+    margin: 0 0 10px;
     color: var(--color-text-primary);
-    font-size: 18px;
-    font-weight: 900;
-}
-.room-detail h2 svg {
-    color: var(--color-primary-600);
-}
-.room-detail h2 > small {
-    margin-left: auto;
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-weight: 750;
-}
-.detail-heading {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--color-border);
-}
-.detail-heading .detail-avatar {
-    display: grid;
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
-    place-items: center;
-    border-radius: 14px;
-    background: linear-gradient(
-        135deg,
-        var(--color-primary-500),
-        var(--color-primary-400)
-    );
-    color: #fff;
-    font-size: 20px;
-    font-weight: 900;
-    box-shadow: 0 6px 16px var(--color-focus-ring);
-}
-.detail-heading > div {
-    min-width: 0;
-    flex: 1;
-}
-.detail-heading h3 {
-    margin: 0;
-    font-size: 19px;
-    font-weight: 900;
-    color: var(--color-text-primary);
-}
-.detail-heading h3 .comfort-badge {
-    margin-left: 6px;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 800;
-    vertical-align: middle;
 }
-.detail-heading h3 .comfort-badge.is-comfort {
-    background: linear-gradient(135deg, var(--color-success-soft), #f0fdf4);
-    color: var(--color-success);
+
+.qs-title svg {
+    width: 16px;
+    height: 16px;
 }
-.detail-heading h3 .comfort-badge.is-good {
-    background: linear-gradient(135deg, var(--tone-teal-soft), #ecfdfa);
-    color: var(--tone-teal);
+
+.title-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    border-radius: 7px;
 }
-.detail-heading .online-status {
-    margin: 5px 0 0;
-    color: var(--color-success);
-    font-size: 14px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-.detail-heading .online-status .status-pulse {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-success);
-    animation: pulse-dot 2s var(--motion-ease) infinite;
-}
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-.room-detail dl {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin: 14px 0;
-}
-.room-detail dl .field-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 0;
-    font-size: 14px;
-    transition: background 160ms var(--motion-ease);
-    border-radius: 8px;
-    padding-left: 8px;
-    padding-right: 8px;
-    margin: 0 -8px;
-}
-.room-detail dl .field-row:hover {
-    background: var(--color-surface-hover);
-}
-.room-detail dl .field-row + .field-row {
-    border-top: 1px solid var(--color-border-subtle);
-}
-.room-detail dt {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--color-text-tertiary);
-    font-weight: 700;
-    font-size: 13px;
-}
-.room-detail dt svg {
-    color: var(--color-text-muted);
+
+.title-icon svg {
     width: 14px;
     height: 14px;
 }
-.room-detail dt:hover svg {
-    color: var(--color-text-tertiary);
-}
-.room-detail dd {
-    margin: 0;
-    font-weight: 800;
-    text-align: right;
-    font-size: 14px;
-}
-.room-detail dd.tone-primary {
+
+.title-icon.is-blue {
+    background: var(--color-primary-50);
     color: var(--color-primary-600);
 }
-.room-detail dd.tone-teal {
-    color: var(--tone-teal);
-}
-.room-detail dd.tone-success {
+
+.title-icon.is-green {
+    background: var(--color-success-soft);
     color: var(--color-success);
 }
-.room-detail dd.tone-purple {
+
+.title-icon.is-orange {
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+}
+
+.title-icon.is-purple {
+    background: var(--tone-purple-soft);
     color: var(--tone-purple);
 }
-.room-detail dd.tone-orange {
-    color: var(--tone-orange);
-}
-.room-detail dl .recent-activity-row {
-    align-items: flex-start;
-}
-.recent-activity-row dt {
-    flex: 0 0 auto;
-    padding-top: 4px;
-    white-space: nowrap;
-}
-.recent-activity,
-.recent-activity-empty {
-    min-width: 0;
-    max-width: 68%;
-}
-.recent-activity {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-}
-.recent-activity small {
-    border-radius: 999px;
-    background: var(--tone-orange-soft);
-    padding: 2px 7px;
-    color: var(--tone-orange);
-    font-size: 11px;
-    line-height: 1.4;
-    white-space: nowrap;
-}
-.recent-activity span {
-    max-width: 100%;
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-}
-.recent-activity-empty {
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-}
-.detail-actions {
+
+.qs-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
-.detail-actions button {
-    display: inline-flex;
-    min-height: 38px;
+
+.qs-btn {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    min-height: 46px;
     border: 1px solid var(--color-border);
-    border-radius: 9px;
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    padding: 0 14px;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 900;
-    transition: 160ms var(--motion-ease);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+        border-color 120ms var(--motion-ease),
+        background-color 120ms var(--motion-ease),
+        color 120ms var(--motion-ease),
+        transform 120ms var(--motion-ease);
 }
-.detail-actions button:hover {
+
+.qs-btn svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    color: var(--color-primary-600);
+}
+
+.qs-btn:hover {
     border-color: var(--color-primary-200);
     background: var(--color-primary-50);
     color: var(--color-primary-700);
     transform: translateY(-1px);
 }
-.detail-actions button.primary {
-    border-color: var(--color-primary-600);
-    background: var(--color-primary-600) !important;
-    color: white !important;
+
+.qs-btn:active {
+    transform: scale(0.97);
 }
-.environment-overview {
-    cursor: pointer;
+
+.qs-btn:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 1px;
 }
-.environment-overview:hover {
-    border-color: var(--color-primary-200);
-    box-shadow: var(--shadow-card-hover);
+
+.qs-btn-all_lights {
+    border-color: color-mix(in srgb, #f59e0b 30%, transparent);
 }
-.detail-environment {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+
+.qs-btn-all_lights svg {
+    color: #f59e0b;
 }
-.detail-environment p {
-    margin: 0;
-    border-radius: 9px;
-    background: var(--color-surface-subtle);
-    padding: 10px 12px;
-    transition: background 160ms var(--motion-ease);
+
+.qs-btn-all_lights:hover {
+    border-color: #f59e0b;
+    background: #fffbeb;
+    color: #b45309;
 }
-.detail-environment p:hover {
-    background: var(--color-primary-50);
+
+.qs-btn-all_off svg {
+    color: var(--color-text-muted);
 }
-.detail-environment span,
-.detail-environment strong {
-    display: block;
+
+.qs-btn-all_off:hover {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
-.detail-environment span {
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-weight: 750;
+
+.qs-btn-all_off:hover svg {
+    color: var(--color-danger);
 }
-.detail-environment strong {
-    margin-top: 3px;
-    color: var(--color-text-primary);
-    font-size: 16px;
-    font-weight: 900;
+
+.qs-btn-away_mode {
+    border-color: color-mix(in srgb, #3b82f6 30%, transparent);
 }
-.detail-quick {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+
+.qs-btn-away_mode svg {
+    color: #3b82f6;
 }
-.detail-quick button {
+
+.qs-btn-away_mode:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.qs-btn-edit svg {
+    color: var(--color-text-muted);
+}
+
+.qs-btn-edit:hover svg {
+    color: var(--color-primary-600);
+}
+
+/* ── 最近执行 ── */
+.recent-section {
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-card-bg);
+    padding: 14px 16px;
+    animation: card-enter 260ms var(--motion-ease-out) both;
+}
+
+.recent-row {
     display: flex;
-    min-width: 0;
-    flex-direction: column;
     align-items: center;
     gap: 6px;
-    border-radius: 9px;
-    background: var(--color-primary-50);
-    padding: 12px 6px;
-    color: var(--color-primary-700);
-    font-size: 14px;
-    font-weight: 800;
-    transition: 160ms var(--motion-ease);
 }
-.detail-quick button:hover {
-    background: var(--color-primary-100);
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-1px);
+
+.recent-check {
+    flex: 0 0 auto;
+    color: var(--color-success);
 }
-.detail-quick button svg {
-    width: 18px;
-    height: 18px;
+
+.recent-check svg {
+    width: 16px;
+    height: 16px;
 }
-.section-empty {
+
+.recent-time {
+    flex: 0 0 auto;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.recent-desc {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── 空状态 ── */
+.ra-empty {
     display: flex;
-    min-height: 120px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 1px dashed var(--color-border);
-    border-radius: 12px;
-    padding: 24px 16px;
+    flex: 1;
+    min-height: 120px;
     color: var(--color-text-tertiary);
-    text-align: center;
 }
-.section-empty svg {
+
+.ra-empty svg {
     width: 36px;
     height: 36px;
     color: var(--color-primary-300);
 }
-.section-empty p {
+
+.ra-empty p {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
 }
 
+/* ── 输入区（sticky 固定于底部） ── */
+.ra-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: auto;
+    padding-top: 8px;
+    background: var(--color-card-bg);
+}
+
+.composer-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    border: 1px solid var(--color-border);
+    border-radius: 22px;
+    background: var(--color-card-bg);
+    padding: 4px 4px 4px 14px;
+    transition:
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease);
+}
+
+.composer-form:focus-within {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgb(139 92 246 / 18%);
+}
+
+.composer-input {
+    min-width: 0;
+    flex: 1;
+    resize: none;
+    border: 0;
+    background: transparent;
+    padding: 6px 0;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+    outline: none;
+    max-height: 80px;
+}
+
+.composer-input::placeholder {
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+.composer-send {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: #fff;
+    cursor: pointer;
+    transition:
+        background-color 120ms var(--motion-ease),
+        transform 120ms var(--motion-ease),
+        box-shadow 120ms var(--motion-ease);
+}
+
+.composer-send:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgb(139 92 246 / 30%);
+}
+
+.composer-send:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.composer-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.composer-send svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.5;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 720px) {
+    .ac-metrics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .qs-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .room-detail > section,
-    .detail-actions button,
-    .detail-quick button {
+    .assistant-card,
+    .suggestion-card,
+    .quick-section,
+    .recent-section,
+    .sug-actions {
+        animation: none;
+    }
+    .action-btn,
+    .qs-btn,
+    .composer-send,
+    .composer-form,
+    .ac-metric {
         transition-duration: 1ms;
     }
-    .detail-actions button:hover,
-    .detail-quick button:hover {
+    .action-btn:hover,
+    .qs-btn:hover,
+    .composer-send:hover:not(:disabled),
+    .ac-metric:hover {
+        transform: none;
+    }
+    .action-btn:active,
+    .qs-btn:active,
+    .composer-send:active:not(:disabled) {
         transform: none;
     }
 }

@@ -1,4 +1,40 @@
 import type { DashboardDevice, Device, DeviceType, DeviceStatus } from "../types/device";
+import type { Room, RoomDeviceCard } from "../types/room";
+import { getDeviceTypeIcon } from "../components/device/deviceMeta";
+
+/**
+ * 设备展示层工具（SRP：模型转换与状态解析，不含请求与业务编排）。
+ */
+
+/* ── 房间设备视图模型转换 ── */
+
+export const toRoomDeviceCards = (devices: Room["device"]): RoomDeviceCard[] => {
+    if (!devices || devices.length === 0) return [];
+    return devices.map((d) => ({
+        id: d.id,
+        key: d.type,
+        icon: d.icon || getDeviceTypeIcon(d.type),
+        color: d.color,
+        name: d.name,
+        detail: d.brand || "",
+        status: d.status as RoomDeviceCard["status"],
+    }));
+};
+
+/* ── 设备状态判断 ── */
+
+export const isDeviceActive = (status: string): boolean =>
+    status === "online" || status === "running";
+
+export const isDeviceUnavailable = (status: string): boolean =>
+    status === "offline" || status === "warning";
+
+export const deviceStatusLabel: Record<string, string> = {
+    online: "开",
+    offline: "关",
+    running: "运行中",
+    warning: "异常",
+};
 
 /**
  * 设备展示层工具（SRP：模型转换与状态解析，不含请求与业务编排）。

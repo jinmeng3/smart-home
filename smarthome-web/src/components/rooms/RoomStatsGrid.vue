@@ -29,9 +29,9 @@ defineProps<{
             >
         </article>
         <article>
-            <i class="tone-chip is-orange"><SvgIcon name="notification" /></i>
+            <i :class="['tone-chip', alertCount > 0 ? 'is-orange' : 'is-neutral']"><SvgIcon name="notification" /></i>
             <span
-                >当前告警<strong>{{ alertCount }} <small>条</small></strong
+                >当前告警<strong :class="alertCount > 0 ? '' : 'tone-muted'">{{ alertCount }} <small>条</small></strong
                 ><em>{{ pendingAlertCount > 0 ? '待处理告警' : '无待处理告警' }}</em></span
             >
         </article>
@@ -99,6 +99,21 @@ defineProps<{
 @media (max-width: 1450px) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.tone-chip.is-neutral {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
+}
+
+.stats-grid strong.tone-muted {
+    color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-grid * {
+        transition-duration: 1ms !important;
     }
 }
 </style>

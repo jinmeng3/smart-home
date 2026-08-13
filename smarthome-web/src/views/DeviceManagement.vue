@@ -5,6 +5,7 @@ import BaseCollapsibleRail from "../components/common/BaseCollapsibleRail.vue";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
+import PageHeader from "../components/common/PageHeader.vue";
 import RailIndicator from "../components/common/RailIndicator.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import DeviceList from "../components/device/DeviceList.vue";
@@ -127,31 +128,24 @@ const handleRailSync = () => {
         :class="{ 'rail-collapsed-layout': railCollapsed }"
     >
         <section class="device-management-page page-shell page-enter">
-            <header class="device-page-header">
-                <div class="device-page-title">
-                    <span
-                        class="page-header-icon"
-                        style="background: var(--color-warning-soft); color: var(--color-device-light)"
-                        aria-hidden="true"
-                    >
-                        <SvgIcon name="device-management" />
-                    </span>
-                    <div>
-                        <h1>设备管理</h1>
-                        <p>统一管理家庭设备、状态、分组与接入平台</p>
-                    </div>
-                </div>
-
+            <PageHeader
+                title="设备管理"
+                description="家庭设备与接入管理"
+                icon="device-management"
+                tone="var(--color-device-light)"
+                soft="var(--color-warning-soft)"
+            >
                 <DeviceToolbar
                     :keyword="filters.keyword"
                     :room="filters.room"
                     :rooms="rooms"
                     :status="filters.status"
+                    @add="controller.addDevice"
                     @update:keyword="(value) => controller.updateFilter('keyword', value)"
                     @update:room="(value) => controller.updateFilter('room', value)"
                     @update:status="(value) => controller.updateFilter('status', value)"
                 />
-            </header>
+            </PageHeader>
 
             <div class="device-stats-grid">
                 <DeviceStatsCard
@@ -196,7 +190,6 @@ const handleRailSync = () => {
                 :sort="sort"
                 :syncing="syncing"
                 :total="total"
-                @add="controller.addDevice"
                 @batch="
                     batchMode &&
                     selectedDeviceIds.length
@@ -453,51 +446,6 @@ const handleRailSync = () => {
     overflow-x: hidden;
     overflow-y: auto;
     padding: 14px;
-}
-
-.device-page-header {
-    display: grid;
-    min-width: 0;
-    grid-template-columns: minmax(325px, 380px) minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-}
-
-.device-page-title {
-    position: relative;
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 12px;
-    border-right: 1px solid var(--color-border-subtle);
-    padding-right: 24px;
-}
-
-.device-page-title .page-header-icon {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    place-items: center;
-    border-radius: 12px;
-}
-
-.device-page-title h1 {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 900;
-    color: var(--color-text-primary);
-    line-height: 1.15;
-}
-
-.device-page-title p {
-    margin: 8px 0 0;
-    overflow: hidden;
-    color: var(--color-text-tertiary);
-    font-size: 14px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .batch-mode-bar {
@@ -845,15 +793,6 @@ button:disabled {
 }
 
 @media (max-width: 1180px) {
-    .device-page-header {
-        grid-template-columns: 1fr;
-    }
-
-    .device-page-title {
-        border-right: none;
-        padding-right: 0;
-    }
-
     .device-stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }

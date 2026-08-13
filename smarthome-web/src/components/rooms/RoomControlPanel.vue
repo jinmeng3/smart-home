@@ -3,15 +3,17 @@ import { computed } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Room, RoomDeviceCard } from "../../types/room";
 import type { RoomEnvironmentItem } from "./RoomDetailPanel.vue";
+import { isDeviceActive } from "../../utils/device";
+import { keyToCategory } from "./roomMeta";
 
 const props = defineProps<{
-    rooms: Room[];
     selected: Room | undefined;
     loading: boolean;
     devices: RoomDeviceCard[];
     environment: RoomEnvironmentItem[];
     temperature: number;
     activeCategory: string;
+    currentScene?: string;
 }>();
 
 const emit = defineEmits<{
@@ -22,7 +24,22 @@ const emit = defineEmits<{
     open: [dialog: "scene" | "devices" | "environment"];
 }>();
 
-const sidebarRooms = computed(() => props.rooms.slice(0, 3));
+const onlineCount = computed(() => props.selected?.onlineCount ?? 0);
+const deviceCount = computed(() => props.selected?.deviceCount ?? 0);
+
+const categoryDeviceCounts = computed(() => {
+    const counts: Record<string, number> = { "全部设备": props.devices.length };
+    for (const cat of ["灯光", "空调", "窗帘", "插座"]) {
+        counts[cat] = 0;
+    }
+    for (const device of props.devices) {
+        const catName = keyToCategory[device.key];
+        if (catName && counts[catName] !== undefined) {
+            counts[catName]++;
+        }
+    }
+    return counts;
+});
 
 const categories = [
     { name: "全部设备", icon: "chevron-down" },
@@ -30,35 +47,56 @@ const categories = [
     { name: "空调", icon: "air-conditioner" },
     { name: "窗帘", icon: "curtain" },
     { name: "插座", icon: "plug" },
-    { name: "场景", icon: "scene" },
-    { name: "更多...", icon: "more" },
+    { name: "更多", icon: "chevron-down" },
 ];
 
 const selectCategory = (name: string) => {
     emit("update:activeCategory", name);
-    if (name === "场景") emit("open", "scene");
-    if (name === "更多...") emit("open", "devices");
+    if (name === "更多") emit("open", "devices");
 };
+
+const offlineDevices = computed(() =>
+    props.devices.filter((d) => d.status === "offline" || d.status === "warning"),
+);
 </script>
 
 <template>
     <section class="quick-control" :class="{ 'is-loading': loading }">
-        <aside class="room-sidebar">
-            <h1>房间快捷控制</h1>
-            <nav aria-label="房间列表">
-                <button
-                    v-for="room in sidebarRooms"
-                    :key="room.id"
-                    :class="{ active: selected?.id === room.id }"
-                    type="button"
-                    @click="$emit('select', room)"
-                >
-                    {{ room.name }}
-                </button>
-            </nav>
+        <aside class="room-sidebar" :style="{ '--theme-color': selected?.themeColor || '#3478f6' }">
+            <template v-if="selected">
+                <h1>{{ selected.name }}</h1>
+                <p class="sidebar-meta">
+                    <span><SvgIcon name="online-device" size="sm" />{{ onlineCount }}/{{ deviceCount }} 台设备在线</span>
+                    <span class="sidebar-comfort" :class="selected.comfort >= 84 ? 'is-comfort' : 'is-good'">
+                        舒适度 {{ selected.comfort }}
+                    </span>
+                    <span v-if="currentScene" class="sidebar-scene">
+                        <SvgIcon name="scene" size="sm" />{{ currentScene }}
+                    </span>
+                </p>
+            </template>
+            <template v-else>
+                <h1>房间快捷控制</h1>
+                <p class="sidebar-meta">{{ loading ? "正在加载..." : "暂无房间" }}</p>
+            </template>
         </aside>
 
-        <main v-if="selected" class="control-content">
+        <main v-if="selected" :key="selected.id" class="control-content">
+            <div class="control-header">
+                <div>
+                    <h2 class="control-title">设备控制</h2>
+                    <p class="control-context">{{ onlineCount }} 台在线 · 舒适度 {{ selected?.comfort ?? 0 }}<template v-if="currentScene"> · {{ currentScene }}</template></p>
+                </div>
+                <button
+                    class="scene-btn"
+                    type="button"
+                    @click="$emit('open', 'scene')"
+                >
+                    <SvgIcon name="scene" size="sm" />
+                    <span>{{ currentScene || '场景' }}</span>
+                </button>
+            </div>
+
             <nav class="category-bar" aria-label="设备分类">
                 <button
                     v-for="category in categories"
@@ -69,6 +107,7 @@ const selectCategory = (name: string) => {
                 >
                     <SvgIcon :name="category.icon" size="sm" />
                     <span>{{ category.name }}</span>
+                    <span class="cat-count" :class="{ 'is-zero': categoryDeviceCounts[category.name] === 0 }">{{ categoryDeviceCounts[category.name] }}</span>
                 </button>
             </nav>
 
@@ -82,10 +121,12 @@ const selectCategory = (name: string) => {
                         :class="{
                             featured: device.key === 'airConditioner',
                             disabled: device.status === 'offline',
+                            'is-warning': device.status === 'warning',
+                            'is-running': device.status === 'running',
                         }"
                     >
                         <header>
-                            <span class="device-icon" :style="{ '--device-color': device.color || '#6b7280' }">
+                            <span class="device-icon" :class="{ 'is-on': isDeviceActive(device.status) }" :style="{ '--device-color': device.color || '#6b7280' }">
                                 <SvgIcon :name="device.icon" size="sm" />
                             </span>
                             <div>
@@ -94,7 +135,7 @@ const selectCategory = (name: string) => {
                             </div>
                             <button
                                 class="switch"
-                                :class="{ enabled: device.status === 'online' || device.status === 'running' }"
+                                :class="{ enabled: isDeviceActive(device.status) }"
                                 :aria-label="`切换${device.name}`"
                                 type="button"
                                 @click="$emit('toggle', device)"
@@ -102,7 +143,7 @@ const selectCategory = (name: string) => {
                         </header>
 
                         <div v-if="device.key === 'light'" class="range-row">
-                            <span>亮度 0%</span><i><b></b></i>
+                            <span>{{ isDeviceActive(device.status) ? '亮度 60%' : '已关闭' }}</span><i v-if="isDeviceActive(device.status)"><b></b></i>
                         </div>
                         <div v-else-if="device.key === 'television'" class="range-row">
                             <span>音量</span><i class="volume"><b></b></i><em>30%</em>
@@ -114,6 +155,11 @@ const selectCategory = (name: string) => {
                         </div>
                         <div v-else-if="device.key === 'airPurifier'" class="purifier-row">
                             <span>风速</span><b>自动</b><SvgIcon name="refresh" size="sm" />
+                        </div>
+                        <div v-else class="device-status-text">
+                            <span class="status-label" :class="isDeviceActive(device.status) ? 'is-on' : (device.status === 'warning' ? 'is-warning' : 'is-off')">
+                                {{ isDeviceActive(device.status) ? '已开启' : (device.status === 'warning' ? '异常' : '已关闭') }}
+                            </span>
                         </div>
                     </article>
                 </div>
@@ -132,10 +178,29 @@ const selectCategory = (name: string) => {
                     >
                         <small>{{ item.name }}</small>
                         <strong>{{ item.value }}</strong>
+                        <span v-if="item.statusLabel" class="env-status-label">{{ item.statusLabel }}</span>
                         <svg :class="item.tone" viewBox="0 0 66 22" aria-hidden="true">
                             <polyline :points="item.points" />
                         </svg>
                     </article>
+                </div>
+            </section>
+
+            <section v-if="offlineDevices.length > 0" class="control-section alert-section">
+                <h2>需关注设备 <small>{{ offlineDevices.length }}</small></h2>
+                <div class="alert-list">
+                    <div
+                        v-for="device in offlineDevices"
+                        :key="device.id"
+                        class="alert-item"
+                        :class="{ 'is-warning': device.status === 'warning' }"
+                    >
+                        <span class="alert-icon">
+                            <SvgIcon :name="device.icon" size="sm" />
+                        </span>
+                        <span class="alert-name">{{ device.name }}</span>
+                        <span class="alert-status">{{ device.status === 'warning' ? '异常' : '离线' }}</span>
+                    </div>
                 </div>
             </section>
         </main>
@@ -152,12 +217,9 @@ const selectCategory = (name: string) => {
     min-width: 0;
     min-height: 0;
     grid-template-columns: 164px minmax(0, 1fr);
+    gap: 10px;
     align-self: stretch;
     overflow: hidden auto;
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 18px;
-    background: var(--color-card-bg);
-    box-shadow: var(--shadow-card);
 }
 
 .quick-control.is-loading {
@@ -165,53 +227,56 @@ const selectCategory = (name: string) => {
 }
 
 .room-sidebar {
-    border-right: 1px solid var(--color-border-subtle);
-    padding: 20px 14px;
-    background: var(--color-sidebar-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 16px 14px;
+    box-shadow: var(--shadow-card);
 }
 
 .room-sidebar h1 {
-    margin: 0 10px 16px;
-    color: var(--color-text-primary);
-    font-size: 19px;
-    font-weight: 900;
-}
-
-.room-sidebar nav {
-    display: grid;
-    gap: 6px;
-}
-
-.room-sidebar button {
-    position: relative;
-    min-height: 38px;
-    border-radius: 9px;
-    padding: 0 14px;
-    color: var(--color-text-secondary);
-    font-size: 15px;
-    font-weight: 800;
-    text-align: left;
-    transition: 160ms var(--motion-ease);
-}
-
-.room-sidebar button:hover {
-    background: var(--color-surface-hover);
-}
-
-.room-sidebar button.active {
-    background: linear-gradient(90deg, var(--color-primary-50), var(--color-primary-100));
+    margin: 0 0 6px;
     color: var(--color-primary-700);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.3;
 }
 
-.room-sidebar button.active::before {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 0;
-    width: 3px;
+.sidebar-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.sidebar-meta svg {
+    color: var(--color-text-muted);
+    margin-right: 3px;
+}
+
+.sidebar-comfort {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
     border-radius: 999px;
-    background: var(--color-primary-600);
-    content: "";
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.sidebar-comfort.is-comfort {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.sidebar-comfort.is-good {
+    background: color-mix(in srgb, var(--theme-color, #3478f6) 12%, transparent);
+    color: var(--color-primary-600);
 }
 
 .control-content {
@@ -219,32 +284,101 @@ const selectCategory = (name: string) => {
     overflow-x: hidden;
     overflow-y: auto;
     padding: 18px;
-    background: var(--color-page-bg);
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+}
+
+/* ── 控制区头部 ── */
+.control-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.control-title {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 17px;
+    font-weight: 900;
+}
+
+.control-context {
+    margin: 3px 0 0;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.scene-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-card-bg);
+    padding: 0 10px;
+    color: var(--color-primary-600);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 120ms var(--motion-ease);
+}
+
+.scene-btn:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    transform: translateY(-1px);
+}
+
+.scene-btn:active {
+    transform: scale(0.97);
+}
+
+.scene-btn:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.scene-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 .category-bar {
-    display: grid;
-    grid-template-columns: 1.2fr repeat(6, minmax(0, 1fr));
-    gap: 8px;
+    display: flex;
+    gap: 6px;
     padding-bottom: 16px;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.category-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .category-bar button {
     display: inline-flex;
-    min-width: 0;
-    height: 36px;
     flex: 0 0 auto;
+    height: 32px;
     align-items: center;
-    justify-content: center;
-    gap: 7px;
+    gap: 6px;
     border: 1px solid var(--color-border-subtle);
-    border-radius: 9px;
+    border-radius: 8px;
     background: var(--color-card-bg);
+    padding: 0 10px;
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
-    box-shadow: var(--shadow-card);
-    transition: 160ms var(--motion-ease);
+    box-shadow: none;
+    transition: 120ms var(--motion-ease);
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .category-bar button:first-child {
@@ -260,11 +394,63 @@ const selectCategory = (name: string) => {
     color: var(--color-text-tertiary);
 }
 
+.cat-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    padding: 0 5px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.cat-count.is-zero {
+    opacity: 0.45;
+}
+
+.category-bar button.active .cat-count {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+
+.sidebar-scene {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    border-radius: 999px;
+    background: var(--tone-purple-soft);
+    padding: 2px 8px;
+    color: var(--tone-purple);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.sidebar-scene svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* ── 键盘焦点样式 ── */
+.room-sidebar button:focus-visible,
+.category-bar button:focus-visible,
+.device-card:focus-visible,
+.environment-grid article:focus-visible,
+.quick-control .switch:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
 .category-bar button:hover,
 .category-bar button.active {
     border-color: var(--color-primary-200);
     color: var(--color-primary-700);
-    box-shadow: var(--shadow-card-hover);
+    box-shadow: none;
     transform: translateY(-1px);
 }
 
@@ -277,7 +463,7 @@ const selectCategory = (name: string) => {
 
 .device-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
@@ -294,17 +480,14 @@ const selectCategory = (name: string) => {
     border-radius: 12px;
     background: var(--color-card-bg);
     box-shadow: var(--shadow-card);
+transition: 160ms var(--motion-ease);
 }
 
 .device-card {
-    min-height: 104px;
-    grid-column: span 2;
-    padding: 13px 14px;
+    min-height: 90px;
+    grid-column: span 1;
+    padding: 8px 10px;
     transition: 160ms var(--motion-ease);
-}
-
-.device-card:nth-last-child(-n + 2) {
-    grid-column: span 3;
 }
 
 .device-card:hover {
@@ -319,29 +502,55 @@ const selectCategory = (name: string) => {
 
 .device-card.disabled {
     opacity: 0.68;
+    border-color: var(--color-border);
+}
+
+.device-card.is-warning {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+}
+
+.device-card.is-running {
+    border-color: var(--color-primary-400);
+    background: color-mix(in srgb, var(--color-primary-500) 6%, transparent);
+}
+
+.device-card.is-warning .device-icon {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.device-card.is-running .device-icon {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 
 .device-card header {
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
 }
 
 .device-icon {
     display: grid;
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     place-items: center;
-    border-radius: 10px;
+    border-radius: 7px;
     background: color-mix(in srgb, var(--device-color, #6b7280) 14%, transparent);
     color: var(--device-color, #6b7280);
+    transition: transform 160ms var(--motion-ease), background-color 220ms var(--motion-ease), color 220ms var(--motion-ease);
+}
+
+.device-icon.is-on {
+    transform: scale(1.05);
 }
 
 .device-card header div {
     display: grid;
     min-width: 0;
-    gap: 2px;
+    gap: 1px;
 }
 
 .device-card strong,
@@ -353,19 +562,19 @@ const selectCategory = (name: string) => {
 
 .device-card strong {
     color: var(--color-text-primary);
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 900;
 }
 
 .device-card small {
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .switch {
-    width: 34px;
-    height: 19px;
+    width: 28px;
+    height: 15px;
     border-radius: 999px;
     background: var(--color-text-muted);
     padding: 2px;
@@ -374,8 +583,8 @@ const selectCategory = (name: string) => {
 
 .switch span {
     display: block;
-    width: 15px;
-    height: 15px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     background: white;
     box-shadow: 0 1px 3px rgb(15 23 42 / 24%);
@@ -387,18 +596,50 @@ const selectCategory = (name: string) => {
 }
 
 .switch.enabled span {
-    transform: translateX(15px);
+    transform: translateX(13px);
+}
+
+.device-status-text {
+    display: flex;
+    align-items: center;
+    min-height: 22px;
+    padding-top: 2px;
+}
+
+.status-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.status-label.is-on {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+
+.status-label.is-off {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+}
+
+.status-label.is-warning {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .range-row,
 .temperature-row,
 .purifier-row {
     display: flex;
-    min-height: 38px;
+    min-height: 24px;
     align-items: flex-end;
-    gap: 8px;
+    gap: 4px;
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
 }
 
@@ -445,18 +686,18 @@ const selectCategory = (name: string) => {
 .temperature-row > b {
     margin-right: auto;
     color: var(--color-text-primary);
-    font-size: 22px;
+    font-size: 15px;
 }
 
 .temperature-row button {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     place-items: center;
-    border-radius: 8px;
+    border-radius: 5px;
     background: var(--color-primary-50);
     color: var(--color-primary-700);
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -471,6 +712,90 @@ const selectCategory = (name: string) => {
 
 .environment-section {
     margin-top: 16px;
+}
+
+.alert-section {
+    margin-top: 12px;
+}
+
+.alert-section h2 small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: var(--color-danger);
+    padding: 0 5px;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    vertical-align: middle;
+}
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    background: var(--color-card-bg);
+}
+
+.alert-item.is-warning {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-soft);
+}
+
+.alert-icon {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    place-items: center;
+    border-radius: 6px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+}
+
+.alert-item.is-warning .alert-icon {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.alert-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.alert-status {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 800;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+}
+
+.alert-item.is-warning .alert-status {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .environment-grid article {
@@ -513,6 +838,16 @@ const selectCategory = (name: string) => {
     stroke-width: 2;
 }
 
+.environment-grid article .env-status-label {
+    position: relative;
+    z-index: 1;
+    display: block;
+    margin-top: 2px;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .environment-grid svg.green {
     stroke: var(--color-success);
 }
@@ -534,19 +869,8 @@ const selectCategory = (name: string) => {
 }
 
 @media (max-width: 1280px) {
-    .category-bar {
-        grid-template-columns: 1.2fr repeat(4, minmax(0, 1fr));
-    }
-    .category-bar button:nth-child(5),
-    .category-bar button:nth-child(6) {
-        display: none;
-    }
     .device-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .device-card,
-    .device-card:nth-last-child(-n + 2) {
-        grid-column: span 1;
+        grid-template-columns: repeat(2, 1fr);
     }
     .environment-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -558,8 +882,7 @@ const selectCategory = (name: string) => {
         grid-template-columns: 148px minmax(0, 1fr);
     }
     .room-sidebar {
-        padding-right: 10px;
-        padding-left: 10px;
+        padding: 14px 10px;
     }
     .control-content {
         padding-right: 14px;
@@ -572,28 +895,17 @@ const selectCategory = (name: string) => {
         grid-template-columns: 1fr;
     }
     .room-sidebar {
-        border-right: 0;
-        border-bottom: 1px solid var(--color-border-subtle);
-        padding: 16px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 14px 16px;
     }
     .room-sidebar h1 {
-        margin-bottom: 10px;
+        margin-bottom: 4px;
     }
-    .room-sidebar nav {
-        display: flex;
-        overflow-x: auto;
-    }
-    .room-sidebar button {
-        min-width: 90px;
-        text-align: center;
-    }
-    .room-sidebar button.active::before {
-        top: auto;
-        right: 8px;
-        bottom: 0;
-        left: 8px;
-        width: auto;
-        height: 3px;
+    .sidebar-meta {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
     }
     .control-content {
         padding: 16px;
@@ -601,12 +913,6 @@ const selectCategory = (name: string) => {
 }
 
 @media (max-width: 620px) {
-    .category-bar {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-    .category-bar button:nth-child(4) {
-        display: none;
-    }
     .device-grid,
     .environment-grid {
         grid-template-columns: 1fr;
@@ -618,6 +924,9 @@ const selectCategory = (name: string) => {
     .quick-control *::before,
     .quick-control *::after {
         transition-duration: 1ms !important;
+    }
+    .device-icon.is-on {
+        transform: none;
     }
 }
 </style>

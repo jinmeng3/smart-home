@@ -17,6 +17,7 @@ import {
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
+import BaseCollapsibleRail from "../components/common/BaseCollapsibleRail.vue";
 import RoomControlDialogs, {
     type RoomDialog,
 } from "../components/rooms/RoomControlDialogs.vue";
@@ -24,7 +25,8 @@ import RoomStatsGrid from "../components/rooms/RoomStatsGrid.vue";
 import RoomCard from "../components/rooms/RoomCard.vue";
 import RoomControlPanel from "../components/rooms/RoomControlPanel.vue";
 import RoomDetailPanel from "../components/rooms/RoomDetailPanel.vue";
-import { getDeviceTypeIcon } from "../components/device/deviceMeta";
+import { toRoomDeviceCards, isDeviceActive } from "../utils/device";
+import { metricConfig, metricLabels } from "../components/rooms/roomMeta";
 import type {
     Room,
     RoomDeviceCard,
@@ -34,22 +36,11 @@ import type {
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
 import { getErrorMessage } from "../utils/error";
 
-const deriveDevices = (room: Room): RoomDeviceCard[] => {
-    if (!room.device || room.device.length === 0) return [];
-    return room.device.map((d) => ({
-        id: d.id,
-        key: d.type,
-        icon: d.icon || getDeviceTypeIcon(d.type),
-        color: d.color,
-        name: d.name,
-        detail: d.brand || "",
-        status: d.status as RoomDeviceCard["status"],
-    }));
-};
-
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
-const loading = ref(false);
+const pageLoading = ref(false);
+const roomsLoading = ref(false);
+const roomSaving = ref(false);
 const activeCategory = ref("全部设备");
 const temperature = ref(24);
 const keyword = ref("");
@@ -58,7 +49,7 @@ const roomType = ref("");
 const activeDialog = ref<RoomDialog>(null);
 const roomStats = ref<RoomStats | null>(null);
 const roomDetailMap = ref<Record<number, RoomDetail>>({});
-const environmentData = ref<RoomEnvironmentItem[]>([]);
+const environmentByRoomId = ref<Record<number, RoomEnvironmentItem[]>>({});
 const detailRequests = new Map<number, Promise<RoomDetail>>();
 const deleteDialogOpen = ref(false);
 const deletingRoom = ref<Room | null>(null);
@@ -68,6 +59,19 @@ const roomGridExpanded = ref(false);
 const toggleRoomGrid = () => {
     roomGridExpanded.value = !roomGridExpanded.value;
 };
+
+const devicesByRoomId = computed(() =>
+    Object.fromEntries(
+        rooms.value.map((room) => [
+            room.id,
+            toRoomDeviceCards(room.device ?? []),
+        ]),
+    ),
+);
+
+const selectedDevices = computed<RoomDeviceCard[]>(
+    () => (selected.value ? devicesByRoomId.value[selected.value.id] ?? [] : []),
+);
 
 const selected = computed(
     () =>
@@ -92,7 +96,8 @@ const comfort = computed(() =>
 );
 
 const environment = computed<RoomEnvironmentItem[]>(() => {
-    return environmentData.value;
+    const roomId = selectedId.value;
+    return roomId ? environmentByRoomId.value[roomId] ?? [] : [];
 });
 
 const selectedDetail = computed<RoomDetail | null>(() => {
@@ -101,7 +106,7 @@ const selectedDetail = computed<RoomDetail | null>(() => {
 });
 
 const load = async () => {
-    loading.value = true;
+    pageLoading.value = true;
 
     try {
         const [result, stats] = await Promise.all([
@@ -120,19 +125,24 @@ const load = async () => {
                 loadEnvironment(firstRoom.id),
             ]);
         } else {
-            environmentData.value = [];
+            environmentByRoomId.value = {};
         }
     } finally {
-        loading.value = false;
+        pageLoading.value = false;
     }
 };
 
-const metricConfig: Record<string, { name: string; unit: string; tone: string }> = {
-    temperature: { name: "温度", unit: "°C", tone: "blue" },
-    humidity: { name: "湿度", unit: "%", tone: "blue" },
-    pm25: { name: "PM2.5", unit: " μg/m³", tone: "green" },
-    illuminance: { name: "光照", unit: " lux", tone: "orange" },
-    noise: { name: "噪音", unit: " dB", tone: "purple" },
+const loadRooms = async () => {
+    roomsLoading.value = true;
+    try {
+        const result = await fetchRooms(floor.value, roomType.value);
+        rooms.value = result.items;
+        if (!selectedId.value || !result.items.some((r) => r.id === selectedId.value)) {
+            selectedId.value = result.items[0]?.id;
+        }
+    } finally {
+        roomsLoading.value = false;
+    }
 };
 
 const loadRoomDetail = async (roomId: number, refresh = false) => {
@@ -161,21 +171,20 @@ const loadEnvironment = async (roomId: number) => {
         for (const [key, val] of Object.entries(env.values)) {
             const cfg = metricConfig[key];
             if (cfg) {
+                const numVal = val ?? 0;
+                const labelFn = metricLabels[key];
                 items.push({
                     name: cfg.name,
-                    value: `${val ?? 0}${cfg.unit}`,
+                    value: `${numVal}${cfg.unit}`,
                     tone: cfg.tone,
                     points: "",
+                    statusLabel: labelFn ? labelFn(numVal) : undefined,
                 });
             }
         }
-        if (selectedId.value === roomId) {
-            environmentData.value = items;
-        }
+        environmentByRoomId.value = { ...environmentByRoomId.value, [roomId]: items };
     } catch {
-        if (selectedId.value === roomId) {
-            environmentData.value = [];
-        }
+        environmentByRoomId.value = { ...environmentByRoomId.value, [roomId]: [] };
     }
 };
 
@@ -205,7 +214,7 @@ const toggleDevice = useAsyncAction(
     async (device: RoomDeviceCard) => {
         if (!selected.value) return;
 
-        const newStatus = device.status === "online" || device.status === "running" ? "offline" : "online";
+        const newStatus = isDeviceActive(device.status) ? "offline" : "online";
 
         const updated = await updateRoomDevice(
             selected.value.id,
@@ -217,7 +226,7 @@ const toggleDevice = useAsyncAction(
 ).execute;
 
 const handleRoomUpdated = async (room: Room) => {
-  loading.value = true;
+  roomSaving.value = true;
   try {
     const updated = await updateRoom(room.id, {
       name: room.name,
@@ -232,7 +241,7 @@ const handleRoomUpdated = async (room: Room) => {
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "房间更新失败"));
   } finally {
-    loading.value = false;
+    roomSaving.value = false;
   }
 };
 
@@ -246,7 +255,7 @@ const handleRoomCreated = async (
     deviceIds: number[];
   },
 ) => {
-  loading.value = true;
+  roomSaving.value = true;
   try {
     const room = await createRoom({
       name: payload.name,
@@ -258,11 +267,12 @@ const handleRoomCreated = async (
     });
     rooms.value = [...rooms.value, room];
     await selectRoom(room);
+    activeDialog.value = null;
     ElMessage.success("房间已创建");
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "房间创建失败"));
   } finally {
-    loading.value = false;
+    roomSaving.value = false;
   }
 };
 
@@ -284,7 +294,7 @@ const { pending: roomDeleting, execute: confirmDeleteRoom } = useAsyncAction(
             if (selectedId.value) {
                 await loadEnvironment(selectedId.value);
             } else {
-                environmentData.value = [];
+                environmentByRoomId.value = {};
             }
         }
 
@@ -311,35 +321,38 @@ useAuthenticatedLoader(load);
         <main class="workspace page-shell page-enter">
             <PageHeader
                 title="房间控制"
-                description="按房间查看设备状态、环境数据与快捷控制"
+                description="房间设备与环境控制"
                 icon="room"
                 tone="var(--color-teal-600)"
                 soft="var(--color-teal-soft)"
             >
                 <div class="page-tools">
-                    <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间、设备或场景" /></label>
-                    <select v-model="floor" @change="load">
+                    <label><SvgIcon name="search" size="sm" /><input v-model="keyword" placeholder="搜索房间" /></label>
+                    <select v-model="floor" @change="loadRooms">
                         <option value="">全部楼层</option><option>1F</option><option>2F</option>
                     </select>
-                    <select v-model="roomType" @change="load">
+                    <select v-model="roomType" @change="loadRooms">
                         <option value="">全部类型</option><option value="living">客厅</option><option value="bedroom">卧室</option><option value="study">书房</option>
                     </select>
                     <button class="primary" type="button" @click="activeDialog = 'create'"><SvgIcon name="plus" size="sm" />添加房间</button>
                 </div>
             </PageHeader>
 
-            <RoomStatsGrid
-                v-show="!roomGridExpanded"
-                :room-count="rooms.length"
-                :online-count="online"
-                :comfort-score="comfort"
-                :room-count-change="roomStats?.roomCountChange ?? 0"
-                :online-rate="roomStats?.onlineRate ?? 0"
-                :alert-count="roomStats?.alertCount ?? 0"
-                :pending-alert-count="roomStats?.pendingAlertCount ?? 0"
-            />
+            <Transition name="stats-fade">
+                <div v-if="!roomGridExpanded" key="stats">
+                    <RoomStatsGrid
+                        :room-count="rooms.length"
+                        :online-count="online"
+                        :comfort-score="comfort"
+                        :room-count-change="roomStats?.roomCountChange ?? 0"
+                        :online-rate="roomStats?.onlineRate ?? 0"
+                        :alert-count="roomStats?.alertCount ?? 0"
+                        :pending-alert-count="roomStats?.pendingAlertCount ?? 0"
+                    />
+                </div>
+            </Transition>
 
-            <div v-if="rooms.length === 0 && !loading" class="room-empty-state">
+            <div v-if="rooms.length === 0 && !pageLoading && !roomsLoading" class="room-empty-state">
                 <SvgIcon name="room" size="lg" />
                 <h3>暂无房间数据</h3>
                 <p>请添加您的第一个房间，开始管理智能家居设备</p>
@@ -348,18 +361,24 @@ useAuthenticatedLoader(load);
                 </button>
             </div>
 
-            <section v-if="rooms.length > 0" :class="['room-grid', 'card-grid-enter', { 'room-grid-expanded': roomGridExpanded }]">
+            <TransitionGroup
+                v-if="rooms.length > 0"
+                tag="section"
+                :class="['room-grid', { 'room-grid-expanded': roomGridExpanded }]"
+                name="room-grid"
+                appear
+            >
                 <RoomCard
                     v-for="room in visibleRooms"
                     :key="room.id"
                     :room="room"
                     :selected="selected?.id === room.id"
-                    :devices="deriveDevices(room)"
+                    :devices="devicesByRoomId[room.id] ?? []"
                     @select="selectRoom"
                     @toggle="toggleDevice"
                     @delete="handleRoomDeleteClick"
                 />
-            </section>
+            </TransitionGroup>
 
             <button v-if="rooms.length > 3" class="room-view-all" type="button" @click="toggleRoomGrid">
                 {{ roomGridExpanded ? '收起房间' : `查看全部房间（${rooms.length}）` }}
@@ -372,11 +391,12 @@ useAuthenticatedLoader(load);
                 <RoomControlPanel
                     :rooms="rooms"
                     :selected="selected"
-                    :loading="loading"
-                    :devices="selected ? deriveDevices(selected) : []"
+                    :loading="pageLoading || roomsLoading"
+                    :devices="selectedDevices"
                     :environment="environment"
                     :temperature="temperature"
                     :active-category="activeCategory"
+                    :current-scene="selectedDetail?.currentScene ?? undefined"
                     @select="selectRoom"
                     @toggle="toggleDevice"
                     @update:temperature="temperature = $event"
@@ -386,19 +406,57 @@ useAuthenticatedLoader(load);
             </div>
         </main>
 
-        <RoomDetailPanel
-            :room="selected ?? null"
-            :environment="environment"
-            :current-scene="selectedDetail?.currentScene ?? undefined"
-            :recent-activity="selectedDetail?.recentActivity ?? undefined"
-            :recent-activity-time="selectedDetail?.recentActivityTime ?? undefined"
-            @quick="quick"
-            @open="activeDialog = $event"
-        />
+        <BaseCollapsibleRail
+            :title="`${selected?.name ?? '房间'}助手`"
+            :subtitle="selected ? `● ${selected.onlineCount}/${selected.deviceCount} 台在线 · 舒适度 ${selected.comfort}` : ''"
+            storage-key="orion.room-assistant-rail-collapsed"
+            expanded-width="344px"
+        >
+            <template #collapsed>
+                <div class="rail-collapsed-content">
+                    <img
+                        src="/orion-sidebar-icon.svg"
+                        alt="助手"
+                        class="rail-mini-avatar"
+                    />
+                    <span
+                        v-if="selected"
+                        class="rail-mini-dot"
+                        :title="`${selected.name} · ${selected.onlineCount} 台在线`"
+                    ></span>
+                    <span
+                        v-if="environment[0]"
+                        class="rail-mini-value"
+                        :title="environment[0].value"
+                    >{{ environment[0].value }}</span>
+                    <span
+                        v-if="selected"
+                        class="rail-mini-num"
+                        :title="`${selected.onlineCount} 台设备在线`"
+                    >{{ selected.onlineCount }}</span>
+                    <span
+                        v-if="environment.some(e => e.statusLabel === '差' || e.statusLabel === '偏热' || e.statusLabel === '潮湿')"
+                        class="rail-mini-alert"
+                        title="有告警"
+                    >!</span>
+                </div>
+            </template>
+
+            <RoomDetailPanel
+                :room="selected ?? null"
+                :environment="environment"
+                :current-scene="selectedDetail?.currentScene ?? undefined"
+                :recent-activity="selectedDetail?.recentActivity ?? undefined"
+                :recent-activity-time="selectedDetail?.recentActivityTime ?? undefined"
+                @quick="quick"
+                @open="activeDialog = $event"
+            />
+        </BaseCollapsibleRail>
 
         <RoomControlDialogs
             v-model="activeDialog"
             :room="selected"
+            :submitting="roomSaving"
             @create="handleRoomCreated"
             @update="handleRoomUpdated"
         />
@@ -416,17 +474,17 @@ useAuthenticatedLoader(load);
             @update:model-value="deleteDialogOpen = $event"
         >
             <section v-if="deletingRoom" class="delete-dialog-body">
-                <div class="delete-device-summary">
-                    <span class="delete-device-thumb" aria-hidden="true">
+                <div class="delete-room-card" :style="{ '--theme-color': deletingRoom.themeColor || '#3478f6' }">
+                    <span class="delete-room-avatar">
                         <SvgIcon name="room" />
                     </span>
-                    <div>
-                        <strong>{{ deletingRoom.name }}</strong>
-                        <p class="delete-room-meta">
-                            <span><SvgIcon name="home" size="sm" />{{ deletingRoom.floor }}</span>
-                            <span class="meta-sep"></span>
-                            <span><SvgIcon name="online-device" size="sm" />{{ deletingRoom.onlineCount }}/{{ deletingRoom.deviceCount }} 个设备在线</span>
-                        </p>
+                    <div class="delete-room-info">
+                        <strong class="delete-room-name">{{ deletingRoom.name }}</strong>
+                        <span class="delete-room-detail">
+                            <SvgIcon name="home" size="sm" />{{ deletingRoom.floor }}
+                            <span class="detail-sep"></span>
+                            <SvgIcon name="online-device" size="sm" />{{ deletingRoom.onlineCount }}/{{ deletingRoom.deviceCount }} 台在线
+                        </span>
                     </div>
                 </div>
             </section>
@@ -462,22 +520,36 @@ useAuthenticatedLoader(load);
 .room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 
 .room-grid-expanded {
-    max-height: 320px;
-    overflow-y: auto;
-    scrollbar-gutter: stable;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
-.room-grid-expanded::-webkit-scrollbar {
-    width: 6px;
+/* TransitionGroup room-grid animations */
+.room-grid-enter-active {
+    animation: room-grid-enter 280ms var(--motion-ease-out) both;
+}
+.room-grid-leave-active {
+    animation: room-grid-leave 180ms var(--motion-ease-in) both;
+}
+.room-grid-move {
+    transition: transform 280ms var(--motion-ease-out);
 }
 
-.room-grid-expanded::-webkit-scrollbar-thumb {
-    border-radius: 3px;
-    background: var(--color-border);
-}
+.room-grid-enter-active:nth-child(1) { animation-delay: 0ms; }
+.room-grid-enter-active:nth-child(2) { animation-delay: 30ms; }
+.room-grid-enter-active:nth-child(3) { animation-delay: 60ms; }
+.room-grid-enter-active:nth-child(4) { animation-delay: 90ms; }
+.room-grid-enter-active:nth-child(5) { animation-delay: 120ms; }
+.room-grid-enter-active:nth-child(6) { animation-delay: 150ms; }
+.room-grid-enter-active:nth-child(7) { animation-delay: 180ms; }
+.room-grid-enter-active:nth-child(8) { animation-delay: 210ms; }
 
-.room-grid-expanded::-webkit-scrollbar-track {
-    background: transparent;
+@keyframes room-grid-enter {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes room-grid-leave {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-8px) scale(0.96); }
 }
 
 .room-view-all {
@@ -504,7 +576,7 @@ useAuthenticatedLoader(load);
 
 .chevron-icon {
     display: inline-flex;
-    transition: transform 300ms ease;
+    transition: transform 280ms var(--motion-ease-out);
 }
 
 .chevron-icon.is-expanded {
@@ -522,6 +594,11 @@ useAuthenticatedLoader(load);
     flex: 0 0 auto;
     min-height: max-content;
     overflow: visible;
+}
+
+/* Cross-fade for room panel switch */
+.room-panel-wrapper:deep(.control-content) {
+    animation: panel-enter 240ms var(--motion-ease) both;
 }
 
 .room-empty-state {
@@ -566,177 +643,206 @@ useAuthenticatedLoader(load);
 
 @media (max-width: 900px) {
     .room-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
     .room-grid-expanded {
-        max-height: 280px;
+        grid-template-columns: 1fr;
     }
 }
 
+@media (max-width: 620px) {
+    .page-tools label { min-width: 120px; }
+    .page-tools select:not(:first-of-type) { display: none; }
+}
+
 /* ── 删除房间弹窗 ─────────────────────────────── */
-.delete-dialog-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--color-danger-border);
-    background: linear-gradient(
-        180deg,
-        var(--color-card-bg),
-        var(--color-danger-soft)
-    );
-}
-.delete-dialog-icon {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
-    place-items: center;
-    border-radius: 12px;
-    background: var(--color-danger-soft);
-    color: var(--color-danger);
-}
-.delete-dialog-header h2,
-.delete-dialog-header p {
-    margin: 0;
-}
-.delete-dialog-header h2 {
-    color: var(--color-text-primary);
-    font-size: 20px;
-    font-weight: 900;
-}
-.delete-dialog-header p {
-    margin-top: 4px;
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    font-weight: 700;
-}
-.delete-dialog-close {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    margin-left: auto;
-    place-items: center;
-    border-radius: 8px;
-    color: var(--color-text-tertiary);
-}
-.delete-dialog-close:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text-primary);
-}
 .delete-dialog-body {
-    display: grid;
-    gap: 14px;
-    padding: 20px 22px;
+    padding: 4px 0;
 }
-.delete-device-summary {
+
+.delete-room-card {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card-bg);
+    padding: 14px 16px;
 }
-.delete-device-thumb {
+
+.delete-room-avatar {
     display: grid;
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
     place-items: center;
     border-radius: 12px;
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--theme-color, #3478f6) 80%, white),
+        color-mix(in srgb, var(--theme-color, #3478f6) 50%, white)
+    );
+    color: #fff;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-color, #3478f6) 24%, transparent);
 }
-.delete-device-summary strong {
+
+.delete-room-avatar svg {
+    width: 22px;
+    height: 22px;
+}
+
+.delete-room-info {
+    min-width: 0;
+    flex: 1;
+    display: grid;
+    gap: 4px;
+}
+
+.delete-room-name {
     color: var(--color-text-primary);
     font-size: 16px;
     font-weight: 900;
+    line-height: 1.3;
 }
-.delete-device-summary p {
-    margin: 4px 0 0;
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-weight: 700;
-}
-.delete-room-meta {
+
+.delete-room-detail {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin: 4px 0 0;
+    gap: 6px;
     color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 700;
 }
-.delete-room-meta svg {
+
+.delete-room-detail svg {
     color: var(--color-text-muted);
-    margin-right: 2px;
 }
-.delete-room-meta .meta-sep {
+
+.detail-sep {
     display: inline-block;
     width: 3px;
     height: 3px;
     border-radius: 50%;
     background: var(--color-border);
 }
-.delete-dialog-warning {
-    margin: 0;
-    border: 1px solid var(--color-danger-border);
-    border-radius: 10px;
-    background: var(--color-danger-soft);
-    padding: 12px 14px;
-    color: var(--color-danger);
-    line-height: 1.6;
+
+@media (prefers-reduced-motion: reduce) {
+    .room-grid-enter-active {
+        animation: none;
+    }
+    .room-grid-leave-active {
+        animation: none;
+    }
+    .room-grid-move {
+        transition: none;
+    }
+    .room-panel-wrapper:deep(.control-content) {
+        animation: none;
+    }
+    .room-panel-wrapper:deep(.quick-control) {
+        transition: none;
+    }
+    .chevron-icon {
+        transition: none;
+    }
 }
-.delete-dialog-footer {
+/* ── 统计卡片折叠动画（Vue Transition） ── */
+.stats-fade-leave-active {
+    transition: opacity 180ms var(--motion-ease-in), transform 180ms var(--motion-ease-in);
+}
+.stats-fade-enter-active {
+    transition: opacity 250ms var(--motion-ease-out), transform 250ms var(--motion-ease-out);
+}
+.stats-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+.stats-fade-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-fade-leave-active,
+    .stats-fade-enter-active {
+        transition: none;
+    }
+}
+
+/* ── 可折叠房间助手侧栏 ── */
+@media (min-width: 1024px) {
+    .app-page-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .app-page-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+/* ── 收起状态指示器 ── */
+.rail-collapsed-content {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 14px 22px;
-    border-top: 1px solid var(--color-border-subtle);
-    background: var(--color-workspace-background);
+    gap: 10px;
+    padding-top: 4px;
 }
-.delete-dialog-footer span {
-    color: var(--color-text-tertiary);
-    font-size: 13px;
-    font-weight: 700;
+
+.rail-mini-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
 }
-.delete-dialog-footer > div {
-    display: flex;
-    gap: 8px;
+
+.rail-mini-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-success);
+    animation: pulse-dot 2s var(--motion-ease) infinite;
 }
-.delete-cancel-button,
-.delete-confirm-button {
-    display: inline-flex;
-    height: 38px;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border-radius: 8px;
-    padding: 0 16px;
-    font-size: 13px;
+
+.rail-mini-value {
+    color: var(--color-text-primary);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+}
+
+.rail-mini-num {
+    display: grid;
+    min-width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
+    font-size: 10px;
     font-weight: 900;
 }
-.delete-cancel-button {
-    border: 1px solid var(--color-border-default);
-    background: var(--color-card-bg);
-    color: var(--color-text-secondary);
-}
-.delete-confirm-button {
-    border: 1px solid var(--color-danger);
+
+.rail-mini-alert {
+    display: grid;
+    min-width: 18px;
+    height: 18px;
+    place-items: center;
+    border-radius: 999px;
     background: var(--color-danger);
-    color: var(--color-text-on-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
 }
-.delete-cancel-button:hover {
-    background: var(--color-surface-hover);
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
-.delete-confirm-button:hover {
-    background: color-mix(in srgb, var(--color-danger) 88%, black);
-}
-.delete-confirm-button:disabled svg {
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
+
+@media (prefers-reduced-motion: reduce) {
+    .rail-mini-dot {
+        animation: none;
     }
 }
 </style>

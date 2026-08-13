@@ -11,6 +11,7 @@ defineProps<{
 }>();
 
 defineEmits<{
+    add: [];
     "update:keyword": [value: string];
     "update:room": [value: string];
     "update:status": [value: DeviceStatus | ""];
@@ -23,7 +24,7 @@ defineEmits<{
             <SvgIcon name="search" size="sm" />
             <input
                 :value="keyword"
-                placeholder="搜索设备、房间、品牌或类型"
+                placeholder="搜索设备"
                 type="search"
                 @input="
                     $emit(
@@ -34,14 +35,13 @@ defineEmits<{
             />
         </label>
         <div class="filter-group">
-            <SvgIcon class="filter-leading-icon" name="room" size="sm" />
             <select
                 :value="room"
                 @change="
                     $emit('update:room', ($event.target as HTMLSelectElement).value)
                 "
             >
-                <option value="">房间</option>
+                <option value="">全部房间</option>
                 <option v-for="item in rooms" :key="item" :value="item">
                     {{ item }}
                 </option>
@@ -49,11 +49,6 @@ defineEmits<{
             <SvgIcon class="dropdown-arrow" name="chevron-down" size="sm" />
         </div>
         <div class="filter-group">
-            <SvgIcon
-                class="filter-leading-icon"
-                name="online-device"
-                size="sm"
-            />
             <select
                 :value="status"
                 @change="
@@ -69,22 +64,26 @@ defineEmits<{
                     :key="item.label"
                     :value="item.value"
                 >
-                    {{ item.value ? item.label : "状态" }}
+                    {{ item.value ? item.label : "全部状态" }}
                 </option>
             </select>
             <SvgIcon class="dropdown-arrow" name="chevron-down" size="sm" />
         </div>
+        <button class="device-add-button" type="button" @click="$emit('add')">
+            <SvgIcon name="plus" size="sm" />
+            添加设备
+        </button>
     </section>
 </template>
 
 <style scoped>
 .device-toolbar {
     display: grid;
-    width: min(100%, 340px);
+    width: min(100%, 688px);
     min-width: 0;
     margin-left: auto;
     box-sizing: border-box;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(260px, 290px) 126px 126px 116px;
     gap: 8px;
     align-items: center;
 }
@@ -95,13 +94,44 @@ defineEmits<{
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 40px;
+    height: 34px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--color-card-bg);
     padding: 0 9px;
     transition: border-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
-    grid-column: 1 / -1;
+}
+
+.device-add-button {
+    display: inline-flex;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--color-primary-600);
+    border-radius: 8px;
+    background: var(--color-primary-600);
+    color: var(--color-text-on-primary);
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: none;
+    transition:
+        background-color 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.device-add-button:hover {
+    border-color: var(--color-primary-700);
+    background: var(--color-primary-700);
+    box-shadow: 0 6px 14px var(--color-focus-ring);
+    transform: translateY(-1px);
+}
+
+.device-add-button:active {
+    transform: scale(0.98);
 }
 
 .device-search:focus-within {
@@ -128,7 +158,7 @@ defineEmits<{
 
 .device-search input::placeholder {
     color: var(--color-text-tertiary);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -138,9 +168,9 @@ defineEmits<{
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 40px;
+    height: 34px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--color-card-bg);
     padding: 0 10px;
     transition: border-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
@@ -156,12 +186,6 @@ defineEmits<{
     color: var(--color-text-tertiary);
 }
 
-.filter-leading-icon {
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-}
-
 .filter-group select {
     width: 100%;
     height: 100%;
@@ -170,9 +194,9 @@ defineEmits<{
     border-radius: 0;
     background: transparent;
     background-image: none;
-    padding: 0 24px 0 2px !important;
+    padding: 0 24px 0 0 !important;
     color: var(--color-text-primary);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     box-shadow: none;
     outline: none;
@@ -203,10 +227,31 @@ defineEmits<{
 }
 
 /* ── 响应式 ── */
+@media (max-width: 900px) {
+    .device-toolbar {
+        width: 100%;
+        grid-template-columns: minmax(200px, 1fr) repeat(2, 126px) 116px;
+    }
+}
+
+@media (max-width: 720px) {
+    .device-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .device-search {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 560px) {
     .device-toolbar {
         width: 100%;
         grid-template-columns: 1fr;
+    }
+
+    .device-search {
+        grid-column: auto;
     }
 }
 </style>

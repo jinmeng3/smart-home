@@ -4,6 +4,7 @@ import BaseSmartModal from "../../common/BaseSmartModal.vue";
 import SvgIcon from "../../common/SvgIcon.vue";
 import { listDevices } from "../../../api/device";
 import { getDeviceTypeIcon } from "../../device/deviceMeta";
+import { roomTypes, roomTypeColorMap, roomTypeBgMap } from "../roomMeta";
 import type { Room } from "../../../types/room";
 import type { Device } from "../../../types/device";
 
@@ -11,6 +12,7 @@ const props = defineProps<{
     modelValue: boolean;
     room: Room | undefined;
     mode: "edit" | "create";
+    submitting?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -78,16 +80,6 @@ const roomColors = [
     { value: "#94a3b8", label: "灰色" },
 ] as const;
 
-const roomTypes = [
-    { value: "living", label: "客厅", icon: "home" },
-    { value: "bedroom", label: "卧室", icon: "room" },
-    { value: "study", label: "书房", icon: "comfort" },
-    { value: "kitchen", label: "厨房", icon: "plug" },
-    { value: "balcony", label: "阳台", icon: "illumination" },
-    { value: "bathroom", label: "卫生间", icon: "humidity" },
-    { value: "custom", label: "自定义", icon: "edit" },
-] as const;
-
 const title = computed(() =>
     props.mode === "edit" ? "编辑房间" : "添加房间",
 );
@@ -107,6 +99,8 @@ const previewDevices = computed(() => {
         deviceList.value.find((d) => d.id === id),
     ).filter((d): d is Device => d !== undefined);
 });
+
+const deviceSectionExpanded = ref(false);
 
 const dragIndex = ref<number | null>(null);
 
@@ -214,26 +208,8 @@ const confirm = () => {
             deviceIds: [...selectedDevices],
         });
     }
-    close();
 };
 
-const roomTypeColorMap: Record<string, string> = {
-    living: "var(--color-primary-500)",
-    bedroom: "var(--tone-indigo)",
-    study: "var(--color-teal-600)",
-    kitchen: "var(--color-device-light)",
-    balcony: "var(--color-success)",
-    bathroom: "var(--color-info)",
-};
-
-const roomTypeBgMap: Record<string, string> = {
-    living: "var(--color-primary-50)",
-    bedroom: "var(--tone-indigo-soft)",
-    study: "var(--color-teal-soft)",
-    kitchen: "var(--color-warning-soft)",
-    balcony: "var(--color-success-soft)",
-    bathroom: "var(--color-info-soft)",
-};
 </script>
 
 <template>
@@ -242,6 +218,8 @@ const roomTypeBgMap: Record<string, string> = {
         :title="title"
         :description="description"
         :confirm-text="confirmText"
+        :loading="submitting"
+        :body-scrollable="false"
         width="large"
         @cancel="close"
         @confirm="confirm"
@@ -396,14 +374,24 @@ const roomTypeBgMap: Record<string, string> = {
 
                 <!-- 设备绑定 -->
                 <div class="section-card">
-                    <div class="section-head">
+                    <div class="section-head" style="cursor: pointer" @click="deviceSectionExpanded = !deviceSectionExpanded">
                         <span class="section-head-icon"><SvgIcon name="device-management" size="sm" /></span>
                         <span>
-                            {{ mode === "edit" ? "已绑定设备" : "绑定设备" }}
+                            {{ mode === "edit" ? "已绑定设备" : "关联设备" }}
+                            <small style="font-weight: 700; color: var(--color-text-tertiary); font-size: 12px; margin-left: 4px;">（可选）</small>
                         </span>
                         <sup class="device-badge">{{ deviceCount }}</sup>
+                        <span class="section-toggle" :class="{ expanded: deviceSectionExpanded }">
+                            <SvgIcon name="chevron-down" size="sm" />
+                        </span>
                     </div>
-                    <div class="device-grid">
+                    <div v-if="!deviceSectionExpanded" class="device-collapsed-summary">
+                        <span class="device-summary-text">
+                            {{ deviceCount > 0 ? `已选择 ${deviceCount} 台设备` : "为房间绑定已有设备" }}
+                        </span>
+                        <span class="device-expand-btn" @click="deviceSectionExpanded = true">展开</span>
+                    </div>
+                    <div v-else class="device-grid">
                         <button
                             v-for="(item, index) in deviceList"
                             :key="item.id"
@@ -519,7 +507,7 @@ const roomTypeBgMap: Record<string, string> = {
    ============================================= */
 .room-editor {
     display: grid;
-    height: min(520px, calc(100vh - 260px));
+    height: min(520px, calc(100dvh - 260px));
     min-height: 0;
     grid-template-columns: 1.4fr 1fr;
     gap: 24px;
@@ -538,9 +526,14 @@ const roomTypeBgMap: Record<string, string> = {
     height: 100%;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     max-height: none;
     padding-right: 4px;
     scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .editor-form-scroll::-webkit-scrollbar {
@@ -560,25 +553,23 @@ const roomTypeBgMap: Record<string, string> = {
    分区卡片
    ============================================= */
 .section-card {
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 16px;
     background: var(--color-card-bg);
-    padding: 18px;
-    box-shadow: var(--shadow-card);
-    transition: border-color 220ms var(--motion-ease),
-                box-shadow 220ms var(--motion-ease);
+    padding: 20px 22px;
+    box-shadow: 0 4px 14px rgb(15 23 42 / 4%);
+    transition: border-color 220ms var(--motion-ease);
 }
 
 .section-card:hover {
     border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-card-hover);
 }
 
 .section-head {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
     font-size: 14px;
     font-weight: 700;
     color: var(--color-text-primary);
@@ -710,15 +701,15 @@ const roomTypeBgMap: Record<string, string> = {
 .type-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 10px;
 }
 
 .type-grid button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    height: 44px;
-    padding: 0 12px;
+    gap: 6px;
+    height: 42px;
+    padding: 0 10px;
     border: 1.5px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-subtle);
@@ -764,10 +755,10 @@ const roomTypeBgMap: Record<string, string> = {
 
 .type-icon {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     place-items: center;
-    border-radius: 7px;
+    border-radius: 6px;
     background: var(--icon-bg, var(--color-card-bg));
     border: 1px solid color-mix(in srgb, var(--type-color, var(--color-border)) 20%, transparent);
     transition: all 220ms var(--motion-ease);
@@ -796,8 +787,8 @@ const roomTypeBgMap: Record<string, string> = {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--type-color);
     color: #fff;
@@ -983,6 +974,48 @@ const roomTypeBgMap: Record<string, string> = {
     line-height: 1;
     margin-left: 4px;
     box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary-500) 30%, transparent);
+}
+
+.section-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    color: var(--color-text-muted);
+    transition: transform 200ms var(--motion-ease);
+}
+
+.section-toggle.expanded {
+    transform: rotate(180deg);
+}
+
+.section-toggle svg {
+    width: 14px;
+    height: 14px;
+}
+
+.device-collapsed-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 2px;
+}
+
+.device-summary-text {
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.device-expand-btn {
+    color: var(--color-primary-600);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: color 120ms var(--motion-ease);
+}
+
+.device-expand-btn:hover {
+    color: var(--color-primary-700);
 }
 
 .device-grid {
@@ -1483,18 +1516,18 @@ const roomTypeBgMap: Record<string, string> = {
    ============================================= */
 @media (max-width: 900px) {
     .room-editor {
-        height: auto;
+        height: min(520px, calc(100dvh - 240px));
         grid-template-columns: 1fr;
-        overflow: visible;
+        overflow: hidden;
     }
 
     .room-preview {
-        position: static;
+        display: none;
     }
 
     .editor-form-scroll {
-        height: auto;
-        max-height: 520px;
+        height: 100%;
+        max-height: none;
     }
 
     .field-row {

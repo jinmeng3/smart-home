@@ -47,6 +47,7 @@ interface SmartModalProps {
     dirty?: boolean;
     dirtyText?: string;
     sheet?: boolean;
+    bodyScrollable?: boolean;
     tone?: "primary" | "indigo" | "orange" | "teal" | "green" | "purple" | "red";
 }
 
@@ -75,6 +76,7 @@ const props = withDefaults(defineProps<SmartModalProps>(), {
     dirty: false,
     dirtyText: "有尚未保存的更改",
     sheet: false,
+    bodyScrollable: true,
     tone: "primary",
 });
 
@@ -260,7 +262,10 @@ onBeforeUnmount(() => {
                             </header>
                         </slot>
 
-                        <main class="smart-modal-body">
+                        <main
+                            class="smart-modal-body"
+                            :class="{ 'is-scroll-locked': !bodyScrollable }"
+                        >
                             <div
                                 v-if="$slots.status"
                                 class="smart-modal-status smart-modal-stagger-2"
@@ -447,6 +452,10 @@ onBeforeUnmount(() => {
     background: var(--color-surface-subtle);
     scrollbar-color: var(--color-border-strong) transparent;
     scrollbar-width: thin;
+}
+
+.smart-modal-body.is-scroll-locked {
+    overflow: hidden;
 }
 
 .smart-modal-content {

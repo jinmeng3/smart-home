@@ -53,13 +53,6 @@ const viewMode = ref<"list" | "grid">("list");
             <h2>设备列表</h2>
             <div class="device-list-tools">
                 <button
-                    class="device-list-primary"
-                    type="button"
-                    @click="$emit('add')"
-                >
-                    <SvgIcon name="plus" /> 添加设备
-                </button>
-                <button
                     class="device-list-action"
                     :class="{ 'is-active': batchMode }"
                     type="button"

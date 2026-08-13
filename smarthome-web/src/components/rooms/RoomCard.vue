@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
 import type { Room, RoomDeviceCard } from "../../types/room";
+import { getRoomTypeIcon } from "./roomMeta";
 
 defineProps<{
     room: Room;
@@ -14,24 +15,20 @@ defineEmits<{
     delete: [room: Room];
 }>();
 
-const roomTypeIconMap: Record<string, string> = {
-    living: "home",
-    bedroom: "room",
-    study: "comfort",
-    kitchen: "plug",
-    balcony: "illumination",
-    bathroom: "humidity",
-};
-
 const roomTypeIcon = (room: Room) =>
-    roomTypeIconMap[room.roomType] ?? "room";
+    getRoomTypeIcon(room.roomType);
 </script>
 
 <template>
     <article
         class="room-card"
         :class="{ selected }"
+        :style="{ '--theme-color': room.themeColor || '#3478f6' }"
+        role="button"
+        tabindex="0"
         @click="$emit('select', room)"
+        @keydown.enter="$emit('select', room)"
+        @keydown.space.prevent="$emit('select', room)"
     >
         <header>
             <span
@@ -43,8 +40,11 @@ const roomTypeIcon = (room: Room) =>
             <div class="room-title">
                 <h2>{{ room.name }}</h2>
                 <p class="room-status">
-                    <small>{{ room.comfort >= 84 ? "舒适" : "良好" }}</small>
-                    <b></b>{{ room.onlineCount }}/{{ room.deviceCount }} 在线
+                    <span class="online-indicator">
+                        <i></i>
+                        {{ room.onlineCount }}/{{ room.deviceCount }} 在线
+                    </span>
+                    <span class="comfort-badge">舒适度 {{ room.comfort }}</span>
                 </p>
             </div>
             <button
@@ -56,11 +56,6 @@ const roomTypeIcon = (room: Room) =>
                 <SvgIcon name="more" size="sm" />
             </button>
         </header>
-        <p class="room-meta">
-            <SvgIcon name="home" size="sm" />{{ room.floor }}
-            <span class="meta-sep"></span>
-            <SvgIcon name="online-device" size="sm" />{{ room.onlineCount }} 个设备在线
-        </p>
         <div class="room-devices">
             <button
                 v-for="device in devices.slice(0, 3)"
@@ -88,10 +83,10 @@ const roomTypeIcon = (room: Room) =>
     border: 1px solid var(--color-border);
     border-radius: 12px;
     background: var(--color-card-bg);
-    padding: 12px;
+    padding: 16px;
     box-shadow: var(--shadow-card);
     cursor: pointer;
-    transition: 160ms var(--motion-ease);
+    transition: 220ms var(--motion-ease);
     animation: room-card-enter 300ms var(--motion-ease) both;
 }
 
@@ -105,30 +100,44 @@ const roomTypeIcon = (room: Room) =>
         transform: translateY(0);
     }
 }
-.room-card:hover,
-.room-card.selected {
-    border-color: var(--color-primary-300);
-    box-shadow: var(--shadow-card-hover);
+
+.room-card:hover {
+    border-color: var(--color-border-strong);
 }
+
+.room-card:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.room-card.selected {
+    border-color: color-mix(in srgb, var(--theme-color, #3478f6) 50%, var(--color-border));
+    background: color-mix(in srgb, var(--theme-color, #3478f6) 5%, transparent);
+}
+
+/* 选中态左侧色条 */
 .room-card.selected::before {
     position: absolute;
-    top: 18px;
-    bottom: 18px;
+    top: 12px;
+    bottom: 12px;
     left: -1px;
     width: 3px;
     border-radius: 0 999px 999px 0;
-    background: var(--color-primary-600);
+    background: var(--theme-color, #3478f6);
     content: "";
 }
+
 .room-card > header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
+
 .room-title {
     min-width: 0;
     flex: 1;
 }
+
 .room-avatar {
     display: grid;
     width: 40px;
@@ -138,8 +147,8 @@ const roomTypeIcon = (room: Room) =>
     border-radius: 10px;
     background: linear-gradient(135deg, var(--color-primary-100), var(--color-primary-50));
     color: var(--color-primary-700);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary-500) 14%, transparent);
 }
+
 .room-avatar :deep(svg),
 .room-avatar svg {
     width: 20px;
@@ -182,21 +191,58 @@ const roomTypeIcon = (room: Room) =>
     );
     color: var(--color-device-camera);
 }
+
 .room-card h2 {
     overflow: hidden;
     margin: 0;
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-text-primary);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.room-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 0;
+}
+
+.online-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.online-indicator i {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-success);
+}
+
+.comfort-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: var(--color-success-soft);
+    padding: 1px 7px;
+    color: var(--color-success);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
 .room-menu-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     place-items: center;
     border: none;
     border-radius: 6px;
@@ -204,89 +250,25 @@ const roomTypeIcon = (room: Room) =>
     color: var(--color-text-muted);
     cursor: pointer;
     opacity: 0;
-    transition: 160ms var(--motion-ease);
+    transition: 120ms var(--motion-ease);
 }
+
 .room-card:hover .room-menu-btn,
-.room-card.selected .room-menu-btn {
+.room-card.selected .room-menu-btn,
+.room-menu-btn:focus-visible {
     opacity: 1;
 }
+
 .room-menu-btn:hover {
-    background: var(--color-danger-soft);
-    color: var(--color-danger);
-    transform: scale(1.1);
-}
-.room-status {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin: 2px 0 0;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-}
-.room-status small {
-    border-radius: 999px;
-    background: var(--color-success-soft);
-    padding: 0 5px;
-    color: var(--color-success);
-    font-size: 11px;
-    line-height: 1.5;
-}
-.room-status b {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-success);
-}
-.room-meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin: 6px 0 0;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-    font-weight: 700;
-}
-.room-meta svg {
-    color: var(--color-text-muted);
-}
-.meta-sep {
-    display: inline-block;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: var(--color-border);
-    margin: 0 4px;
-}
-.room-metrics {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: 10px;
-}
-.room-metrics span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    min-height: 28px;
-    border-radius: 8px;
-    background: var(--color-surface-subtle);
-    padding: 4px 6px;
+    background: var(--color-surface-hover);
     color: var(--color-text-secondary);
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
 }
-.room-metrics .quality {
-    background: var(--color-success-soft);
-    color: var(--color-success);
-}
+
 .room-devices {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    margin-top: 6px;
+    margin-top: 10px;
 }
 
 .room-devices button {
@@ -303,15 +285,23 @@ const roomTypeIcon = (room: Room) =>
     transition: 160ms var(--motion-ease);
     cursor: pointer;
 }
+
 .room-devices button:hover {
     border-color: var(--color-primary-200);
     background: var(--color-surface-hover);
 }
+
+.room-devices button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 1px;
+}
+
 .room-devices button.on {
     border-color: var(--color-primary-200);
     background: var(--color-primary-50);
     color: var(--color-primary-700);
 }
+
 .room-devices .device-icon-row {
     display: flex;
     align-items: center;
@@ -319,6 +309,7 @@ const roomTypeIcon = (room: Room) =>
     min-width: 0;
     flex: 1;
 }
+
 .room-devices i {
     display: grid;
     width: 28px;
@@ -330,6 +321,7 @@ const roomTypeIcon = (room: Room) =>
     color: var(--device-color, #6b7280);
     font-style: normal;
 }
+
 .room-devices .device-info {
     display: flex;
     flex-direction: column;
@@ -337,6 +329,7 @@ const roomTypeIcon = (room: Room) =>
     min-width: 0;
     flex: 1;
 }
+
 .room-devices .device-name {
     overflow: hidden;
     max-width: 100%;
@@ -347,25 +340,31 @@ const roomTypeIcon = (room: Room) =>
     color: var(--color-text-primary);
     line-height: 1.2;
 }
+
 .room-devices .device-status {
     font-size: 11px;
     font-weight: 600;
     color: var(--color-text-muted);
     line-height: 1.2;
 }
+
 .room-devices .device-status.on {
     color: var(--color-primary-600);
 }
+
 .room-devices button.on .device-name {
     color: var(--color-primary-700);
 }
+
 .room-devices button.on .device-status {
     color: var(--color-primary-500);
 }
+
 .room-devices small {
     color: var(--color-text-muted);
     font-size: 11px;
 }
+
 .room-devices button.on small {
     color: var(--color-primary-600);
 }
@@ -381,6 +380,19 @@ const roomTypeIcon = (room: Room) =>
     .room-devices button {
         padding: 4px 6px;
         min-height: 48px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .room-card,
+    .room-menu-btn {
+        transition-duration: 1ms;
+    }
+    .room-card:hover {
+        transform: none;
+    }
+    .room-menu-btn:hover {
+        transform: none;
     }
 }
 </style>

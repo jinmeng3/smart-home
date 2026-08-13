@@ -30,6 +30,7 @@ export type RoomDialog =
 defineProps<{
     modelValue: RoomDialog;
     room: Room | undefined;
+    submitting?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -54,6 +55,7 @@ const close = () => emit("update:modelValue", null);
         :model-value="Boolean(modelValue)"
         :room="room"
         :mode="modelValue"
+        :submitting="submitting"
         @create="emit('create', $event)"
         @update="emit('update', $event)"
         @update:model-value="close"
