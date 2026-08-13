@@ -14,6 +14,9 @@ defineEmits<{
     "update:enabled": [value: "all" | "enabled" | "disabled"];
     create: [];
     import: [];
+    batchEnabled: [];
+    batchSchedule: [];
+    sort: [];
 }>();
 </script>
 
@@ -79,13 +82,33 @@ defineEmits<{
         >
             <SvgIcon name="layers" /> 导入模板
         </button>
+        <div class="batch-actions-wrapper">
+            <button
+                class="batch-trigger"
+                type="button"
+                title="批量操作"
+            >
+                <SvgIcon name="more" />
+            </button>
+            <div class="batch-dropdown">
+                <button type="button" @click="$emit('batchEnabled')">
+                    <SvgIcon name="check-circle" size="sm" /> 批量启用
+                </button>
+                <button type="button" @click="$emit('batchSchedule')">
+                    <SvgIcon name="calendar" size="sm" /> 批量定时
+                </button>
+                <button type="button" @click="$emit('sort')">
+                    <SvgIcon name="layers" size="sm" /> 场景排序
+                </button>
+            </div>
+        </div>
     </section>
 </template>
 
 <style scoped>
 .scene-toolbar {
     display: grid;
-    grid-template-columns: minmax(190px, 1fr) 96px 96px auto auto;
+    grid-template-columns: minmax(190px, 1fr) 96px 96px auto auto auto;
     gap: 8px;
     align-items: center;
 }
@@ -97,7 +120,7 @@ defineEmits<{
     align-items: center;
     gap: 8px;
     border: 1px solid var(--color-border);
-    border-radius: 9px;
+    border-radius: 10px;
     background: var(--color-card-bg);
     padding: 0 12px;
     color: var(--color-text-tertiary);
@@ -127,7 +150,7 @@ select {
     width: 100%;
     height: 38px;
     border: 1px solid var(--color-border);
-    border-radius: 9px;
+    border-radius: 10px;
     background: var(--color-card-bg);
     color: var(--color-text-secondary);
     padding: 0 9px;
@@ -144,7 +167,7 @@ select {
     justify-content: center;
     gap: 7px;
     height: 38px;
-    border-radius: 9px;
+    border-radius: 10px;
     padding: 0 13px;
     font-size: 13px;
     font-weight: 900;
@@ -179,6 +202,80 @@ button:hover {
     transform: translateY(-1px);
 }
 
+/* ── 批量操作 ── */
+.batch-actions-wrapper {
+    position: relative;
+}
+
+.batch-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    color: var(--color-text-tertiary);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition:
+        transform 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease);
+}
+
+.batch-trigger:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.batch-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 20;
+    min-width: 150px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    padding: 4px;
+    box-shadow: var(--shadow-card-hover);
+}
+
+.batch-actions-wrapper:hover .batch-dropdown,
+.batch-dropdown:hover {
+    display: block;
+}
+
+.batch-dropdown button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 8px 10px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        background-color 140ms var(--motion-ease),
+        color 140ms var(--motion-ease);
+    transform: none;
+}
+
+.batch-dropdown button:hover {
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+    transform: none;
+}
+
 @media (max-width: 1180px) {
     .scene-toolbar {
         grid-template-columns: minmax(180px, 1fr) repeat(2, 92px);
@@ -187,6 +284,10 @@ button:hover {
     .scene-primary-button,
     .scene-secondary-button {
         justify-self: start;
+    }
+
+    .batch-actions-wrapper {
+        justify-self: end;
     }
 }
 

@@ -36,7 +36,7 @@ export interface SceneFilters {
   enabled: "all" | "enabled" | "disabled";
 }
 
-export type SceneStepStatus = "pending" | "running" | "completed";
+export type SceneStepStatus = "pending" | "running" | "completed" | "failed";
 
 export interface SceneStepInput {
   name: string;

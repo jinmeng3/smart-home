@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { storeToRefs } from "pinia";
@@ -76,24 +76,42 @@ watch(
     },
 );
 
+// 动态摘要
+const headerSummary = computed(() => {
+    const total = scenes.value.length;
+    const enabled = scenes.value.filter((s) => s.enabled).length;
+    const monthlyExe = stats.value.monthlyExecutions;
+    return `共 ${total} 个场景 · ${enabled} 个已启用 · 今日执行 ${monthlyExe} 次`;
+});
+
+const handleRetryStep = (stepId: string) => {
+    ElMessage.info("重试步骤：重新执行该步骤");
+};
+
+const handleViewAllTemplates = () => {
+    controller.openTemplateDialog();
+};
 </script>
 
 <template>
     <div class="app-page-layout">
-        <section class="scene-mode-page page-shell page-enter">
+        <section class="scene-mode-page page-enter">
+            <!-- 头部：渐变背景 + 动态摘要 -->
             <header class="scene-page-header">
-                <div class="scene-page-title">
-                    <span
-                        class="page-header-icon"
-                        style="background: var(--color-success-soft); color: var(--color-success)"
-                        aria-hidden="true"
-                    >
-                        <SvgIcon name="scene" />
-                    </span>
-                    <div>
-                        <h1>场景模式</h1>
-                        <p>一键管理家庭场景与智能联动</p>
+                <div class="scene-page-title-area">
+                    <div class="scene-page-title">
+                        <span
+                            class="page-header-icon"
+                            style="background: var(--color-success-soft); color: var(--color-success)"
+                            aria-hidden="true"
+                        >
+                            <SvgIcon name="scene" />
+                        </span>
+                        <div>
+                            <h1>场景模式</h1>
+                        </div>
                     </div>
+                    <p class="scene-page-summary">{{ headerSummary }}</p>
                 </div>
                 <SceneToolbar
                     v-model:enabled="filters.enabled"
@@ -101,6 +119,9 @@ watch(
                     v-model:trigger-type="filters.triggerType"
                     @create="controller.openCreateDialog"
                     @import="controller.openTemplateDialog"
+                    @batch-enabled="controller.runAction('batch')"
+                    @batch-schedule="controller.runAction('schedule')"
+                    @sort="controller.runAction('sort')"
                 />
             </header>
 
@@ -123,8 +144,10 @@ watch(
                     :scenes="scenes"
                     :selected-id="selectedSceneId"
                     @copy="controller.copyScene"
+                    @create="controller.openCreateDialog"
                     @edit="controller.editScene"
                     @expand="sceneGridExpanded = $event"
+                    @import-template="controller.openTemplateDialog"
                     @remove="controller.removeScene"
                     @run="controller.runScene"
                     @select="store.selectScene($event.id)"
@@ -139,6 +162,7 @@ watch(
                     :step-statuses="stepStatuses"
                     @edit="selectedScene && controller.editScene(selectedScene)"
                     @preview="selectedScene && controller.previewScene(selectedScene)"
+                    @retry-step="handleRetryStep"
                 />
             </div>
         </section>
@@ -152,6 +176,7 @@ watch(
             @remove="controller.removeScene"
             @run="controller.runScene"
             @template="controller.openTemplateDialog"
+            @view-all-templates="handleViewAllTemplates"
         />
 
         <SceneCreateDialog
@@ -239,19 +264,32 @@ watch(
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    gap: 14px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    padding: 18px;
+    gap: 8px;
+    overflow: hidden;
+    padding: 12px;
 }
 
+/* ── 头部 ── */
 .scene-page-header {
     display: grid;
-    grid-template-columns: minmax(210px, auto) minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-success-soft) 40%, transparent),
+        transparent 60%
+    );
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: -12px -12px 0;
+    position: relative;
+}
+
+.scene-page-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .scene-page-title {
@@ -263,31 +301,35 @@ watch(
 
 .scene-page-title .page-header-icon {
     display: grid;
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     place-items: center;
-    border-radius: 12px;
+    border-radius: 10px;
 }
 
 .scene-page-title h1 {
     margin: 0;
     color: var(--color-text-primary);
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 900;
     line-height: 1.15;
 }
 
-.scene-page-title p {
-    margin: 8px 0 0;
+.scene-page-summary {
+    margin: 0 0 0 48px;
     color: var(--color-text-tertiary);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 750;
 }
 
 @media (max-width: 1180px) {
     .scene-page-header {
         grid-template-columns: 1fr;
+    }
+
+    .scene-page-summary {
+        margin-left: 0;
     }
 }
 
@@ -308,19 +350,28 @@ watch(
 }
 
 .scene-flow-wrapper {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
 .scene-flow-wrapper:deep(.scene-flow) {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
     margin-top: 0;
 }
 
 @media (max-width: 720px) {
     .scene-mode-page {
-        padding: 12px;
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .scene-page-header {
+        padding: 8px 10px;
+        margin: -8px -8px 0;
+        border-radius: 10px;
     }
 }
 

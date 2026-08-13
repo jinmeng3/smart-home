@@ -81,19 +81,19 @@ const items = [
 .scene-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .scene-stat-card {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 13px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 10px;
     align-items: center;
-    min-height: 94px;
+    min-height: 64px;
     border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border-radius: 10px;
     background: var(--color-card-bg);
-    padding: 15px 18px;
+    padding: 10px 12px;
     box-shadow: var(--shadow-card);
     animation: scene-card-enter 220ms var(--motion-ease) both;
     transition:
@@ -108,8 +108,8 @@ const items = [
 
 .scene-stat-icon {
     display: grid;
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     place-items: center;
     border-radius: 999px;
 }
@@ -118,15 +118,22 @@ p,
 small {
     margin: 0;
     color: var(--color-text-tertiary);
-    font-size: 12px;
     font-weight: 800;
+}
+
+p {
+    font-size: 13px;
+}
+
+small {
+    font-size: 12px;
 }
 
 strong {
     display: block;
-    margin: 3px 0;
+    margin: 2px 0;
     color: var(--color-text-primary);
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 900;
     line-height: 1;
 }

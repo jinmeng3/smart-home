@@ -14,8 +14,9 @@ defineEmits<{
     edit: [scene: Scene];
     copy: [scene: Scene];
     remove: [scene: Scene];
-    action: [key: "batch" | "schedule" | "sort" | "logs"];
+    action: [key: "logs" | "schedule"];
     template: [name: string];
+    viewAllTemplates: [];
 }>();
 
 const triggerIcon = computed(() => {
@@ -47,17 +48,10 @@ const detailRows = computed(() => {
             chip: true,
         },
         {
-            icon: "room",
-            label: "关联房间",
-            value: scene.roomLabels?.length ? scene.roomLabels.join("、") : "—",
-        },
-        {
             icon: "device-management",
             label: "关联设备",
             value: `${scene.deviceCount} 个设备`,
         },
-        { icon: "clock", label: "创建时间", value: scene.createdAt },
-        { icon: "refresh", label: "更新时间", value: scene.updatedAt },
     ];
 });
 
@@ -73,142 +67,144 @@ onMounted(async () => {
     }
 });
 
-const actions = [
-    {
-        key: "batch",
-        label: "批量启用",
-        note: "启用多个场景",
-        icon: "check-circle",
-    },
-    {
-        key: "schedule",
-        label: "定时设置",
-        note: "统一定时管理",
-        icon: "calendar",
-    },
-    { key: "sort", label: "场景排序", note: "自定义排序", icon: "layers" },
-    { key: "logs", label: "查看日志", note: "执行记录与日志", icon: "log" },
+const displayedTemplates = computed(() => templates.value.slice(0, 2));
+const hasMoreTemplates = computed(() => templates.value.length > 2);
+
+const manageActions = [
+    { key: "edit", label: "编辑", icon: "edit", danger: false },
+    { key: "logs", label: "执行日志", icon: "log", danger: false },
+    { key: "schedule", label: "定时管理", icon: "calendar", danger: false },
+    { key: "copy", label: "复制", icon: "layers", danger: false },
+    { key: "remove", label: "删除", icon: "delete", danger: true },
 ] as const;
 </script>
 
 <template>
     <aside class="scene-detail-panel">
         <Transition name="scene-detail-crossfade" mode="out-in">
-            <section v-if="scene" :key="scene.id" class="scene-panel-card">
-                <header class="scene-panel-title">
-                    <h2><SvgIcon name="device-management" /> 场景详情</h2>
-                    <button type="button" title="刷新详情">
-                        <SvgIcon name="refresh" />
-                    </button>
-                </header>
+            <div v-if="scene" :key="scene.id" class="scene-detail-wrapper">
+                <!-- 第一部分：当前场景（吸顶） -->
+                <section class="scene-panel-card scene-detail-sticky">
+                    <div class="scene-detail-head">
+                        <span class="scene-detail-icon" :style="{ color: scene.color, background: `color-mix(in srgb, ${scene.color} 16%, transparent)` }">
+                            <SvgIcon :name="scene.icon" />
+                        </span>
+                        <div class="scene-detail-title">
+                            <div class="scene-detail-name-row">
+                                <h3>{{ scene.name }}</h3>
+                                <span
+                                    class="scene-detail-badge"
+                                    :class="{ 'is-off': !scene.enabled }"
+                                >
+                                    <SvgIcon :name="scene.enabled ? 'check-circle' : 'clock'" size="sm" />
+                                    {{ scene.enabled ? "已启用" : "已停用" }}
+                                </span>
+                            </div>
+                            <p class="scene-detail-desc">{{ scene.description }}</p>
+                        </div>
+                    </div>
 
-                <div class="scene-detail-head">
-                    <span class="scene-detail-icon" :style="{ color: scene.color }">
-                        <SvgIcon :name="scene.icon" />
-                    </span>
-                    <div class="scene-detail-title">
-                        <div class="scene-detail-name-row">
-                            <h3>{{ scene.name }}</h3>
-                            <span
-                                class="scene-detail-badge"
-                                :class="{ 'is-off': !scene.enabled }"
-                            >
-                                <SvgIcon :name="scene.enabled ? 'check-circle' : 'clock'" />
-                                {{ scene.enabled ? "已启用" : "已停用" }}
+                    <dl class="scene-detail-info">
+                        <div v-for="row in detailRows" :key="row.label" class="info-row">
+                            <span class="info-icon"><SvgIcon :name="row.icon" size="sm" /></span>
+                            <span class="info-label">{{ row.label }}</span>
+                            <span class="info-value">
+                                <em
+                                    v-if="row.chip"
+                                    class="exec-chip"
+                                    :class="
+                                        scene.triggerType === 'manual'
+                                            ? 'is-manual'
+                                            : 'is-auto'
+                                    "
+                                >
+                                    {{ row.value }}
+                                </em>
+                                <template v-else>{{ row.value }}</template>
                             </span>
                         </div>
-                        <p class="scene-detail-desc">{{ scene.description }}</p>
-                    </div>
-                </div>
+                    </dl>
 
-                <dl class="scene-detail-info">
-                    <div v-for="row in detailRows" :key="row.label" class="info-row">
-                        <span class="info-icon"><SvgIcon :name="row.icon" /></span>
-                        <span class="info-label">{{ row.label }}</span>
-                        <span class="info-value">
-                            <em
-                                v-if="row.chip"
-                                class="exec-chip"
-                                :class="
-                                    scene.triggerType === 'manual'
-                                        ? 'is-manual'
-                                        : 'is-auto'
-                                "
-                            >
-                                {{ row.value }}
-                            </em>
-                            <template v-else>{{ row.value }}</template>
-                        </span>
-                    </div>
-                </dl>
-
-                <div class="scene-detail-actions">
                     <button
-                        class="is-primary"
+                        class="scene-execute-button"
                         :disabled="running"
                         type="button"
                         @click="$emit('run', scene)"
                     >
-                        <SvgIcon name="power" /> {{ running ? "执行中" : "执行" }}
+                        <SvgIcon name="power" :class="{ 'is-spinning': running }" />
+                        {{ running ? "执行中..." : "立即执行" }}
                     </button>
-                    <button type="button" @click="$emit('edit', scene)">
-                        <SvgIcon name="edit" /> 编辑
-                    </button>
-                    <button type="button" @click="$emit('copy', scene)">
-                        <SvgIcon name="layers" /> 复制
-                    </button>
+                </section>
+
+                <!-- 第二部分：场景管理 -->
+                <section class="scene-panel-card">
+                    <header class="scene-panel-title">
+                        <h2><SvgIcon name="device-management" size="sm" /> 场景管理</h2>
+                    </header>
+                    <div class="scene-manage-actions">
+                        <button
+                            v-for="item in manageActions"
+                            :key="item.key"
+                            type="button"
+                            :class="{ 'is-danger': item.danger }"
+                            @click="
+                                item.key === 'edit'
+                                    ? $emit('edit', scene)
+                                    : item.key === 'copy'
+                                      ? $emit('copy', scene)
+                                      : item.key === 'remove'
+                                        ? $emit('remove', scene)
+                                        : $emit('action', item.key as any)
+                            "
+                        >
+                            <SvgIcon :name="item.icon" />
+                            <span>{{ item.label }}</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 第三部分：推荐模板 -->
+                <section class="scene-panel-card">
+                    <header class="scene-panel-title">
+                        <h2><SvgIcon name="device-management" size="sm" /> 推荐模板</h2>
+                        <button
+                            v-if="hasMoreTemplates"
+                            type="button"
+                            @click="$emit('viewAllTemplates')"
+                        >
+                            查看全部 <SvgIcon name="chevron-right" size="sm" />
+                        </button>
+                    </header>
+                    <div class="scene-template-list">
+                        <button
+                            v-for="item in displayedTemplates"
+                            :key="item.id"
+                            type="button"
+                            @click="$emit('template', item.name)"
+                        >
+                            <span class="scene-template-icon"
+                                ><SvgIcon :name="item.icon"
+                            /></span>
+                            <span>
+                                <strong>{{ item.name }}</strong>
+                                <small>{{ item.deviceCount }} 个设备</small>
+                            </span>
+                            <em>使用</em>
+                        </button>
+                        <p v-if="!templates.length" class="template-empty">暂无推荐模板</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 空状态 -->
+            <section v-else class="scene-panel-card scene-panel-empty">
+                <div class="empty-state">
+                    <SvgIcon name="device-management" />
+                    <p>选择一个场景</p>
+                    <small>查看配置和执行信息</small>
                 </div>
             </section>
-            <section v-else class="scene-panel-card scene-panel-empty">
-                请选择场景
-            </section>
         </Transition>
-
-        <section class="scene-panel-card">
-            <header class="scene-panel-title">
-                <h2><SvgIcon name="device-management" /> 快捷操作</h2>
-            </header>
-            <div class="scene-quick-actions">
-                <button
-                    v-for="item in actions"
-                    :key="item.key"
-                    type="button"
-                    @click="$emit('action', item.key)"
-                >
-                    <SvgIcon :name="item.icon" />
-                    <span>
-                        <strong>{{ item.label }}</strong>
-                        <small>{{ item.note }}</small>
-                    </span>
-                </button>
-            </div>
-        </section>
-
-        <section class="scene-panel-card">
-            <header class="scene-panel-title">
-                <h2><SvgIcon name="device-management" /> 推荐模板</h2>
-                <button type="button" title="更多模板">
-                    更多 <SvgIcon name="chevron-right" />
-                </button>
-            </header>
-            <div class="scene-template-list">
-                <button
-                    v-for="item in templates"
-                    :key="item.id"
-                    type="button"
-                    @click="$emit('template', item.name)"
-                >
-                    <span class="scene-template-icon"
-                        ><SvgIcon :name="item.icon"
-                    /></span>
-                    <span>
-                        <strong>{{ item.name }}</strong>
-                        <small>{{ item.deviceCount }} 个设备</small>
-                    </span>
-                    <em>使用</em>
-                </button>
-            </div>
-        </section>
     </aside>
 </template>
 
@@ -218,11 +214,19 @@ const actions = [
     min-width: 0;
     min-height: 0;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     overflow-y: auto;
     border-left: 1px solid var(--color-border);
     background: var(--color-sidebar-bg);
     padding: 0 4px 0 12px;
+    scrollbar-gutter: stable;
+}
+
+.scene-detail-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
 }
 
 .scene-panel-card {
@@ -233,11 +237,16 @@ const actions = [
     box-shadow: var(--shadow-card);
 }
 
+/* ── 吸顶 ── */
+.scene-detail-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
 .scene-panel-title,
 .scene-detail-head,
-.scene-detail-actions,
-.scene-quick-actions,
-.scene-template-list button {
+.scene-manage-actions {
     display: flex;
     align-items: center;
 }
@@ -245,45 +254,45 @@ const actions = [
 .scene-panel-title {
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .scene-panel-title h2 {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     margin: 0;
     color: var(--color-text-primary);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 900;
 }
 
 .scene-panel-title button {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     color: var(--color-primary-600);
     font-size: 12px;
     font-weight: 900;
 }
 
-/* ── 头部：图标 + 名称 + 描述 + 状态 ───────────────────────── */
+/* ═══ 第一部分：当前场景 ═══ */
+
 .scene-detail-head {
     align-items: flex-start;
-    gap: 12px;
-    padding: 10px 0 14px;
-    margin-bottom: 6px;
+    gap: 10px;
+    padding: 6px 0 10px;
+    margin-bottom: 4px;
     border-bottom: 1px solid var(--color-border);
 }
 
 .scene-detail-icon {
     display: grid;
-    width: 46px;
-    height: 46px;
-    flex: 0 0 46px;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
     place-items: center;
-    border-radius: 14px;
-    background: var(--color-primary-50);
+    border-radius: 12px;
     box-shadow: inset 0 0 0 1px var(--color-primary-100);
 }
 
@@ -296,7 +305,7 @@ const actions = [
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .scene-detail-name-row h3 {
@@ -304,9 +313,8 @@ const actions = [
     margin: 0;
     overflow: hidden;
     color: var(--color-text-primary);
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 900;
-    letter-spacing: -0.01em;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -315,11 +323,11 @@ const actions = [
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     border: 1px solid var(--color-success-border);
     border-radius: 999px;
     background: var(--color-success-soft);
-    padding: 3px 9px;
+    padding: 2px 8px;
     color: var(--color-success);
     font-size: 11px;
     font-weight: 800;
@@ -337,28 +345,27 @@ const actions = [
     -webkit-line-clamp: 2;
     line-clamp: 2;
     -webkit-box-orient: vertical;
-    margin: 7px 0 0;
+    margin: 6px 0 0;
     overflow: hidden;
     color: var(--color-text-secondary);
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 650;
     line-height: 1.5;
 }
 
-/* ── 详情信息行 ───────────────────────────────────────────── */
 .scene-detail-info {
     display: grid;
     gap: 0;
     margin: 0;
-    padding: 6px 0 12px;
+    padding: 4px 0 8px;
 }
 
 .info-row {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 11px;
-    padding: 10px 2px;
+    gap: 10px;
+    padding: 8px 2px;
     border-bottom: 1px dashed var(--color-border);
 }
 
@@ -368,11 +375,11 @@ const actions = [
 
 .info-icon {
     display: grid;
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
     place-items: center;
-    border-radius: 9px;
+    border-radius: 8px;
     background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
 }
@@ -389,7 +396,7 @@ const actions = [
     margin: 0 0 0 auto;
     overflow: hidden;
     color: var(--color-text-secondary);
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 900;
     text-align: right;
     text-overflow: ellipsis;
@@ -402,8 +409,8 @@ const actions = [
     gap: 5px;
     border: 1px solid transparent;
     border-radius: 999px;
-    padding: 3px 10px;
-    font-size: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
     font-style: normal;
     font-weight: 900;
     white-space: nowrap;
@@ -421,107 +428,132 @@ const actions = [
     color: var(--color-success);
 }
 
-/* ── 操作按钮 ─────────────────────────────────────────────── */
-.scene-detail-actions {
-    display: grid;
+/* 执行按钮 */
+.scene-execute-button {
+    display: flex;
     width: 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.scene-detail-actions button,
-.scene-quick-actions button,
-.scene-template-list button {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    background: var(--color-card-bg);
-    color: var(--color-text-secondary);
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-primary-600) 92%, #fff),
+        var(--color-primary-600)
+    );
+    color: var(--color-text-on-primary);
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
     transition:
         transform 160ms var(--motion-ease),
-        background-color 160ms var(--motion-ease),
-        border-color 160ms var(--motion-ease);
+        box-shadow 160ms var(--motion-ease),
+        opacity 160ms var(--motion-ease);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary-600) 24%, transparent);
 }
 
-.scene-detail-actions button {
+.scene-execute-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary-600) 32%, transparent);
+}
+
+.scene-execute-button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.scene-execute-button:disabled .is-spinning {
+    animation: scene-spin 900ms linear infinite;
+}
+
+/* ═══ 第二部分：场景管理 ═══ */
+.scene-manage-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.scene-manage-actions button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    min-width: 0;
-    gap: 6px;
-    height: 36px;
+    gap: 5px;
+    height: 34px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-card-bg);
+    padding: 0 8px;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 900;
+    cursor: pointer;
+    transition:
+        transform 140ms var(--motion-ease),
+        background-color 140ms var(--motion-ease),
+        border-color 140ms var(--motion-ease),
+        color 140ms var(--motion-ease);
 }
 
-.scene-detail-actions .is-primary {
-    border-color: var(--color-primary-600);
-    background: var(--color-primary-600);
-    color: var(--color-text-on-primary);
+.scene-manage-actions button:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+    transform: translateY(-1px);
 }
 
-.scene-detail-actions .is-danger {
+.scene-manage-actions button.is-danger:hover {
     border-color: var(--color-danger);
-    background: var(--color-danger);
-    color: var(--color-text-on-primary);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
-.scene-quick-actions {
+/* ═══ 第三部分：推荐模板 ═══ */
+.scene-template-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
-.scene-quick-actions button {
-    justify-content: flex-start;
+.scene-template-list button {
+    display: flex;
+    width: 100%;
+    align-items: center;
     gap: 9px;
-    min-height: 58px;
-    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: transparent;
+    padding: 10px 10px;
     text-align: left;
+    cursor: pointer;
+    transition:
+        transform 140ms var(--motion-ease),
+        background-color 140ms var(--motion-ease),
+        border-color 140ms var(--motion-ease);
 }
 
-.scene-quick-actions svg {
-    flex: 0 0 auto;
-    color: var(--color-primary-600);
+.scene-template-list button:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    transform: translateY(-1px);
 }
 
-.scene-quick-actions span,
 .scene-template-list button > span:nth-child(2) {
     display: grid;
     min-width: 0;
+    flex: 1;
 }
 
-.scene-quick-actions strong,
 .scene-template-list strong {
     color: var(--color-text-primary);
     font-size: 12px;
     font-weight: 900;
 }
 
-.scene-quick-actions small,
 .scene-template-list small {
     color: var(--color-text-tertiary);
     font-size: 11px;
     font-weight: 750;
-}
-
-.scene-template-list {
-    display: grid;
-    gap: 0;
-}
-
-.scene-template-list button {
-    justify-content: space-between;
-    gap: 9px;
-    min-height: 52px;
-    border-width: 0 0 1px;
-    border-radius: 0;
-    padding: 8px 0;
-    text-align: left;
-}
-
-.scene-template-list button:last-child {
-    border-bottom: 0;
 }
 
 .scene-template-icon {
@@ -540,32 +572,54 @@ const actions = [
     border: 1px solid var(--color-primary-200);
     border-radius: 7px;
     background: var(--color-primary-50);
-    padding: 5px 9px;
+    padding: 4px 8px;
     color: var(--color-primary-700);
-    font-size: 12px;
+    font-size: 11px;
     font-style: normal;
     font-weight: 900;
 }
 
-button:hover {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
-    transform: translateY(-1px);
+.template-empty {
+    margin: 0;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    padding: 12px 0;
 }
 
-button:disabled {
-    opacity: 0.55;
-}
-
+/* ═══ 空状态 ═══ */
 .scene-panel-empty {
     display: grid;
-    min-height: 180px;
+    min-height: 200px;
     place-items: center;
-    color: var(--color-text-tertiary);
-    font-weight: 800;
 }
 
+.empty-state {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    color: var(--color-text-tertiary);
+}
+
+.empty-state svg {
+    width: 32px;
+    height: 32px;
+    opacity: 0.4;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.empty-state small {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* ── 过渡 ── */
 .scene-detail-crossfade-enter-active,
 .scene-detail-crossfade-leave-active {
     transition:
@@ -579,6 +633,15 @@ button:disabled {
     transform: translateY(8px);
 }
 
+@keyframes scene-spin {
+    to { transform: rotate(360deg); }
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
 @media (prefers-reduced-motion: reduce) {
     button,
     .scene-detail-crossfade-enter-active,
@@ -586,9 +649,7 @@ button:disabled {
         transition-duration: 1ms;
     }
 
-    button:hover,
-    .scene-detail-crossfade-enter-from,
-    .scene-detail-crossfade-leave-to {
+    button:hover {
         transform: none;
     }
 }

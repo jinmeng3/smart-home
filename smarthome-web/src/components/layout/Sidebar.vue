@@ -6,7 +6,9 @@ import { useHomeStore } from "../../stores/home";
 import { useSettingsStore } from "../../stores/settings";
 import {
     navigationItems,
+    navigationGroups,
     type NavigationItem,
+    type NavigationGroup,
 } from "../../router/navigation";
 import type { RecentConversation } from "../../types/chat";
 import SvgIcon from "../common/SvgIcon.vue";
@@ -34,12 +36,14 @@ const router = useRouter();
 const avatarLoadError = ref(false);
 
 const menuItems = navigationItems;
-const primaryMenuItem = menuItems[0]!;
-const secondaryMenuItems = menuItems.slice(1);
 const activeLabel = computed(
     () =>
         menuItems.find((item) => item.path === route.path)?.label ??
         "智能对话",
+);
+
+const isCollapsed = computed(
+    () => store.sidebarCollapsed && props.mode === "full",
 );
 
 const account = computed(() => settingsStore.settings.account);
@@ -49,7 +53,7 @@ const accountInitial = computed(() =>
         : "访",
 );
 
-/* ── 最近会话分组：今天 / 昨天 / 更早 ─────────────────────────── */
+/* ── 最近会话分组 ─────────────────────────────────────────── */
 const conversationGroups = computed(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -76,10 +80,9 @@ const conversationGroups = computed(() => {
     return groups.filter((group) => group.conversations.length > 0);
 });
 
-/** 当前会话（淡蓝背景 + 左侧高亮条） */
 const isActiveConversation = (id: string) => store.activeSessionId === id;
 
-/* ── 滚动渐隐提示 ─────────────────────────────────────────────── */
+/* ── 滚动渐隐 ─────────────────────────────────────────────── */
 const scrollGroupRef = ref<HTMLElement | null>(null);
 const scrollAtTop = ref(true);
 const scrollAtBottom = ref(true);
@@ -91,29 +94,24 @@ const updateScrollState = () => {
     scrollAtBottom.value = scrollTop + clientHeight >= scrollHeight - 4;
 };
 
-// 路由切换后重新计算渐隐状态（侧边栏本身不销毁，滚动位置天然保留）
 watch(
     () => route.path,
-    () => {
-        void nextTick(updateScrollState);
-    },
+    () => void nextTick(updateScrollState),
 );
 
 watch(
     () => store.recentConversations.length,
-    () => {
-        void nextTick(updateScrollState);
-    },
+    () => void nextTick(updateScrollState),
 );
 
-/* ── 紧凑模式会话浮层 ─────────────────────────────────────────── */
+/* ── 紧凑模式会话浮层 ─────────────────────────────────────── */
 const compactPanelOpen = ref(false);
 const toggleChatFromCompact = async () => {
     if (props.mode !== "compact") return;
     compactPanelOpen.value = !compactPanelOpen.value;
 };
 
-/* ── 交互 ─────────────────────────────────────────────────────── */
+/* ── 交互 ─────────────────────────────────────────────────── */
 const selectMenu = async (item: NavigationItem) => {
     store.setActiveMenu(item.label);
 
@@ -127,7 +125,6 @@ const selectMenu = async (item: NavigationItem) => {
             authStore.openLogin();
             return;
         }
-
         await router.push(item.path);
     }
 
@@ -174,6 +171,10 @@ const deleteConversation = async (sessionId: string) => {
     if (!authStore.isAuthenticated) return;
     await store.deleteConversation(sessionId);
 };
+
+/* ── 判断分组是否包含当前路由 ─────────────────────────────── */
+const isGroupActive = (group: NavigationGroup) =>
+    group.items.some((item) => item.path === route.path);
 </script>
 
 <template>
@@ -181,11 +182,11 @@ const deleteConversation = async (sessionId: string) => {
         :class="[
             `is-${mode}`,
             `phase-${props.phase}`,
-            { 'is-collapsed': store.sidebarCollapsed && mode === 'full' },
-            store.sidebarCollapsed && mode === 'full' ? 'px-2' : 'px-4',
+            { 'is-collapsed': isCollapsed },
+            isCollapsed ? 'px-2 py-4' : 'px-3 py-4',
         ]"
-        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] py-5 shadow-soft transition-[width] duration-300 ease-out"
-        :style="{ width: store.sidebarCollapsed && mode === 'full' ? '76px' : '240px' }"
+        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] shadow-soft transition-[width] duration-300 ease-out"
+        :style="{ width: isCollapsed ? '72px' : '240px' }"
     >
         <button
             v-if="mode === 'drawer'"
@@ -197,16 +198,16 @@ const deleteConversation = async (sessionId: string) => {
             <SvgIcon name="close" size="sm" />
         </button>
 
-        <!-- 品牌区 -->
+        <!-- ── 品牌区（固定） ── -->
         <div
-            class="mb-6 flex shrink-0 items-center"
-            :class="store.sidebarCollapsed && mode === 'full' ? 'justify-center' : 'gap-3'"
+            class="mb-5 flex shrink-0 items-center"
+            :class="isCollapsed ? 'justify-center' : 'gap-3'"
         >
             <button
                 class="brand-logo motion-button grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--color-primary-50)] ring-1 ring-[var(--color-primary-100)] transition-transform duration-200 hover:scale-105"
                 type="button"
-                title="Orion Home"
-                @click="store.sidebarCollapsed && store.toggleSidebar()"
+                :title="isCollapsed ? '展开侧栏' : 'Orion Home'"
+                @click="isCollapsed && store.toggleSidebar()"
             >
                 <img
                     class="h-full w-full object-cover"
@@ -215,7 +216,7 @@ const deleteConversation = async (sessionId: string) => {
                 />
             </button>
             <div
-                v-show="!store.sidebarCollapsed || mode !== 'full'"
+                v-show="!isCollapsed"
                 class="min-w-0 sidebar-detail"
             >
                 <strong
@@ -230,102 +231,94 @@ const deleteConversation = async (sessionId: string) => {
                 </span>
             </div>
             <button
-                v-show="!store.sidebarCollapsed || mode !== 'full'"
-                class="motion-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary-700)] sidebar-detail"
+                v-show="!isCollapsed"
+                class="motion-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary-700)] sidebar-detail transition-all duration-150"
                 type="button"
-                title="折叠菜单"
+                :title="'折叠菜单'"
                 @click="store.toggleSidebar"
             >
-                ‹
+                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
+                    <path d="M15 18l-6-6 6-6" />
+                </svg>
             </button>
         </div>
 
-        <div class="sidebar-content flex min-h-0 flex-1 flex-col">
-            <!-- 智能对话：固定 -->
-            <nav class="primary-navigation grid shrink-0 gap-1">
-                <button
-                    :key="primaryMenuItem.label"
-                    class="motion-button relative flex h-11 items-center rounded-lg text-sm font-bold text-[var(--color-text-secondary)] transition-all duration-150 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary-700)]"
-                    :class="activeLabel === primaryMenuItem.label ? 'gap-3 bg-[var(--color-primary-100)] px-3 text-[var(--color-primary-700)]' : 'gap-3 px-3'"
-                    type="button"
-                    :title="primaryMenuItem.label"
-                    @focus="preloadMenu(primaryMenuItem)"
-                    @mouseenter="preloadMenu(primaryMenuItem)"
-                    @click="mode === 'compact' ? toggleChatFromCompact() : selectMenu(primaryMenuItem)"
-                >
-                    <span
-                        v-if="activeLabel === primaryMenuItem.label && (!store.sidebarCollapsed || mode !== 'full')"
-                        class="active-indicator absolute left-0 h-6 w-1 rounded-full bg-[var(--color-primary-600)]"
-                    ></span>
-                    <span
-                        class="menu-icon"
-                        :class="{ 'is-active': activeLabel === primaryMenuItem.label }"
-                        :style="
-                            activeLabel === primaryMenuItem.label
-                                ? { background: primaryMenuItem.soft, color: primaryMenuItem.tone }
-                                : {}
-                        "
-                    >
-                        <SvgIcon :name="primaryMenuItem.icon" />
-                    </span>
-                    <span
-                        v-show="!store.sidebarCollapsed || mode !== 'full'"
-                        class="truncate sidebar-detail"
-                    >
-                        {{ primaryMenuItem.label }}
-                    </span>
-                    <span
-                        v-if="mode === 'compact'"
-                        class="compact-panel-trigger"
-                        :class="{ 'is-open': compactPanelOpen }"
-                        aria-hidden="true"
-                    ></span>
-                </button>
-            </nav>
-
-            <!-- 共同滚动区：其他导航 + 最近会话 -->
+        <!-- ── 内容区（滚动） ── -->
+        <div class="sidebar-content flex min-h-0 flex-1 flex-col overflow-hidden">
             <div class="scroll-region">
                 <div
                     ref="scrollGroupRef"
                     class="sidebar-scroll-group min-h-0 flex-1 overflow-y-auto"
                     @scroll.passive="updateScrollState"
                 >
-                    <nav class="secondary-navigation grid gap-1">
-                        <button
-                            v-for="item in secondaryMenuItems"
-                            :key="item.label"
-                            class="motion-button relative flex h-11 items-center rounded-lg text-sm font-bold text-[var(--color-text-secondary)] transition-all duration-150 hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary-700)]"
-                            :class="activeLabel === item.label ? 'gap-3 bg-[var(--color-primary-100)] px-3 text-[var(--color-primary-700)]' : 'gap-3 px-3'"
-                            type="button"
-                            :title="item.label"
-                            @focus="preloadMenu(item)"
-                            @mouseenter="preloadMenu(item)"
-                            @click="selectMenu(item)"
+                    <!-- 导航分组 -->
+                    <template v-for="group in navigationGroups" :key="group.label">
+                        <!-- 分组标题（折叠时隐藏） -->
+                        <div
+                            v-show="!isCollapsed"
+                            class="group-header sidebar-detail"
                         >
-                            <span
-                                v-if="activeLabel === item.label && (!store.sidebarCollapsed || mode !== 'full')"
-                                class="active-indicator absolute left-0 h-6 w-1 rounded-full bg-[var(--color-primary-600)]"
-                            ></span>
-                            <span
-                                class="menu-icon"
-                                :class="{ 'is-active': activeLabel === item.label }"
-                                :style="activeLabel === item.label ? { background: item.soft, color: item.tone } : {}"
-                            >
-                                <SvgIcon :name="item.icon" />
-                            </span>
-                            <span
-                                v-show="!store.sidebarCollapsed || mode !== 'full'"
-                                class="truncate sidebar-detail"
-                            >{{ item.label }}</span>
-                        </button>
-                    </nav>
+                            <span class="group-line" aria-hidden="true"></span>
+                            <p class="group-label">{{ group.label }}</p>
+                        </div>
 
-                    <!-- 最近会话（今天的会话分组） -->
+                        <nav class="group-nav grid gap-0.5">
+                            <button
+                                v-for="item in group.items"
+                                :key="item.label"
+                                class="motion-button nav-item relative flex h-10 items-center rounded-lg text-sm font-bold text-[var(--color-text-secondary)] transition-all duration-150"
+                                :class="[
+                                    activeLabel === item.label
+                                        ? 'bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
+                                        : 'hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-primary-700)]',
+                                    isCollapsed ? 'justify-center gap-0 px-0' : 'gap-3 px-3',
+                                ]"
+                                type="button"
+                                :title="isCollapsed ? item.label : ''"
+                                :aria-label="item.label"
+                                @focus="preloadMenu(item)"
+                                @mouseenter="preloadMenu(item)"
+                                @click="selectMenu(item)"
+                            >
+                                <!-- 左侧色条（当前项） -->
+                                <span
+                                    v-if="activeLabel === item.label"
+                                    class="active-indicator absolute left-0 h-5 w-[3px] rounded-full"
+                                    :style="{ background: item.tone }"
+                                ></span>
+                                <!-- 图标 -->
+                                <span
+                                    class="menu-icon"
+                                    :class="{ 'is-active': activeLabel === item.label }"
+                                    :style="
+                                        activeLabel === item.label
+                                            ? { background: item.soft, color: item.tone }
+                                            : {}
+                                    "
+                                >
+                                    <SvgIcon :name="item.icon" />
+                                </span>
+                                <!-- 标签 -->
+                                <span
+                                    v-show="!isCollapsed"
+                                    class="truncate sidebar-detail"
+                                >
+                                    {{ item.label }}
+                                </span>
+                            </button>
+                        </nav>
+                    </template>
+
+                    <!-- 最近会话 -->
                     <section
                         v-show="route.path === '/' && !compactPanelOpen"
                         class="conversation-panel"
+                        :class="{ 'is-collapsed-mode': isCollapsed }"
                     >
-                        <div class="conversation-heading">
+                        <div
+                            v-show="!isCollapsed"
+                            class="conversation-heading sidebar-detail"
+                        >
                             <span>最近会话</span>
                             <button type="button" @click="startConversation">
                                 <SvgIcon name="plus" size="sm" />
@@ -333,7 +326,19 @@ const deleteConversation = async (sessionId: string) => {
                             </button>
                         </div>
 
-                        <template v-if="store.recentConversations.length">
+                        <!-- 折叠时只保留新建按钮 -->
+                        <button
+                            v-show="isCollapsed"
+                            class="collapsed-new-chat"
+                            type="button"
+                            title="新建会话"
+                            aria-label="新建会话"
+                            @click="startConversation"
+                        >
+                            <SvgIcon name="plus" />
+                        </button>
+
+                        <template v-if="store.recentConversations.length && !isCollapsed">
                             <div
                                 v-for="group in conversationGroups"
                                 :key="group.key"
@@ -342,9 +347,7 @@ const deleteConversation = async (sessionId: string) => {
                                 <p class="conversation-group-label">
                                     {{ group.label }}
                                 </p>
-                                <div
-                                    class="conversation-list"
-                                >
+                                <div class="conversation-list">
                                     <div
                                         v-for="conversation in group.conversations"
                                         :key="conversation.id"
@@ -373,7 +376,12 @@ const deleteConversation = async (sessionId: string) => {
                                 </div>
                             </div>
                         </template>
-                        <p v-else class="conversation-empty">暂无会话</p>
+                        <p
+                            v-else-if="!store.recentConversations.length && !isCollapsed"
+                            class="conversation-empty"
+                        >
+                            暂无会话
+                        </p>
                     </section>
                 </div>
 
@@ -437,11 +445,12 @@ const deleteConversation = async (sessionId: string) => {
             </div>
         </Transition>
 
-        <!-- 账户区 -->
+        <!-- ── 账户区（固定底部） ── -->
         <button
-            class="mt-auto flex h-[70px] w-full shrink-0 items-center justify-start gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 transition-all duration-150 hover:border-[var(--color-primary-200)]"
-            :class="store.sidebarCollapsed && mode === 'full' ? 'justify-center px-0' : ''"
+            class="mt-auto flex h-[68px] w-full shrink-0 items-center justify-start gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-r from-[var(--color-card-bg)] to-[var(--color-primary-50)] p-3 transition-all duration-150 hover:border-[var(--color-primary-200)] hover:shadow-sm"
+            :class="isCollapsed ? 'justify-center px-0' : ''"
             type="button"
+            :title="isCollapsed ? '账户' : ''"
             @click="authStore.openLogin"
         >
             <img
@@ -462,7 +471,7 @@ const deleteConversation = async (sessionId: string) => {
                 {{ accountInitial }}
             </div>
             <div
-                v-show="!store.sidebarCollapsed || mode !== 'full'"
+                v-show="!isCollapsed"
                 class="min-w-0 sidebar-detail"
             >
                 <strong class="block truncate text-sm">
@@ -485,7 +494,7 @@ const deleteConversation = async (sessionId: string) => {
                 </span>
             </div>
             <span
-                v-show="!store.sidebarCollapsed || mode !== 'full'"
+                v-show="!isCollapsed"
                 class="ml-auto text-[var(--color-text-muted)] transition-transform duration-150 sidebar-detail"
             >
                 <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
@@ -497,6 +506,7 @@ const deleteConversation = async (sessionId: string) => {
 </template>
 
 <style scoped>
+/* ── 布局重置 ── */
 .is-compact > div:first-of-type {
     justify-content: center;
     margin-bottom: 16px;
@@ -531,8 +541,6 @@ const deleteConversation = async (sessionId: string) => {
     margin-bottom: 16px;
 }
 
-.is-compact > div:first-of-type > div,
-.is-compact nav button > span:last-child,
 .is-compact .conversation-panel,
 .is-compact > button:last-of-type > div:last-of-type,
 .is-compact > button:last-of-type > span:last-child {
@@ -559,9 +567,9 @@ const deleteConversation = async (sessionId: string) => {
     padding: 6px;
 }
 
-/* 桌面端手动折叠（is-collapsed 复用 compact 样式） */
+/* ── 桌面端手动折叠 ── */
 .is-collapsed {
-    padding: 14px 10px;
+    padding: 14px 10px !important;
 }
 
 .is-collapsed nav button {
@@ -571,21 +579,21 @@ const deleteConversation = async (sessionId: string) => {
 }
 
 .is-collapsed nav button > span:first-child {
-    left: -10px;
+    left: -8px;
 }
 
-.is-collapsed .conversation-panel {
+.is-collapsed .conversation-panel .conversation-heading,
+.is-collapsed .conversation-group,
+.is-collapsed .conversation-empty {
     display: none;
 }
 
-.is-compact .secondary-navigation,
-.is-collapsed .secondary-navigation {
-    align-content: start;
+.is-collapsed .group-label {
+    display: none;
 }
 
-.is-compact .sidebar-scroll-group,
 .is-collapsed .sidebar-scroll-group {
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .is-collapsed > button:last-of-type {
@@ -594,18 +602,20 @@ const deleteConversation = async (sessionId: string) => {
     padding: 6px;
 }
 
-/* 侧边栏本体：进入动画 + 性能提示 */
+/* ── 侧边栏本体 ── */
 aside {
     will-change: transform, opacity;
     transition: padding 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow:
+        inset -1px 0 0 var(--color-border-subtle),
+        var(--shadow-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
     aside,
     .brand-logo,
     .menu-icon,
-    .primary-navigation button,
-    .secondary-navigation button,
+    .nav-item,
     aside > button:last-of-type {
         transition-duration: 1ms;
     }
@@ -613,63 +623,78 @@ aside {
 
 .brand-logo,
 .menu-icon,
-.primary-navigation button,
-.secondary-navigation button,
+.nav-item,
 aside > button:last-of-type {
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* 菜单项入场错落动画 */
-.primary-navigation,
-.secondary-navigation {
-    animation: sidebar-nav-enter 360ms var(--motion-ease) both;
+/* ── 分组标题 ── */
+.group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 6px 0;
 }
 
-.primary-navigation {
-    animation-delay: 60ms;
+.group-header:first-of-type {
+    margin-top: 0;
 }
 
-.secondary-navigation {
-    animation-delay: 110ms;
+.group-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        var(--color-border-subtle),
+        transparent
+    );
+    opacity: 0.5;
 }
 
-@keyframes sidebar-nav-enter {
-    from {
-        opacity: 0;
-        transform: translateX(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+.group-label {
+    margin: 0;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    white-space: nowrap;
 }
 
-.conversation-panel {
-    animation: conversation-panel-enter 360ms var(--motion-ease) both;
-    animation-delay: 160ms;
+/* ── 导航项 ── */
+.nav-item {
+    position: relative;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition:
+        background 160ms var(--motion-ease),
+        color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
 }
 
-@keyframes conversation-panel-enter {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.nav-item:hover {
+    background: var(--color-surface-hover);
 }
 
-/* 已激活菜单项指示条动画 */
-nav button .active-indicator {
-    animation: active-stripe 300ms var(--motion-ease) both;
+.nav-item:hover .menu-icon {
+    transform: scale(1.05);
+}
+
+/* 已激活项指示条 */
+.active-indicator {
+    animation: active-stripe 260ms var(--motion-ease) both;
     transform-origin: left center;
 }
 
 @keyframes active-stripe {
     from {
-        transform: scaleY(0.4);
+        transform: scaleY(0.3);
         opacity: 0;
     }
     to {
@@ -678,13 +703,34 @@ nav button .active-indicator {
     }
 }
 
-/* 菜单图标微动：选中后轻微放大一次，悬停时图标右移 1-2px */
+/* ── 菜单图标 ── */
+.menu-icon {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 9px;
+    color: inherit;
+    will-change: transform, background, color;
+    transition:
+        background 180ms var(--motion-ease),
+        color 180ms var(--motion-ease),
+        transform 180ms var(--motion-ease);
+}
+
 .menu-icon svg {
     transition: transform 160ms var(--motion-ease);
 }
 
-nav button:hover .menu-icon svg {
-    transform: translateX(1.5px);
+.nav-item:hover .menu-icon svg {
+    transform: translateX(1px);
+}
+
+.menu-icon.is-active {
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent),
+        0 0 12px color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .menu-icon.is-active svg {
@@ -692,48 +738,11 @@ nav button:hover .menu-icon svg {
 }
 
 @keyframes icon-pop {
-    0% {
-        transform: scale(0.86);
-    }
-    100% {
-        transform: scale(1);
-    }
+    0% { transform: scale(0.86); }
+    100% { transform: scale(1); }
 }
 
-.drawer-close {
-    position: absolute;
-    z-index: 1;
-    top: 14px;
-    right: 14px;
-    display: grid;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    border-radius: 9px;
-    background: var(--color-surface-subtle);
-    color: var(--color-text-secondary);
-}
-
-.menu-icon {
-    display: grid;
-    width: 28px;
-    height: 28px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 8px;
-    color: inherit;
-    will-change: transform, background, color;
-    transition:
-        background 160ms var(--motion-ease),
-        color 160ms var(--motion-ease),
-        transform 160ms var(--motion-ease);
-}
-
-.menu-icon.is-active {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
-}
-
-/* ── 共同滚动区 ─────────────────────────────────────────────── */
+/* ── 滚动区 ── */
 .scroll-region {
     position: relative;
     display: flex;
@@ -748,7 +757,6 @@ nav button:hover .menu-icon svg {
     scrollbar-gutter: stable;
 }
 
-/* 边栏滚动条：默认弱化，悬停时增强 */
 .sidebar-scroll-group::-webkit-scrollbar {
     width: 4px;
 }
@@ -767,7 +775,7 @@ nav button:hover .menu-icon svg {
     background: var(--color-border-strong);
 }
 
-/* 顶部/底部渐隐遮罩 */
+/* ── 渐隐遮罩 ── */
 .scroll-fade {
     position: absolute;
     right: 0;
@@ -801,7 +809,7 @@ nav button:hover .menu-icon svg {
     opacity: 1;
 }
 
-/* 紧凑模式：智能对话按钮上的折叠标记 */
+/* ── 紧凑模式标记 ── */
 .compact-panel-trigger {
     position: absolute;
     right: 6px;
@@ -820,12 +828,13 @@ nav button:hover .menu-icon svg {
     background: var(--color-primary-600);
 }
 
+/* ── 会话面板 ── */
 .conversation-panel {
     display: flex;
     flex-direction: column;
-    margin-top: 14px;
-    margin-bottom: 14px;
-    padding-top: 12px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding-top: 10px;
     border-top: 1px solid var(--color-border-subtle);
 }
 
@@ -859,7 +868,39 @@ nav button:hover .menu-icon svg {
     background: var(--color-primary-50);
 }
 
-/* 会话分组 */
+/* 折叠时新建会话按钮 */
+.collapsed-new-chat {
+    display: grid;
+    width: 100%;
+    height: 40px;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
+    border: 1px solid var(--color-primary-200);
+    transition:
+        background 160ms var(--motion-ease),
+        color 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease);
+}
+
+.collapsed-new-chat:hover {
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+    border-color: var(--color-primary-300);
+    transform: scale(1.08);
+}
+
+.collapsed-new-chat:active {
+    transform: scale(0.96);
+}
+
+.collapsed-new-chat svg {
+    width: 20px;
+    height: 20px;
+}
+
 .conversation-group {
     margin-top: 8px;
 }
@@ -882,7 +923,6 @@ nav button:hover .menu-icon svg {
     gap: 3px;
 }
 
-/* 会话项：当前会话淡蓝背景 + 左侧高亮条 */
 .conversation-item {
     position: relative;
     display: grid;
@@ -977,7 +1017,7 @@ nav button:hover .menu-icon svg {
     font-weight: 700;
 }
 
-/* 账户区在线状态圆点 */
+/* ── 账户区 ── */
 .account-dot {
     display: inline-block;
     width: 6px;
@@ -991,8 +1031,7 @@ nav button:hover .menu-icon svg {
     background: var(--color-success);
 }
 
-/* ── 三阶段折叠动画 ─────────────────────────────────────── */
-/* 收起：内容先淡出，宽度再收缩 */
+/* ── 三阶段折叠动画 ── */
 aside.phase-collapsing {
     overflow: hidden;
 }
@@ -1007,7 +1046,6 @@ aside.phase-collapsed .sidebar-detail {
     pointer-events: none;
 }
 
-/* 展开：宽度先展开，内容再淡入 */
 aside.phase-expanding {
     overflow: hidden;
 }
@@ -1020,8 +1058,22 @@ aside.phase-expanding .sidebar-detail {
         transform 180ms var(--motion-ease);
 }
 
-/* 紧凑模式下隐藏文字（v-show 兜底） */
 aside.phase-collapsed .sidebar-detail {
     display: none;
+}
+
+/* ── 抽屉关闭按钮 ── */
+.drawer-close {
+    position: absolute;
+    z-index: 1;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 9px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-secondary);
 }
 </style>
