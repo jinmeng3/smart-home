@@ -36,9 +36,9 @@ const activeSection = ref<SettingsSectionId>("account");
 const savingAccount = ref(false);
 const addingMember = ref(false);
 const loadingMemberId = ref<number | null>(null);
-const initialAccountSnapshot = ref("");
-const initialIntegrationSnapshot = ref("");
-const initialPreferencesSnapshot = ref("");
+const initialAccountSnapshot = ref<string>();
+const initialIntegrationSnapshot = ref<string>();
+const initialPreferencesSnapshot = ref<string>();
 
 // 滚动监听
 const scrollContainer = ref<HTMLElement | null>(null);
@@ -104,7 +104,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const accountSnapshot = computed(() => JSON.stringify(accountForm));
 const accountDirty = computed(
-    () => accountSnapshot.value !== initialAccountSnapshot.value,
+    () => initialAccountSnapshot.value !== undefined && accountSnapshot.value !== initialAccountSnapshot.value,
 );
 const integrationSnapshot = computed(() =>
     JSON.stringify({
@@ -113,7 +113,7 @@ const integrationSnapshot = computed(() =>
     }),
 );
 const integrationDirty = computed(
-    () => integrationSnapshot.value !== initialIntegrationSnapshot.value,
+    () => initialIntegrationSnapshot.value !== undefined && integrationSnapshot.value !== initialIntegrationSnapshot.value,
 );
 const preferencesSnapshot = computed(() =>
     JSON.stringify({
@@ -129,11 +129,12 @@ const preferencesSnapshot = computed(() =>
     }),
 );
 const preferencesDirty = computed(
-    () => preferencesSnapshot.value !== initialPreferencesSnapshot.value,
+    () => initialPreferencesSnapshot.value !== undefined && preferencesSnapshot.value !== initialPreferencesSnapshot.value,
 );
 const settingsDirty = computed(
     () => accountDirty.value || integrationDirty.value || preferencesDirty.value,
 );
+
 const householdMembers = computed(() => settings.value.account.members ?? []);
 const members = computed<FamilyMember[]>(() =>
     householdMembers.value.map((member) => ({
@@ -207,24 +208,25 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 const loadSettings = async () => {
     await Promise.all([
         settingsStore
-        .loadAccountHome()
-        .then(syncAccountForm)
-        .catch((error: unknown) => {
-            ElMessage.error(getErrorMessage(error, "账户与家庭信息加载失败"));
-        }),
+            .loadAccountHome()
+            .catch((error: unknown) => {
+                ElMessage.error(getErrorMessage(error, "账户与家庭信息加载失败"));
+            }),
         settingsStore
-        .loadAIModel()
-        .then(syncIntegrationSnapshot)
-        .catch((error: unknown) => {
-            ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
-        }),
+            .loadAIModel()
+            .catch((error: unknown) => {
+                ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
+            }),
         settingsStore
             .loadUserPreferences()
-            .then(syncPreferencesSnapshot)
             .catch((error: unknown) => {
                 ElMessage.error(getErrorMessage(error, "用户偏好加载失败"));
             }),
     ]);
+
+    syncAccountForm();
+    syncIntegrationSnapshot();
+    syncPreferencesSnapshot();
 };
 
 useAuthenticatedLoader(loadSettings);
@@ -447,9 +449,9 @@ const removeMember = async (membershipId: number) => {
 </script>
 
 <template>
-    <fieldset
+    <div
         class="app-page-layout m-0 min-w-0 border-0 p-0"
-        :disabled="!authStore.isAuthenticated"
+        :inert="!authStore.isAuthenticated"
     >
         <section
             class="settings-main page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
@@ -483,7 +485,7 @@ const removeMember = async (membershipId: number) => {
                 ref="scrollContainer"
                 class="settings-scroll-area min-h-0 flex-1 overflow-y-auto pr-1"
             >
-                <div class="settings-card-grid card-grid-enter grid grid-cols-2 gap-4">
+                <div class="settings-card-grid card-grid-enter">
                     <AccountFamilyCard
                         :dirty="accountDirty"
                         :form="accountForm"
@@ -583,7 +585,7 @@ const removeMember = async (membershipId: number) => {
                 @select="selectSection"
             />
         </aside>
-    </fieldset>
+    </div>
 </template>
 
 <style scoped>
@@ -594,6 +596,18 @@ const removeMember = async (membershipId: number) => {
     overscroll-behavior: contain;
     scroll-behavior: smooth;
     scrollbar-gutter: stable;
+}
+
+.settings-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 14px;
+    padding: 1px 2px 4px;
+}
+
+.settings-card-grid > :deep(.settings-section) {
+    height: 100%;
 }
 
 .settings-actions {
@@ -739,7 +753,7 @@ const removeMember = async (membershipId: number) => {
     }
 }
 
-@container settings-content (max-width: 900px) {
+@container settings-content (max-width: 680px) {
     .settings-card-grid {
         grid-template-columns: minmax(0, 1fr);
     }

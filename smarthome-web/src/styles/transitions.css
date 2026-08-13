@@ -8,25 +8,61 @@
 .suggestion-list-leave-active,
 .expand-enter-active,
 .expand-leave-active {
+    will-change: transform, opacity, max-height;
+}
+
+/* ── 消息列表：垂直入场/退场（更适合聊天场景） ────────────────── */
+.message-list-enter-active {
+    transition:
+        opacity 260ms var(--motion-ease),
+        transform 260ms var(--motion-ease),
+        max-height 260ms var(--motion-ease);
+}
+
+.message-list-leave-active {
+    transition:
+        opacity 160ms var(--motion-ease-in),
+        transform 160ms var(--motion-ease-in),
+        max-height 180ms var(--motion-ease-in);
+}
+
+.message-list-enter-from {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+/* 使用固定上限值让 max-height 可插值（none→0 无法平滑过渡） */
+.message-list-leave-active {
+    max-height: 1000px;
+}
+
+.message-list-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* ── 右侧列表（设备列表、建议列表） ────────────────────────────── */
+.recent-list-enter-active,
+.recent-list-leave-active,
+.suggestion-list-enter-active,
+.suggestion-list-leave-active {
     transition:
         opacity 240ms var(--motion-ease),
         transform 240ms var(--motion-ease),
         max-height 240ms var(--motion-ease);
 }
 
-.message-list-enter-from {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-.message-list-leave-to,
-.recent-list-leave-to,
-.suggestion-list-leave-to {
+.recent-list-enter-from {
     opacity: 0;
     transform: translateX(-12px);
 }
 
-.recent-list-enter-from {
+.recent-list-leave-to,
+.suggestion-list-leave-to {
     opacity: 0;
     transform: translateX(-12px);
 }

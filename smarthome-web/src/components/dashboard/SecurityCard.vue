@@ -1,103 +1,78 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { useHomeStore } from "../../stores/home";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
-const expanded = ref(false);
-
-// 知识库快捷入口列表
-const knowledgeItems = [
-    "门窗传感器校准指南",
-    "摄像头夜视模式设置",
-    "家庭安防布防提醒",
-    "门锁电池更换周期",
-];
 </script>
 
 <template>
     <section
-        class="motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
+        class="security-card motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
         style="animation-delay: 420ms"
     >
-        <div class="mb-3 flex items-center justify-between">
+        <div class="mb-2 flex items-center justify-between gap-2">
             <h2
-                class="flex items-center gap-2 text-sm font-extrabold text-slate-800"
+                class="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-800"
             >
                 <SvgIcon name="security" size="sm" />
-                安防与知识库
+                安防
             </h2>
-            <a class="motion-button text-xs font-bold text-blue-600" href="#"
-                >更多</a
-            >
-        </div>
-
-        <button
-            class="alert-once mb-4 flex w-full gap-2 rounded-lg border p-3 text-left transition"
-            :class="
-                store.securityAlertHandled
-                    ? 'border-[var(--color-success-border)] bg-[var(--color-success-soft)]'
-                    : 'border-[var(--color-warning-border)] bg-[var(--color-warning-soft)]'
-            "
-            type="button"
-            @click="expanded = !expanded"
-        >
             <span
-                class="grid h-6 w-6 shrink-0 place-items-center"
-                :class="
-                    store.securityAlertHandled
-                        ? 'text-[var(--color-success)]'
-                        : 'warning-shake text-[var(--color-warning)]'
-                "
+                class="security-badge"
+                :class="store.securityAlertHandled ? 'is-ok' : 'is-warn'"
             >
-                <SvgIcon
-                    :name="
-                        store.securityAlertHandled ? 'check-circle' : 'warning'
-                    "
-                    size="sm"
-                />
+                {{ store.securityAlertHandled ? "正常" : "异常" }}
             </span>
-            <div class="min-w-0">
-                <strong class="block text-sm text-slate-800">{{
-                    store.securityAlertHandled ? "告警已处理" : "门窗传感器异常"
-                }}</strong>
-                <p class="mt-1 text-xs text-slate-500">厨房窗户 · 10:15</p>
-                <Transition name="expand">
-                    <div
-                        v-if="expanded"
-                        class="mt-2 overflow-hidden text-xs leading-5 text-slate-600"
-                    >
-                        <p>位置：厨房东侧窗户</p>
-                        <p>建议：检查窗户闭合状态，并确认传感器电量。</p>
-                        <button
-                            class="motion-button mt-2 rounded-lg border border-[var(--color-success-border)] bg-[var(--color-panel-background)] px-2 py-1 text-[var(--color-success)]"
-                            type="button"
-                            @click.stop="store.markAlertHandled"
-                        >
-                            已处理
-                        </button>
-                    </div>
-                </Transition>
-            </div>
-        </button>
-
-        <div class="mb-2 text-xs text-slate-500">
-            告警数量：
-            <Transition name="status-crossfade" mode="out-in">
-                <strong :key="store.alertCount" class="text-slate-800">{{
-                    store.alertCount
-                }}</strong>
-            </Transition>
         </div>
 
-        <h3 class="mb-2 text-sm font-bold">知识库</h3>
+        <!-- 主信息：告警数量 -->
+        <p class="security-count text-lg font-extrabold leading-snug">
+            {{ store.alertCount }} 处告警
+        </p>
+        <!-- 次信息：状态描述 -->
+        <p class="security-summary text-xs">
+            {{
+                store.securityAlertHandled
+                    ? "全部门窗已关闭"
+                    : "门窗传感器异常"
+            }}
+        </p>
+        <!-- 次级入口 -->
         <a
-            v-for="item in knowledgeItems"
-            :key="item"
-            class="motion-button mb-2 block truncate text-xs text-slate-600 hover:text-blue-600"
+            class="motion-button mt-2.5 inline-flex items-center gap-0.5 text-xs font-bold text-blue-600 transition-colors duration-150 hover:text-blue-700"
             href="#"
         >
-            {{ item }}
+            查看详情
+            <SvgIcon name="chevron-right" size="sm" />
         </a>
     </section>
 </template>
+
+<style scoped>
+.security-badge {
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.6;
+}
+
+.security-badge.is-ok {
+    color: var(--color-success);
+    background: var(--color-success-soft);
+}
+
+.security-badge.is-warn {
+    color: var(--color-warning);
+    background: var(--color-warning-soft);
+}
+
+.security-count {
+    color: var(--color-text-primary);
+}
+
+.security-summary {
+    margin-top: 2px;
+    color: var(--color-text-tertiary);
+}
+</style>

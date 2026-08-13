@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 class AgentRunRequest(BaseModel):
     session_id: int
     household_id: int
-    household_name: str | None = None
+    household_name: str
     model: str | None = None
     message: str = Field(min_length=1, max_length=4000)
 

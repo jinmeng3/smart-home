@@ -1,5 +1,7 @@
 import { apiRequest, streamRequest } from "./client";
 import type { ChatMessage, RecentConversation } from "../types/chat";
+import type { AgentRunRequest } from "../types/chat";
+import type { AgentEvent } from "../types/chat";
 
 // ── DTO 类型 ──────────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ const toRecentConversation = (session: ChatSessionRead): RecentConversation => (
   title: session.title,
   time: formatConversationTime(session.updated_at || session.created_at),
   icon: "MessageCircle",
+  updatedAt: session.updated_at || session.created_at,
 });
 
 // ── SSE 流式解析 ──────────────────────────────────────────────────────────────────
@@ -120,6 +123,12 @@ export const listChatMessages = async (sessionId: string) => {
   return messages.map(toChatMessage);
 };
 
+export const deleteChatSession = async (sessionId: string) => {
+  await apiRequest<void>(`/api/chat/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+};
+
 /** 流式聊天补全（/api/chat/completions）。 */
 export const streamChatCompletion = (
   messages: ChatCompletionMessage[],
@@ -144,7 +153,7 @@ const openAICompletions = (payload: OpenAICompletionsPayload) =>
   });
 
 /** 流式 OpenAI 兼容聊天（/api/v1/chat/completions）。 */
-const streamOpenAICompletions = (
+export const streamOpenAICompletions = (
   payload: Omit<OpenAICompletionsPayload, "stream">,
   onDelta: (content: string) => void,
   signal: AbortSignal,
@@ -157,3 +166,68 @@ const streamOpenAICompletions = (
     onDelta,
     signal,
   );
+
+// ── Agent SSE 运行 ───────────────────────────────────────────────────────
+// 解析一行 SSE 数据，返回 { event, data } 或 null
+function parseSseLine(line: string): { event: string; data: string } | null {
+  if (line.startsWith("event: ")) {
+    return { event: line.slice(7).trim(), data: "" };
+  }
+  if (line.startsWith("data: ")) {
+    return { event: "", data: line.slice(6).trim() };
+  }
+  return null;
+}
+
+interface SseBuffer {
+  event: string;
+  data: string;
+}
+
+/**
+ * 调用后端 Agent SSE 端点，逐事件回调。
+ * 参数 onEvent 接收已解析的 AgentEvent 对象。
+ */
+export const runAgent = async (
+  payload: AgentRunRequest,
+  onEvent: (event: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> => {
+  let buffer: SseBuffer = { event: "", data: "" };
+
+  await streamRequest(
+    "/api/agent/runs",
+    (line) => {
+      if (!line) {
+        // 空行 = 事件结束，解析并发出
+        if (buffer.data) {
+          try {
+            const parsed = JSON.parse(buffer.data) as AgentEvent;
+            // SSE 头部 event 与 data 内 event 字段可能不一致，以头部为准
+            parsed.event = (buffer.event || parsed.event) as AgentEvent["event"];
+            onEvent(parsed);
+          } catch {
+            // 忽略解析失败的行
+          }
+        }
+        buffer = { event: "", data: "" };
+        return;
+      }
+
+      const parsed = parseSseLine(line);
+      if (!parsed) return;
+
+      if (parsed.event) {
+        buffer.event = parsed.event;
+      }
+      if (parsed.data) {
+        buffer.data = parsed.data;
+      }
+    },
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    signal,
+  );
+};

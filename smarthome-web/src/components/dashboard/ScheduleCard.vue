@@ -30,16 +30,16 @@ const automationTone = (id: string): string => {
 
 <template>
     <section
-        class="motion-card page-enter-stagger shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
+        class="motion-card page-enter-stagger shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-3 py-2 shadow-soft"
         style="animation-delay: 180ms"
     >
+        <!-- 标题行：标题 + 更多（同一行，标题占视觉重点） -->
         <header class="schedule-header">
             <h2 class="schedule-title">
                 <span class="tone-chip is-orange">
                     <SvgIcon name="calendar" size="sm" />
                 </span>
                 家庭日程
-                <small>/ 自动化计划</small>
             </h2>
             <button
                 class="more-button"
@@ -53,12 +53,13 @@ const automationTone = (id: string): string => {
             </button>
         </header>
 
+        <!-- 日期行：紧凑，左右切换按钮缩小 -->
         <div class="date-nav">
             <button class="date-arrow" type="button" aria-label="上一个日期">
                 <SvgIcon name="chevron-left" size="sm" />
             </button>
             <div class="date-info">
-                <strong>{{ todayLabel }}</strong>
+                <span>{{ todayLabel }}</span>
                 <span class="today-badge"><i></i>今天</span>
             </div>
             <button class="date-arrow" type="button" aria-label="下一个日期">
@@ -66,7 +67,8 @@ const automationTone = (id: string): string => {
             </button>
         </div>
 
-        <div class="schedule-list">
+        <!-- 计划列表 / 空状态 -->
+        <div v-if="store.automations.length" class="schedule-list">
             <article
                 v-for="automation in store.automations"
                 :key="automation.id"
@@ -76,19 +78,19 @@ const automationTone = (id: string): string => {
                 <span class="timeline-node" aria-hidden="true"></span>
                 <div class="schedule-body">
                     <strong>{{ automation.name }}</strong>
-                    <p>{{ automation.description }}</p>
                 </div>
                 <BaseSwitch v-model="automation.enabled" small />
             </article>
         </div>
-
-        <footer class="schedule-footer">
-            <span>今日计划 <b>{{ store.automations.length }}</b> 个</span>
-            <span>已开启 <b>{{ store.enabledAutomationCount }}</b> 个</span>
-        </footer>
-
-        <ScheduleDialog v-if="dialogVisible" v-model="dialogVisible" />
+        <p v-else class="schedule-empty">
+            今天暂无计划
+            <span v-if="store.enabledAutomationCount" class="schedule-empty-meta"
+                >已开启 {{ store.enabledAutomationCount }} 个</span
+            >
+        </p>
     </section>
+
+    <ScheduleDialog v-if="dialogVisible" v-model="dialogVisible" />
 </template>
 
 <style scoped>
@@ -97,7 +99,7 @@ const automationTone = (id: string): string => {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
 }
 
 .schedule-title {
@@ -106,28 +108,19 @@ const automationTone = (id: string): string => {
     align-items: center;
     gap: 8px;
     margin: 0;
-    font-size: 14px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 900;
     color: var(--color-text-primary);
-}
-
-.schedule-title small {
-    overflow: hidden;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-text-tertiary);
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .schedule-title .tone-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
     flex: none;
-    border-radius: 9px;
+    border-radius: 8px;
 }
 
 .more-button {
@@ -149,26 +142,23 @@ const automationTone = (id: string): string => {
     background: var(--color-primary-50);
 }
 
+/* 日期行：无独立大框，仅留白分隔 */
 .date-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 10px;
-    background: var(--color-panel-secondary);
-    padding: 6px;
+    gap: 6px;
+    padding: 1px 0 4px;
 }
 
 .date-arrow {
     display: grid;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     place-items: center;
     border: none;
-    border-radius: 8px;
-    background: var(--color-panel-background);
+    border-radius: 6px;
+    background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
     transition:
         background-color 160ms var(--motion-ease),
@@ -182,20 +172,25 @@ const automationTone = (id: string): string => {
 
 .date-info {
     display: flex;
+    min-width: 0;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    overflow: hidden;
     font-size: 13px;
     font-weight: 900;
     color: var(--color-text-primary);
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .today-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    flex: none;
     border-radius: 999px;
     background: var(--tone-success-soft);
-    padding: 2px 8px;
+    padding: 1px 7px;
     color: var(--tone-success);
     font-size: 10px;
     font-weight: 800;
@@ -208,49 +203,35 @@ const automationTone = (id: string): string => {
     background: currentColor;
 }
 
+/* 计划列表：紧凑，无独立边框 */
 .schedule-list {
-    position: relative;
     display: grid;
-    margin-top: 2px;
-}
-
-.schedule-list::before {
-    content: "";
-    position: absolute;
-    top: 8px;
-    bottom: 8px;
-    left: calc(52px + 8px + 10px);
-    width: 2px;
-    transform: translateX(-50%);
-    background: var(--color-border-strong);
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 4px;
 }
 
 .schedule-list article {
     display: grid;
-    grid-template-columns: 52px 20px minmax(0, 1fr) auto;
+    grid-template-columns: 44px 16px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 8px;
-    padding: 9px 0;
+    gap: 6px;
+    padding: 6px 0;
 }
 
 .schedule-time {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
     text-align: center;
     color: var(--color-text-secondary);
 }
 
 .timeline-node {
-    position: relative;
-    z-index: 1;
+    width: 8px;
+    height: 8px;
     justify-self: center;
-    width: 9px;
-    height: 9px;
     border-radius: 50%;
     background: var(--tone-primary);
-    box-shadow:
-        0 0 0 3px var(--color-card-bg),
-        0 0 0 6px var(--tone-primary-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-primary-soft);
 }
 
 .schedule-body {
@@ -259,17 +240,10 @@ const automationTone = (id: string): string => {
 
 .schedule-body strong {
     display: block;
+    overflow: hidden;
     font-size: 13px;
     font-weight: 900;
     color: var(--color-text-primary);
-}
-
-.schedule-body p {
-    overflow: hidden;
-    margin: 2px 0 0;
-    font-size: 11px;
-    line-height: 1.5;
-    color: var(--color-text-tertiary);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -279,52 +253,46 @@ const automationTone = (id: string): string => {
 }
 .schedule-list article.is-orange .timeline-node {
     background: var(--tone-orange);
-    box-shadow:
-        0 0 0 3px var(--color-card-bg),
-        0 0 0 6px var(--tone-orange-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-orange-soft);
 }
 .schedule-list article.is-blue .schedule-time {
     color: var(--tone-info);
 }
 .schedule-list article.is-blue .timeline-node {
     background: var(--tone-info);
-    box-shadow:
-        0 0 0 3px var(--color-card-bg),
-        0 0 0 6px var(--tone-info-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-info-soft);
 }
 .schedule-list article.is-purple .schedule-time {
     color: var(--tone-purple);
 }
 .schedule-list article.is-purple .timeline-node {
     background: var(--tone-purple);
-    box-shadow:
-        0 0 0 3px var(--color-card-bg),
-        0 0 0 6px var(--tone-purple-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-purple-soft);
 }
 .schedule-list article.is-teal .schedule-time {
     color: var(--tone-teal);
 }
 .schedule-list article.is-teal .timeline-node {
     background: var(--tone-teal);
-    box-shadow:
-        0 0 0 3px var(--color-card-bg),
-        0 0 0 6px var(--tone-teal-soft);
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-teal-soft);
 }
 
-.schedule-footer {
+/* 空状态 */
+.schedule-empty {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 6px;
-    border-top: 1px dashed var(--color-border-default);
-    padding-top: 9px;
+    margin: 0;
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 6px;
     color: var(--color-text-tertiary);
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 800;
 }
 
-.schedule-footer b {
+.schedule-empty-meta {
     color: var(--color-primary-600);
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 800;
 }
 </style>

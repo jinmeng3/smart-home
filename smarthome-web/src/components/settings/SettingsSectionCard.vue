@@ -39,4 +39,9 @@ defineProps<{
     place-items: center;
     border-radius: 10px;
 }
+
+.settings-section {
+    min-width: 0;
+    box-shadow: var(--shadow-card);
+}
 </style>

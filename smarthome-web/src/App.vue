@@ -140,8 +140,8 @@ onUnmounted(() => {
     <main class="app-viewport">
         <SvgCore />
         <component :is="SvgSprite" v-if="extrasLoaded" />
-        <div class="app-shell">
-            <Sidebar class="desktop-sidebar" mode="full" />
+        <div class="app-shell" :class="{ 'is-sidebar-collapsed': store.sidebarCollapsed }">
+            <Sidebar class="desktop-sidebar" mode="full" :phase="store.sidebarPhase" />
             <Sidebar class="tablet-sidebar" mode="compact" />
             <header class="mobile-app-header">
                 <button
@@ -197,12 +197,18 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     min-width: 0;
-    grid-template-columns: 240px minmax(0, 1fr) 330px;
+    grid-template-columns: auto minmax(0, 1fr) 330px;
     gap: 8px;
     padding: 8px;
     background:
         radial-gradient(circle at 20% 10%, var(--color-brand-glow), transparent 28%),
         linear-gradient(135deg, var(--color-page-bg) 0%, var(--color-sidebar-bg) 100%);
+    transition: grid-template-columns 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 桌面端侧边栏折叠时，auto 列跟随 sidebar 的 width 过渡 */
+.app-shell.is-sidebar-collapsed {
+    grid-template-columns: auto minmax(0, 1fr) 330px;
 }
 
 .tablet-sidebar,
@@ -320,6 +326,10 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .app-shell {
+        transition-duration: 1ms;
+    }
+
     .nav-fade-enter-active,
     .nav-fade-leave-active,
     .nav-slide-enter-active,

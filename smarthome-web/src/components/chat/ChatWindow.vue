@@ -1,73 +1,64 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useAutoScroll } from "../../composables/useAutoScroll";
 import { useHomeStore } from "../../stores/home";
-import AgentExecutionSteps from "../animation/AgentExecutionSteps.vue";
-import AIThinking from "../animation/AIThinking.vue";
-import AnimatedList from "../animation/AnimatedList.vue";
-import ChatMessage from "./ChatMessage.vue";
 import { useAuthStore } from "../../stores/auth";
+import AnimatedList from "../animation/AnimatedList.vue";
+import ChatComposer from "./ChatComposer.vue";
+import ChatInlineStatus from "./ChatInlineStatus.vue";
+import ChatMessage from "./ChatMessage.vue";
 
 const store = useHomeStore();
 const authStore = useAuthStore();
-const inputValue = ref("");
 const chatScrollRef = ref<HTMLElement | null>(null);
-const modelMenuOpen = ref(false);
-const modelMenuRef = ref<HTMLElement | null>(null);
 
-const messageCount = computed(() => store.messages.length);
 const visibleMessages = computed(() => store.messages.slice(-30));
 const hasMessages = computed(() => visibleMessages.value.length > 0);
-const generating = computed(
-    () => store.agentStatus === "thinking" || store.agentStatus === "executing",
-);
-const sendDisabled = computed(
-    () =>
-        !authStore.isAuthenticated ||
-        (!generating.value && !inputValue.value.trim()),
-);
-const { scrollToBottom, updateStickiness } = useAutoScroll(
+const { scrollToBottom, shouldStickToBottom, updateStickiness } = useAutoScroll(
     chatScrollRef,
-    messageCount,
 );
 
-const onClickOutside = (event: MouseEvent) => {
-    if (
-        modelMenuRef.value &&
-        !modelMenuRef.value.contains(event.target as Node)
-    ) {
-        modelMenuOpen.value = false;
-    }
+/** 用于填充提示词到输入框 */
+const pendingPrompt = ref("");
+
+/** 当前正在流式输出的助手消息 id（用于显示流式光标） */
+const streamingMessageId = computed<string | null>(() => {
+    if (store.agentStatus !== "executing") return null;
+    const last = store.messages[store.messages.length - 1];
+    if (!last || last.role !== "assistant") return null;
+    return last.id;
+});
+
+/* ── 重新生成状态：点击按钮后延迟执行 splice，让退场动画先播放 ── */
+const regeneratingMessageId = ref<string | null>(null);
+let regeneratingTimer = 0;
+const handleRegenerate = (messageId: string) => {
+    if (regeneratingMessageId.value) return; // 正在处理中
+    regeneratingMessageId.value = messageId;
+    window.clearTimeout(regeneratingTimer);
+    regeneratingTimer = window.setTimeout(() => {
+        regeneratingMessageId.value = null;
+        store.regenerateMessage(messageId);
+    }, 180);
+};
+
+/* ── 发送与停止 ─────────────────────────────────────────────── */
+const handleSend = (content: string) => {
+    store.sendMessage(content);
+    void scrollToBottom(true);
+};
+
+const handleStop = () => {
+    store.stopGenerating();
+};
+
+const fillPrompt = (prompt: string) => {
+    pendingPrompt.value = prompt;
 };
 
 onMounted(() => {
     void store.fetchModels();
-    document.addEventListener("click", onClickOutside);
 });
-
-onUnmounted(() => {
-    document.removeEventListener("click", onClickOutside);
-});
-
-const selectModel = (name: string) => {
-    store.activeModel = name;
-    modelMenuOpen.value = false;
-};
-
-const send = () => {
-    if (generating.value) {
-        store.stopGenerating();
-        return;
-    }
-
-    store.sendMessage(inputValue.value);
-    inputValue.value = "";
-    void scrollToBottom(true);
-};
-
-const fillPrompt = (prompt: string) => {
-    inputValue.value = prompt;
-};
 
 const starterPrompts = [
     {
@@ -89,32 +80,78 @@ const starterPrompts = [
 </script>
 
 <template>
-    <div class="flex min-h-0 flex-1 flex-col px-6 pb-5">
+    <div class="chat-workspace relative flex min-h-0 flex-1 flex-col px-6 pb-5 pt-4">
         <section
             ref="chatScrollRef"
-            class="page-enter-stagger min-h-0 flex-1 overflow-y-auto pr-2"
+            :inert="!authStore.isAuthenticated"
+            :aria-disabled="!authStore.isAuthenticated"
+            class="page-enter-stagger chat-scroll-area min-h-0 flex-1 overflow-y-auto pr-2"
+            :class="{ 'has-messages': hasMessages }"
             style="animation-delay: 220ms"
             @scroll.passive="updateStickiness"
         >
-            <div
-                v-if="!hasMessages && store.agentStatus === 'idle'"
-                class="empty-chat"
-            >
-                <img
-                    src="/1.png"
-                    alt="Empty chat illustration"
-                    class="empty-chat-illustration"
-                />
-                <h2>今天想让家里怎么配合你？</h2>
-                <p>
+            <Transition name="empty-to-chat" mode="out-in">
+                <div
+                    :key="hasMessages ? 'chat' : 'empty'"
+                    class="chat-content-wrapper"
+                >
+                    <div
+                        v-if="!hasMessages && store.agentStatus === 'idle'"
+                        class="empty-chat"
+                    >
+                        <div class="empty-chat-illustration stagger-in" style="animation-delay: 60ms">
+                    <svg viewBox="0 0 200 160" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="orb-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="var(--color-primary-400)" stop-opacity="0.35" />
+                                <stop offset="50%" stop-color="var(--color-primary-500)" stop-opacity="0.25" />
+                                <stop offset="100%" stop-color="var(--color-primary-600)" stop-opacity="0.15" />
+                            </linearGradient>
+                            <linearGradient id="beam-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="var(--color-primary-400)" stop-opacity="0" />
+                                <stop offset="50%" stop-color="var(--color-primary-400)" stop-opacity="0.12" />
+                                <stop offset="100%" stop-color="var(--color-primary-400)" stop-opacity="0" />
+                            </linearGradient>
+                            <filter id="orb-glow">
+                                <feGaussianBlur stdDeviation="8" result="blur" />
+                                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                            </filter>
+                        </defs>
+                        <!-- 光束 -->
+                        <ellipse cx="100" cy="145" rx="80" ry="6" fill="url(#beam-grad)" class="orb-beam" />
+                        <!-- 光环 -->
+                        <circle cx="100" cy="70" r="42" fill="none" stroke="var(--color-primary-200)" stroke-width="0.8" opacity="0.5" class="orb-ring-1" />
+                        <circle cx="100" cy="70" r="52" fill="none" stroke="var(--color-primary-200)" stroke-width="0.6" opacity="0.3" class="orb-ring-2" />
+                        <!-- 主球体渐变 -->
+                        <circle cx="100" cy="70" r="36" fill="url(#orb-grad)" filter="url(#orb-glow)" class="orb-main" />
+                        <!-- 核心高光 -->
+                        <circle cx="100" cy="70" r="18" fill="var(--color-primary-100)" opacity="0.4" class="orb-core" />
+                        <circle cx="92" cy="58" r="8" fill="white" opacity="0.25" class="orb-highlight" />
+                        <!-- 浮动粒子 -->
+                        <circle cx="64" cy="42" r="3" fill="var(--color-primary-400)" opacity="0.3" class="particle p1" />
+                        <circle cx="140" cy="38" r="2.5" fill="var(--color-primary-500)" opacity="0.25" class="particle p2" />
+                        <circle cx="48" cy="80" r="2" fill="var(--color-primary-400)" opacity="0.2" class="particle p3" />
+                        <circle cx="155" cy="85" r="2.5" fill="var(--color-primary-500)" opacity="0.2" class="particle p4" />
+                        <circle cx="70" cy="55" r="1.5" fill="var(--color-primary-300)" opacity="0.3" class="particle p5" />
+                        <circle cx="130" cy="50" r="1.8" fill="var(--color-primary-400)" opacity="0.25" class="particle p6" />
+                        <circle cx="56" cy="68" r="1.2" fill="var(--color-primary-300)" opacity="0.2" class="particle p7" />
+                        <circle cx="148" cy="72" r="1.5" fill="var(--color-primary-400)" opacity="0.2" class="particle p8" />
+                    </svg>
+                </div>
+                <h2 class="stagger-in" style="animation-delay: 140ms">
+                    今天想让家里怎么配合你？
+                </h2>
+                <p class="stagger-in" style="animation-delay: 220ms">
                     从设备巡检、场景联动到节能建议，Orion Home
                     可以先帮你整理可执行方案。
                 </p>
                 <div class="starter-grid">
                     <button
-                        v-for="item in starterPrompts"
+                        v-for="(item, index) in starterPrompts"
                         :key="item.title"
-                        class="starter-card"
+                        class="starter-card stagger-in"
+                        :class="`is-${item.icon}`"
+                        :style="{ animationDelay: `${300 + index * 90}ms` }"
                         type="button"
                         @click="fillPrompt(item.prompt)"
                     >
@@ -144,112 +181,62 @@ const starterPrompts = [
                         <span>{{ item.prompt }}</span>
                     </button>
                 </div>
-            </div>
-            <template v-else>
+                    </div>
+                    <template v-else>
                 <AnimatedList tag="div" name="message-list">
                     <ChatMessage
                         v-for="message in visibleMessages"
                         :key="message.id"
                         :message="message"
+                        :streaming="message.id === streamingMessageId"
+                        :generating="store.agentStatus === 'executing'"
+                        :regenerating="message.id === regeneratingMessageId"
+                        @regenerate="handleRegenerate"
                     />
                 </AnimatedList>
-                <AIThinking v-if="store.agentStatus === 'thinking'" />
-                <AgentExecutionSteps
+                <ChatInlineStatus
                     v-if="store.agentStatus === 'executing'"
-                    :steps="store.executionSteps"
+                    :label="store.pendingStatus || '正在等待智能体响应'"
                 />
             </template>
+                </div>
+            </Transition>
         </section>
 
-        <form
-            class="page-enter-stagger relative mt-4 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-4 shadow-soft transition focus-within:border-[var(--color-border-focus)] focus-within:shadow-[0_0_0_3px_var(--color-focus-ring)]"
-            style="animation-delay: 400ms"
-            @submit.prevent="send"
-        >
-            <input
-                v-model="inputValue"
-                class="h-8 w-full border-0 bg-transparent pr-16 text-sm outline-none placeholder:text-slate-400"
-                :disabled="!authStore.isAuthenticated"
-                :placeholder="
-                    authStore.isAuthenticated
-                        ? '向 Orion Home 发送设备控制或自动化需求...'
-                        : '登录后可使用智能对话'
-                "
-            />
-            <div
-                class="mt-5 flex items-center gap-4 text-[var(--color-primary-600)]"
-            >
-                <div class="relative" ref="modelMenuRef">
-                    <button
-                        :disabled="!authStore.isAuthenticated"
-                        class="motion-button flex items-center gap-1"
-                        type="button"
-                        @click="modelMenuOpen = !modelMenuOpen"
-                    >
-                        <span class="text-xs">
-                            {{ store.activeModel || "选择模型" }}
-                        </span>
-                        <span class="text-[10px]">▾</span>
-                    </button>
-                    <div
-                        v-if="modelMenuOpen"
-                        class="absolute bottom-full left-0 z-20 mb-2 max-h-60 min-w-40 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-card-bg)] p-1 shadow-soft"
-                    >
-                        <button
-                            v-for="model in store.availableModels"
-                            :key="model.id"
-                            class="block w-full rounded-md px-3 py-2 text-left text-xs text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
-                            type="button"
-                            @click="selectModel(model.name)"
-                        >
-                            {{ model.name }}
-                        </button>
-                        <div
-                            v-if="store.availableModels.length === 0"
-                            class="px-3 py-2 text-xs text-[var(--color-text-disabled)]"
-                        >
-                            暂无可用模型
-                        </div>
-                    </div>
-                </div>
-                <button
-                    :disabled="!authStore.isAuthenticated"
-                    class="motion-button grid h-8 w-8 place-items-center rounded-full bg-[var(--color-surface-hover)] text-lg"
-                    type="button"
-                >
-                    +
-                </button>
-                <button
-                    :disabled="!authStore.isAuthenticated"
-                    class="motion-button"
-                    type="button"
-                >
-                    附件
-                </button>
-                <button
-                    :disabled="!authStore.isAuthenticated"
-                    class="motion-button"
-                    type="button"
-                >
-                    @
-                </button>
-            </div>
+        <!-- 滚动到底部按钮 -->
+        <Transition name="status-crossfade">
             <button
-                class="motion-button absolute bottom-4 right-4 grid h-11 w-11 place-items-center rounded-full bg-[var(--color-primary-600)] text-xl text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--color-primary-700)] active:bg-[var(--color-primary-800)] disabled:bg-[var(--color-text-disabled)]"
-                type="submit"
-                :disabled="sendDisabled"
-                :title="generating ? '停止生成' : '发送'"
+                v-if="hasMessages && !shouldStickToBottom && store.agentStatus !== 'executing' && store.agentStatus !== 'thinking'"
+                class="scroll-bottom-btn"
+                type="button"
+                title="滚动到最新消息"
+                @click="scrollToBottom(true)"
             >
-                <span
-                    class="transition-transform group-hover:-translate-y-0.5"
-                    >{{ store.agentStatus === "success" ? "✓" : "↑" }}</span
-                >
+                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
+                    <path d="M6 9l6 6 6-6" />
+                </svg>
             </button>
-        </form>
+        </Transition>
+
+        <ChatComposer
+            :prompt="pendingPrompt"
+            @send="handleSend"
+            @stop="handleStop"
+        />
     </div>
 </template>
 
 <style scoped>
+.chat-workspace {
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-primary-50) 38%, transparent),
+            transparent 88px
+        ),
+        var(--color-workspace-background);
+}
+
 .empty-chat {
     display: grid;
     min-height: 100%;
@@ -259,12 +246,98 @@ const starterPrompts = [
     text-align: center;
 }
 
+.stagger-in {
+    animation: fade-up 360ms var(--motion-ease) both;
+}
+
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .empty-chat-illustration {
     width: clamp(132px, 18vw, 190px);
     max-width: 44%;
     max-height: 148px;
-    object-fit: contain;
+}
+
+.empty-chat-illustration svg {
+    display: block;
+    width: 100%;
+    height: 100%;
     filter: drop-shadow(0 8px 18px var(--color-focus-ring));
+}
+
+/* SVG 动画 */
+.orb-main {
+    animation: orb-pulse 4s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.orb-ring-1 {
+    animation: ring-rotate 8s linear infinite;
+    transform-origin: center;
+}
+
+.orb-ring-2 {
+    animation: ring-rotate 12s linear infinite reverse;
+    transform-origin: center;
+}
+
+.orb-beam {
+    animation: beam-pulse 3s ease-in-out infinite;
+}
+
+.orb-core {
+    animation: core-breathe 3s ease-in-out infinite;
+}
+
+.particle {
+    animation: particle-float 6s ease-in-out infinite;
+}
+.particle.p2 { animation-delay: -1s; }
+.particle.p3 { animation-delay: -2s; }
+.particle.p4 { animation-delay: -3s; }
+.particle.p5 { animation-delay: -0.5s; }
+.particle.p6 { animation-delay: -1.5s; }
+.particle.p7 { animation-delay: -2.5s; }
+.particle.p8 { animation-delay: -3.5s; }
+
+@keyframes orb-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.85; }
+}
+
+@keyframes ring-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes beam-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+@keyframes core-breathe {
+    0%, 100% { opacity: 0.35; r: 18px; }
+    50% { opacity: 0.55; r: 20px; }
+}
+
+@keyframes particle-float {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-6px) scale(1.15);
+        opacity: 0.5;
+    }
 }
 
 .empty-chat h2 {
@@ -297,7 +370,7 @@ const starterPrompts = [
     gap: 8px 12px;
     min-height: 126px;
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 16px;
     text-align: left;
     background: var(--color-card-bg);
@@ -305,12 +378,13 @@ const starterPrompts = [
     transition:
         border-color 160ms ease,
         box-shadow 160ms ease,
-        transform 120ms ease;
+        transform 160ms var(--motion-ease-out);
 }
 
 .starter-card:hover {
     border-color: var(--color-primary-300);
     box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
 }
 
 .starter-card:active {
@@ -342,6 +416,33 @@ const starterPrompts = [
     background: var(--color-primary-50);
 }
 
+.starter-card.is-scan .starter-icon {
+    color: var(--color-primary-700);
+    background: var(--color-primary-50);
+}
+
+.starter-card.is-home .starter-icon {
+    color: var(--tone-purple);
+    background: var(--tone-purple-soft);
+}
+
+.starter-card.is-energy .starter-icon {
+    color: var(--color-teal-600);
+    background: var(--color-teal-soft);
+}
+
+.starter-card.is-scan:hover {
+    border-color: var(--color-primary-300);
+}
+
+.starter-card.is-home:hover {
+    border-color: color-mix(in srgb, var(--tone-purple) 40%, transparent);
+}
+
+.starter-card.is-energy:hover {
+    border-color: var(--color-teal-border);
+}
+
 .starter-icon svg {
     width: 21px;
     height: 21px;
@@ -350,6 +451,83 @@ const starterPrompts = [
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-width: 2;
+    transition: transform 200ms var(--motion-ease-out);
+}
+
+.starter-card:hover .starter-icon svg {
+    transform: scale(1.12) rotate(-3deg);
+}
+
+.model-menu {
+    max-width: min(240px, 42%);
+}
+
+/* 滚动到底部按钮 */
+.scroll-bottom-btn {
+    position: absolute;
+    bottom: 104px;
+    left: 50%;
+    z-index: 10;
+    display: grid;
+    height: 36px;
+    width: 36px;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-tertiary);
+    box-shadow: 0 4px 16px rgb(15 23 42 / 12%);
+    cursor: pointer;
+    transform: translateX(-50%);
+    transition:
+        border-color 200ms ease,
+        color 200ms ease,
+        box-shadow 200ms ease,
+        transform 200ms ease;
+    will-change: transform, opacity;
+}
+
+.scroll-bottom-btn:hover {
+    border-color: var(--color-primary-300);
+    color: var(--color-primary-600);
+    box-shadow: 0 6px 20px rgb(15 23 42 / 15%);
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.scroll-bottom-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+/* 聊天区域自定义滚动条 */
+.chat-scroll-area::-webkit-scrollbar {
+    display: block;
+    width: 4px;
+    height: 4px;
+}
+
+.chat-scroll-area::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--color-border);
+    transition: background 200ms ease;
+}
+
+.chat-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-strong);
+}
+
+.chat-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+@media (max-width: 520px) {
+    .composer-tools {
+        gap: 10px;
+    }
+
+    .model-menu {
+        max-width: none;
+        flex: 1 1 0;
+    }
 }
 
 @media (max-width: 760px) {

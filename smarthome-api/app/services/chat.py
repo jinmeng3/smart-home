@@ -75,6 +75,16 @@ def list_chat_messages_service(
     )
 
 
+def delete_chat_session_service(
+    db: Session, current_user: User, session_id: int
+) -> None:
+    """删除指定聊天会话及其所有消息。"""
+    session = get_chat_session(db, current_user, session_id, [])
+    db.query(ChatMessage).filter(ChatMessage.session_id == session.id).delete()
+    db.delete(session)
+    db.commit()
+
+
 # === SSE 格式化 ===
 
 

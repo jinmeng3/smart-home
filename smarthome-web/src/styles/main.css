@@ -9,20 +9,40 @@
 @tailwind utilities;
 
 :root {
-    font-family:
-        Inter,
-        "PingFang SC",
-        "Microsoft YaHei",
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    font-family: var(--font-sans);
     color: var(--color-text-primary);
     background: var(--color-page-background);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-optical-sizing: auto;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    letter-spacing: 0.01em;
+}
+
+/* 中文标点间距优化 */
+:root[lang="zh-CN"] {
+    letter-spacing: 0.02em;
+}
+
+/* 标题使用平衡折行，段落在中文字符处自然折行 */
+h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+}
+
+p, li, .text-pretty {
+    text-wrap: pretty;
+}
+
+/* 数字表格对齐 */
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 代码字体 */
+code, pre, kbd, samp {
+    font-family: var(--font-mono);
 }
 
 :root[data-font-size="small"] {

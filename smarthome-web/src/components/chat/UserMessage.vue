@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useSettingsStore } from "../../stores/settings";
 import type { ChatMessage } from "../../types/chat";
+import ChatMessageShell from "./ChatMessageShell.vue";
 
 defineProps<{
     message: ChatMessage;
@@ -15,28 +16,37 @@ const accountInitial = computed(() =>
 </script>
 
 <template>
-    <article
-        class="user-message-enter mb-5 ml-auto grid max-w-[620px] grid-cols-[minmax(0,1fr)_42px] gap-3"
-    >
+    <ChatMessageShell side="right" :timestamp="message.timestamp">
+        <template #avatar>
+            <img
+                v-if="account.avatarUrl"
+                class="h-10 w-10 self-start rounded-full object-cover ring-2 ring-white/60 avatar-in"
+                style="animation-delay: 40ms"
+                :src="account.avatarUrl"
+                alt=""
+            />
+            <div
+                v-else
+                class="grid h-10 w-10 self-start place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-sm font-bold text-blue-700 ring-2 ring-white/60 avatar-in"
+                style="animation-delay: 40ms"
+            >
+                {{ accountInitial }}
+            </div>
+        </template>
+
         <div
-            class="whitespace-pre-wrap break-words rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 px-5 py-3 text-sm font-semibold leading-6 text-white"
+            class="user-bubble whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-gradient-to-br from-blue-600 via-blue-500 to-sky-500 px-5 py-3 text-sm font-medium leading-6 text-white shadow-md shadow-blue-500/15 ring-1 ring-white/15"
         >
             {{ message.content }}
         </div>
-        <img
-            v-if="account.avatarUrl"
-            class="h-10 w-10 rounded-full object-cover"
-            :src="account.avatarUrl"
-            alt=""
-        />
-        <div
-            v-else
-            class="grid h-10 w-10 place-items-center rounded-full bg-blue-100 text-sm font-bold text-blue-700"
-        >
-            {{ accountInitial }}
-        </div>
-        <time class="col-start-1 justify-self-end text-xs text-slate-400">{{
-            message.timestamp
-        }}</time>
-    </article>
+    </ChatMessageShell>
 </template>
+
+<style scoped>
+.user-bubble {
+    position: relative;
+    transition:
+        transform 180ms var(--motion-ease),
+        box-shadow 180ms var(--motion-ease);
+}
+</style>

@@ -4,12 +4,22 @@ import {
   useBatchedDeviceUpdates,
   type DeviceUpdate,
 } from "../composables/useBatchedDeviceUpdates";
+import { useCollapsePhase } from "../composables/useCollapsePhase";
 import { useHomeChat } from "../composables/useHomeChat";
 import { listDevices as apiListDevices } from "../api/device";
 import { mapDashboardDevice } from "../utils/device";
 import type { LoadingState } from "../types/loading";
 
 import type { Automation, DashboardDevice } from "../types/device";
+
+/* ── 统一 AI 生命周期状态 ─────────────────────────────────── */
+export type ChatPhase =
+    | "idle"
+    | "waiting"
+    | "executing"
+    | "streaming"
+    | "completed"
+    | "failed";
 
 const buildDeviceMap = (devices: DashboardDevice[]) => ({
   ids: devices.map((device) => device.id),
@@ -30,6 +40,23 @@ export const useHomeStore = defineStore("home", () => {
   const energyToday = ref(18.62);
   const devicesLoading = ref<LoadingState>("idle");
   const securityAlertHandled = ref(false);
+
+  /* ── 左侧导航栏折叠状态 + 三阶段动画（localStorage 持久化） ── */
+  const {
+    collapsed: sidebarCollapsed,
+    phase: sidebarPhase,
+    toggle: toggleSidebar,
+    skipAnimation: skipSidebarAnimation,
+  } = useCollapsePhase(
+    localStorage.getItem("orion.sidebar-collapsed") === "true",
+    (value) => {
+      localStorage.setItem("orion.sidebar-collapsed", String(value));
+    },
+  );
+
+  // 首次加载不播放动画
+  skipSidebarAnimation();
+
   const chat = useHomeChat([]);
 
   const devices = computed(() => {
@@ -170,6 +197,20 @@ export const useHomeStore = defineStore("home", () => {
     securityAlertHandled.value = true;
   };
 
+  /* ── 统一 AI 生命周期状态 ─────────────────────────────────── */
+  const chatPhase = computed<ChatPhase>(() => {
+    const status = chat.agentStatus.value;
+    if (status === "idle") return "idle";
+    if (status === "executing") {
+      if (chat.eventReceived.value) return "streaming";
+      if (chat.executionSteps.value.length > 0) return "executing";
+      return "waiting";
+    }
+    if (status === "success") return "completed";
+    if (status === "error") return "failed";
+    return "idle";
+  });
+
   return {
     activeMenu,
     activeSessionId: chat.activeSessionId,
@@ -178,6 +219,7 @@ export const useHomeStore = defineStore("home", () => {
     alertCount,
     availableModels: chat.availableModels,
     automations,
+    chatPhase,
     closeDeviceDrawer,
     deviceDrawerOpen,
     deviceIds,
@@ -187,24 +229,32 @@ export const useHomeStore = defineStore("home", () => {
     deviceSummary,
     enabledAutomationCount,
     energyToday,
+    eventReceived: chat.eventReceived,
     executionSteps: chat.executionSteps,
     fetchModels: chat.fetchModels,
     hasWarning,
     loadConversation: chat.loadConversation,
+    deleteConversation: chat.deleteConversation,
     loadDevices,
     markAlertHandled,
     messages: chat.messages,
+    pendingStatus: chat.pendingStatus,
     queueDeviceUpdate,
     queueDeviceUpdates,
     recentConversations: chat.recentConversations,
+    regenerateMessage: chat.regenerateMessage,
     refreshRecentConversations: chat.refreshRecentConversations,
     securityAlertHandled,
     selectedDevice,
     selectDevice,
     sendMessage: chat.sendMessage,
+    selectModel: chat.selectModel,
     setActiveMenu,
+    sidebarCollapsed,
+    sidebarPhase,
     startNewConversation: chat.startNewConversation,
     stopGenerating: chat.stopGenerating,
     toggleAutomation,
+    toggleSidebar,
   };
 });

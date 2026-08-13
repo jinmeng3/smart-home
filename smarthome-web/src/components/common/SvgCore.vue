@@ -73,6 +73,20 @@
             <path d="M4 20V12M8 20V7M12 20V10M16 20V4M20 20V14" />
             <path d="M3 20h18" />
         </symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 3v4M17 3v4M4 9h16" />
+            <rect x="4" y="5" width="16" height="16" rx="2" />
+            <path d="M8 13h3M8 17h6" />
+        </symbol>
+        <symbol id="icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.5 15.5A6 6 0 1 1 15.5 15.5c-.9.7-1.2 1.3-1.3 2.1H9.8c-.1-.8-.4-1.4-1.3-2.1Z" />
+            <path d="M9.5 20h5M10.5 17.5h3" />
+        </symbol>
+        <symbol id="icon-air-conditioner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M4.2 6.5l15.6 11M19.8 6.5l-15.6 11" />
+            <path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2" />
+            <path d="m5 9 3-.5-.3-3M19 15l-3 .5.3 3M19 9l-3-.5.3-3M5 15l3 .5-.3 3" />
+        </symbol>
         <symbol id="icon-security" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z" />
             <path d="m8.5 12 2.2 2.2 4.8-5" />

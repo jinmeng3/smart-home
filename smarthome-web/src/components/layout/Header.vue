@@ -3,6 +3,10 @@ import { computed, ref } from "vue";
 import { useSettingsStore } from "../../stores/settings";
 import { useAuthStore } from "../../stores/auth";
 
+const props = defineProps<{
+    compact?: boolean;
+}>();
+
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const avatarLoadError = ref(false);
@@ -32,23 +36,32 @@ const greeting = computed(() => {
 
 <template>
     <header
-        class="page-enter-stagger flex h-[88px] shrink-0 items-center justify-between border-b border-blue-100/70 px-6 py-4"
+        class="home-header page-enter-stagger flex shrink-0 items-center justify-between px-6 transition-[height,box-shadow] duration-200"
+        :class="compact ? 'home-header-compact' : 'h-[88px]'"
         style="animation-delay: 80ms"
     >
-        <div>
-            <h1 class="text-xl font-extrabold tracking-normal text-slate-900">
+        <div
+            class="min-w-0"
+            :class="compact ? 'flex items-center gap-3' : ''"
+        >
+            <h1
+                class="truncate font-extrabold text-slate-900 transition-all duration-200"
+                :class="compact ? 'text-base' : 'text-xl'"
+            >
                 {{ greeting }}，{{ username }}
             </h1>
-            <p class="date-chip">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 3v4M17 3v4M4 9h16" />
-                    <path
-                        d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-                    />
-                    <path d="M8 13h3M8 16h6" />
-                </svg>
-                <span>今天是 {{ today }}</span>
-            </p>
+            <Transition name="expand">
+                <p v-if="!compact" class="date-chip">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 3v4M17 3v4M4 9h16" />
+                        <path
+                            d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+                        />
+                        <path d="M8 13h3M8 16h6" />
+                    </svg>
+                    <span>今天是 {{ today }}</span>
+                </p>
+            </Transition>
         </div>
 
         <div class="flex items-center gap-3">
@@ -98,6 +111,30 @@ const greeting = computed(() => {
 </template>
 
 <style scoped>
+.home-header {
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid var(--color-primary-200);
+    background:
+        radial-gradient(
+            circle at 88% 20%,
+            var(--color-primary-100),
+            transparent 34%
+        ),
+        linear-gradient(
+            110deg,
+            var(--color-panel-background),
+            var(--color-primary-50)
+        );
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary-600) 8%, transparent);
+}
+
+/* 紧凑模式：已有对话时压缩顶部栏，保留标题、搜索、头像 */
+.home-header-compact {
+    height: 58px;
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary-600) 5%, transparent);
+}
+
 .header-search-native {
     display: flex;
     width: 240px;
@@ -109,6 +146,7 @@ const greeting = computed(() => {
     padding: 0 11px;
     color: var(--color-text-tertiary);
     background: var(--color-panel-background);
+    box-shadow: var(--shadow-card);
 }
 
 .date-chip {

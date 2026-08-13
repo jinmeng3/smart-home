@@ -13,6 +13,7 @@ from app.schemas.common import ApiResponse
 from app.services.chat import (
     create_chat_service,
     create_chat_service_stream,
+    delete_chat_session_service,
     get_chat_session,
     list_chat_messages_service,
     list_chat_sessions_service,
@@ -62,6 +63,16 @@ def list_chat_messages(
 ) -> ApiResponse[list[ChatMessageRead]]:
     """读取指定会话的历史消息。"""
     return ApiResponse(data=list_chat_messages_service(db, current_user, session_id))
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_chat_session(
+    session_id: int,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+    db: Session = DB_DEPENDENCY,
+):
+    """删除指定聊天会话及其所有消息。"""
+    delete_chat_session_service(db, current_user, session_id)
 
 
 # === 对话补全 ===

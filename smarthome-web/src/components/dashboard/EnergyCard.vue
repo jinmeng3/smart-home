@@ -1,132 +1,34 @@
 <script setup lang="ts">
-import { computed } from "vue";
 import { useHomeStore } from "../../stores/home";
 import AnimatedNumber from "../animation/AnimatedNumber.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
-
-// 今日用电趋势（模拟数据）
-const energyTrend = [2.1, 2.4, 2.0, 2.8, 3.1, 2.9, 3.4, 3.2, 2.7, 2.3, 2.5, 2.2];
-
-const chartWidth = 300;
-const chartHeight = 88;
-const chartPadding = 4;
-const maxValue = Math.max(...energyTrend);
-const minValue = Math.min(...energyTrend);
-const valueRange = maxValue - minValue || 1;
-
-const points = computed(() =>
-    energyTrend
-        .map((value, index) => {
-            const x =
-                chartPadding +
-                (index / (energyTrend.length - 1)) *
-                    (chartWidth - chartPadding * 2);
-            const y =
-                chartPadding +
-                ((maxValue - value) / valueRange) *
-                    (chartHeight - chartPadding * 2);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
-        .join(" "),
-);
-const areaPoints = computed(
-    () =>
-        `${chartPadding},${chartHeight} ${points.value} ${chartWidth - chartPadding},${chartHeight}`,
-);
 </script>
 
 <template>
     <section
-        class="motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3 shadow-soft"
+        class="energy-card motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
         style="animation-delay: 340ms"
     >
-        <div class="mb-3 flex items-center justify-between">
+        <!-- 标题 + 主数值 同行 -->
+        <div class="flex items-center justify-between gap-2">
             <h2
-                class="flex items-center gap-2 text-sm font-extrabold text-slate-800"
+                class="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-800"
             >
                 <SvgIcon name="energy" size="sm" />
-                能耗概览
+                能耗
             </h2>
-            <a class="motion-button text-xs font-bold text-blue-600" href="#"
-                >更多</a
-            >
+            <strong class="text-lg leading-none text-slate-900">
+                <AnimatedNumber :value="store.energyToday" :decimals="2" />
+                <small class="text-[11px] font-bold text-slate-400"> kWh</small>
+            </strong>
         </div>
-        <span class="text-xs text-slate-500">今日用电</span>
-        <strong class="mt-1 block text-2xl text-slate-900">
-            <AnimatedNumber :value="store.energyToday" :decimals="2" />
-            <small class="text-sm"> kWh</small>
-        </strong>
-        <p class="trend-enter mt-1 text-xs text-slate-500">
-            较昨日 <b class="text-[var(--color-success)]">↓ 8.7%</b>
+        <!-- 次要结论：单行 -->
+        <p class="mt-2 flex flex-wrap items-center gap-x-1 text-xs text-slate-500">
+            较昨日下降 <b class="text-[var(--color-success)]">8.7%</b>
+            <span class="mx-1 text-slate-300">·</span>
+            本月 <b class="text-slate-700">326.8</b> kWh
         </p>
-        <svg
-            aria-label="今日用电趋势"
-            class="h-24 w-full"
-            preserveAspectRatio="none"
-            role="img"
-            :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-        >
-            <defs>
-                <linearGradient id="energy-area" x1="0" x2="0" y1="0" y2="1">
-                    <stop
-                        offset="0"
-                        stop-color="var(--color-teal-500)"
-                        stop-opacity="0.2"
-                    />
-                    <stop
-                        offset="1"
-                        stop-color="var(--color-teal-500)"
-                        stop-opacity="0"
-                    />
-                </linearGradient>
-            </defs>
-            <polygon :points="areaPoints" fill="url(#energy-area)" />
-            <polyline
-                class="sparkline"
-                :points="points"
-                fill="none"
-                stroke="var(--color-teal-600)"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="3"
-                vector-effect="non-scaling-stroke"
-            />
-        </svg>
-        <span class="text-xs text-slate-500">本月用电</span>
-        <strong class="block text-sm">326.8 kWh</strong>
     </section>
 </template>
-
-<style scoped>
-.trend-enter {
-    animation: trend-enter 300ms var(--motion-ease) both;
-}
-
-.sparkline {
-    stroke-dasharray: 420;
-    stroke-dashoffset: 420;
-    animation: sparkline-draw 900ms var(--motion-ease) forwards;
-}
-
-@keyframes trend-enter {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-}
-
-@keyframes sparkline-draw {
-    to {
-        stroke-dashoffset: 0;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .sparkline {
-        animation: none;
-        stroke-dashoffset: 0;
-    }
-}
-</style>
