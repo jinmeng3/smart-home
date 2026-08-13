@@ -258,15 +258,15 @@ const isGroupActive = (group: NavigationGroup) =>
                             v-show="!isCollapsed"
                             class="group-header sidebar-detail"
                         >
-                            <span class="group-line" aria-hidden="true"></span>
                             <p class="group-label">{{ group.label }}</p>
+                            <span class="group-line" aria-hidden="true"></span>
                         </div>
 
-                        <nav class="group-nav grid gap-0.5">
+                        <nav class="group-nav grid gap-1">
                             <button
                                 v-for="item in group.items"
                                 :key="item.label"
-                                class="motion-button nav-item relative flex h-10 items-center rounded-lg text-sm font-bold text-[var(--color-text-secondary)] transition-all duration-150"
+                                class="motion-button nav-item relative flex items-center rounded-lg text-sm font-bold text-[var(--color-text-secondary)] transition-all duration-150"
                                 :class="[
                                     activeLabel === item.label
                                         ? 'bg-[var(--color-primary-50)] text-[var(--color-primary-700)]'
@@ -633,53 +633,64 @@ aside > button:last-of-type {
 .group-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 14px 0 6px 0;
+    gap: 10px;
+    margin: 18px 10px 7px;
 }
 
 .group-header:first-of-type {
-    margin-top: 0;
+    margin-top: 5px;
 }
 
 .group-line {
-    flex: 1;
+    width: 28px;
     height: 1px;
     background: linear-gradient(
         90deg,
         var(--color-border-subtle),
         transparent
     );
-    opacity: 0.5;
+    opacity: 0.85;
 }
 
 .group-label {
     margin: 0;
     color: var(--color-text-tertiary);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    opacity: 0.5;
+    font-size: 11.5px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    opacity: 0.72;
     white-space: nowrap;
 }
 
 /* ── 导航项 ── */
 .nav-item {
     position: relative;
-    min-height: 40px;
-    border-radius: 8px;
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: 11px;
     padding: 0 10px;
-    font-size: 13px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 750;
     cursor: pointer;
     transition:
         background 160ms var(--motion-ease),
+        border-color 160ms var(--motion-ease),
         color 160ms var(--motion-ease),
-        transform 160ms var(--motion-ease);
+        box-shadow 160ms var(--motion-ease);
 }
 
 .nav-item:hover {
     background: var(--color-surface-hover);
+}
+
+.nav-item:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: -1px;
+}
+
+.nav-item:has(.menu-icon.is-active) {
+    border-color: color-mix(in srgb, var(--color-primary-200) 58%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 52%, transparent);
 }
 
 .nav-item:hover .menu-icon {
@@ -688,6 +699,10 @@ aside > button:last-of-type {
 
 /* 已激活项指示条 */
 .active-indicator {
+    left: 3px;
+    width: 3px;
+    height: 22px;
+    box-shadow: 0 0 8px color-mix(in srgb, currentColor 26%, transparent);
     animation: active-stripe 260ms var(--motion-ease) both;
     transform-origin: left center;
 }
@@ -706,11 +721,11 @@ aside > button:last-of-type {
 /* ── 菜单图标 ── */
 .menu-icon {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     flex: 0 0 auto;
     place-items: center;
-    border-radius: 9px;
+    border-radius: 10px;
     color: inherit;
     will-change: transform, background, color;
     transition:
