@@ -12,7 +12,7 @@ const store = useHomeStore();
     >
         <div class="mb-2 flex items-center justify-between gap-2">
             <h2
-                class="flex items-center gap-1.5 text-[14px] font-extrabold text-slate-800"
+                class="flex items-center gap-1.5 text-[14px] font-extrabold text-[var(--color-text-primary)]"
             >
                 <SvgIcon name="security" size="sm" />
                 安防
@@ -39,7 +39,7 @@ const store = useHomeStore();
         </p>
         <!-- 次级入口 -->
         <a
-            class="motion-button mt-2.5 inline-flex items-center gap-0.5 text-xs font-bold text-blue-600 transition-colors duration-150 hover:text-blue-700"
+            class="motion-button mt-2.5 inline-flex items-center gap-0.5 text-xs font-bold text-[var(--color-primary-600)] transition-colors duration-150 hover:text-[var(--color-primary-700)]"
             href="#"
         >
             查看详情

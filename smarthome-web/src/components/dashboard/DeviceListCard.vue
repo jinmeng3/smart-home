@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
     >
         <div class="mb-2.5 flex items-center justify-between gap-2">
             <h2
-                class="flex items-center gap-2 text-[15px] font-extrabold text-slate-800"
+                class="flex items-center gap-2 text-[15px] font-extrabold text-[var(--color-text-primary)]"
             >
                 <SvgIcon name="device-management" size="sm" />
                 设备清单
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
                 >
                     <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="sm" />
                 </span>
-                <strong class="truncate text-[13px] font-bold text-slate-700">{{
+                <strong class="truncate text-[13px] font-bold text-[var(--color-text-secondary)]">{{
                     device.name
                 }}</strong>
                 <!-- 状态：圆点 + 中文文字 -->
@@ -214,7 +214,7 @@ onBeforeUnmount(() => {
 
         <!-- 查看全部设备：卡片底部轻量文字入口 -->
         <RouterLink
-            class="mt-1.5 block border-t border-[var(--color-border-subtle)] px-1 pt-2 text-right text-xs font-bold text-blue-600 transition-colors duration-150 hover:text-blue-700"
+            class="mt-1.5 block border-t border-[var(--color-border-subtle)] px-1 pt-2 text-right text-xs font-bold text-[var(--color-primary-600)] transition-colors duration-150 hover:text-[var(--color-primary-700)]"
             to="/devices"
             >查看全部设备 →</RouterLink
         >

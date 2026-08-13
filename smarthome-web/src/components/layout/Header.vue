@@ -45,7 +45,7 @@ const greeting = computed(() => {
             :class="compact ? 'flex items-center gap-3' : ''"
         >
             <h1
-                class="truncate font-extrabold text-slate-900 transition-all duration-200"
+                class="truncate font-extrabold text-[var(--color-text-primary)] transition-all duration-200"
                 :class="compact ? 'text-base' : 'text-xl'"
             >
                 {{ greeting }}，{{ username }}

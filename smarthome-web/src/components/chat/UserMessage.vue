@@ -27,7 +27,7 @@ const accountInitial = computed(() =>
             />
             <div
                 v-else
-                class="grid h-10 w-10 self-start place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-sm font-bold text-blue-700 ring-2 ring-white/60 avatar-in"
+                class="grid h-10 w-10 self-start place-items-center rounded-full bg-gradient-to-br from-[var(--color-primary-100)] to-[var(--color-primary-200)] text-sm font-bold text-[var(--color-primary-700)] ring-2 ring-white/60 avatar-in"
                 style="animation-delay: 40ms"
             >
                 {{ accountInitial }}

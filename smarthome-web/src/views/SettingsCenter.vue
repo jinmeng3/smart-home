@@ -18,13 +18,15 @@ import HomeAssistantSettingsCard from "../components/settings/HomeAssistantSetti
 import MemberManagementCard from "../components/settings/MemberManagementCard.vue";
 import NotificationSettingsCard from "../components/settings/NotificationSettingsCard.vue";
 import SecuritySettingsCard from "../components/settings/SecuritySettingsCard.vue";
-import SecurityStatusPanel from "../components/settings/SecurityStatusPanel.vue";
+import ConfigHealthCard from "../components/settings/ConfigHealthCard.vue";
+import SettingsDirectory from "../components/settings/SettingsDirectory.vue";
 import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPanel.vue";
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import { useSettingsStore } from "../stores/settings";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { useCollapsePhase } from "../composables/useCollapsePhase";
 import { getErrorMessage } from "../utils/error";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId } from "../types/settings";
@@ -39,6 +41,77 @@ const loadingMemberId = ref<number | null>(null);
 const initialAccountSnapshot = ref<string>();
 const initialIntegrationSnapshot = ref<string>();
 const initialPreferencesSnapshot = ref<string>();
+
+/* ── 右侧栏折叠状态 ──────────────────────────────────────────── */
+const SETTINGS_RAIL_STORAGE_KEY = "orion.settings-rail-collapsed";
+const {
+    collapsed: settingsRailCollapsed,
+    phase: settingsRailPhase,
+    toggle: toggleSettingsRail,
+    skipAnimation: skipSettingsRailAnimation,
+} = useCollapsePhase(
+    localStorage.getItem(SETTINGS_RAIL_STORAGE_KEY) === "true",
+    (value) => localStorage.setItem(SETTINGS_RAIL_STORAGE_KEY, String(value)),
+);
+
+skipSettingsRailAnimation();
+
+/* ── 移动端分区标签 ──────────────────────────────────────────── */
+const mobileSections = [
+    { id: "account" as const, label: "账户与家庭" },
+    { id: "appearance" as const, label: "界面" },
+    { id: "ai" as const, label: "智能助手" },
+    { id: "homeAssistant" as const, label: "Home" },
+    { id: "notifications" as const, label: "通知" },
+    { id: "security" as const, label: "安全" },
+    { id: "backup" as const, label: "备份" },
+];
+
+/* ── 更多操作下拉菜单 ────────────────────────────────────────── */
+const moreActionsOpen = ref(false);
+const moreActionsRef = ref<HTMLElement | null>(null);
+const toggleMoreActions = () => {
+    moreActionsOpen.value = !moreActionsOpen.value;
+};
+const closeMoreActions = (event: MouseEvent) => {
+    if (
+        moreActionsRef.value &&
+        !moreActionsRef.value.contains(event.target as Node)
+    ) {
+        moreActionsOpen.value = false;
+    }
+};
+
+/* ── 恢复默认确认 ────────────────────────────────────────────── */
+const confirmReset = async () => {
+    try {
+        await ElMessageBox.confirm(
+            "此操作将重置以下设置为出厂默认值：<br><br>" +
+                "• 界面外观（主题、语言、时区）<br>" +
+                "• 智能助手配置（模型参数、自动执行规则）<br>" +
+                "• Home Assistant 接入凭证将清空<br>" +
+                "• 通知与安全偏好<br><br>" +
+                "<strong>账户与家庭信息不受影响。</strong>",
+            "恢复默认设置",
+            {
+                confirmButtonText: "确认恢复",
+                cancelButtonText: "取消",
+                type: "warning",
+                dangerouslyUseHTMLString: true,
+                confirmButtonClass: "el-button--danger",
+            },
+        );
+        settingsStore.resetSettings();
+        syncAccountForm();
+        syncIntegrationSnapshot();
+        syncPreferencesSnapshot();
+        ElMessage.success("已恢复默认设置");
+    } catch {
+        // 用户取消
+    } finally {
+        moreActionsOpen.value = false;
+    }
+};
 
 // 滚动监听
 const scrollContainer = ref<HTMLElement | null>(null);
@@ -136,6 +209,18 @@ const settingsDirty = computed(
 );
 
 const householdMembers = computed(() => settings.value.account.members ?? []);
+
+/** 已完成的配置项数量（用于目录进度条） */
+const completedConfigCount = computed(() => {
+    let count = 2; // 账户 + 界面 默认已完成
+    if (settings.value.aiAssistant.model) count++;
+    if (settings.value.homeAssistant.tokenConfigured) count++;
+    count++; // 通知 默认已完成
+    if (settings.value.security.twoFactorEnabled) count++;
+    if (settings.value.backup.autoBackup) count++;
+    if (householdMembers.value.length > 0) count++;
+    return count;
+});
 const members = computed<FamilyMember[]>(() =>
     householdMembers.value.map((member) => ({
         id: member.membershipId,
@@ -236,6 +321,7 @@ onMounted(() => {
     syncIntegrationSnapshot();
     syncPreferencesSnapshot();
     window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", closeMoreActions);
 
     void nextTick(() => {
         setupScrollObserver();
@@ -244,6 +330,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     window.removeEventListener("beforeunload", handleBeforeUnload);
+    document.removeEventListener("click", closeMoreActions);
     cleanupScrollObserver();
 });
 
@@ -451,13 +538,14 @@ const removeMember = async (membershipId: number) => {
 <template>
     <div
         class="app-page-layout m-0 min-w-0 border-0 p-0"
+        :class="{ 'settings-rail-collapsed-layout': settingsRailCollapsed }"
         :inert="!authStore.isAuthenticated"
     >
         <section
             class="settings-main page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
             <header
-                class="mb-4 shrink-0 border-b border-[var(--color-divider)] pb-4"
+                class="shrink-0 border-b border-[var(--color-divider)] pb-4 mb-4"
             >
                 <div class="flex items-center gap-3">
                     <span
@@ -481,46 +569,97 @@ const removeMember = async (membershipId: number) => {
                 </div>
             </header>
 
+            <!-- 移动端横向吸顶标签 -->
+            <nav class="settings-mobile-tabs" aria-label="设置分区导航">
+                <button
+                    v-for="tab in mobileSections"
+                    :key="tab.id"
+                    class="mobile-tab"
+                    :class="{ 'is-active': activeSection === tab.id }"
+                    type="button"
+                    @click="selectSection(tab.id)"
+                >
+                    <span class="mobile-tab-label">{{ tab.label }}</span>
+                </button>
+            </nav>
+
             <div
                 ref="scrollContainer"
                 class="settings-scroll-area min-h-0 flex-1 overflow-y-auto pr-1"
             >
-                <div class="settings-card-grid card-grid-enter">
-                    <AccountFamilyCard
-                        :dirty="accountDirty"
-                        :form="accountForm"
-                        :loading="savingAccount"
-                        @delete-avatar="deleteAvatar"
-                        @save="saveAccountFamily"
-                        @update-form="Object.assign(accountForm, $event)"
-                        @upload-avatar="uploadAvatar"
-                    />
-                    <MemberManagementCard
-                        :admin-count="adminCount"
-                        :can-manage="canManageMembers"
-                        :current-member-id="currentMemberId"
-                        :loading-member-id="loadingMemberId"
-                        :members="members"
-                        :submitting="addingMember"
-                        @add-member="addMember"
-                        @remove-member="removeMember"
-                        @update-member-role="updateMemberRole"
-                    />
-                    <AppearanceSettingsCard :appearance="settings.appearance" />
-                    <AiAssistantSettingsCard :ai="settings.aiAssistant" />
-                    <HomeAssistantSettingsCard
-                        :ai="settings.aiAssistant"
-                        :home-assistant="settings.homeAssistant"
-                        @sync="syncDevices"
-                    />
-                    <NotificationSettingsCard
-                        :notifications="settings.notifications"
-                    />
-                    <SecuritySettingsCard :security="settings.security" />
-                    <BackupSettingsCard
-                        :backup="settings.backup"
-                    />
-                </div>
+                <!-- 个人与家庭 -->
+                <section class="settings-group">
+                    <header class="settings-group-header">
+                        <SvgIcon name="account" size="sm" />
+                        个人与家庭
+                    </header>
+                    <div class="settings-group-grid">
+                        <AccountFamilyCard
+                            :dirty="accountDirty"
+                            :form="accountForm"
+                            :loading="savingAccount"
+                            @delete-avatar="deleteAvatar"
+                            @save="saveAccountFamily"
+                            @update-form="Object.assign(accountForm, $event)"
+                            @upload-avatar="uploadAvatar"
+                        />
+                        <MemberManagementCard
+                            :admin-count="adminCount"
+                            :can-manage="canManageMembers"
+                            :current-member-id="currentMemberId"
+                            :loading-member-id="loadingMemberId"
+                            :members="members"
+                            :submitting="addingMember"
+                            @add-member="addMember"
+                            @remove-member="removeMember"
+                            @update-member-role="updateMemberRole"
+                        />
+                    </div>
+                </section>
+
+                <!-- 界面与偏好 -->
+                <section class="settings-group">
+                    <header class="settings-group-header">
+                        <SvgIcon name="appearance" size="sm" />
+                        界面与偏好
+                    </header>
+                    <div class="settings-group-grid">
+                        <AppearanceSettingsCard :appearance="settings.appearance" />
+                        <NotificationSettingsCard
+                            :notifications="settings.notifications"
+                        />
+                    </div>
+                </section>
+
+                <!-- 智能助手 -->
+                <section class="settings-group">
+                    <header class="settings-group-header">
+                        <SvgIcon name="ai" size="sm" />
+                        智能助手
+                    </header>
+                    <div class="settings-group-grid">
+                        <AiAssistantSettingsCard :ai="settings.aiAssistant" />
+                    </div>
+                </section>
+
+                <!-- 平台与安全 -->
+                <section class="settings-group">
+                    <header class="settings-group-header">
+                        <SvgIcon name="security" size="sm" />
+                        平台与安全
+                    </header>
+                    <div class="settings-group-grid">
+                        <HomeAssistantSettingsCard
+                            :ai="settings.aiAssistant"
+                            :home-assistant="settings.homeAssistant"
+                            @sync="syncDevices"
+                        />
+                        <SecuritySettingsCard :security="settings.security" />
+                        <BackupSettingsCard
+                            :backup="settings.backup"
+                        />
+                    </div>
+                </section>
             </div>
 
             <footer class="settings-actions">
@@ -548,14 +687,40 @@ const removeMember = async (membershipId: number) => {
                 </Transition>
 
                 <div class="settings-action-buttons">
-                    <button
-                        class="settings-reset-button"
-                        type="button"
-                        @click="settingsStore.resetSettings"
+                    <div
+                        ref="moreActionsRef"
+                        class="settings-more-actions"
                     >
-                        <SvgIcon name="refresh" size="sm" />
-                        恢复默认
-                    </button>
+                        <button
+                            class="more-actions-btn"
+                            type="button"
+                            @click="toggleMoreActions"
+                        >
+                            <SvgIcon name="settings" size="sm" />
+                            <span class="more-actions-label">更多操作</span>
+                            <SvgIcon
+                                name="chevron-down"
+                                size="sm"
+                                class="more-actions-arrow"
+                                :class="{ 'is-open': moreActionsOpen }"
+                            />
+                        </button>
+                        <Transition name="status-crossfade">
+                            <div
+                                v-if="moreActionsOpen"
+                                class="more-actions-menu"
+                            >
+                                <button
+                                    class="more-actions-item is-danger"
+                                    type="button"
+                                    @click="confirmReset"
+                                >
+                                    <SvgIcon name="refresh" size="sm" />
+                                    恢复默认设置
+                                </button>
+                            </div>
+                        </Transition>
+                    </div>
                     <button
                         class="settings-save-button"
                         :class="{ 'button-loading': savingAccount }"
@@ -571,24 +736,82 @@ const removeMember = async (membershipId: number) => {
         </section>
 
         <aside
-            class="page-enter flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-default)] bg-[var(--color-sidebar-background)] pl-2 pr-1"
+            class="settings-aside page-enter"
+            :class="[
+                settingsRailCollapsed ? 'is-collapsed' : '',
+                `phase-${settingsRailPhase}`,
+            ]"
+            :style="{
+                width: settingsRailCollapsed ? '46px' : '330px',
+            }"
             style="animation-delay: 70ms"
         >
-            <SettingsSummaryPanel :summary="settings.summary" />
-            <SecurityStatusPanel
-                :backup="settings.backup"
-                :notifications="settings.notifications"
-                :security="settings.security"
-            />
-            <SettingsSuggestionPanel
-                :suggestions="settings.suggestions"
-                @select="selectSection"
-            />
+            <div v-if="settingsRailCollapsed" class="settings-rail-collapsed">
+                <button
+                    class="settings-rail-toggle"
+                    type="button"
+                    title="展开设置侧栏"
+                    aria-label="展开设置侧栏"
+                    @click="toggleSettingsRail"
+                >
+                    <SvgIcon name="chevron-left" size="sm" />
+                </button>
+                <SettingsDirectory
+                    :active="activeSection"
+                    compact
+                    @select="selectSection"
+                />
+            </div>
+
+            <template v-else>
+                <header class="settings-rail-header rail-detail">
+                    <div>
+                        <h2>设置导航</h2>
+                        <p>快速定位与配置状态</p>
+                    </div>
+                    <button
+                        class="settings-rail-toggle"
+                        type="button"
+                        title="收起设置侧栏"
+                        aria-label="收起设置侧栏"
+                        @click="toggleSettingsRail"
+                    >
+                        <SvgIcon name="chevron-right" size="sm" />
+                    </button>
+                </header>
+
+                <div class="settings-aside-content rail-detail">
+                    <SettingsDirectory
+                        :active="activeSection"
+                        :total-items="8"
+                        :completed-items="completedConfigCount"
+                        @select="selectSection"
+                    />
+                    <ConfigHealthCard
+                        :security="settings.security"
+                        :backup="settings.backup"
+                        :notifications="settings.notifications"
+                        :account-status="settings.summary.accountStatus"
+                        :home-assistant-connected="settings.summary.homeAssistantStatus === 'online'"
+                        @navigate="selectSection"
+                    />
+                    <SettingsSummaryPanel
+                        :summary="settings.summary"
+                        :member-count="householdMembers.length"
+                    />
+                    <SettingsSuggestionPanel
+                        :suggestions="settings.suggestions"
+                        @select="selectSection"
+                    />
+                </div>
+                <div class="settings-rail-fade" aria-hidden="true"></div>
+            </template>
         </aside>
     </div>
 </template>
 
 <style scoped>
+/* ── 左栏滚动区 ──────────────────────────────────────────────── */
 .settings-scroll-area {
     container-name: settings-content;
     container-type: inline-size;
@@ -598,7 +821,24 @@ const removeMember = async (membershipId: number) => {
     scrollbar-gutter: stable;
 }
 
-.settings-card-grid {
+/* ── 设置分组 ────────────────────────────────────────────────── */
+.settings-group + .settings-group {
+    margin-top: 20px;
+}
+
+.settings-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.settings-group-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
@@ -606,11 +846,14 @@ const removeMember = async (membershipId: number) => {
     padding: 1px 2px 4px;
 }
 
-.settings-card-grid > :deep(.settings-section) {
+.settings-group-grid > :deep(.settings-section) {
     height: 100%;
 }
 
+/* ── 底部操作栏 ──────────────────────────────────────────────── */
 .settings-actions {
+    position: relative;
+    z-index: 5;
     display: flex;
     min-height: 72px;
     flex: 0 0 auto;
@@ -681,7 +924,6 @@ const removeMember = async (membershipId: number) => {
     margin-left: auto;
 }
 
-.settings-reset-button,
 .settings-save-button {
     display: inline-flex;
     min-width: 124px;
@@ -700,23 +942,11 @@ const removeMember = async (membershipId: number) => {
         box-shadow 160ms var(--motion-ease);
 }
 
-.settings-reset-button {
-    border: 1px solid var(--color-border-default);
-    background: var(--color-panel-background);
-    color: var(--color-text-secondary);
-}
-
 .settings-save-button {
     border: 1px solid var(--color-primary-600);
     background: var(--color-primary-600);
     color: var(--color-text-on-primary);
     box-shadow: 0 6px 14px var(--color-focus-ring);
-}
-
-.settings-reset-button:hover {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
 }
 
 .settings-save-button:hover:not(:disabled) {
@@ -742,20 +972,300 @@ const removeMember = async (membershipId: number) => {
     }
 }
 
+/* ── 更多操作下拉菜单 ────────────────────────────────────────── */
+.settings-more-actions {
+    position: relative;
+}
+
+.more-actions-btn {
+    display: inline-flex;
+    height: 40px;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-text-secondary);
+    background: var(--color-panel-background);
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        color 160ms ease;
+    white-space: nowrap;
+}
+
+.more-actions-btn:hover {
+    border-color: var(--color-primary-200);
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.more-actions-arrow {
+    transition: transform 200ms var(--motion-ease);
+}
+
+.more-actions-arrow.is-open {
+    transform: rotate(180deg);
+}
+
+.more-actions-label {
+    display: inline;
+}
+
+.more-actions-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    z-index: 20;
+    min-width: 180px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    padding: 6px;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 12%);
+    transform-origin: bottom right;
+}
+
+.more-actions-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    transition:
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+.more-actions-item:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.more-actions-item.is-danger {
+    color: var(--color-danger);
+}
+
+.more-actions-item.is-danger:hover {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+/* ── 右栏 ────────────────────────────────────────────────────── */
+.settings-aside {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 12px;
+    background: var(--color-workspace-background);
+    box-shadow: var(--shadow-soft);
+    transition: width 300ms var(--motion-ease);
+}
+
+.settings-aside-content {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 8px 14px;
+    scrollbar-gutter: stable;
+}
+
+.settings-aside-content > :deep(section) {
+    border-color: var(--color-border-subtle);
+    box-shadow: 0 3px 12px rgb(15 23 42 / 5%);
+}
+
+.settings-aside-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.settings-aside-content::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: transparent;
+}
+
+.settings-aside:hover .settings-aside-content::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+}
+
+.settings-rail-header {
+    display: flex;
+    min-height: 61px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding: 10px 12px 9px;
+    background: color-mix(in srgb, var(--color-panel-background) 72%, transparent);
+}
+
+.settings-rail-header h2 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.settings-rail-header p {
+    margin: 2px 0 0;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.settings-rail-toggle {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+    transition: background 160ms var(--motion-ease), color 160ms var(--motion-ease);
+}
+
+.settings-rail-toggle:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.settings-rail-collapsed {
+    display: flex;
+    width: 46px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+}
+
+.settings-rail-fade {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    height: 24px;
+    pointer-events: none;
+    background: linear-gradient(to top, var(--color-workspace-background), transparent);
+}
+
+.settings-rail-collapsed,
+.settings-rail-header,
+.settings-aside-content {
+    animation: settings-rail-content-enter 220ms var(--motion-ease) both;
+}
+
+@keyframes settings-rail-content-enter {
+    from { opacity: 0; transform: scale(0.98) translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.settings-aside.phase-collapsing .rail-detail {
+    opacity: 0;
+    transform: translateX(8px);
+    transition: opacity 140ms ease, transform 180ms var(--motion-ease);
+    pointer-events: none;
+}
+
+.settings-aside.phase-collapsed .rail-detail {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .app-page-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+/* ── 移动端吸顶标签（桌面端隐藏） ────────────────────────────── */
+.settings-mobile-tabs {
+    display: none;
+}
+
+/* ── 响应式 ──────────────────────────────────────────────────── */
 @media (max-width: 1180px) {
     .settings-save-state small {
         display: none;
     }
 
-    .settings-reset-button,
     .settings-save-button {
         min-width: auto;
+    }
+
+    .more-actions-label {
+        display: none;
+    }
+
+    .more-actions-btn {
+        padding: 0 10px;
     }
 }
 
 @container settings-content (max-width: 680px) {
-    .settings-card-grid {
+    .settings-group-grid {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 1023px) {
+    .settings-aside {
+        display: none;
+    }
+
+    .settings-mobile-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        overflow-x: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--color-workspace-background);
+        border-bottom: 1px solid var(--color-divider);
+    }
+
+    .settings-mobile-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-tab {
+        flex: 0 0 auto;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        transition:
+            background-color 150ms ease,
+            color 150ms ease;
+    }
+
+    .mobile-tab:hover {
+        background: var(--color-surface-hover);
+        color: var(--color-text-primary);
+    }
+
+    .mobile-tab.is-active {
+        background: var(--color-primary-50);
+        color: var(--color-primary-700);
     }
 }
 
@@ -764,7 +1274,7 @@ const removeMember = async (membershipId: number) => {
         padding: 12px;
     }
 
-    .settings-card-grid {
+    .settings-group-grid {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -786,7 +1296,13 @@ const removeMember = async (membershipId: number) => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .settings-reset-button,
+    .settings-aside,
+    .settings-rail-collapsed,
+    .settings-rail-header,
+    .settings-aside-content {
+        animation: none;
+        transition-duration: 1ms;
+    }
     .settings-save-button {
         transition-duration: 1ms;
     }

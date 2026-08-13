@@ -27,7 +27,7 @@ const unregisterModal = (id: symbol) => {
     if (!modalStack.length) document.body.style.overflow = bodyOverflow;
 };
 
-type SmartModalWidth = "small" | "medium" | "large" | string | number;
+type SmartModalWidth = "small" | "medium" | "large" | "xlarge" | string | number;
 
 interface SmartModalProps {
     modelValue: boolean;
@@ -44,6 +44,9 @@ interface SmartModalProps {
     showDraft?: boolean;
     beforeClose?: () => boolean | Promise<boolean>;
     closeButtonDisabled?: boolean;
+    dirty?: boolean;
+    dirtyText?: string;
+    sheet?: boolean;
     tone?: "primary" | "indigo" | "orange" | "teal" | "green" | "purple" | "red";
 }
 
@@ -69,6 +72,9 @@ const props = withDefaults(defineProps<SmartModalProps>(), {
     draftText: "保存草稿",
     showDraft: false,
     closeButtonDisabled: false,
+    dirty: false,
+    dirtyText: "有尚未保存的更改",
+    sheet: false,
     tone: "primary",
 });
 
@@ -87,7 +93,8 @@ const isPresetWidth = computed(
     () =>
         props.width === "small" ||
         props.width === "medium" ||
-        props.width === "large",
+        props.width === "large" ||
+        props.width === "xlarge",
 );
 const widthClass = computed(() =>
     isPresetWidth.value ? `is-${props.width}` : "",
@@ -213,7 +220,11 @@ onBeforeUnmount(() => {
                     <article
                         ref="dialogRef"
                         class="smart-modal"
-                        :class="[widthClass, `tone-${tone}`]"
+                        :class="[
+                            widthClass,
+                            `tone-${tone}`,
+                            { 'is-sheet': sheet },
+                        ]"
                         :style="widthStyle"
                         role="dialog"
                         aria-modal="true"
@@ -238,7 +249,7 @@ onBeforeUnmount(() => {
                                 </div>
                                 <BaseButton
                                     v-if="closable"
-                                    class="close-button"
+                                    class="smart-modal-close"
                                     variant="text"
                                     aria-label="关闭"
                                     :disabled="loading || closeButtonDisabled"
@@ -277,10 +288,17 @@ onBeforeUnmount(() => {
 
                         <slot name="footer">
                             <footer
-                                class="smart-modal-footer smart-modal-stagger-6"
+                                class="smart-modal-footer"
+                                :class="{ 'has-dirty': dirty }"
                             >
                                 <span class="smart-modal-footer-note">
                                     <slot name="footerHint" />
+                                </span>
+                                <span
+                                    v-if="dirty && !$slots.footerHint"
+                                    class="smart-modal-dirty"
+                                >
+                                    {{ dirtyText }}
                                 </span>
                                 <div class="smart-modal-actions">
                                     <BaseButton
@@ -332,8 +350,8 @@ onBeforeUnmount(() => {
     --modal-accent-soft: var(--color-primary-50);
     display: flex;
     width: min(100%, 720px);
-    max-width: min(980px, calc(100vw - 48px));
-    max-height: 88vh;
+    max-width: min(900px, calc(100vw - 48px));
+    max-height: min(80dvh, 760px);
     flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--color-border-strong);
@@ -357,35 +375,39 @@ onBeforeUnmount(() => {
 .smart-modal.tone-red { --modal-accent: var(--color-danger); --modal-accent-soft: var(--color-danger-soft); }
 
 .smart-modal.is-small {
-    width: min(100%, 560px);
+    width: min(100%, 440px);
 }
 .smart-modal.is-medium {
-    width: min(100%, 760px);
+    width: min(100%, 560px);
 }
 .smart-modal.is-large {
-    width: min(100%, 980px);
+    width: min(100%, 720px);
+}
+.smart-modal.is-xlarge {
+    width: min(100%, 900px);
 }
 
 .smart-modal-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 22px 28px;
+    gap: 14px;
+    padding: 18px 24px;
     border-bottom: 1px solid var(--color-border);
     background: linear-gradient(
         135deg,
         var(--color-card-bg),
         var(--color-primary-50)
     );
+    flex: 0 0 auto;
 }
 
 .smart-modal-icon {
     display: grid;
-    width: 56px;
-    height: 56px;
-    flex: 0 0 56px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
     place-items: center;
-    border-radius: 16px;
+    border-radius: 12px;
     color: var(--color-text-on-primary);
     background: linear-gradient(
         135deg,
@@ -402,15 +424,15 @@ onBeforeUnmount(() => {
 
 .smart-modal-title h2 {
     color: var(--color-text-primary);
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.25;
 }
 
 .smart-modal-title p {
-    margin-top: 5px;
+    margin-top: 3px;
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .smart-modal-status {
@@ -419,8 +441,9 @@ onBeforeUnmount(() => {
 
 .smart-modal-body {
     min-height: 0;
+    flex: 1 1 auto;
     overflow-y: auto;
-    padding: 22px 24px;
+    padding: 20px 24px;
     background: var(--color-surface-subtle);
     scrollbar-color: var(--color-border-strong) transparent;
     scrollbar-width: thin;
@@ -443,14 +466,25 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 28px;
+    padding: 14px 24px;
     border-top: 1px solid var(--color-border);
     background: var(--color-card-bg);
+    flex: 0 0 auto;
 }
 
 .smart-modal-footer-note {
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.smart-modal-dirty {
+    color: var(--color-warning);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .smart-modal-actions {
@@ -500,7 +534,7 @@ onBeforeUnmount(() => {
 .smart-modal :deep(select),
 .smart-modal :deep(textarea),
 .smart-modal :deep(.el-input__wrapper) {
-    min-height: 42px;
+    min-height: 40px;
     border-color: var(--color-border);
     border-radius: 10px;
     background: var(--color-card-bg);
@@ -535,8 +569,8 @@ onBeforeUnmount(() => {
 .smart-modal :deep(.dialog-header) {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 22px 28px !important;
+    gap: 14px;
+    padding: 18px 24px !important;
     border-bottom: 1px solid var(--color-border) !important;
     background: linear-gradient(
         135deg,
@@ -548,41 +582,41 @@ onBeforeUnmount(() => {
 .smart-modal :deep(.dialog-icon),
 .smart-modal :deep(.ai-icon) {
     display: grid;
-    width: 48px !important;
-    height: 48px !important;
-    flex: 0 0 48px !important;
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px !important;
     place-items: center;
-    border-radius: 14px;
+    border-radius: 12px;
     color: var(--color-text-on-primary) !important;
     background: linear-gradient(
         135deg,
         color-mix(in srgb, var(--modal-accent) 88%, white),
         var(--modal-accent)
     ) !important;
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--modal-accent) 22%, transparent);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--modal-accent) 22%, transparent);
 }
 
 .smart-modal :deep(.dialog-header h2) {
     color: var(--color-text-primary);
-    font-size: 21px;
+    font-size: 18px;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
 .smart-modal :deep(.dialog-header p) {
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 13px;
 }
 
-.smart-modal :deep(.close-button) {
+.smart-modal-close {
     display: grid;
-    width: 38px !important;
-    min-width: 38px !important;
-    height: 38px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
     margin-left: auto;
     place-items: center;
-    border-radius: 50% !important;
+    border-radius: 8px !important;
     padding: 0 !important;
     color: var(--color-text-tertiary);
     transition:
@@ -591,13 +625,18 @@ onBeforeUnmount(() => {
         transform 160ms var(--motion-ease);
 }
 
-.smart-modal :deep(.close-button:hover) {
-    color: var(--modal-accent);
-    background: var(--modal-accent-soft);
+.smart-modal-close:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-hover);
 }
 
-.smart-modal :deep(.close-button:active) {
-    transform: scale(0.94);
+.smart-modal-close:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.smart-modal-close:active {
+    transform: scale(0.92);
 }
 
 .smart-modal :deep(.dialog-footer) {
@@ -646,7 +685,7 @@ onBeforeUnmount(() => {
 
 .smart-modal-overlay-enter-active,
 .smart-modal-overlay-leave-active {
-    transition: opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 180ms var(--motion-ease);
 }
 
 .smart-modal-overlay-enter-from,
@@ -656,20 +695,24 @@ onBeforeUnmount(() => {
 
 .smart-modal-enter-active {
     transition:
-        opacity 260ms cubic-bezier(0.16, 1, 0.3, 1),
-        transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 240ms var(--motion-ease),
+        transform 240ms var(--motion-ease);
 }
 
 .smart-modal-leave-active {
     transition:
-        opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
-        transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 160ms var(--motion-ease-in),
+        transform 160ms var(--motion-ease-in);
 }
 
-.smart-modal-enter-from,
+.smart-modal-enter-from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+}
+
 .smart-modal-leave-to {
     opacity: 0;
-    transform: translateY(18px) scale(0.97);
+    transform: translateY(6px) scale(0.985);
 }
 
 .smart-modal-stagger-1,
@@ -678,27 +721,26 @@ onBeforeUnmount(() => {
 .smart-modal-stagger-4,
 .smart-modal-stagger-5,
 .smart-modal-stagger-6 {
-    animation: smart-modal-content-enter 220ms cubic-bezier(0.16, 1, 0.3, 1)
-        both;
+    animation: smart-modal-content-enter 200ms var(--motion-ease) both;
 }
 
 .smart-modal-stagger-1 {
-    animation-delay: 35ms;
+    animation-delay: 30ms;
 }
 .smart-modal-stagger-2 {
-    animation-delay: 75ms;
+    animation-delay: 60ms;
 }
 .smart-modal-stagger-3 {
-    animation-delay: 115ms;
+    animation-delay: 90ms;
 }
 .smart-modal-stagger-4 {
-    animation-delay: 155ms;
+    animation-delay: 120ms;
 }
 .smart-modal-stagger-5 {
-    animation-delay: 195ms;
+    animation-delay: 150ms;
 }
 .smart-modal-stagger-6 {
-    animation-delay: 235ms;
+    animation-delay: 180ms;
 }
 
 @keyframes smart-modal-content-enter {
@@ -715,6 +757,7 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
     .smart-modal-overlay {
         padding: 16px;
+        align-items: center;
     }
 
     .smart-modal-footer {
@@ -727,21 +770,46 @@ onBeforeUnmount(() => {
     }
 
     .smart-modal :deep(.dialog-header) {
-        padding: 18px 20px !important;
+        padding: 16px 18px !important;
     }
 
     .smart-modal-body {
-        padding: 18px;
+        padding: 16px 18px;
     }
 
     .smart-modal :deep(.dialog-footer) {
         align-items: stretch;
         flex-direction: column;
-        padding: 14px 18px !important;
+        padding: 12px 18px !important;
     }
 
     .smart-modal :deep(.dialog-footer > div) {
         justify-content: flex-end;
+    }
+}
+
+/* 底部抽屉模式（移动端复杂弹窗） */
+.smart-modal.is-sheet {
+    border-radius: 20px 20px 0 0;
+    max-height: min(90dvh, 800px);
+    margin-top: auto;
+}
+
+.is-sheet .smart-modal-body {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 720px) {
+    .smart-modal-overlay:has(.is-sheet) {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .smart-modal.is-sheet {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 20px 20px 0 0;
+        border-bottom: none;
     }
 }
 
@@ -765,7 +833,12 @@ onBeforeUnmount(() => {
     .smart-modal-stagger-5,
     .smart-modal-stagger-6 {
         animation-duration: 1ms;
-        animation-delay: 0ms;
+        animation-delay: 1ms;
+    }
+
+    .smart-modal-actions :deep(.base-button:hover),
+    .smart-modal-close:hover {
+        transform: none;
     }
 }
 </style>

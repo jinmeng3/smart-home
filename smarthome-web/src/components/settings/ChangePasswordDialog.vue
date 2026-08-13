@@ -163,7 +163,7 @@ const savePassword = async () => {
     <BaseSmartModal
         :model-value="modelValue"
         :before-close="confirmBeforeClose"
-        width="680px"
+        width="medium"
         title="修改密码"
         description="更新当前账户的本地安全记录"
         icon="lock"

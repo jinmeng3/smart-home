@@ -23,7 +23,7 @@ const closeDialog = () => {
 <template>
     <BaseSmartModal
         :model-value="props.modelValue"
-        width="680px"
+        width="medium"
         title="操作日志"
         description="查看最近的本地安全变更"
         icon="log"
