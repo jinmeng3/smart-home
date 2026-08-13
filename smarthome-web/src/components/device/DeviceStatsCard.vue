@@ -71,7 +71,6 @@ defineProps<{
 
 .device-stats-card:hover {
     box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
 }
 
 .device-stats-icon {
@@ -116,16 +115,16 @@ defineProps<{
     color: var(--color-primary-600);
 }
 .is-success strong {
-    color: var(--color-success);
+    color: var(--color-text-primary);
 }
 .is-muted strong {
-    color: var(--color-text-secondary);
+    color: var(--color-text-primary);
+}
+.is-primary strong {
+    color: var(--color-text-primary);
 }
 .is-warning strong {
     color: var(--color-warning);
-}
-.is-primary strong {
-    color: var(--color-primary-600);
 }
 
 @keyframes device-card-enter {

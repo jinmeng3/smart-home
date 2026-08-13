@@ -194,7 +194,7 @@ onBeforeUnmount(releasePreviewUrl);
         :loading="loading"
         :model-value="modelValue"
         :title="device ? '编辑设备' : '添加设备'"
-        width="720px"
+        width="840px"
         @confirm="submit"
         @update:model-value="emit('update:modelValue', $event)"
     >
@@ -228,16 +228,38 @@ onBeforeUnmount(releasePreviewUrl);
         <form class="device-form" @submit.prevent="submit">
             <div class="device-form-columns">
                 <div class="device-form-left">
-                    <section class="device-editor-hero">
-                        <div class="device-hero-preview">
-                            <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="" />
-                            <SvgIcon v-else :name="selectedTypeIcon" />
-                        </div>
-                        <div class="device-hero-body">
-                            <div class="device-hero-actions">
+                    <section class="device-editor-preview">
+                        <div
+                            class="device-preview-card"
+                            :style="{ '--preview-color': form.color || '#6b7280' }"
+                        >
+                            <div class="device-preview-header">
+                                <span class="device-preview-status is-online">
+                                    <i></i>在线
+                                </span>
+                            </div>
+                            <div class="device-preview-icon">
+                                <img
+                                    v-if="imagePreviewUrl"
+                                    :src="imagePreviewUrl"
+                                    alt=""
+                                />
+                                <SvgIcon v-else :name="selectedTypeIcon" size="lg" />
+                            </div>
+                            <div class="device-preview-name">
+                                {{ form.name || "设备名称" }}
+                            </div>
+                            <div class="device-preview-room">
+                                <SvgIcon name="room" size="sm" />
+                                {{ form.room || "所在房间" }}
+                            </div>
+                            <div class="device-preview-type">
+                                {{ getDeviceTypeLabel(form.type) || form.type }}
+                            </div>
+                            <div class="device-preview-actions">
                                 <label class="device-upload-button">
-                                    <SvgIcon name="plus" />
-                                    上传
+                                    <SvgIcon name="plus" size="sm" />
+                                    上传图片
                                     <input
                                         accept="image/png,image/jpeg,image/webp"
                                         type="file"
@@ -245,8 +267,8 @@ onBeforeUnmount(releasePreviewUrl);
                                     />
                                 </label>
                                 <button
+                                    v-if="imagePreviewUrl"
                                     class="device-clear-button"
-                                    :disabled="!imagePreviewUrl"
                                     type="button"
                                     @click="clearImage"
                                 >
@@ -256,10 +278,68 @@ onBeforeUnmount(releasePreviewUrl);
                         </div>
                     </section>
 
+                    <section class="device-appearance-section">
+                        <header>
+                            <div>
+                                <h3>外观设置</h3>
+                                <span>选择设备图标与主题颜色</span>
+                            </div>
+                            <span
+                                class="appearance-swatch"
+                                :style="{ '--swatch-color': form.color || '#6b7280' }"
+                                aria-hidden="true"
+                            ></span>
+                        </header>
+
+                        <div class="device-icon-picker">
+                            <span class="device-type-label">设备图标</span>
+                            <div class="device-icon-grid">
+                                <button
+                                    v-for="item in deviceIconOptions"
+                                    :key="item.value"
+                                    :class="{ active: form.icon === item.value }"
+                                    type="button"
+                                    :title="item.label"
+                                    @click="form.icon = item.value"
+                                >
+                                    <SvgIcon :name="item.value" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="device-icon-picker">
+                            <span class="device-type-label">设备颜色</span>
+                            <div class="icon-grid">
+                                <button
+                                    v-for="c in deviceColors"
+                                    :key="c.value"
+                                    type="button"
+                                    :class="{ active: form.color === c.value }"
+                                    class="color-dot"
+                                    :style="{ '--dot-color': c.value }"
+                                    :title="c.label"
+                                    @click="form.color = c.value"
+                                >
+                                    <svg
+                                        v-if="form.color === c.value"
+                                        viewBox="0 0 16 16"
+                                        fill="currentColor"
+                                        width="14"
+                                        height="14"
+                                    >
+                                        <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="device-form-right">
                     <section class="device-form-section">
                         <header>
-                            <h3>设备信息</h3>
-                            <span>名称、位置与接入信息</span>
+                            <h3>基础信息</h3>
+                            <span>名称、位置与品牌</span>
                         </header>
                         <div class="device-form-grid">
                             <label>
@@ -286,6 +366,15 @@ onBeforeUnmount(releasePreviewUrl);
                                     placeholder="例如：Aqara"
                                 />
                             </label>
+                        </div>
+                    </section>
+
+                    <section class="device-form-section">
+                        <header>
+                            <h3>接入配置</h3>
+                            <span>类型、平台与外观</span>
+                        </header>
+                        <div class="device-form-grid">
                             <label>
                                 <span>接入平台</span>
                                 <select v-model="form.connection">
@@ -307,24 +396,20 @@ onBeforeUnmount(releasePreviewUrl);
                                 />
                             </label>
                         </div>
-                    </section>
-                </div>
 
-                <div class="device-form-right">
-                    <section class="device-form-section">
-                        <header>
-                            <h3>类型与图标</h3>
-                            <span>选择设备类型并自定义图标</span>
-                        </header>
                         <div class="device-type-picker">
-                            <span class="device-type-label">设备类型 <em>*</em></span>
+                            <span class="device-type-label"
+                                >设备类型 <em>*</em></span
+                            >
                             <div class="device-type-grid">
                                 <button
                                     v-for="item in deviceTypeOptions.filter(
                                         (item) => item.value,
                                     )"
                                     :key="item.value"
-                                    :class="{ active: form.type === item.value }"
+                                    :class="{
+                                        active: form.type === item.value,
+                                    }"
                                     type="button"
                                     @click="
                                         form.type = item.value;
@@ -361,44 +446,14 @@ onBeforeUnmount(releasePreviewUrl);
                                 <input
                                     v-model="customTypeInput"
                                     placeholder="输入自定义类型名称"
-                                    @input="form.type = customTypeInput || '__custom__'"
+                                    @input="
+                                        form.type =
+                                            customTypeInput || '__custom__'
+                                    "
                                 />
                             </div>
                         </div>
-                        <div class="device-icon-picker">
-                            <span class="device-type-label">设备图标</span>
-                            <div class="device-icon-grid">
-                                <button
-                                    v-for="item in deviceIconOptions"
-                                    :key="item.value"
-                                    :class="{ active: form.icon === item.value }"
-                                    type="button"
-                                    :title="item.label"
-                                    @click="form.icon = item.value"
-                                >
-                                    <SvgIcon :name="item.value" />
-                                </button>
-                            </div>
-                        </div>
-                        <div class="device-icon-picker">
-                            <span class="device-type-label">设备颜色</span>
-                            <div class="icon-grid">
-                                <button
-                                    v-for="c in deviceColors"
-                                    :key="c.value"
-                                    type="button"
-                                    :class="{ active: form.color === c.value }"
-                                    class="color-dot"
-                                    :style="{ '--dot-color': c.value }"
-                                    :title="c.label"
-                                    @click="form.color = c.value"
-                                >
-                                    <svg v-if="form.color === c.value" viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
-                                        <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+
                     </section>
                 </div>
             </div>
@@ -518,61 +573,169 @@ onBeforeUnmount(releasePreviewUrl);
 .device-form {
     display: grid;
     gap: 16px;
-    padding: 4px 0;
+    padding: 2px 0;
 }
 
 /* ── 顶部预览区 ── */
 
-.device-editor-hero {
+/* ── 左栏预览卡片 ──────────────────────────────────────────────── */
+.device-editor-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+}
+
+.device-preview-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 210px;
+    justify-content: center;
+    padding: 14px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 14px;
+    background: color-mix(
+        in srgb,
+        var(--preview-color, var(--color-primary-500)) 8%,
+        var(--color-panel-background)
+    );
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--preview-color, var(--color-primary-500)) 10%, transparent);
+    transition: background-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
+}
+
+.device-preview-header {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: auto;
+}
+
+.device-preview-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--color-success);
+    background: var(--color-success-soft);
+}
+
+.device-preview-status i {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.device-preview-icon {
     display: grid;
-    gap: 12px;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    border-radius: 14px;
+    background: color-mix(
+        in srgb,
+        var(--preview-color, var(--color-primary-500)) 14%,
+        transparent
+    );
+    color: var(--preview-color, var(--color-primary-600));
+}
+
+.device-preview-icon img {
+    width: 42px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.device-preview-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.device-preview-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--color-text-primary);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+.device-preview-room {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-tertiary);
+}
+
+.device-preview-type {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-tertiary);
+}
+
+.device-preview-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.device-appearance-section {
+    display: grid;
+    gap: 16px;
     border: 1px solid var(--color-border);
     border-radius: 14px;
-    background: linear-gradient(
-        135deg,
-        var(--color-card-bg) 40%,
-        var(--color-primary-50)
-    );
-    padding: 16px;
-}
-
-.device-hero-preview {
-    display: grid;
-    width: 100%;
-    height: 160px;
-    place-items: center;
-    overflow: hidden;
-    border: 2px dashed var(--color-border-strong);
-    border-radius: 14px;
     background: var(--color-card-bg);
-    color: var(--color-primary-500);
+    padding: 15px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.device-hero-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.device-hero-preview svg {
-    width: 64px;
-    height: 64px;
-    opacity: 0.7;
-}
-
-.device-hero-body {
+.device-appearance-section > header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
-    min-width: 0;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.device-hero-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
+.device-appearance-section h3,
+.device-appearance-section header span {
+    margin: 0;
+}
+
+.device-appearance-section h3 {
+    color: var(--color-text-primary);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.device-appearance-section header div > span {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.appearance-swatch {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border: 3px solid var(--color-card-bg);
+    border-radius: 999px;
+    background: var(--swatch-color);
+    box-shadow: 0 0 0 1px var(--color-border), 0 3px 8px color-mix(in srgb, var(--swatch-color) 35%, transparent);
+    transition: background-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
 }
 
 .device-upload-actions small {
@@ -618,15 +781,15 @@ onBeforeUnmount(releasePreviewUrl);
 
 .device-form-columns {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-items: stretch;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
 }
 
 .device-form-left {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    align-content: start;
 }
 
 .device-form-right {
@@ -659,19 +822,20 @@ onBeforeUnmount(releasePreviewUrl);
 
 .device-type-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
 }
 
 .device-type-grid button {
     display: grid;
-    grid-template-columns: 28px 1fr;
+    grid-template-columns: 24px minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     border: 1px solid var(--color-border-subtle);
     border-radius: 10px;
     background: var(--color-surface-subtle);
-    padding: 8px 10px;
+    min-height: 42px;
+    padding: 6px 8px;
     color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 800;
@@ -701,8 +865,8 @@ onBeforeUnmount(releasePreviewUrl);
 
 .device-type-grid i {
     display: grid;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     place-items: center;
     border-radius: 8px;
     background: var(--color-card-bg);
@@ -765,26 +929,36 @@ onBeforeUnmount(releasePreviewUrl);
 
 .device-icon-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 4px;
-    max-height: 196px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-rows: 40px;
+    gap: 6px;
+    /* 4 行图标 + 3 个行间距；保持整行可见并由区域内部滚动。 */
+    max-height: 178px;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 2px;
+    padding: 0 4px 0 0;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
 }
 
 .device-icon-grid::-webkit-scrollbar {
-    width: 3px;
+    width: 4px;
 }
 
 .device-icon-grid::-webkit-scrollbar-thumb {
-    border-radius: 2px;
+    border-radius: 999px;
     background: var(--color-border);
+}
+
+.device-icon-grid::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .device-icon-grid button {
     display: grid;
     width: 100%;
-    aspect-ratio: 1;
+    height: 40px;
+    min-height: 40px;
     place-items: center;
     border: 1px solid var(--color-border-subtle);
     border-radius: 8px;
@@ -798,7 +972,7 @@ onBeforeUnmount(releasePreviewUrl);
     border-color: var(--color-primary-300);
     background: var(--color-primary-50);
     color: var(--color-primary-600);
-    transform: scale(1.08);
+    transform: translateY(-1px);
 }
 
 .device-icon-grid button.active {
@@ -817,17 +991,18 @@ onBeforeUnmount(releasePreviewUrl);
 
 .icon-grid {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(8, 24px);
+    justify-content: space-between;
     gap: 6px;
-    padding: 2px;
+    padding: 3px 2px 2px;
 }
 
 .color-dot {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    aspect-ratio: 1;
+    width: 24px;
+    height: 24px;
     border: 2px solid transparent;
     border-radius: 50%;
     background: var(--dot-color);
@@ -1031,37 +1206,36 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
+    .device-preview-card {
+        min-height: 190px;
+    }
+
+    .device-type-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .device-form-grid {
         grid-template-columns: 1fr;
     }
 
-    .device-editor-hero {
-        flex-wrap: wrap;
-    }
-
-    .device-hero-body {
-        flex-wrap: wrap;
-    }
-
-    .device-icon-grid {
-        max-height: 120px;
-    }
-
     .device-dialog-footer {
-        align-items: stretch;
         flex-direction: column;
     }
 
     .device-dialog-footer div {
-        justify-content: flex-end;
+        width: 100%;
     }
 
     .device-form-section header {
-        display: grid;
+        flex-wrap: wrap;
     }
 
     .device-form-section header span {
-        text-align: left;
+        display: none;
+    }
+
+    .device-icon-grid {
+        grid-template-columns: repeat(6, 1fr);
     }
 }
 

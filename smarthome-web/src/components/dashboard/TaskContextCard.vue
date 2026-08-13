@@ -52,10 +52,8 @@ const progressPercent = computed(() => {
     return Math.round((doneSteps.value / totalSteps.value) * 100);
 });
 
-/** 展示步骤（最多 3 条，避免窄侧栏拥挤） */
+/** 展示完整执行流程，结束后仍保留，便于定位失败环节。 */
 const visibleSteps = computed(() => {
-    if (store.agentStatus === "success" || store.agentStatus === "error") return [];
-    if (store.executionSteps.length > 3) return store.executionSteps.slice(0, 3);
     return store.executionSteps;
 });
 
@@ -104,7 +102,7 @@ const showTask = computed(
             <div
                 v-for="step in visibleSteps"
                 :key="step.id"
-                class="flex min-w-0 items-center gap-2 text-xs"
+                class="task-step-row grid min-w-0 grid-cols-[18px_minmax(0,1fr)] items-start gap-2 text-xs"
                 :class="step.status === 'failed' ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-secondary)]'"
             >
                 <span
@@ -139,14 +137,14 @@ const showTask = computed(
                         <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </span>
-                <span class="truncate font-bold">{{ step.label }}</span>
+                <span class="min-w-0">
+                    <strong class="block truncate font-bold">{{ step.label }}</strong>
+                    <small
+                        v-if="step.message"
+                        class="mt-0.5 block break-words text-[11px] leading-4 text-[var(--color-danger)]"
+                    >{{ step.message }}</small>
+                </span>
             </div>
-            <p
-                v-if="store.executionSteps.length > 3"
-                class="text-xs font-bold text-[var(--color-text-tertiary)]"
-            >
-                等 {{ store.executionSteps.length }} 个步骤
-            </p>
         </div>
 
         <!-- 完成后显示摘要 -->
@@ -244,5 +242,19 @@ const showTask = computed(
 
 .task-step-dot {
     position: relative;
+}
+
+.task-step-row + .task-step-row {
+    position: relative;
+}
+
+.task-step-row + .task-step-row::before {
+    position: absolute;
+    top: -7px;
+    left: 7.5px;
+    width: 1px;
+    height: 8px;
+    background: var(--color-border-default);
+    content: "";
 }
 </style>

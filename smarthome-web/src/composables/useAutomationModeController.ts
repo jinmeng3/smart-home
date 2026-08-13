@@ -72,7 +72,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "保存失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     // ── 删除 ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         deletingRule.value = null;
     };
 
-    const { loading: deleting, run: confirmRemoveRule } = useAsyncAction(
+    const { pending: deleting, execute: confirmRemoveRule } = useAsyncAction(
         async () => {
             if (!deletingRule.value) return;
             const rule = deletingRule.value;
@@ -117,7 +117,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "自动化复制失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const runRule = useAsyncAction(
         async (rule: AutomationRule) => {
@@ -130,7 +130,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "自动化执行失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const toggleRule = useAsyncAction(
         async (rule: AutomationRule, enabled: boolean) => {
@@ -143,7 +143,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "自动化状态更新失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     // ── 导入 / 批量操作 ──────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "规则导入失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const batchEnable = useAsyncAction(
         async (ruleIds: number[]) => {
@@ -171,7 +171,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "批量启用失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const scheduleRules = useAsyncAction(
         async (payload: { weekdays: number[]; time: string; ruleIds: number[] }) => {
@@ -184,7 +184,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "定时设置失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const useTemplate = useAsyncAction(
         async (name: string) => {
@@ -197,7 +197,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
                     error instanceof Error ? error.message : "模板使用失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const runAction = async (key: QuickActionKey) => {
         if (key === "batch") {

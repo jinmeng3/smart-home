@@ -5,11 +5,11 @@ defineProps<{
 </script>
 
 <template>
-    <article class="inline-status ai-message-enter mb-5 grid grid-cols-[42px_minmax(0,360px)] gap-3">
+    <article class="inline-status ai-message-enter mb-5 grid grid-cols-[42px_minmax(0,320px)] gap-3">
         <div class="status-avatar grid h-10 w-10 place-items-center rounded-full">
             <img src="/orion-sidebar-icon.svg" alt="Orion Home" />
         </div>
-        <div class="status-body flex min-h-10 items-center gap-2.5 rounded-xl border px-4 py-2.5">
+        <div class="status-body flex min-h-10 items-center gap-2.5 rounded-xl border px-4 py-2.5 shadow-sm">
             <span class="status-pulse" aria-hidden="true"></span>
             <span class="min-w-0 truncate text-sm font-bold text-[var(--color-text-secondary)]">
                 {{ label }}

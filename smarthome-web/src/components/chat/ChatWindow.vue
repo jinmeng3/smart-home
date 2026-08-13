@@ -29,6 +29,14 @@ const streamingMessageId = computed<string | null>(() => {
     return last.id;
 });
 
+const hasStreamingContent = computed(() => {
+    if (!streamingMessageId.value) return false;
+    const message = store.messages.find(
+        (item) => item.id === streamingMessageId.value,
+    );
+    return Boolean(message?.content.trim());
+});
+
 /* ── 重新生成状态：点击按钮后延迟执行 splice，让退场动画先播放 ── */
 const regeneratingMessageId = ref<string | null>(null);
 let regeneratingTimer = 0;
@@ -195,7 +203,10 @@ const starterPrompts = [
                     />
                 </AnimatedList>
                 <ChatInlineStatus
-                    v-if="store.agentStatus === 'executing'"
+                    v-if="
+                        store.agentStatus === 'executing' &&
+                        !hasStreamingContent
+                    "
                     :label="store.pendingStatus || '正在等待智能体响应'"
                 />
             </template>

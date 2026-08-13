@@ -1,27 +1,25 @@
-import { computed, reactive, ref } from "vue";
+import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useAsyncAction } from "./useAsyncAction";
-import { useDebouncedFilter } from "./useDebouncedFilter";
+import { useDeviceQuery } from "./useDeviceQuery";
+import { usePlatformAccess } from "./usePlatformAccess";
 import {
   createDevice as apiCreateDevice,
   deleteDevice as apiDeleteDevice,
   getDevice as apiGetDevice,
   listDeviceLogs as apiListDeviceLogs,
-  listDevices as apiListDevices,
-  syncDevices as apiSyncDevices,
   updateDevice as apiUpdateDevice,
 } from "../api/device";
-import { devicePlatformOptions } from "../components/device/deviceMeta";
 import type {
   Device,
   DeviceCreatePayload,
   DeviceDetail,
   DeviceFilters,
   DeviceLog,
+  DeviceQuickActionKey,
 } from "../types/device";
 
-export type DeviceSortKey = "updated" | "name" | "status";
-export type DeviceQuickActionKey = "scan" | "delete" | "firmware" | "logs";
+export type { DeviceQuickActionKey } from "../types/device";
 
 const logActionLabels: Record<string, string> = {
   create: "创建",
@@ -39,37 +37,66 @@ const quickActionMessages: Record<Exclude<DeviceQuickActionKey, "logs">, string>
   firmware: "固件更新接口已预留",
 };
 
-const createDefaultFilters = (): DeviceFilters => ({
-  page: 1,
-  pageSize: 10,
-  keyword: "",
-  type: "",
-  status: "",
-  room: "",
-});
-
+/**
+ * 设备管理页面控制器——组合查询/平台/选中/编辑/删除/日志等模块。
+ * 数据查询（筛选/分页/请求取消）见 useDeviceQuery，平台派生见 usePlatformAccess。
+ * 异步操作统一走 useAsyncAction（pending/execute），防重复提交并自动清理状态。
+ */
 export const useDeviceManagementController = () => {
-  const filters = reactive<DeviceFilters>(createDefaultFilters());
-  const devices = ref<Device[]>([]);
-  const total = ref(0);
-  const loading = ref(false);
+  /* ── 选中设备 ─────────────────────────────────────────────────── */
   const selectedId = ref<number | null>(null);
   const selectedDevice = ref<DeviceDetail | null>(null);
-  const editorOpen = ref(false);
-  const editingDevice = ref<Device | null>(null);
-  const deleteDialogOpen = ref(false);
-  const deletingDevice = ref<Device | null>(null);
-  const batchDeleteDialogOpen = ref(false);
-  const batchMode = ref(false);
-  const selectedDeviceIds = ref<number[]>([]);
-  const batchDeletingIds = ref<number[]>([]);
-  const logDialogOpen = ref(false);
-  const deviceLogs = ref<DeviceLog[]>([]);
-  const logDeviceName = ref("");
-  const sort = ref<DeviceSortKey>("updated");
+
+  const loadSelectedDevice = async () => {
+    if (selectedId.value === null) {
+      selectedDevice.value = null;
+      return;
+    }
+
+    try {
+      selectedDevice.value = await apiGetDevice(selectedId.value);
+    } catch (error) {
+      selectedDevice.value = null;
+      ElMessage.error(
+        error instanceof Error ? error.message : "设备详情加载失败",
+      );
+    }
+  };
+
+  const selectDevice = (device: Device) => {
+    selectedId.value = device.id;
+    void loadSelectedDevice();
+  };
+
+  /* ── 数据查询（useDeviceQuery：筛选/分页/防抖/请求取消） ──────── */
+  const query = useDeviceQuery({
+    onLoaded: async (items) => {
+      const selectedExists = items.some(
+        (device) => device.id === selectedId.value,
+      );
+      selectedId.value = selectedExists
+        ? selectedId.value
+        : (items[0]?.id ?? null);
+      await loadSelectedDevice();
+    },
+    onError: (error) => {
+      ElMessage.error(
+        error instanceof Error ? error.message : "设备列表加载失败",
+      );
+    },
+  });
+
+  const { devices, filters, loading, total } = query;
+  const loadDevices = query.loadDevices;
+
+  /* ── 接入平台（usePlatformAccess：平台派生 + 同步入口） ────────── */
+  const platformAccess = usePlatformAccess(devices);
+  const { connectedCount, connectedPlatforms, platforms } = platformAccess;
+
+  /* ── 排序 / 收藏过滤（列表展示层） ─────────────────────────────── */
+  const sort = ref<"updated" | "name" | "status">("updated");
 
   const viewMode = ref<"all" | "frequent" | "favorite">("all");
-
   const setViewMode = (mode: "all" | "frequent" | "favorite") => {
     viewMode.value = mode;
   };
@@ -102,21 +129,17 @@ export const useDeviceManagementController = () => {
     saveFavorites();
   };
 
-  const isFavorite = (deviceId: number) => favoriteDeviceIds.value.includes(deviceId);
+  const isFavorite = (deviceId: number) =>
+    favoriteDeviceIds.value.includes(deviceId);
 
   // Load favorites on initialization
   loadFavorites();
-
-  const rooms = computed(() =>
-    Array.from(new Set(devices.value.map((device) => device.room))).filter(Boolean),
-  );
 
   const filteredDevices = computed(() => {
     let result = devices.value;
     if (viewMode.value === "favorite") {
       result = result.filter((d) => isFavorite(d.id));
     }
-    // For "frequent", we could add a heuristic later; for now show all
     return result;
   });
 
@@ -152,77 +175,35 @@ export const useDeviceManagementController = () => {
     return { online, offline, warning, monthlyNew: items.length };
   });
 
-  const platforms = computed(() =>
-    devicePlatformOptions.map((name) => {
-      const connected = devices.value.some(
-        (device) => device.connection === name,
-      );
+  /* ── 新增 / 编辑 ───────────────────────────────────────────────── */
+  const editorOpen = ref(false);
+  const editingDevice = ref<Device | null>(null);
 
-      return {
-        name,
-        connected,
-        status: connected ? "已连接" : "未连接",
-      };
-    }),
-  );
-
-  const loadSelectedDevice = async () => {
-    if (selectedId.value === null) {
-      selectedDevice.value = null;
-      return;
-    }
-
-    try {
-      selectedDevice.value = await apiGetDevice(selectedId.value);
-    } catch (error) {
-      selectedDevice.value = null;
-      ElMessage.error(
-        error instanceof Error ? error.message : "设备详情加载失败",
-      );
-    }
-  };
-
-  const loadDevices = async (signal?: AbortSignal) => {
-    loading.value = true;
-
-    try {
-      const response = await apiListDevices(filters, signal);
-      devices.value = response.items;
-      total.value = response.total;
-
-      const selectedExists = response.items.some(
-        (device) => device.id === selectedId.value,
-      );
-      selectedId.value = selectedExists
-        ? selectedId.value
-        : (response.items[0]?.id ?? null);
-      await loadSelectedDevice();
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-      devices.value = [];
-      total.value = 0;
-      ElMessage.error(
-        error instanceof Error ? error.message : "设备列表加载失败",
-      );
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  // 筛选输入（搜索/类型/状态/房间）防抖加载：输入停止 250ms 后才请求，
-  // 同时用 AbortSignal 取消旧请求，避免快速连续筛选时旧数据覆盖新数据。
-  const debouncedLoad = useDebouncedFilter((signal) => loadDevices(signal), 250);
-  const loadDevicesDebounced = debouncedLoad.run;
-  const cancelDebouncedLoad = debouncedLoad.cancel;
-
-  // ── 设备操作（useAsyncAction：统一 loading / 防重复提交 / 错误提示）─────────────
-
-  const { loading: saving, run: saveDevice } = useAsyncAction(
+  const { pending: saving, execute: saveDevice } = useAsyncAction(
     async (payload: DeviceCreatePayload) => {
       if (editingDevice.value) {
         await apiUpdateDevice(editingDevice.value.id, payload);
+        // 局部更新——先更新本地设备，再后台刷新保持一致性
+        const idx = devices.value.findIndex(
+          (d) => d.id === editingDevice.value!.id,
+        );
+        if (idx >= 0) {
+          const current = devices.value[idx];
+          if (!current) return;
+          const { name, room, type, brand, connection, firmware, icon, color } =
+            payload;
+          devices.value[idx] = {
+            ...current,
+            name,
+            room,
+            type,
+            brand,
+            connection,
+            firmware: firmware ?? current.firmware,
+            icon: icon ?? current.icon,
+            color: color ?? current.color,
+          };
+        }
         ElMessage.success("设备已更新");
       } else {
         const created = await apiCreateDevice(payload);
@@ -231,100 +212,13 @@ export const useDeviceManagementController = () => {
       }
 
       editorOpen.value = false;
-      await loadDevices();
+      await query.loadDevices();
     },
     {
       onError: (error) =>
         ElMessage.error(error instanceof Error ? error.message : "设备保存失败"),
     },
   );
-
-  const { loading: deleting, run: confirmRemoveDevice } = useAsyncAction(
-    async () => {
-      if (!deletingDevice.value) return;
-      const device = deletingDevice.value;
-      await apiDeleteDevice(device.id);
-      ElMessage.success("设备已删除");
-      deleteDialogOpen.value = false;
-      deletingDevice.value = null;
-      await loadDevices();
-    },
-    {
-      onError: (error) =>
-        ElMessage.error(error instanceof Error ? error.message : "设备删除失败"),
-    },
-  );
-
-  const { loading: syncing, run: runSync } = useAsyncAction(
-    async () => {
-      const response = await apiSyncDevices("Home Assistant");
-      ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
-      await loadDevices();
-    },
-    {
-      onError: (error) =>
-        ElMessage.error(error instanceof Error ? error.message : "设备同步失败"),
-    },
-  );
-
-  const { loading: batchDeleting, run: confirmBatchDelete } = useAsyncAction(
-    async () => {
-      const ids = batchDeletingIds.value;
-      if (!ids.length) {
-        batchDeleteDialogOpen.value = false;
-        return;
-      }
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const id of ids) {
-        try {
-          await apiDeleteDevice(id);
-          successCount++;
-        } catch {
-          failCount++;
-        }
-      }
-
-      batchDeleteDialogOpen.value = false;
-      batchDeletingIds.value = [];
-
-      if (failCount === 0) {
-        ElMessage.success(`已成功删除 ${successCount} 台设备`);
-      } else {
-        ElMessage.warning(`已删除 ${successCount} 台，${failCount} 台删除失败`);
-      }
-
-      selectedDeviceIds.value = [];
-      batchMode.value = false;
-      await loadDevices();
-    },
-  );
-
-  const updateFilter = <K extends keyof DeviceFilters>(
-    key: K,
-    value: DeviceFilters[K],
-  ) => {
-    filters[key] = value;
-    if (key !== "page") {
-      filters.page = 1;
-    }
-  };
-
-  const updatePage = (value: number) => {
-    filters.page = value;
-  };
-
-  const updatePageSize = (value: number) => {
-    filters.pageSize = value;
-    filters.page = 1;
-  };
-
-  const selectDevice = (device: Device) => {
-    selectedId.value = device.id;
-    void loadSelectedDevice();
-  };
 
   const addDevice = () => {
     editingDevice.value = null;
@@ -337,19 +231,53 @@ export const useDeviceManagementController = () => {
     editorOpen.value = true;
   };
 
+  /* ── 单个删除 ─────────────────────────────────────────────────── */
+  const deleteDialogOpen = ref(false);
+  const deletingDevice = ref<Device | null>(null);
+
   const removeDevice = (device: Device) => {
     deletingDevice.value = device;
     deleteDialogOpen.value = true;
   };
 
   const cancelRemoveDevice = () => {
-    if (deleting.value) {
-      return;
-    }
-
+    if (deleting.value) return;
     deleteDialogOpen.value = false;
     deletingDevice.value = null;
   };
+
+  const { pending: deleting, execute: confirmRemoveDevice } = useAsyncAction(
+    async () => {
+      if (!deletingDevice.value) return;
+      const device = deletingDevice.value;
+      await apiDeleteDevice(device.id);
+      // 局部更新——先移除本地设备
+      const idx = devices.value.findIndex((d) => d.id === device.id);
+      if (idx >= 0) {
+        devices.value.splice(idx, 1);
+        total.value = Math.max(0, total.value - 1);
+      }
+      ElMessage.success("设备已删除");
+      deleteDialogOpen.value = false;
+      deletingDevice.value = null;
+      await query.loadDevices();
+    },
+    {
+      onError: (error) =>
+        ElMessage.error(error instanceof Error ? error.message : "设备删除失败"),
+    },
+  );
+
+  /* ── 批量删除 ─────────────────────────────────────────────────── */
+  const batchDeleteDialogOpen = ref(false);
+  const batchMode = ref(false);
+  const selectedDeviceIds = ref<number[]>([]);
+  const batchDeletingIds = ref<number[]>([]);
+  const batchDeletingDevices = computed(() => {
+    const ids = batchDeletingIds.value;
+    if (!ids.length) return [];
+    return devices.value.filter((d) => ids.includes(d.id));
+  });
 
   const toggleSelectDevice = (device: Device) => {
     const id = device.id;
@@ -392,11 +320,64 @@ export const useDeviceManagementController = () => {
     batchDeletingIds.value = [];
   };
 
-  const batchDeletingDevices = computed(() => {
-    const ids = batchDeletingIds.value;
-    if (!ids.length) return [];
-    return devices.value.filter((d) => ids.includes(d.id));
-  });
+  const { pending: batchDeleting, execute: confirmBatchDelete } = useAsyncAction(
+    async () => {
+      const ids = batchDeletingIds.value;
+      if (!ids.length) {
+        batchDeleteDialogOpen.value = false;
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const removedIds = new Set<number>();
+
+      for (const id of ids) {
+        try {
+          await apiDeleteDevice(id);
+          removedIds.add(id);
+          successCount++;
+        } catch {
+          failCount++;
+        }
+      }
+
+      // 局部更新——批量移除本地设备
+      devices.value = devices.value.filter((d) => !removedIds.has(d.id));
+      total.value = Math.max(0, total.value - successCount);
+
+      batchDeleteDialogOpen.value = false;
+      batchDeletingIds.value = [];
+
+      if (failCount === 0) {
+        ElMessage.success(`已成功删除 ${successCount} 台设备`);
+      } else {
+        ElMessage.warning(`已删除 ${successCount} 台，${failCount} 台删除失败`);
+      }
+
+      selectedDeviceIds.value = [];
+      batchMode.value = false;
+      await query.loadDevices();
+    },
+  );
+
+  /* ── 平台同步 / 快捷操作 / 日志 ───────────────────────────────── */
+  const { pending: syncing, execute: runSync } = useAsyncAction(
+    async () => {
+      const response = await platformAccess.syncAllPlatforms();
+      ElMessage.success(`同步完成，更新 ${response.synced_count} 台设备`);
+      query.loadDevices();
+      return response.synced_count;
+    },
+    {
+      onError: (error) =>
+        ElMessage.error(error instanceof Error ? error.message : "设备同步失败"),
+    },
+  );
+
+  const logDialogOpen = ref(false);
+  const deviceLogs = ref<DeviceLog[]>([]);
+  const logDeviceName = ref("");
 
   const runQuickAction = (key: DeviceQuickActionKey) => {
     if (key === "delete") {
@@ -453,6 +434,8 @@ export const useDeviceManagementController = () => {
     batchDeleteDevices,
     cancelBatchDelete,
     cancelRemoveDevice,
+    connectedCount,
+    connectedPlatforms,
     confirmBatchDelete,
     confirmRemoveDevice,
     deleteDialogOpen,
@@ -464,13 +447,14 @@ export const useDeviceManagementController = () => {
     editorOpen,
     filters,
     loading,
+    loadDevices,
     logActionLabel,
     logDeviceName,
     logDialogOpen,
     closeLogDialog,
     platforms,
     removeDevice,
-    rooms,
+    rooms: query.rooms,
     runBatch,
     runQuickAction,
     runSync,
@@ -484,12 +468,10 @@ export const useDeviceManagementController = () => {
     stats,
     syncing,
     total,
-    updateFilter,
-    updatePage,
-    updatePageSize,
+    updateFilter: query.updateFilter,
+    updatePage: query.updatePage,
+    updatePageSize: query.updatePageSize,
     editDevice,
-    loadDevices,
-    loadDevicesDebounced,
     viewMode,
     setViewMode,
     toggleFavorite,

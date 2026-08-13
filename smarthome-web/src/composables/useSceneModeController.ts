@@ -56,7 +56,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "场景创建失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const saveDraft = useAsyncAction(
         async (payload: SceneInput) => {
@@ -69,7 +69,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "草稿保存失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const importTemplate = useAsyncAction(
         async (template: SceneTemplate) => {
@@ -82,7 +82,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "模板导入失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const editScene = (scene: Scene) => {
         openEditDialog(scene);
@@ -101,7 +101,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "场景更新失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const removeScene = (scene: Scene) => {
         deletingScene.value = scene;
@@ -114,7 +114,7 @@ export const useSceneModeController = (store: ScenesStore) => {
         deletingScene.value = null;
     };
 
-    const { loading: deleting, run: confirmRemoveScene } = useAsyncAction(
+    const { pending: deleting, execute: confirmRemoveScene } = useAsyncAction(
         async () => {
             if (!deletingScene.value) return;
             const scene = deletingScene.value;
@@ -203,7 +203,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "操作失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const applyBatchEnabled = async (sceneIds: string[], enabled: boolean) => {
         try {
@@ -244,7 +244,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "场景复制失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     const runScene = useAsyncAction(
         async (scene: Scene) => {
@@ -264,7 +264,7 @@ export const useSceneModeController = (store: ScenesStore) => {
                     error instanceof Error ? error.message : "场景执行失败",
                 ),
         },
-    ).run;
+    ).execute;
 
     /** 打开高风险确认弹窗，并返回用户是否确认执行的 Promise。 */
     const requestHighRiskConfirm = (scene: Scene): Promise<boolean> => {
@@ -296,7 +296,7 @@ export const useSceneModeController = (store: ScenesStore) => {
             ElMessage.success(`${scene.name} ${enabled ? "已启用" : "已停用"}`);
         },
         roleTag,
-    ).run;
+    ).execute;
 
     return {
         cancelRemoveScene,

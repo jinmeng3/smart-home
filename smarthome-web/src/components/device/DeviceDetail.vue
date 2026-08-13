@@ -46,57 +46,57 @@ const platformToneMap: Record<string, string> = {
             <h2><SvgIcon name="device-management" size="sm" />设备详情</h2>
         </header>
 
-        <div v-if="device" class="device-detail-body">
-            <div class="device-summary">
-                <div class="device-image" :style="{ '--device-color': device.color || '#6b7280' }">
-                    <img v-if="device.image" :src="device.image" alt="" />
-                    <span v-else>
-                        <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="lg" />
-                    </span>
+        <Transition name="detail-crossfade" mode="out-in">
+            <div :key="device ? device.id : 'empty'" class="detail-content">
+                <div v-if="device" class="device-detail-body">
+                    <div class="device-summary">
+                        <div class="device-image" :style="{ '--device-color': device.color || '#6b7280' }">
+                            <img v-if="device.image" :src="device.image" alt="" />
+                            <span v-else>
+                                <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" size="lg" />
+                            </span>
+                        </div>
+                        <div class="device-title">
+                            <strong>{{ device.name }}</strong>
+                            <span class="device-type">{{ getDeviceTypeLabel(device.type) }}</span>
+                            <span class="device-status" :class="`is-${device.status}`">
+                                <i :class="`status-dot is-${device.status}`"></i>
+                                {{ deviceStatusLabelMap[device.status] }}
+                            </span>
+                        </div>
+                    </div>
+                    <dl>
+                        <div>
+                            <dt><SvgIcon name="room" size="sm" />房间</dt>
+                            <dd class="is-room">{{ device.room }}</dd>
+                        </div>
+                        <div>
+                            <dt><SvgIcon name="layers" size="sm" />品牌</dt>
+                            <dd>{{ device.brand }}</dd>
+                        </div>
+                        <div>
+                            <dt><SvgIcon name="plug" size="sm" />连接方式</dt>
+                            <dd>
+                                <em class="platform tone-chip" :class="`is-${platformToneMap[device.connection] ?? 'blue'}`">{{ device.connection }}</em>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt><SvgIcon name="refresh" size="sm" />固件版本</dt>
+                            <dd class="is-firmware">{{ device.firmware }}</dd>
+                        </div>
+                        <div>
+                            <dt><SvgIcon name="clock" size="sm" />最后同步</dt>
+                            <dd class="is-sync">{{ formatLastSync(device.lastOnline) }}</dd>
+                        </div>
+                    </dl>
                 </div>
-                <div class="device-title">
-                    <strong>{{ device.name }}</strong>
-                    <span class="device-type">{{ getDeviceTypeLabel(device.type) }}</span>
-                    <span class="device-status" :class="`is-${device.status}`">
-                        <i :class="`status-dot is-${device.status}`"></i>
-                        {{ deviceStatusLabelMap[device.status] }}
-                    </span>
+
+                <div v-else class="device-detail-empty">
+                    <SvgIcon name="device-management" />
+                    <span>选择设备后查看详情</span>
                 </div>
             </div>
-            <dl>
-                <div>
-                    <dt><SvgIcon name="room" size="sm" />房间</dt>
-                    <dd class="is-room">{{ device.room }}</dd>
-                </div>
-                <div>
-                    <dt><SvgIcon name="layers" size="sm" />品牌</dt>
-                    <dd>{{ device.brand }}</dd>
-                </div>
-                <div>
-                    <dt><SvgIcon name="plug" size="sm" />连接方式</dt>
-                    <dd>
-                        <em
-                            class="platform tone-chip"
-                            :class="`is-${platformToneMap[device.connection] ?? 'blue'}`"
-                            >{{ device.connection }}</em
-                        >
-                    </dd>
-                </div>
-                <div>
-                    <dt><SvgIcon name="refresh" size="sm" />固件版本</dt>
-                    <dd class="is-firmware">{{ device.firmware }}</dd>
-                </div>
-                <div>
-                    <dt><SvgIcon name="clock" size="sm" />最后同步</dt>
-                    <dd class="is-sync">{{ formatLastSync(device.lastOnline) }}</dd>
-                </div>
-            </dl>
-        </div>
-
-        <div v-else class="device-detail-empty">
-            <SvgIcon name="device-management" />
-            <span>选择设备后查看详情</span>
-        </div>
+        </Transition>
     </section>
 </template>
 
@@ -107,7 +107,15 @@ const platformToneMap: Record<string, string> = {
     background: var(--color-panel-background);
     padding: 14px;
     box-shadow: var(--shadow-card);
-    animation: side-card-enter 220ms var(--motion-ease) both;
+}
+
+.detail-crossfade-enter-active,
+.detail-crossfade-leave-active {
+    transition: opacity 140ms var(--motion-ease);
+}
+.detail-crossfade-enter-from,
+.detail-crossfade-leave-to {
+    opacity: 0;
 }
 
 header {

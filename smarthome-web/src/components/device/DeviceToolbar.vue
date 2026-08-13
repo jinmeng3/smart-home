@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import SvgIcon from "../common/SvgIcon.vue";
-import type { DeviceStatus, DeviceType } from "../../types/device";
-import { deviceStatusOptions, deviceTypeOptions } from "./deviceMeta";
+import type { DeviceStatus } from "../../types/device";
+import { deviceStatusOptions } from "./deviceMeta";
 
 defineProps<{
     keyword: string;
     room: string;
-    type: DeviceType | "";
     status: DeviceStatus | "";
     rooms: string[];
 }>();
@@ -14,7 +13,6 @@ defineProps<{
 defineEmits<{
     "update:keyword": [value: string];
     "update:room": [value: string];
-    "update:type": [value: DeviceType | ""];
     "update:status": [value: DeviceStatus | ""];
 }>();
 </script>
@@ -36,6 +34,7 @@ defineEmits<{
             />
         </label>
         <div class="filter-group">
+            <SvgIcon class="filter-leading-icon" name="room" size="sm" />
             <select
                 :value="room"
                 @change="
@@ -50,27 +49,11 @@ defineEmits<{
             <SvgIcon class="dropdown-arrow" name="chevron-down" size="sm" />
         </div>
         <div class="filter-group">
-            <select
-                :value="type"
-                @change="
-                    $emit(
-                        'update:type',
-                        ($event.target as HTMLSelectElement).value as
-                            DeviceType | '',
-                    )
-                "
-            >
-                <option
-                    v-for="item in deviceTypeOptions"
-                    :key="item.label"
-                    :value="item.value"
-                >
-                    {{ item.value ? item.label : "类型" }}
-                </option>
-            </select>
-            <SvgIcon class="dropdown-arrow" name="chevron-down" size="sm" />
-        </div>
-        <div class="filter-group">
+            <SvgIcon
+                class="filter-leading-icon"
+                name="online-device"
+                size="sm"
+            />
             <select
                 :value="status"
                 @change="
@@ -97,10 +80,11 @@ defineEmits<{
 <style scoped>
 .device-toolbar {
     display: grid;
-    width: 100%;
+    width: min(100%, 340px);
     min-width: 0;
+    margin-left: auto;
     box-sizing: border-box;
-    grid-template-columns: minmax(180px, 1fr) repeat(3, 120px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     align-items: center;
 }
@@ -117,6 +101,7 @@ defineEmits<{
     background: var(--color-card-bg);
     padding: 0 9px;
     transition: border-color 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
+    grid-column: 1 / -1;
 }
 
 .device-search:focus-within {
@@ -171,6 +156,12 @@ defineEmits<{
     color: var(--color-text-tertiary);
 }
 
+.filter-leading-icon {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
 .filter-group select {
     width: 100%;
     height: 100%;
@@ -179,7 +170,7 @@ defineEmits<{
     border-radius: 0;
     background: transparent;
     background-image: none;
-    padding: 0 24px 0 0 !important;
+    padding: 0 24px 0 2px !important;
     color: var(--color-text-primary);
     font-size: 13px;
     font-weight: 700;
@@ -212,17 +203,9 @@ defineEmits<{
 }
 
 /* ── 响应式 ── */
-@media (max-width: 1100px) {
-    .device-toolbar {
-        grid-template-columns: 1fr 1fr;
-    }
-    .device-search {
-        grid-column: 1 / -1;
-    }
-}
-
 @media (max-width: 560px) {
     .device-toolbar {
+        width: 100%;
         grid-template-columns: 1fr;
     }
 }

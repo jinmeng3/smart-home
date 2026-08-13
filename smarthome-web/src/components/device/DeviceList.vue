@@ -40,6 +40,7 @@ defineEmits<{
     add: [];
     batch: [];
     sync: [];
+    "clear-filters": [];
 }>();
 
 const pageSizeOptions = [10, 20, 50];
@@ -72,7 +73,7 @@ const viewMode = ref<"list" | "grid">("list");
                     type="button"
                     @click="$emit('sync')"
                 >
-                    <SvgIcon name="refresh" />
+                    <SvgIcon :class="{ 'is-spinning': syncing }" name="refresh" />
                     {{ syncing ? "同步中" : "同步设备" }}
                 </button>
                 <select
@@ -108,117 +109,149 @@ const viewMode = ref<"list" | "grid">("list");
             </div>
         </header>
 
-        <div class="device-type-tabs">
-            <button
-                v-for="item in deviceTypeOptions"
-                :key="item.label"
-                :class="{ 'is-active': activeType === item.value }"
-                type="button"
-                @click="$emit('update:activeType', item.value)"
-            >
-                {{ item.label }}
-            </button>
-        </div>
+        <Transition name="view-switch" mode="out-in">
+            <div v-if="viewMode === 'list'" key="list" class="device-table-wrap" :class="{ 'is-loading': loading && devices.length }">
+                <div v-if="loading && devices.length" class="device-refresh-overlay">
+                    <div class="device-refresh-spinner" aria-hidden="true"></div>
+                    <span>正在刷新</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>设备名称</th>
+                            <th>房间</th>
+                            <th>类型</th>
+                            <th>品牌</th>
+                            <th>状态</th>
+                            <th>最后在线</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <TransitionGroup
+                        v-if="devices.length"
+                        tag="tbody"
+                        name="device-row"
+                    >
+                        <DeviceRow
+                            v-for="device in devices"
+                            :key="device.id"
+                            :device="device"
+                            :selected="selectedId === device.id"
+                            :batch-mode="batchMode"
+                            :batch-selected="selectedDeviceIds?.includes(device.id)"
+                            @edit="$emit('edit', $event)"
+                            @remove="$emit('remove', $event)"
+                            @select="$emit('select', $event)"
+                            @batch-select="$emit('batch-select', $event)"
+                        />
+                    </TransitionGroup>
+                    <tbody v-else class="skeleton-body">
+                        <tr v-for="i in 6" :key="i" class="skeleton-row">
+                            <td><div class="skeleton-box" style="width:16px;height:16px;border-radius:4px"></div></td>
+                            <td><div class="skeleton-box" style="width:60%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:50%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:40%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:45%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:35%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:50%;height:14px"></div></td>
+                            <td><div class="skeleton-box" style="width:30%;height:14px"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="!loading && !devices.length" class="device-empty">
+                    <SvgIcon name="device-management" />
+                    <span>暂无匹配设备</span>
+                    <small class="device-empty-desc">调整筛选条件或添加新设备</small>
+                    <div class="device-empty-actions">
+                        <button
+                            class="device-empty-action"
+                            type="button"
+                            @click="$emit('clear-filters')"
+                        >
+                            清除筛选
+                        </button>
+                        <button
+                            class="device-empty-action is-primary"
+                            type="button"
+                            @click="$emit('add')"
+                        >
+                            添加设备
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-        <div v-if="viewMode === 'list'" class="device-table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>设备名称</th>
-                        <th>房间</th>
-                        <th>类型</th>
-                        <th>品牌</th>
-                        <th>状态</th>
-                        <th>最后在线</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody v-if="!loading && devices.length">
-                    <DeviceRow
+            <div v-else key="grid" class="device-grid-wrap" :class="{ 'is-loading': loading && devices.length }">
+                <div v-if="loading && devices.length" class="device-refresh-overlay">
+                    <div class="device-refresh-spinner" aria-hidden="true"></div>
+                    <span>正在刷新</span>
+                </div>
+                <div v-if="!loading && !devices.length" class="device-empty">
+                    <SvgIcon name="device-management" />
+                    <span>暂无匹配设备</span>
+                    <small class="device-empty-desc">调整筛选条件或添加新设备</small>
+                    <div class="device-empty-actions">
+                        <button
+                            class="device-empty-action"
+                            type="button"
+                            @click="$emit('clear-filters')"
+                        >
+                            清除筛选
+                        </button>
+                        <button
+                            class="device-empty-action is-primary"
+                            type="button"
+                            @click="$emit('add')"
+                        >
+                            添加设备
+                        </button>
+                    </div>
+                </div>
+                <TransitionGroup
+                    v-else
+                    tag="div"
+                    name="device-card"
+                    class="device-grid"
+                    :class="{ 'is-loading': loading }"
+                >
+                    <article
                         v-for="device in devices"
                         :key="device.id"
-                        :device="device"
-                        :selected="selectedId === device.id"
-                        :batch-mode="batchMode"
-                        :batch-selected="selectedDeviceIds?.includes(device.id)"
-                        @edit="$emit('edit', $event)"
-                        @remove="$emit('remove', $event)"
-                        @select="$emit('select', $event)"
-                        @batch-select="$emit('batch-select', $event)"
-                    />
-                </tbody>
-            </table>
-            <div v-if="loading" class="device-empty">正在加载设备</div>
-            <div v-else-if="!devices.length" class="device-empty">
-                暂无设备数据
-            </div>
-        </div>
-
-        <div v-else class="device-grid-wrap">
-            <div v-if="loading" class="device-empty">正在加载设备</div>
-            <div v-else-if="!devices.length" class="device-empty">
-                暂无设备数据
-            </div>
-            <div v-else class="device-grid">
-                <article
-                    v-for="device in devices"
-                    :key="device.id"
-                    class="device-grid-card"
-                    :class="{ 'is-selected': selectedId === device.id }"
-                    @click="$emit('select', device)"
-                >
-                    <header>
-                        <span
-                            class="device-grid-icon"
-                            :style="{ '--device-color': device.color || '#6b7280' }"
-                            aria-hidden="true"
-                        >
-                            <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" />
-                        </span>
-                        <span
-                            class="device-status-badge"
-                            :class="getStatusClasses(device.status)"
-                        >
-                            <i :class="`status-dot is-${device.status}`"></i>
-                            {{ deviceStatusLabelMap[device.status] }}
-                        </span>
-                    </header>
-                    <div class="device-grid-main">
-                        <strong>{{ device.name }}</strong>
-                        <small>{{ getDeviceTypeLabel(device.type) }}</small>
-                    </div>
-                    <dl>
-                        <div>
-                            <dt>房间</dt>
-                            <dd>{{ device.room }}</dd>
+                        class="device-grid-card"
+                        :class="{ 'is-selected': selectedId === device.id }"
+                        @click="$emit('select', device)"
+                    >
+                        <header>
+                            <span
+                                class="device-grid-icon"
+                                :style="{ '--device-color': device.color || '#6b7280' }"
+                                aria-hidden="true"
+                            >
+                                <SvgIcon :name="getDeviceTypeIcon(device.icon || device.type)" />
+                            </span>
+                            <span class="device-status-badge" :class="getStatusClasses(device.status)">
+                                <i :class="`status-dot is-${device.status}`"></i>
+                                {{ deviceStatusLabelMap[device.status] }}
+                            </span>
+                        </header>
+                        <div class="device-grid-main">
+                            <strong>{{ device.name }}</strong>
+                            <small>{{ device.room }}</small>
                         </div>
-                        <div>
-                            <dt>品牌</dt>
-                            <dd>{{ device.brand }}</dd>
-                        </div>
-                        <div>
-                            <dt>最后在线</dt>
-                            <dd>{{ formatDeviceTimestamp(device.lastOnline, "从未在线") }}</dd>
-                        </div>
-                    </dl>
-                    <footer>
-                        <button
-                            type="button"
-                            @click.stop="$emit('edit', device)"
-                        >
-                            编辑
-                        </button>
-                        <button
-                            type="button"
-                            @click.stop="$emit('remove', device)"
-                        >
-                            删除
-                        </button>
-                    </footer>
-                </article>
+                        <dl>
+                            <div><dt>类型</dt><dd>{{ getDeviceTypeLabel(device.type) }}</dd></div>
+                            <div><dt>品牌</dt><dd>{{ device.brand }}</dd></div>
+                            <div><dt>最后在线</dt><dd>{{ formatDeviceTimestamp(device.lastOnline, '从未在线') }}</dd></div>
+                        </dl>
+                        <footer>
+                            <button type="button" @click.stop="$emit('edit', device)">编辑</button>
+                            <button type="button" @click.stop="$emit('remove', device)">删除</button>
+                        </footer>
+                    </article>
+                </TransitionGroup>
             </div>
-        </div>
+        </Transition>
 
         <footer class="device-pagination">
             <span>共 {{ total }} 条</span>
@@ -371,6 +404,7 @@ const viewMode = ref<"list" | "grid">("list");
 
 .device-list-tools select,
 .device-pagination select {
+    height: 34px;
     height: 38px;
     border: 1px solid var(--color-border-default);
     border-radius: 8px;
@@ -415,7 +449,7 @@ const viewMode = ref<"list" | "grid">("list");
 .device-page-actions button,
 .device-page-actions strong {
     min-width: 34px;
-    height: 34px;
+    height: 32px;
     border: 1px solid var(--color-border-default);
     border-radius: 8px;
     background: var(--color-panel-background);
@@ -453,6 +487,7 @@ const viewMode = ref<"list" | "grid">("list");
 }
 
 .device-table-wrap {
+    position: relative;
     min-height: 0;
     flex: 1 1 auto;
     overflow: auto;
@@ -460,6 +495,7 @@ const viewMode = ref<"list" | "grid">("list");
 }
 
 .device-grid-wrap {
+    position: relative;
     min-height: 0;
     flex: 1 1 auto;
     overflow: auto;
@@ -645,7 +681,7 @@ th:last-child {
     flex: 0 0 auto;
     justify-content: space-between;
     gap: 14px;
-    padding: 14px 18px;
+    padding: 8px 18px;
     border-top: 1px solid var(--color-border);
     background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
@@ -674,6 +710,109 @@ button:disabled {
     opacity: 0.45;
 }
 
+/* ── 骨架屏 ── */
+.skeleton-body {
+    pointer-events: none;
+}
+
+.skeleton-row td {
+    border-top: none;
+    padding: 8px 10px;
+}
+
+.skeleton-box {
+    background: var(--color-surface-subtle);
+    border-radius: 6px;
+    animation: skeleton-shimmer 1500ms ease-in-out infinite;
+    background: linear-gradient(
+        90deg,
+        var(--color-surface-subtle) 25%,
+        var(--color-surface-hover) 50%,
+        var(--color-surface-subtle) 75%
+    );
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* ── 列表/网格切换过渡 ── */
+.view-switch-enter-active,
+.view-switch-leave-active {
+    transition: opacity 140ms var(--motion-ease), transform 140ms var(--motion-ease);
+}
+.view-switch-enter-from {
+    opacity: 0;
+    transform: scale(0.985);
+}
+.view-switch-leave-to {
+    opacity: 0;
+    transform: scale(0.985);
+}
+
+/* ── 加载中保留旧数据降透明度 ── */
+.device-grid.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 180ms var(--motion-ease);
+}
+
+/* ── 空状态增加图标和操作入口 ── */
+.device-empty {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+    min-height: 200px;
+    color: var(--color-text-tertiary);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.device-empty svg {
+    width: 40px;
+    height: 40px;
+    color: var(--color-text-muted);
+}
+
+.device-empty-action {
+    margin-top: 4px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
+    transition: background-color 160ms var(--motion-ease);
+}
+
+.device-empty-action:hover {
+    background: var(--color-primary-100);
+}
+
+.device-empty-action.is-primary {
+    color: #fff;
+    background: var(--color-primary-600);
+}
+
+.device-empty-action.is-primary:hover {
+    background: var(--color-primary-700);
+}
+
+.device-empty-desc {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.device-empty-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
 @keyframes device-list-enter {
     from {
         opacity: 0;
@@ -695,6 +834,164 @@ button:disabled {
     button:not(:disabled):hover,
     button:not(:disabled):active {
         transform: none;
+    }
+}
+
+/* ── 刷新遮罩 ───────────────────────────────────────────────────── */
+
+.device-refresh-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: color-mix(in srgb, var(--color-card-bg) 72%, transparent);
+    backdrop-filter: blur(2px);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    animation: device-refresh-fade-in 160ms ease;
+}
+
+/* 顶部细进度条 */
+.device-refresh-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-primary-500) 25%, transparent);
+}
+
+.device-refresh-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    width: 40%;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--color-primary-500);
+    animation: device-loading-slide 900ms var(--motion-ease) infinite;
+}
+
+@keyframes device-loading-slide {
+    to { left: 100%; }
+}
+
+.device-refresh-spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary-500);
+    border-radius: 50%;
+    animation: device-refresh-spin 600ms linear infinite;
+}
+
+@keyframes device-refresh-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes device-refresh-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .device-refresh-overlay {
+        animation: none;
+    }
+    .device-refresh-spinner {
+        animation-duration: 1.5s;
+    }
+}
+
+/* ── 同步按钮旋转 ─────────────────────────────────────────────────── */
+
+.device-list-sync svg.is-spinning {
+    animation: device-sync-spin 800ms linear infinite;
+}
+
+@keyframes device-sync-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── 行/卡片增删过渡 ──────────────────────────────────────────────── */
+
+.device-row-enter-active,
+.device-row-leave-active {
+    transition:
+        opacity 200ms ease,
+        transform 200ms var(--motion-ease);
+}
+
+.device-row-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+.device-row-enter-to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.device-row-leave-to {
+    opacity: 0;
+}
+
+.device-row-leave-active {
+    position: relative;
+}
+
+.device-row-move {
+    transition: transform 220ms var(--motion-ease);
+}
+
+.device-card-enter-active,
+.device-card-leave-active {
+    transition:
+        opacity 200ms ease,
+        transform 200ms var(--motion-ease);
+}
+
+.device-card-enter-from {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+.device-card-enter-to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.device-card-leave-to {
+    opacity: 0;
+}
+
+.device-card-leave-active {
+    position: absolute;
+}
+
+.device-card-move {
+    transition: transform 220ms var(--motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .device-row-enter-active,
+    .device-row-leave-active,
+    .device-row-move,
+    .device-card-enter-active,
+    .device-card-leave-active,
+    .device-card-move {
+        transition-duration: 1ms !important;
+    }
+    .device-list-sync svg.is-spinning {
+        animation-duration: 1.5s;
     }
 }
 </style>

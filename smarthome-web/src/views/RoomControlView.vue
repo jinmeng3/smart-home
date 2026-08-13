@@ -214,7 +214,7 @@ const toggleDevice = useAsyncAction(
         );
         replaceRoom(updated);
     },
-).run;
+).execute;
 
 const handleRoomUpdated = async (room: Room) => {
   loading.value = true;
@@ -271,7 +271,7 @@ const handleRoomDeleteClick = (room: Room) => {
   deleteDialogOpen.value = true;
 };
 
-const { loading: roomDeleting, run: confirmDeleteRoom } = useAsyncAction(
+const { pending: roomDeleting, execute: confirmDeleteRoom } = useAsyncAction(
     async () => {
         if (!deletingRoom.value) return;
 

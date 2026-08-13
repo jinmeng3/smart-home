@@ -15,6 +15,36 @@ export type DeviceStatus = "online" | "offline" | "warning" | "running";
 
 export type DevicePlatform = "Home Assistant" | "Matter" | "Zigbee" | "MQTT";
 
+/** 侧栏快捷操作按键——设备详情/概览与页面分发共用 */
+export type DeviceRailActionKey =
+    | "scan"
+    | "delete"
+    | "firmware"
+    | "logs"
+    | "edit"
+    | "sync";
+
+/** 快捷操作按键（侧栏与列表操作菜单共用） */
+export type DeviceQuickActionKey = "scan" | "delete" | "firmware" | "logs";
+
+/** 平台连接状态联合类型——避免字符串推导带来的矛盾状态 */
+export type PlatformConnectionStatus =
+    | "connected"
+    | "syncing"
+    | "authorization_required"
+    | "error"
+    | "disabled";
+
+/** 侧栏接入平台列表项 */
+export interface DevicePlatformInfo {
+    name: DevicePlatform;
+    connected: boolean;
+    status: PlatformConnectionStatus;
+    deviceCount: number;
+    lastSyncedAt?: string | null;
+    errorMessage?: string;
+}
+
 export interface Device {
   id: number;
   deviceId?: string;

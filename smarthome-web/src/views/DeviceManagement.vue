@@ -1,53 +1,72 @@
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
+import BaseCollapsibleRail from "../components/common/BaseCollapsibleRail.vue";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
+import RailIndicator from "../components/common/RailIndicator.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
-import DeviceDetail from "../components/device/DeviceDetail.vue";
 import DeviceList from "../components/device/DeviceList.vue";
-import DeviceQuickActions from "../components/device/DeviceQuickActions.vue";
+import DeviceRailDetail from "../components/device/DeviceRailDetail.vue";
+import DeviceRailOverview from "../components/device/DeviceRailOverview.vue";
 import DeviceStatsCard from "../components/device/DeviceStatsCard.vue";
 import DeviceToolbar from "../components/device/DeviceToolbar.vue";
-import PlatformStatus from "../components/device/PlatformStatus.vue";
+import PlatformAccessList from "../components/device/PlatformAccessList.vue";
+import {
+    deviceStatusLabelMap,
+    getDeviceTypeIcon,
+} from "../components/device/deviceMeta";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
+import type { DeviceQuickActionKey } from "../composables/useDeviceManagementController";
 import { defineAsyncDialog } from "../utils/asyncDialog";
 
 const DeviceEditorDialog = defineAsyncDialog(
     () => import("../components/device/DeviceEditorDialog.vue"),
 );
+const SyncDialog = defineAsyncDialog(
+    () => import("../components/device/SyncDialog.vue"),
+);
 
 const controller = useDeviceManagementController();
 const route = useRoute();
-const router = useRouter();
+
+/* ── 页面显式解构 refs，模板不再出现 controller.x.value ── */
+const {
+    batchDeleteDialogOpen,
+    batchDeleting,
+    batchDeletingIds,
+    batchDeletingDevices,
+    batchMode,
+    connectedCount,
+    deleteDialogOpen,
+    deleting,
+    deletingDevice,
+    deviceLogs,
+    editingDevice,
+    editorOpen,
+    filters,
+    loading,
+    logActionLabel,
+    logDeviceName,
+    logDialogOpen,
+    platforms,
+    rooms,
+    saving,
+    selectedDevice,
+    selectedDeviceIds,
+    selectedId,
+    sort,
+    sortedDevices,
+    stats,
+    syncing,
+    total,
+} = controller;
 
 const loadDevices = useAuthenticatedLoader(controller.loadDevices, {
     immediate: false,
 });
-
-// 分页变更立即请求（离散操作，需要即时反馈）
-watch(
-    () => [controller.filters.page, controller.filters.pageSize],
-    () => {
-        void loadDevices();
-    },
-);
-
-// 筛选条件（搜索词/类型/状态/房间）防抖加载：输入停止 250ms 后才请求，
-// 并通过 AbortSignal 取消旧请求，避免快速连续筛选时旧数据覆盖新数据。
-watch(
-    () => [
-        controller.filters.keyword,
-        controller.filters.type,
-        controller.filters.status,
-        controller.filters.room,
-    ],
-    () => {
-        controller.loadDevicesDebounced();
-    },
-);
 
 onMounted(() => {
     // Read view parameter from URL
@@ -57,10 +76,56 @@ onMounted(() => {
     }
     void loadDevices();
 });
+
+/** 清空全部筛选条件（搜索词/类型/状态/房间），防抖 watch 会自动重新加载 */
+const clearDeviceFilters = () => {
+    for (const key of ["keyword", "type", "status", "room"] as const) {
+        if (filters[key] !== "") {
+            controller.updateFilter(key, "");
+        }
+    }
+};
+
+/* ── 侧栏折叠状态（由 BaseCollapsibleRail 维护，v-model 同步） ── */
+const railCollapsed = ref(false);
+const syncDialogOpen = ref(false);
+
+/* ── 同步弹窗处理 ──────────────────────────────────────────────── */
+const handleSync = () => {
+    syncDialogOpen.value = true;
+};
+
+const handlePlatformSync = async (_platformName: string) => {
+    return await controller.runSync();
+};
+
+/* ── 侧栏快捷操作分发 ──────────────────────────────────────────── */
+const handleRailAction = (key: string) => {
+    if (key === "sync") {
+        handleSync();
+        return;
+    }
+
+    if (key === "edit") {
+        if (selectedDevice.value) {
+            controller.editDevice(selectedDevice.value);
+        }
+        return;
+    }
+
+    controller.runQuickAction(key as DeviceQuickActionKey);
+};
+
+const handleRailSync = () => {
+    handleSync();
+};
 </script>
 
 <template>
-    <div class="app-page-layout">
+    <div
+        class="app-page-layout"
+        :class="{ 'rail-collapsed-layout': railCollapsed }"
+    >
         <section class="device-management-page page-shell page-enter">
             <header class="device-page-header">
                 <div class="device-page-title">
@@ -78,15 +143,13 @@ onMounted(() => {
                 </div>
 
                 <DeviceToolbar
-                    :keyword="controller.filters.keyword"
-                    :room="controller.filters.room"
-                    :rooms="controller.rooms.value"
-                    :status="controller.filters.status"
-                    :type="controller.filters.type"
+                    :keyword="filters.keyword"
+                    :room="filters.room"
+                    :rooms="rooms"
+                    :status="filters.status"
                     @update:keyword="(value) => controller.updateFilter('keyword', value)"
                     @update:room="(value) => controller.updateFilter('room', value)"
                     @update:status="(value) => controller.updateFilter('status', value)"
-                    @update:type="(value) => controller.updateFilter('type', value)"
                 />
             </header>
 
@@ -94,132 +157,208 @@ onMounted(() => {
                 <DeviceStatsCard
                     icon="online-device"
                     label="在线设备"
-                    :value="controller.stats.value.online"
+                    :value="stats.online"
                     tone="success"
                     :delay="0"
-                    style="animation-delay: 0ms"
                 />
                 <DeviceStatsCard
                     icon="offline-device"
                     label="离线设备"
-                    :value="controller.stats.value.offline"
+                    :value="stats.offline"
                     tone="muted"
-                    :delay="60"
-                    style="animation-delay: 60ms"
+                    :delay="40"
                 />
                 <DeviceStatsCard
                     icon="warning"
                     label="告警设备"
-                    :value="controller.stats.value.warning"
+                    :value="stats.warning"
                     tone="warning"
-                    :delay="120"
-                    style="animation-delay: 120ms"
+                    :delay="80"
                 />
                 <DeviceStatsCard
                     icon="new-device"
                     label="本月新增"
-                    :value="controller.stats.value.monthlyNew"
+                    :value="stats.monthlyNew"
                     tone="primary"
-                    :delay="180"
-                    style="animation-delay: 180ms"
+                    :delay="120"
                 />
             </div>
 
             <DeviceList
-                :active-type="controller.filters.type"
-                :batch-mode="controller.batchMode.value"
-                :selected-device-ids="controller.selectedDeviceIds.value"
-                :devices="controller.sortedDevices.value"
-                :loading="controller.loading.value"
-                :page="controller.filters.page"
-                :page-size="controller.filters.pageSize"
-                :selected-id="controller.selectedId.value"
-                :sort="controller.sort.value"
-                :syncing="controller.syncing.value"
-                :total="controller.total.value"
+                :active-type="filters.type"
+                :batch-mode="batchMode"
+                :selected-device-ids="selectedDeviceIds"
+                :devices="sortedDevices"
+                :loading="loading"
+                :page="filters.page"
+                :page-size="filters.pageSize"
+                :selected-id="selectedId"
+                :sort="sort"
+                :syncing="syncing"
+                :total="total"
                 @add="controller.addDevice"
                 @batch="
-                    controller.batchMode.value &&
-                    controller.selectedDeviceIds.value.length
-                        ? controller.batchDeleteDevices(controller.selectedDeviceIds.value)
+                    batchMode &&
+                    selectedDeviceIds.length
+                        ? controller.batchDeleteDevices(selectedDeviceIds)
                         : controller.toggleBatchMode()
                 "
                 @batch-select="controller.toggleSelectDevice"
                 @edit="controller.editDevice"
                 @remove="controller.removeDevice"
                 @select="controller.selectDevice"
-                @sync="controller.runSync"
+                @sync="handleSync"
                 @update:active-type="(value) => controller.updateFilter('type', value)"
                 @update:page="controller.updatePage"
                 @update:page-size="controller.updatePageSize"
-                @update:sort="controller.sort.value = $event"
+                @update:sort="sort = $event"
+                @clear-filters="clearDeviceFilters"
             />
         </section>
 
-        <aside class="device-right-panel">
-            <DeviceDetail :device="controller.selectedDevice.value" />
-            <DeviceQuickActions @action="controller.runQuickAction" />
-            <PlatformStatus :platforms="controller.platforms.value" />
-        </aside>
+        <BaseCollapsibleRail
+            v-model:collapsed="railCollapsed"
+            :title="selectedDevice ? '设备详情' : '设备概览'"
+            :subtitle="
+                selectedDevice
+                    ? `${selectedDevice.name} · ${selectedDevice.room}`
+                    : '家庭设备与平台连接状态'
+            "
+            storage-key="orion.device-context-rail-collapsed"
+        >
+            <template #collapsed>
+                <RailIndicator
+                    v-if="selectedDevice"
+                    :icon="getDeviceTypeIcon(selectedDevice.icon || selectedDevice.type)"
+                    :dot="selectedDevice.status"
+                    :tooltip="`${selectedDevice.name} · ${deviceStatusLabelMap[selectedDevice.status]}`"
+                />
+                <RailIndicator
+                    v-else
+                    icon="online-device"
+                    tone="success"
+                    :tooltip="`${stats.online} 台设备在线`"
+                />
+                <RailIndicator
+                    icon="platform"
+                    :tone="connectedCount > 0 ? 'success' : 'muted'"
+                    :tooltip="`${connectedCount}/${platforms.length} 个平台已连接`"
+                />
+                <RailIndicator
+                    v-if="stats.warning > 0"
+                    icon="warning"
+                    tone="danger"
+                    :badge="stats.warning"
+                    :tooltip="`${stats.warning} 条告警`"
+                />
+            </template>
+
+            <template #default>
+                <Transition name="rail-mode" mode="out-in">
+                    <DeviceRailDetail
+                        v-if="selectedDevice"
+                        :key="`detail-${selectedDevice.id}`"
+                        :device="selectedDevice"
+                        :syncing="syncing"
+                        @action="handleRailAction"
+                        @sync="handleRailSync"
+                    />
+                    <DeviceRailOverview
+                        v-else
+                        key="overview"
+                        :stats="stats"
+                        :total="total"
+                        @action="handleRailAction"
+                        @sync="handleRailSync"
+                    />
+                </Transition>
+
+                <PlatformAccessList
+                    :platforms="platforms"
+                    :syncing="syncing"
+                    @sync="handleRailSync"
+                />
+            </template>
+        </BaseCollapsibleRail>
+
+        <SyncDialog
+            v-if="syncDialogOpen"
+            v-model="syncDialogOpen"
+            :platforms="platforms"
+            :syncing="syncing"
+            :sync-handler="handlePlatformSync"
+        />
 
         <DeviceEditorDialog
-            v-if="controller.editorOpen.value"
-            v-model="controller.editorOpen.value"
-            :device="controller.editingDevice.value"
-            :loading="controller.saving.value"
+            v-if="editorOpen"
+            v-model="editorOpen"
+            :device="editingDevice"
+            :loading="saving"
             @submit="controller.saveDevice"
         />
 
         <ConfirmActionDialog
-            v-if="controller.deleteDialogOpen.value"
-            :loading="controller.deleting.value"
-            :model-value="controller.deleteDialogOpen.value"
+            v-if="deleteDialogOpen"
+            :loading="deleting"
+            :model-value="deleteDialogOpen"
             title="删除设备"
             description="此操作会从设备管理中移除该设备。"
             warning="删除后将无法在设备列表、智能对话设备清单和快捷操作中继续管理该设备。"
             footer-hint="确认后会立即调用后端删除接口。"
             @cancel="controller.cancelRemoveDevice"
             @confirm="controller.confirmRemoveDevice"
-            @update:model-value="controller.deleteDialogOpen.value = $event"
+            @update:model-value="deleteDialogOpen = $event"
         >
-            <section
-                v-if="controller.deletingDevice.value"
-                class="delete-dialog-body"
-            >
+            <section v-if="deletingDevice" class="delete-dialog-body">
                 <ConfirmEntitySummary
-                    :description="`${controller.deletingDevice.value.room} · ${controller.deletingDevice.value.brand}`"
+                    :description="`${deletingDevice.room} · ${deletingDevice.brand}`"
                     icon="device-management"
-                    :title="controller.deletingDevice.value.name"
+                    :title="deletingDevice.name"
                 />
             </section>
         </ConfirmActionDialog>
 
         <ConfirmActionDialog
-            v-if="controller.batchDeleteDialogOpen.value"
-            :loading="controller.batchDeleting.value"
-            :model-value="controller.batchDeleteDialogOpen.value"
+            v-if="batchDeleteDialogOpen"
+            :loading="batchDeleting"
+            :model-value="batchDeleteDialogOpen"
             title="批量删除设备"
-            description="此操作会从设备管理中移除所选设备，不可撤销。"
-            warning="所选设备的信息、关联日志及绑定关系会被一并删除。"
-            footer-hint="确认后会立即调用后端删除接口。"
+            description="请核对设备清单，确认后将立即移除。"
+            warning="设备信息、关联日志和绑定关系将被永久删除，且无法撤销。"
+            footer-hint="删除操作不可撤销"
             @cancel="controller.cancelBatchDelete"
             @confirm="controller.confirmBatchDelete"
-            @update:model-value="controller.batchDeleteDialogOpen.value = $event"
+            @update:model-value="batchDeleteDialogOpen = $event"
         >
             <section class="batch-delete-body">
-                <div class="batch-delete-summary">
-                    <div class="batch-delete-count">
-                        <span class="batch-delete-number">{{ controller.batchDeletingIds.value.length }}</span>
-                        <span class="batch-delete-unit">台设备</span>
+                <div
+                    v-if="batchDeleting"
+                    class="batch-delete-progress"
+                >
+                    <div class="batch-delete-progress-bar">
+                        <div class="batch-delete-progress-fill"></div>
                     </div>
-                    <p class="batch-delete-hint">
-                        将删除以下设备，包括设备信息、关联日志及绑定关系。
-                    </p>
+                    <span class="batch-delete-progress-label">正在删除…</span>
                 </div>
 
-                <div class="batch-delete-list">
+                <div v-if="!batchDeleting" class="batch-delete-summary">
+                    <div class="batch-delete-summary-icon" aria-hidden="true">
+                        <SvgIcon name="delete" />
+                    </div>
+                    <div class="batch-delete-summary-copy">
+                        <div class="batch-delete-count">
+                            <span class="batch-delete-number">{{ batchDeletingIds.length }}</span>
+                            <span class="batch-delete-unit">台设备待删除</span>
+                        </div>
+                        <p class="batch-delete-hint">
+                            请确认以下设备是否正确
+                        </p>
+                    </div>
+                </div>
+
+                <div v-if="!batchDeleting" class="batch-delete-list">
                     <div
-                        v-for="device in controller.batchDeletingDevices.value.slice(0, 6)"
+                        v-for="device in batchDeletingDevices.slice(0, 6)"
                         :key="device.id"
                         class="batch-delete-item"
                     >
@@ -230,19 +369,18 @@ onMounted(() => {
                         <span class="batch-delete-item-room">{{ device.room }}</span>
                     </div>
                     <div
-                        v-if="controller.batchDeletingIds.value.length > 6"
+                        v-if="batchDeletingIds.length > 6"
                         class="batch-delete-more"
                     >
-                        还有 {{ controller.batchDeletingIds.value.length - 6 }} 台设备
+                        还有 {{ batchDeletingIds.length - 6 }} 台设备
                     </div>
                 </div>
             </section>
-
         </ConfirmActionDialog>
 
         <BaseSmartModal
-            v-if="controller.logDialogOpen.value"
-            :model-value="controller.logDialogOpen.value"
+            v-if="logDialogOpen"
+            :model-value="logDialogOpen"
             width="640px"
             @update:model-value="!$event && controller.closeLogDialog()"
         >
@@ -254,8 +392,8 @@ onMounted(() => {
                     <div>
                         <h2>设备日志</h2>
                         <p class="log-dialog-subtitle">
-                            {{ controller.logDeviceName.value }}
-                            <span class="log-count-badge">{{ controller.deviceLogs.value.length }}</span>
+                            {{ logDeviceName }}
+                            <span class="log-count-badge">{{ deviceLogs.length }}</span>
                             条操作记录
                         </p>
                     </div>
@@ -271,17 +409,14 @@ onMounted(() => {
             </template>
 
             <section class="log-dialog-body">
-                <div
-                    v-if="!controller.deviceLogs.value.length"
-                    class="log-empty"
-                >
+                <div v-if="!deviceLogs.length" class="log-empty">
                     <SvgIcon name="log" size="lg" />
                     <span>该设备暂无操作日志</span>
                 </div>
 
                 <div class="log-timeline">
                     <div
-                        v-for="(log, index) in controller.deviceLogs.value"
+                        v-for="(log, index) in deviceLogs"
                         :key="log.id"
                         class="log-item"
                         :style="{ '--i': index }"
@@ -289,14 +424,14 @@ onMounted(() => {
                         <div class="log-timeline-node">
                             <span class="log-dot" :class="`is-${log.action}`"></span>
                             <div
-                                v-if="index < controller.deviceLogs.value.length - 1"
+                                v-if="index < deviceLogs.length - 1"
                                 class="log-line"
                                 :class="`is-${log.action}`"
                             ></div>
                         </div>
                         <div class="log-card" :class="`is-${log.action}`">
                             <div class="log-card-top">
-                                <span class="log-action-label">{{ controller.logActionLabel(log.action) }}</span>
+                                <span class="log-action-label">{{ logActionLabel(log.action) }}</span>
                                 <time class="log-time">{{ log.createdAt }}</time>
                             </div>
                             <p class="log-message">{{ log.message }}</p>
@@ -323,7 +458,7 @@ onMounted(() => {
 .device-page-header {
     display: grid;
     min-width: 0;
-    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(325px, 380px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
 }
@@ -334,6 +469,8 @@ onMounted(() => {
     min-width: 0;
     align-items: center;
     gap: 12px;
+    border-right: 1px solid var(--color-border-subtle);
+    padding-right: 24px;
 }
 
 .device-page-title .page-header-icon {
@@ -343,16 +480,6 @@ onMounted(() => {
     flex: 0 0 44px;
     place-items: center;
     border-radius: 12px;
-}
-
-.device-page-title::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 6px;
-    bottom: 6px;
-    width: 1px;
-    background: var(--color-border-subtle);
 }
 
 .device-page-title h1 {
@@ -365,9 +492,12 @@ onMounted(() => {
 
 .device-page-title p {
     margin: 8px 0 0;
+    overflow: hidden;
     color: var(--color-text-tertiary);
     font-size: 14px;
     font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .batch-mode-bar {
@@ -485,34 +615,56 @@ onMounted(() => {
     gap: 10px;
 }
 
-.device-right-panel {
-    display: flex;
-    min-width: 0;
-    min-height: 0;
-    flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-    border-left: 1px solid var(--color-border);
-    background: var(--color-sidebar-bg);
-    padding: 0 4px 0 14px;
-}
-
-.device-right-panel > * {
-    animation: panel-enter 300ms var(--motion-ease) both;
-}
-
-.device-right-panel > *:nth-child(1) { animation-delay: 80ms; }
-.device-right-panel > *:nth-child(2) { animation-delay: 160ms; }
-.device-right-panel > *:nth-child(3) { animation-delay: 240ms; }
-
-@keyframes panel-enter {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
+/* ── 双栏布局（与 components.css 的 .app-page-layout 保持一致） ── */
+/* 仅桌面端（≥1024px）为双栏；移动端保持单栏。 */
+/* 使用 auto 列 + rail 自身 width 过渡实现平滑动画。 */
+@media (min-width: 1024px) {
+    .app-page-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .app-page-layout.rail-collapsed-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .app-page-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .app-page-layout.rail-collapsed-layout {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-page-layout {
+        transition: none;
+    }
+}
+
+/* ── 侧栏概览 ↔ 详情模式切换（out-in 交叉淡入） ── */
+.rail-mode-enter-active,
+.rail-mode-leave-active {
+    transition:
+        opacity 160ms ease,
+        transform 180ms var(--motion-ease);
+}
+
+.rail-mode-enter-from {
+    opacity: 0;
+    transform: translateY(4px);
+}
+
+.rail-mode-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rail-mode-enter-active,
+    .rail-mode-leave-active {
+        transition-duration: 1ms;
     }
 }
 
@@ -697,19 +849,27 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
-    .device-page-title::after {
-        display: none;
+    .device-page-title {
+        border-right: none;
+        padding-right: 0;
     }
 
     .device-stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
 }
 
-@media (max-width: 720px) {
+@media (max-width: 480px) {
     .device-management-page {
         padding: 12px;
     }
+    .device-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 360px) {
     .device-stats-grid {
         grid-template-columns: 1fr;
     }
@@ -717,7 +877,14 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
     .device-management-page {
-        animation-duration: 1ms;
+        animation: none;
+    }
+    .device-stats-card,
+    .device-list-panel,
+    .log-item,
+    .batch-action-bar {
+        animation: none !important;
+        transition-duration: 1ms !important;
     }
 }
 
@@ -782,14 +949,37 @@ button:disabled {
 
 .batch-delete-body {
     display: grid;
-    gap: 16px;
+    gap: 12px;
     padding: 0;
 }
 
 .batch-delete-summary {
     display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
     gap: 12px;
-    padding: 20px 22px 0;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 12px;
+    margin: 0;
+    padding: 12px 14px;
+    background: color-mix(in srgb, var(--color-danger-soft) 68%, var(--color-card-bg));
+}
+
+.batch-delete-summary-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--color-card-bg);
+    color: var(--color-danger);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+.batch-delete-summary-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
 }
 
 .batch-delete-count {
@@ -799,14 +989,14 @@ button:disabled {
 }
 
 .batch-delete-number {
-    font-size: 36px;
+    font-size: 26px;
     font-weight: 900;
     color: var(--color-danger);
     line-height: 1;
 }
 
 .batch-delete-unit {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 900;
     color: var(--color-text-secondary);
 }
@@ -816,17 +1006,21 @@ button:disabled {
     color: var(--color-text-tertiary);
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.6;
+    line-height: 1.45;
 }
 
 .batch-delete-list {
     display: grid;
     gap: 2px;
-    margin: 0 22px;
+    max-height: 248px;
+    margin: 0;
     border: 1px solid var(--color-border);
     border-radius: 12px;
     background: var(--color-card-bg);
     overflow: hidden;
+    overflow-y: auto;
+    scrollbar-color: var(--color-border-strong) transparent;
+    scrollbar-width: thin;
 }
 
 .batch-delete-item {
@@ -834,7 +1028,8 @@ button:disabled {
     grid-template-columns: 28px 1fr auto;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
+    min-height: 52px;
+    padding: 8px 12px;
     transition: background-color 160ms;
 }
 
@@ -852,8 +1047,8 @@ button:disabled {
     height: 28px;
     place-items: center;
     border-radius: 7px;
-    background: var(--color-surface-subtle);
-    color: var(--color-primary-700);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
 }
 
 .batch-delete-item-name {
@@ -878,6 +1073,57 @@ button:disabled {
     font-size: 13px;
     font-weight: 700;
     text-align: center;
+}
+
+/* ── 批量删除进度条 ───────────────────────────────────────────── */
+.batch-delete-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-height: 150px;
+    justify-content: center;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 12px;
+    padding: 20px;
+    background: var(--color-danger-soft);
+}
+
+.batch-delete-progress-bar {
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-surface-subtle);
+}
+
+.batch-delete-progress-fill {
+    width: 30%;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-danger);
+    animation: batch-delete-progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes batch-delete-progress-indeterminate {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(400%);
+    }
+}
+
+.batch-delete-progress-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .batch-delete-progress-fill {
+        animation-duration: 2s;
+    }
 }
 
 .batch-delete-footer {
@@ -1058,8 +1304,7 @@ button:disabled {
     display: grid;
     grid-template-columns: 20px 1fr;
     gap: 14px;
-    animation: log-item-enter 300ms ease both;
-    animation-delay: calc(var(--i, 0) * 40ms);
+    animation: log-item-enter 240ms ease both;
 }
 
 @keyframes log-item-enter {

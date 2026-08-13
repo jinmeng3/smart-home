@@ -51,7 +51,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   let streamFrameId = 0;
   let pendingContent = "";
   let streamDrainResolver: (() => void) | null = null;
-  let stepIdCounter = 0;
+    let stepIdCounter = 0;
+    let activeToolCallId = "";
 
   const clearReplyTimers = () => {
     replyTimerIds.forEach((id) => window.clearTimeout(id));
@@ -95,12 +96,6 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       status: "completed" as const,
     }));
     agentStatus.value = "success";
-    replyTimerIds.push(
-      window.setTimeout(() => {
-        agentStatus.value = "idle";
-        resetExecutionSteps();
-      }, 700),
-    );
   };
 
   const fetchHousehold = async () => {
@@ -317,18 +312,19 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           eventReceived.value = true;
           const ev = event as ToolStartedEvent;
           stepIdCounter++;
-          const stepId = `tool-${stepIdCounter}`;
+          const stepId = ev.call_id || `tool-${stepIdCounter}`;
+          activeToolCallId = stepId;
           updateStep(stepId, ev.summary || `正在调用 ${ev.tool}`, "executing");
           break;
         }
         case "tool_completed": {
           const ev = event as ToolCompletedEvent;
-          updateStep(`tool-${stepIdCounter}`, `已完成 ${ev.tool}`, "completed");
+          updateStep(ev.call_id || activeToolCallId, `已完成 ${ev.tool}`, "completed");
           break;
         }
         case "tool_failed": {
           const ev = event as ToolFailedEvent;
-          updateStep(`tool-${stepIdCounter}`, `${ev.tool} 执行失败`, "failed", ev.error);
+          updateStep(ev.call_id || activeToolCallId, `${ev.tool} 执行失败`, "failed", ev.error);
           break;
         }
         case "run_completed": {
@@ -350,6 +346,12 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
             };
           }
           agentStatus.value = "error";
+          updateStep(
+            `error-${executionSteps.value.length + 1}`,
+            "智能体执行失败",
+            "failed",
+            ev.message || "智能体执行出错",
+          );
           break;
         }
       }
@@ -399,8 +401,14 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           content: error instanceof Error ? error.message : "请求大模型失败",
         };
       }
-      agentStatus.value = "idle";
-      resetExecutionSteps();
+      const message = error instanceof Error ? error.message : "请求大模型失败";
+      agentStatus.value = "error";
+      updateStep(
+        `error-${executionSteps.value.length + 1}`,
+        "请求执行失败",
+        "failed",
+        message,
+      );
     } finally {
       if (chatController === controller) {
         chatController = null;

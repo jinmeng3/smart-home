@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseSmartModal from "./BaseSmartModal.vue";
+import BaseButton from "./BaseButton.vue";
 import SvgIcon from "./SvgIcon.vue";
 
 withDefaults(
@@ -61,23 +62,20 @@ const close = () => {
             <footer class="confirm-action-footer">
                 <span>{{ footerHint }}</span>
                 <div>
-                    <button
-                        class="confirm-action-cancel"
+                    <BaseButton
                         :disabled="loading"
-                        type="button"
                         @click="close"
                     >
                         {{ cancelText }}
-                    </button>
-                    <button
-                        class="confirm-action-confirm"
-                        :disabled="loading"
-                        type="button"
+                    </BaseButton>
+                    <BaseButton
+                        variant="danger"
+                        :loading="loading"
                         @click="emit('confirm')"
                     >
-                        <SvgIcon :name="loading ? 'refresh' : 'warning'" size="sm" />
+                        <SvgIcon v-if="!loading" name="warning" size="sm" />
                         {{ loading ? "处理中" : confirmText }}
-                    </button>
+                    </BaseButton>
                 </div>
             </footer>
         </template>
@@ -115,33 +113,4 @@ const close = () => {
     gap: 10px;
 }
 
-.confirm-action-cancel,
-.confirm-action-confirm {
-    display: inline-flex;
-    min-height: 38px;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 0 18px;
-    border-radius: 10px;
-    font-weight: 700;
-}
-
-.confirm-action-cancel {
-    border: 1px solid var(--color-border);
-    background: var(--color-card-bg);
-    color: var(--color-text-secondary);
-}
-
-.confirm-action-confirm {
-    border: 1px solid var(--color-danger, #ef4444);
-    background: var(--color-danger, #ef4444);
-    color: #fff;
-}
-
-.confirm-action-cancel:disabled,
-.confirm-action-confirm:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-}
 </style>

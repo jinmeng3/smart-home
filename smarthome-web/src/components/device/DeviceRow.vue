@@ -80,20 +80,53 @@ defineEmits<{
 
 <style scoped>
 .device-row {
-    animation: device-row-enter 220ms var(--motion-ease) both;
     cursor: pointer;
     transition:
-        opacity 180ms var(--motion-ease),
-        transform 180ms var(--motion-ease),
-        box-shadow 180ms var(--motion-ease),
-        background-color 180ms var(--motion-ease);
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease);
 }
 
-.device-row:hover,
-.device-row.is-selected {
+.device-row:hover {
     background: var(--color-surface-hover);
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
+}
+
+.device-row.is-selected {
+    background: var(--color-primary-50);
+    box-shadow: inset 3px 0 0 var(--color-primary-600);
+}
+
+/* 设备行固定列宽 */
+.device-row td:first-child {
+    width: 16px;
+    padding-right: 4px;
+}
+
+.device-row td:nth-child(2) {
+    min-width: 180px;
+}
+
+.device-row td:nth-child(3) {
+    width: 100px;
+}
+
+.device-row td:nth-child(4) {
+    width: 90px;
+}
+
+.device-row td:nth-child(5) {
+    width: 120px;
+}
+
+.device-row td:nth-child(6) {
+    width: 100px;
+}
+
+.device-row td:nth-child(7) {
+    width: 130px;
+}
+
+.device-row td:nth-child(8) {
+    width: 120px;
 }
 
 .device-row td {
@@ -171,28 +204,13 @@ defineEmits<{
     transform: translateY(-1px);
 }
 
-@keyframes device-row-enter {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
-    .device-row,
     .device-row-actions button {
-        animation-duration: 1ms;
-        animation-iteration-count: 1;
         transition-duration: 1ms;
     }
 
     .device-row:hover,
-    .device-row.is-selected,
-    .device-row-actions button:hover {
+    .device-row.is-selected {
         transform: none;
     }
 }
