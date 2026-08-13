@@ -28,6 +28,7 @@ import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useCollapsePhase } from "../composables/useCollapsePhase";
 import { getErrorMessage } from "../utils/error";
+import { settingsSections, settingsGroups, sectionIds } from "../constants/settingsSections";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId } from "../types/settings";
 
@@ -56,16 +57,10 @@ const {
 
 skipSettingsRailAnimation();
 
-/* ── 移动端分区标签 ──────────────────────────────────────────── */
-const mobileSections = [
-    { id: "account" as const, label: "账户与家庭" },
-    { id: "appearance" as const, label: "界面" },
-    { id: "ai" as const, label: "智能助手" },
-    { id: "homeAssistant" as const, label: "Home" },
-    { id: "notifications" as const, label: "通知" },
-    { id: "security" as const, label: "安全" },
-    { id: "backup" as const, label: "备份" },
-];
+/* ── 移动端分区标签（从统一配置生成） ──────────────────────── */
+const mobileSections = computed(() =>
+    settingsSections.map((s) => ({ id: s.id, label: s.shortLabel })),
+);
 
 /* ── 更多操作下拉菜单 ────────────────────────────────────────── */
 const moreActionsOpen = ref(false);
@@ -113,55 +108,45 @@ const confirmReset = async () => {
     }
 };
 
-// 滚动监听
+// 滚动监听（单 IntersectionObserver 实例）
 const scrollContainer = ref<HTMLElement | null>(null);
-const sectionObservers = new Map<string, IntersectionObserver>();
+let sectionObserver: IntersectionObserver | null = null;
+/** 点击目录后短时间锁定，避免平滑滚动过程中高亮跳动 */
+let scrollLockUntil = 0;
 
 const setupScrollObserver = () => {
-    if (!scrollContainer.value) return;
+    const container = scrollContainer.value;
+    if (!container) return;
 
-    const sections = [
-        "account",
-        "appearance",
-        "ai",
-        "homeAssistant",
-        "notifications",
-        "security",
-        "backup",
-    ];
-
-    sections.forEach((sectionId) => {
-        const sectionElement = document.getElementById(sectionId);
-        if (!sectionElement) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        activeSection.value = sectionId as SettingsSectionId;
+    sectionObserver = new IntersectionObserver(
+        (entries) => {
+            if (Date.now() < scrollLockUntil) return;
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id as SettingsSectionId;
+                    if (sectionIds.includes(id)) {
+                        activeSection.value = id;
                     }
-                });
-            },
-            {
-                root: scrollContainer.value,
-                rootMargin: "-50% 0px -50% 0px",
-                threshold: 0,
+                    break;
+                }
             }
-        );
+        },
+        {
+            root: container,
+            rootMargin: "-50% 0px -50% 0px",
+            threshold: 0,
+        },
+    );
 
-        observer.observe(sectionElement);
-        sectionObservers.set(sectionId, observer);
+    settingsSections.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (el) sectionObserver?.observe(el);
     });
 };
 
 const cleanupScrollObserver = () => {
-    sectionObservers.forEach((observer, sectionId) => {
-        const element = document.getElementById(sectionId);
-        if (element) {
-            observer.unobserve(element);
-        }
-    });
-    sectionObservers.clear();
+    sectionObserver?.disconnect();
+    sectionObserver = null;
 };
 
 const settings = computed(() => settingsStore.settings);
@@ -207,6 +192,15 @@ const preferencesDirty = computed(
 const settingsDirty = computed(
     () => accountDirty.value || integrationDirty.value || preferencesDirty.value,
 );
+
+/** 具体修改项数 */
+const dirtyCount = computed(() => {
+    let count = 0;
+    if (accountDirty.value) count++;
+    if (integrationDirty.value) count++;
+    if (preferencesDirty.value) count++;
+    return count;
+});
 
 const householdMembers = computed(() => settings.value.account.members ?? []);
 
@@ -276,6 +270,8 @@ const syncPreferencesSnapshot = () => {
 
 const selectSection = (section: SettingsSectionId) => {
     activeSection.value = section;
+    // 锁定 800ms，避免平滑滚动过程中 observer 反复切换
+    scrollLockUntil = Date.now() + 800;
     document
         .getElementById(section)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -384,18 +380,31 @@ const saveAccountFamily = async () => {
 };
 
 const saveAllSettings = async () => {
-    await saveAccountFamily();
+    const tasks: Promise<void>[] = [];
 
-    try {
-        await settingsStore.saveAIModel();
-        await settingsStore.saveSettings();
-        syncIntegrationSnapshot();
-        syncPreferencesSnapshot();
-    } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "AI 助手配置保存失败"),
+    if (accountDirty.value) tasks.push(saveAccountFamily());
+    if (integrationDirty.value || preferencesDirty.value) {
+        tasks.push(
+            (async () => {
+                try {
+                    if (integrationDirty.value) {
+                        await settingsStore.saveAIModel();
+                    }
+                    if (preferencesDirty.value) {
+                        await settingsStore.saveSettings();
+                    }
+                    syncIntegrationSnapshot();
+                    syncPreferencesSnapshot();
+                } catch (error) {
+                    ElMessage.error(
+                        getErrorMessage(error, "设置保存失败"),
+                    );
+                }
+            })(),
         );
     }
+
+    await Promise.all(tasks);
 };
 
 const syncDevices = async () => {
@@ -617,11 +626,11 @@ const removeMember = async (membershipId: number) => {
                     </div>
                 </section>
 
-                <!-- 界面与偏好 -->
+                <!-- 使用体验 -->
                 <section class="settings-group">
                     <header class="settings-group-header">
                         <SvgIcon name="appearance" size="sm" />
-                        界面与偏好
+                        使用体验
                     </header>
                     <div class="settings-group-grid">
                         <AppearanceSettingsCard :appearance="settings.appearance" />
@@ -631,29 +640,29 @@ const removeMember = async (membershipId: number) => {
                     </div>
                 </section>
 
-                <!-- 智能助手 -->
+                <!-- 智能服务 -->
                 <section class="settings-group">
                     <header class="settings-group-header">
                         <SvgIcon name="ai" size="sm" />
-                        智能助手
+                        智能服务
                     </header>
                     <div class="settings-group-grid">
                         <AiAssistantSettingsCard :ai="settings.aiAssistant" />
-                    </div>
-                </section>
-
-                <!-- 平台与安全 -->
-                <section class="settings-group">
-                    <header class="settings-group-header">
-                        <SvgIcon name="security" size="sm" />
-                        平台与安全
-                    </header>
-                    <div class="settings-group-grid">
                         <HomeAssistantSettingsCard
                             :ai="settings.aiAssistant"
                             :home-assistant="settings.homeAssistant"
                             @sync="syncDevices"
                         />
+                    </div>
+                </section>
+
+                <!-- 安全与数据 -->
+                <section class="settings-group">
+                    <header class="settings-group-header">
+                        <SvgIcon name="security" size="sm" />
+                        安全与数据
+                    </header>
+                    <div class="settings-group-grid">
                         <SecuritySettingsCard :security="settings.security" />
                         <BackupSettingsCard
                             :backup="settings.backup"
@@ -671,8 +680,8 @@ const removeMember = async (membershipId: number) => {
                         />
                     </span>
                     <span>
-                        <strong>{{ settingsDirty ? "有尚未保存的更改" : "所有设置均已保存" }}</strong>
-                        <small>设置将同步到当前家庭账户</small>
+                        <strong>{{ settingsDirty ? `${dirtyCount} 项更改尚未保存` : "所有设置均已保存" }}</strong>
+                        <small>{{ settingsDirty ? "请及时保存以避免丢失" : "设置将同步到当前家庭账户" }}</small>
                     </span>
                 </div>
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { settingsGroups } from "../../constants/settingsSections";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { SettingsSectionId } from "../../types/settings";
-import { computed } from "vue";
 
 const props = defineProps<{
     active: SettingsSectionId;
@@ -13,57 +14,18 @@ const emit = defineEmits<{
     select: [section: SettingsSectionId];
 }>();
 
-interface SubItem {
-    id: SettingsSectionId;
-    label: string;
-    tone: string;
-}
-
-interface GroupItem {
-    groupLabel: string;
-    items: SubItem[];
-}
-
-const groups: GroupItem[] = [
-    {
-        groupLabel: "个人与家庭",
-        items: [
-            { id: "account", label: "账户与家庭", tone: "primary" },
-        ],
-    },
-    {
-        groupLabel: "使用体验",
-        items: [
-            { id: "appearance", label: "界面", tone: "purple" },
-            { id: "notifications", label: "通知", tone: "warning" },
-        ],
-    },
-    {
-        groupLabel: "智能服务",
-        items: [
-            { id: "ai", label: "AI 助手", tone: "indigo" },
-            { id: "homeAssistant", label: "Home Assistant", tone: "orange" },
-        ],
-    },
-    {
-        groupLabel: "安全与数据",
-        items: [
-            { id: "security", label: "安全", tone: "danger" },
-            { id: "backup", label: "备份", tone: "success" },
-        ],
-    },
-];
-
 const activeGroup = computed(() => {
-    for (const group of groups) {
-        if (group.items.some((item) => item.id === props.active)) {
+    for (const group of settingsGroups) {
+        if (group.sections.some((item) => item.id === props.active)) {
             return group.groupLabel;
         }
     }
     return null;
 });
 
-const showProgress = computed(() => props.totalItems !== undefined && props.totalItems > 0);
+const showProgress = computed(
+    () => props.totalItems !== undefined && props.totalItems > 0,
+);
 const progressPercent = computed(() => {
     if (!showProgress.value) return 0;
     return Math.round(((props.completedItems ?? 0) / props.totalItems!) * 100);
@@ -71,10 +33,7 @@ const progressPercent = computed(() => {
 </script>
 
 <template>
-    <nav
-        class="settings-directory"
-        aria-label="设置分区导航"
-    >
+    <nav class="settings-directory" aria-label="设置分区导航">
         <div class="directory-header">
             <SvgIcon name="settings" size="sm" />
             <span>设置目录</span>
@@ -82,15 +41,17 @@ const progressPercent = computed(() => {
 
         <div class="directory-scroll">
             <div class="directory-list">
-                <template v-for="group in groups" :key="group.groupLabel">
+                <template v-for="group in settingsGroups" :key="group.group">
                     <div
                         class="directory-group-label"
-                        :class="{ 'is-active-group': activeGroup === group.groupLabel }"
+                        :class="{
+                            'is-active-group': activeGroup === group.groupLabel,
+                        }"
                     >
                         {{ group.groupLabel }}
                     </div>
                     <button
-                        v-for="item in group.items"
+                        v-for="item in group.sections"
                         :key="item.id"
                         class="directory-item"
                         :class="{ 'is-active': active === item.id }"
@@ -98,17 +59,13 @@ const progressPercent = computed(() => {
                         @click="emit('select', item.id)"
                     >
                         <span class="accent-bar"></span>
-                        <span
-                            class="directory-dot"
-                            :class="`is-${item.tone}`"
-                        ></span>
+                        <span class="directory-dot" :class="`is-${item.tone}`"></span>
                         <span class="directory-label">{{ item.label }}</span>
                     </button>
                 </template>
             </div>
         </div>
 
-        <!-- 底部进度 -->
         <div v-if="showProgress" class="directory-progress">
             <div class="directory-progress-bar">
                 <div
@@ -261,7 +218,6 @@ const progressPercent = computed(() => {
     white-space: nowrap;
 }
 
-/* 底部进度条 */
 .directory-progress {
     flex: 0 0 auto;
     display: flex;
