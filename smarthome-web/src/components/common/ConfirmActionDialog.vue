@@ -59,7 +59,7 @@ const close = () => {
         </template>
 
         <template #footer>
-            <footer class="confirm-action-footer">
+            <footer class="dialog-footer confirm-action-footer">
                 <span>{{ footerHint }}</span>
                 <div>
                     <BaseButton
@@ -100,7 +100,7 @@ const close = () => {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    width: 100%;
+    box-sizing: border-box;
 }
 
 .confirm-action-footer > span {

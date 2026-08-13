@@ -783,7 +783,7 @@ onBeforeUnmount(releasePreviewUrl);
     display: grid;
     grid-template-columns: 250px minmax(0, 1fr);
     gap: 18px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .device-form-left {
@@ -796,6 +796,11 @@ onBeforeUnmount(releasePreviewUrl);
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.device-form-left,
+.device-form-right {
+    min-width: 0;
 }
 
 .device-form-right .device-form-section {
@@ -932,8 +937,9 @@ onBeforeUnmount(releasePreviewUrl);
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-auto-rows: 40px;
     gap: 6px;
-    /* 4 行图标 + 3 个行间距；保持整行可见并由区域内部滚动。 */
-    max-height: 178px;
+    /* 3 行图标 + 2 个行间距；与右侧配置卡高度协调并保持整行可见。 */
+    height: 132px;
+    max-height: 132px;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0 4px 0 0;
@@ -991,10 +997,10 @@ onBeforeUnmount(releasePreviewUrl);
 
 .icon-grid {
     display: grid;
-    grid-template-columns: repeat(8, 24px);
-    justify-content: space-between;
-    gap: 6px;
-    padding: 3px 2px 2px;
+    width: 100%;
+    grid-template-columns: repeat(8, minmax(20px, 1fr));
+    gap: 3px;
+    padding: 3px 0 2px;
 }
 
 .color-dot {
@@ -1003,6 +1009,8 @@ onBeforeUnmount(releasePreviewUrl);
     justify-content: center;
     width: 24px;
     height: 24px;
+    max-width: 100%;
+    justify-self: center;
     border: 2px solid transparent;
     border-radius: 50%;
     background: var(--dot-color);

@@ -181,7 +181,7 @@ const close = () => {
         </div>
 
         <template #footer>
-            <footer class="sync-dialog-footer">
+            <footer class="dialog-footer sync-dialog-footer">
                 <span>{{
                     phase === "select"
                         ? "同步会将平台设备信息更新到本地"
@@ -556,7 +556,7 @@ const close = () => {
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    width: 100%;
+    box-sizing: border-box;
 }
 
 .sync-dialog-footer > span {
