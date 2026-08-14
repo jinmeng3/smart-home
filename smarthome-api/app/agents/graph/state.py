@@ -1,4 +1,4 @@
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from app.agents.context import AgentContext
 from langchain_core.messages import BaseMessage
@@ -10,3 +10,5 @@ class AgentState(TypedDict, total=False):
     context: AgentContext
     run_id: str
     rounds: int  # 已执行的工具轮数，防止死循环
+    pending_approval: dict[str, Any] | None
+    approval_decision: dict[str, Any] | None

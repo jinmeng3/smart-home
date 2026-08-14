@@ -43,16 +43,19 @@ class ToolFailed(AgentEvent):
 class ApprovalRequired(AgentEvent):
     event: str = "approval_required"
     session_id: int
+    approval_id: str
     operator: str
-    preview: str = ""
-    approval_id: str = ""
+    risk_level: str = ""
+    reasons: list[str] = []
+    preview: dict = {}
 
 
 class ExecutionStatus(AgentEvent):
-    event: str = "execution_approved"
+    event: str = "execution_status"
     session_id: int
     operator: str
     status: str
+    execution_id: str | None = None
     message: str = ""
 
 

@@ -1,18 +1,19 @@
+from __future__ import annotations
+
 import json
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, cast
+from hashlib import sha256
+from typing import cast
 from uuid import uuid4
 
 from fastapi import HTTPException, status
-from sqlalchemy import CursorResult, case, delete, func, or_, select, update
+from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.device import Device
 from app.models.room import Room
 from app.models.scene import (
     Scene,
-    SceneDraft,
     SceneExecutionLog,
     SceneExecutionStep,
     SceneRoom,
@@ -20,12 +21,6 @@ from app.models.scene import (
     SceneTemplate,
 )
 from app.schemas.scene import (
-    SceneBatchEnabledResult,
-    SceneBatchEnabledWrite,
-    SceneBatchScheduleResult,
-    SceneBatchScheduleWrite,
-    SceneDraftRead,
-    SceneDraftWrite,
     SceneExecutionRead,
     SceneExecutionStepRead,
     SceneListRead,
@@ -37,11 +32,6 @@ from app.schemas.scene import (
     ScenePreviewStep,
     SceneRead,
     SceneSummaryRead,
-    SceneTemplateListRead,
-    SceneTemplatePreviewRead,
-    SceneTemplatePreviewStep,
-    SceneTemplateRead,
-    SceneTemplateUseWrite,
     SceneWrite,
     TriggerType,
 )
@@ -287,7 +277,21 @@ def run_scene_service(
     scene_id: str,
     confirm_high_risk: bool,
     source: str,
+    idempotency_key: str | None = None,
 ) -> SceneExecutionRead:
+    """执行场景，支持幂等键以避免重复执行。
+
+    Args:
+        db: 数据库会话。
+        household_id: 家庭 ID。
+        scene_id: 场景 ID。
+        confirm_high_risk: 是否确认高风险操作。
+        source: 触发来源（manual / agent / room）。
+        idempotency_key: 幂等键。agent 场景执行时传入 approval_id 以实现幂等。
+
+    Returns:
+        SceneExecutionRead: 执行记录。
+    """
     scene = get_scene_or_404(db, household_id, scene_id)
     if scene.high_risk and not confirm_high_risk:
         raise HTTPException(
@@ -298,24 +302,46 @@ def run_scene_service(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="场景已停用")
 
     started_at = now_utc()
-    execution_id = f"exec-{started_at:%Y%m%d%H%M%S}-{uuid4().hex[:8]}"
+
+    if idempotency_key:
+        digest = sha256(
+            f"{household_id}:{scene_id}:{idempotency_key}".encode()
+        ).hexdigest()[:48]
+        execution_id = f"exec-agent-{digest}"
+
+        existing = db.get(SceneExecutionLog, execution_id)
+        if existing is not None:
+            return serialize_execution(existing)
+    else:
+        execution_id = f"exec-{started_at:%Y%m%d%H%M%S}-{uuid4().hex[:8]}"
+
+    is_agent_execution = source == "agent"
+
     log = SceneExecutionLog(
         id=execution_id,
         scene_id=scene.id,
-        status="enabled",
+        status="submitted" if is_agent_execution else "enabled",
         source=source,
         started_at=started_at,
-        finished_at=started_at,
-        message="执行成功",
+        finished_at=None if is_agent_execution else started_at,
+        message=(
+            "已提交到业务执行层，等待设备状态回读"
+            if is_agent_execution
+            else "执行成功"
+        ),
     )
     log.steps = [
         SceneExecutionStep(
             id=f"{execution_id}-{index}",
             step_id=step.id,
-            status="completed",
+            status="pending" if is_agent_execution else "completed",
             started_at=started_at,
-            finished_at=started_at,
-            message=f"{step.name}成功",
+            finished_at=None if is_agent_execution else started_at,
+            message=(
+                "等待设备状态回读"
+                if is_agent_execution
+                else f"{step.name}成功"
+            ),
         )
         for index, step in enumerate(scene.steps, 1)
     ]
@@ -498,204 +524,16 @@ def get_scene_preview_service(
 
 
 def get_execution_service(
-    db: Session, household_id: int, execution_id: str
+    db: Session, household_id: int, scene_id: str
 ) -> SceneExecutionRead:
-    log = db.scalar(
+    scene = get_scene_or_404(db, household_id, scene_id)
+    execution = db.scalar(
         select(SceneExecutionLog)
-        .options(selectinload(SceneExecutionLog.steps))
-        .join(Scene, Scene.id == SceneExecutionLog.scene_id)
-        .where(
-            Scene.household_id == household_id,
-            SceneExecutionLog.id == execution_id,
-        )
+        .where(SceneExecutionLog.scene_id == scene.id)
+        .order_by(SceneExecutionLog.started_at.desc())
     )
-    if not log:
+    if not execution:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="执行记录不存在"
+            status_code=status.HTTP_404_NOT_FOUND, detail="暂无执行记录"
         )
-    return serialize_execution(log)
-
-
-# === 场景模板 ===
-
-
-def serialize_template(template: SceneTemplate) -> SceneTemplateRead:
-    raw_steps = parse_json_list(template.steps_json)
-    valid_steps = [
-        step
-        for step in raw_steps
-        if isinstance(step, dict)
-        and step.get("name")
-        and (step.get("deviceId") or step.get("device_id"))
-    ]
-    return SceneTemplateRead(
-        id=template.id,
-        name=template.name,
-        description=template.description,
-        icon=template.icon,
-        color=template.color,
-        trigger_type=cast(TriggerType, template.trigger_type),
-        trigger_label=template.trigger_label,
-        room_labels=parse_json_list(template.room_labels),
-        device_count=template.device_count,
-        recommended=template.recommended,
-        category=template.category,
-        steps=[
-            {
-                "id": step.get("id", f"{template.id}-{index}"),
-                "name": step["name"],
-                "description": step.get("description", ""),
-                "device_id": step.get("deviceId") or step["device_id"],
-                "order": step.get("order", index),
-            }
-            for index, step in enumerate(valid_steps, 1)
-        ],
-    )
-
-
-def get_templates_service(
-    db: Session, keyword: str | None, category: str | None, limit: int
-) -> SceneTemplateListRead:
-    filters = [SceneTemplate.enabled.is_(True)]
-    if keyword and keyword.strip():
-        term = f"%{keyword.strip()}%"
-        filters.append(
-            or_(SceneTemplate.name.like(term), SceneTemplate.description.like(term))
-        )
-    if category:
-        filters.append(SceneTemplate.category == category)
-    templates = db.scalars(
-        select(SceneTemplate)
-        .where(*filters)
-        .order_by(SceneTemplate.sort_order, SceneTemplate.updated_at.desc())
-        .limit(limit)
-    ).all()
-    return SceneTemplateListRead(items=[serialize_template(item) for item in templates])
-
-
-def import_template_service(
-    db: Session,
-    household_id: int,
-    user_id: int,
-    template_id: str,
-    payload: SceneTemplateUseWrite,
-) -> SceneRead:
-    template = get_template_or_404(db, template_id)
-    data = serialize_template(template)
-    scene_payload = SceneWrite(
-        name=payload.name or template.name,
-        description=template.description,
-        icon=template.icon,
-        color=template.color,
-        trigger_type=cast(TriggerType, template.trigger_type),
-        trigger_label=template.trigger_label,
-        room_labels=data.room_labels,
-        enabled=payload.enabled,
-        recommended=False,
-        steps=[
-            {
-                "name": step.name,
-                "description": step.description,
-                "device_id": payload.device_mapping.get(step.device_id, step.device_id),
-                "order": step.order,
-            }
-            for step in data.steps
-        ],
-    )
-    result = add_scene_service(db, household_id, user_id, scene_payload)
-    scene = db.get(Scene, result.id)
-    if scene is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="创建的场景未找到"
-        )
-    scene.source_template_id = template.id
-    db.commit()
-    return serialize_scene(get_scene_or_404(db, household_id, result.id))
-
-
-def get_template_preview_service(
-    db: Session, household_id: int, template_id: str
-) -> SceneTemplatePreviewRead:
-    template = serialize_template(get_template_or_404(db, template_id))
-    known_ids = set(
-        db.scalars(
-            select(Device.device_id).where(Device.household_id == household_id)
-        ).all()
-    )
-    steps = [
-        SceneTemplatePreviewStep(
-            name=step.name,
-            description=step.description,
-            device_id=step.device_id,
-            matched=step.device_id in known_ids,
-        )
-        for step in template.steps
-    ]
-    matched = sum(step.matched for step in steps)
-    return SceneTemplatePreviewRead(
-        template_id=template_id,
-        matched_device_count=matched,
-        missing_device_count=len(steps) - matched,
-        steps=steps,
-    )
-
-
-def add_draft_service(
-    db: Session, household_id: int, user_id: int, payload: SceneDraftWrite
-) -> SceneDraftRead:
-    draft = SceneDraft(
-        id=f"draft-{uuid4().hex}",
-        household_id=household_id,
-        created_by=user_id,
-        payload_json=payload.model_dump_json(by_alias=True),
-        updated_at=now_utc(),
-    )
-    db.add(draft)
-    db.commit()
-    db.refresh(draft)
-    return SceneDraftRead(draft_id=draft.id, updated_at=draft.updated_at)
-
-
-# === 批量操作 ===
-
-
-def batch_change_enabled_service(
-    db: Session, household_id: int, payload: SceneBatchEnabledWrite
-) -> SceneBatchEnabledResult:
-    """批量启用或停用场景。空列表时操作全部场景。"""
-    filters = [Scene.household_id == household_id]
-    if payload.scene_ids:
-        filters.append(Scene.id.in_(payload.scene_ids))
-    result = cast(
-        CursorResult[Any],
-        db.execute(
-            update(Scene)
-            .where(*filters)
-            .values(enabled=payload.enabled, updated_at=now_utc())
-        ),
-    )
-    db.commit()
-    return SceneBatchEnabledResult(updated_count=result.rowcount or 0)
-
-
-def batch_set_schedule_service(
-    db: Session, household_id: int, payload: SceneBatchScheduleWrite
-) -> SceneBatchScheduleResult:
-    """批量设置场景的触发类型和定时触发描述。空列表时操作全部场景。"""
-    filters = [Scene.household_id == household_id]
-    if payload.scene_ids:
-        filters.append(Scene.id.in_(payload.scene_ids))
-    result = cast(
-        CursorResult[Any],
-        db.execute(
-            update(Scene)
-            .where(*filters)
-            .values(
-                trigger_type=payload.trigger_type,
-                trigger_label=payload.trigger_label,
-                updated_at=now_utc(),
-            )
-        ),
-    )
-    db.commit()
-    return SceneBatchScheduleResult(updated_count=result.rowcount or 0)
+    return serialize_execution(execution)

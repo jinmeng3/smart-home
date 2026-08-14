@@ -1,10 +1,7 @@
-import asyncio
-import json
-import time
-
 from app.agents.graph.state import AgentState
+from app.agents.tools import WRITE_TOOL_NAMES
 from app.core.config import get_settings
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage
 
 
 def should_continue(state: AgentState) -> str:
@@ -12,62 +9,27 @@ def should_continue(state: AgentState) -> str:
     if state.get("rounds", 0) >= settings.agent_max_rounds:
         return "finalize"
     last = state["messages"][-1]
-    if isinstance(last, AIMessage) and last.tool_calls:
-        return "tool"
-    return "finalize"
+    if not isinstance(last, AIMessage) or not last.tool_calls:
+        return "finalize"
+
+    names = {str(call.get("name", "")) for call in last.tool_calls}
+
+    if names & WRITE_TOOL_NAMES:
+        return "risk_check"
+
+    return "read_tool"
 
 
-async def execute_tools(state, tools_by_name, audit=None) -> dict:
-    settings = get_settings()
-    error_prefix = settings.tool_error_prefix
-    last = state["messages"][-1]
-    tool_messages = []
-    for call in last.tool_calls:
-        call_id = str(call.get("id", ""))
-        name = str(call.get("name", ""))
-        args = call.get("args") or {}
-        tool = tools_by_name.get(name)
-        started = time.perf_counter()
+def route_after_risk(state: AgentState) -> str:
+    decision = state.get("approval_decision")
+    if decision and decision.get("decision") == "approve":
+        return "write_tool"
 
-        if tool is None:
-            content = f"{error_prefix}工具 {name} 不存在"
-            ok = False
-        else:
-            try:
-                async with asyncio.timeout(settings.tool_timeout_seconds):
-                    content = await tool.ainvoke(args)
-                ok = True
-            except TimeoutError:
-                content = f"{error_prefix}工具 {name} 执行超时"
-                ok = False
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:  # noqa: BLE001
-                content = f"{error_prefix}工具 {name} 执行异常: {e!s}"
-                ok = False
+    return "approval_interrupt"
 
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        payload = (
-            {"ok": True, "data": content}
-            if ok
-            else {"ok": False, "error": str(content).removeprefix(error_prefix)}
-        )
-        serialized = json.dumps(payload, ensure_ascii=False, default=str)
-        tool_messages.append(
-            ToolMessage(
-                content=serialized[: settings.tool_result_max_length],
-                tool_call_id=call_id,
-            )
-        )
-        if audit is not None:
-            audit.record_tool_call(
-                run_id=state.get("run_id", ""),
-                tool=name,
-                call_id=call_id,
-                args=args,
-                result=content,
-                ok=ok,
-                duration_ms=duration_ms,
-            )
 
-    return {"messages": tool_messages, "rounds": state.get("rounds", 0) + 1}
+def route_after_approval(state: AgentState) -> str:
+    decision = state.get("approval_decision")
+    if decision and decision.get("decision") == "approve":
+        return "write_tool"
+    return "reject_tool"

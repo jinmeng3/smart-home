@@ -1,7 +1,7 @@
 import { apiRequest, streamRequest } from "./client";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 import type { AgentRunRequest } from "../types/chat";
-import type { AgentEvent } from "../types/chat";
+import type { AgentEvent, AgentDecisionRequest, PendingApproval } from "../types/chat";
 
 // ── DTO 类型 ──────────────────────────────────────────────────────────────────────
 
@@ -193,18 +193,67 @@ export const runAgent = async (
   onEvent: (event: AgentEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> => {
+  await streamAgentEvents(
+    "/api/agent/runs",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    onEvent,
+    signal,
+  );
+};
+
+/**
+ * 提交 agent 决策（approve / reject），返回 SSE 事件流。
+ */
+export const decideAgentOperation = (
+  sessionId: number,
+  payload: AgentDecisionRequest,
+  onEvent: (event: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> =>
+  streamAgentEvents(
+    `/api/agent/sessions/${sessionId}/decisions`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    onEvent,
+    signal,
+  );
+
+/**
+ * 查询当前会话的待确认操作。
+ */
+export const getPendingAgentOperation = (
+  sessionId: number,
+  householdId: number,
+): Promise<PendingApproval | null> =>
+  apiRequest<PendingApproval | null>(
+    `/api/agent/sessions/${sessionId}/pending?household_id=${householdId}`,
+  );
+
+// ── 内部工具函数 ────────────────────────────────────────────────────────────
+
+async function streamAgentEvents(
+  url: string,
+  init: RequestInit,
+  onEvent: (event: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   let buffer: SseBuffer = { event: "", data: "" };
 
   await streamRequest(
-    "/api/agent/runs",
+    url,
     (line) => {
       if (!line) {
-        // 空行 = 事件结束，解析并发出
         if (buffer.data) {
           try {
             const parsed = JSON.parse(buffer.data) as AgentEvent;
-            // SSE 头部 event 与 data 内 event 字段可能不一致，以头部为准
-            parsed.event = (buffer.event || parsed.event) as AgentEvent["event"];
+            parsed.event = (
+              buffer.event || parsed.event
+            ) as AgentEvent["event"];
             onEvent(parsed);
           } catch {
             // 忽略解析失败的行
@@ -224,10 +273,7 @@ export const runAgent = async (
         buffer.data = parsed.data;
       }
     },
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
+    init,
     signal,
   );
-};
+}

@@ -15,7 +15,7 @@ export interface RecentConversation {
 }
 
 export type AgentStatus =
-  "idle" | "thinking" | "executing" | "success" | "error";
+  "idle" | "thinking" | "executing" | "awaiting_approval" | "success" | "error";
 
 export type SuggestionStatus = "pending" | "executing" | "completed" | "failed";
 
@@ -80,12 +80,72 @@ export interface AgentErrorEvent extends AgentEventBase {
   retryable: boolean;
 }
 
+export interface ScenePreviewStep {
+  step_id: string;
+  name: string;
+  description: string;
+  device_id: string;
+  device_name: string | null;
+  order: number;
+}
+
+export interface SceneApprovalPreview {
+  scene_id: string;
+  scene_name: string;
+  enabled: boolean;
+  risk_level: "low" | "high" | "unknown";
+  device_count: number;
+  steps: ScenePreviewStep[];
+}
+
+export interface PendingApproval {
+  approval_id: string;
+  run_id: string;
+  session_id: number;
+  call_id: string;
+  tool: string;
+  args: Record<string, unknown>;
+  risk_level: "low" | "high" | "unknown";
+  reasons: string[];
+  preview: SceneApprovalPreview;
+  resource_version: string;
+}
+
+export interface ApprovalRequiredEvent extends AgentEventBase {
+  event: "approval_required";
+  session_id: number;
+  approval_id: string;
+  operator: string;
+  risk_level: "low" | "high" | "unknown";
+  reasons: string[];
+  preview: SceneApprovalPreview;
+}
+
+export interface ExecutionStatusEvent extends AgentEventBase {
+  event: "execution_status";
+  session_id: number;
+  operator: string;
+  status: "submitted" | "running" | "verified" | "failed" | "unknown";
+  execution_id: string | null;
+  message: string;
+}
+
+export type AgentDecision = "approve" | "reject";
+
+export interface AgentDecisionRequest {
+  household_id: number;
+  approval_id: string;
+  decision: AgentDecision;
+}
+
 export type AgentEvent =
   | RunStartedEvent
   | MessageDeltaEvent
   | ToolStartedEvent
   | ToolCompletedEvent
   | ToolFailedEvent
+  | ApprovalRequiredEvent
+  | ExecutionStatusEvent
   | RunCompletedEvent
   | AgentErrorEvent;
 

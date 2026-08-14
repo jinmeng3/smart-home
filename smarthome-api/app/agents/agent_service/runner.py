@@ -7,6 +7,7 @@ from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
 from app.agents.checkpointer import get_checkpointer
 from app.agents.context import AgentContext
 from app.agents.events.models import (
+    ApprovalRequired,
     Error,
     RunCompleted,
     RunStarted,
@@ -36,6 +37,7 @@ async def _create_graph_runner(
     graph = build_graph(
         model=model,
         tools=tools,
+        db=db,
         audit=audit,
         checkpointer=await get_checkpointer(),
     )
@@ -107,7 +109,7 @@ async def run_agent(
 
             name = getattr(msg, "name", None)
             content = getattr(msg, "content", None)
-            if node == "tool" and name and content:
+            if node in {"read_tool", "write_tool"} and name and content:
                 call_id = str(getattr(msg, "tool_call_id", ""))
                 yield track.emit_tool_result(call_id, name, content)
             elif content and node == "model":
@@ -127,6 +129,41 @@ async def run_agent(
                 run_id=run_id,
                 message=redact_text(str(e)),
                 retryable=False,
+            )
+        )
+        return
+
+    # 检查是否有待确认操作
+    snapshot = await graph.aget_state(
+        config={
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": get_settings().graph_recursion_limit,
+        }
+    )
+
+    pending = snapshot.values.get("pending_approval")
+    if snapshot.next and "approval_interrupt" in snapshot.next and pending:
+        audit.record_run_end(
+            run_id, status="pending_confirmation", message="等待用户确认"
+        )
+        yield encode_sse_event(
+            ApprovalRequired(
+                event_id=f"{run_id}-approval",
+                run_id=run_id,
+                session_id=context.session_id,
+                approval_id=pending["approval_id"],
+                operator=pending["tool"],
+                risk_level=pending["risk_level"],
+                reasons=pending["reasons"],
+                preview=pending["preview"],
+            )
+        )
+        yield encode_sse_event(
+            RunCompleted(
+                event_id=f"{run_id}-pending",
+                run_id=run_id,
+                session_id=context.session_id,
+                status="pending_confirmation",
             )
         )
         return

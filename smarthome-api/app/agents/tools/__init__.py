@@ -1,7 +1,11 @@
 from app.agents.context import AgentContext
 from app.agents.tools.base import build_query_tool
+from app.agents.tools.execute import scenes as execute_scenes
+from app.agents.tools.preview import scenes as preview_scenes
 from app.agents.tools.query import automations, devices, executions, rooms, scenes
 from sqlalchemy.orm import Session
+
+WRITE_TOOL_NAMES = {"execute_scene"}
 
 
 def get_household_tools(context: AgentContext, db: Session):
@@ -93,5 +97,27 @@ def get_household_tools(context: AgentContext, db: Session):
             context,
             db,
             executions.list_automation_executions,
+        ),
+        build_query_tool(
+            "preview_scene",
+            "预览指定场景的执行步骤、影响设备和风险等级，不会实际执行场景",
+            preview_scenes.PreviewSceneInput,
+            context,
+            db,
+            preview_scenes.preview_scene,
+        ),
+        build_query_tool(
+            "execute_scene",
+            (
+                "请求执行当前家庭中的场景。该操作可能需要用户确认。"
+                "只能传入scene_id，不得传入household_id、风险等级或确认状态"
+            ),
+            execute_scenes.ExecuteSceneInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "execute_scene只能由受控写操作节点执行",
+            },
         ),
     ]
