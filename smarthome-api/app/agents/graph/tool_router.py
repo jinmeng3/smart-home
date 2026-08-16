@@ -21,6 +21,9 @@ def should_continue(state: AgentState) -> str:
 
 
 def route_after_risk(state: AgentState) -> str:
+    if not state.get("pending_approval"):
+        return "model"
+
     decision = state.get("approval_decision")
     if decision and decision.get("decision") == "approve":
         return "write_tool"

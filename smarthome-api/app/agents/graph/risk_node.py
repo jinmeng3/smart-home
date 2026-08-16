@@ -1,9 +1,12 @@
 import json
+from typing import Any
 
 from app.agents.graph.state import AgentState
 from app.agents.risk import classify_automation_operation, classify_scene_execution
-from app.agents.tools import WRITE_TOOL_NAMES
+from app.agents.tools import WRITE_TOOL_NAMES, WRITE_TOOL_SCHEMAS
+from fastapi import HTTPException
 from langchain_core.messages import AIMessage, ToolMessage
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 
@@ -18,50 +21,29 @@ def risk_check(state: AgentState, db: Session) -> dict:
         if str(call.get("name", "")) in WRITE_TOOL_NAMES
     ]
 
-    # 第一版限制每轮只能执行一个写操作，避免部分成功和确认语义歧义。
+    # 每轮只允许一个写调用，且不能与只读调用混合，避免部分成功。
     if len(write_calls) != 1 or len(last.tool_calls) != 1:
-        messages = [
-            ToolMessage(
-                content=json.dumps(
-                    {
-                        "ok": False,
-                        "error": "每轮只能请求一个写操作，且不能混合只读和写操作",
-                    },
-                    ensure_ascii=False,
-                ),
-                tool_call_id=str(call.get("id", "")),
-                name=str(call.get("name", "")),
-            )
-            for call in write_calls
-        ]
-        return {
-            "messages": messages,
-            "pending_approval": None,
-            "rounds": state.get("rounds", 0) + 1,
-        }
+        return _tool_error(
+            state,
+            last.tool_calls,
+            "每轮只能请求一个写操作，且不能混合只读和写操作",
+        )
 
     call = write_calls[0]
     call_id = str(call.get("id", ""))
     tool_name = str(call.get("name", ""))
-    args = call.get("args") or {}
 
-    # 按工具类型分发风险判定
-    decision = _classify_operation(db, state, tool_name, args)
+    # 风险判定前先执行与真正工具相同的 Pydantic 校验，不能信任模型原始参数。
+    try:
+        validated = WRITE_TOOL_SCHEMAS[tool_name].model_validate(call.get("args") or {})
+        args = validated.model_dump(exclude_none=True)
+    except (KeyError, ValidationError) as exc:
+        return _tool_error(state, [call], f"写操作参数校验失败：{exc}")
 
-    if decision is None:
-        return {
-            "messages": [
-                ToolMessage(
-                    content=json.dumps(
-                        {"ok": False, "error": "参数校验失败，缺少必要参数"},
-                        ensure_ascii=False,
-                    ),
-                    tool_call_id=call_id,
-                    name=tool_name,
-                )
-            ],
-            "pending_approval": None,
-        }
+    try:
+        decision = _classify_operation(db, state, tool_name, args)
+    except HTTPException as exc:
+        return _tool_error(state, [call], str(exc.detail))
 
     pending = {
         "approval_id": f"{state['run_id']}:{call_id}",
@@ -83,6 +65,22 @@ def risk_check(state: AgentState, db: Session) -> dict:
             if not decision.requires_approval
             else None
         ),
+    }
+
+
+def _tool_error(state: AgentState, calls: list[Any], message: str) -> dict:
+    return {
+        "messages": [
+            ToolMessage(
+                content=json.dumps({"ok": False, "error": message}, ensure_ascii=False),
+                tool_call_id=str(call.get("id", "")),
+                name=str(call.get("name", "")),
+            )
+            for call in calls
+        ],
+        "pending_approval": None,
+        "approval_decision": None,
+        "rounds": state.get("rounds", 0) + 1,
     }
 
 

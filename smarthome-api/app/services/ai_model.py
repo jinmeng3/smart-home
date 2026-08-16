@@ -3,6 +3,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.agents.crypto import encrypt_api_key
 from app.models.ai import AIModel
 from app.models.user import User
 from app.schemas.ai import AIModelCreate, AIModelUpdate
@@ -67,7 +68,9 @@ def add_ai_model_service(db: Session, current_user: User, payload: AIModelCreate
     if payload.is_active:
         deactivate_ai_models(db, current_user.id)
 
-    model = AIModel(user_id=current_user.id, **payload.model_dump())
+    values = payload.model_dump()
+    values["api_key"] = encrypt_api_key(values.get("api_key"))
+    model = AIModel(user_id=current_user.id, **values)
     db.add(model)
     return commit_ai_model(db, model)
 
@@ -103,7 +106,10 @@ def update_ai_model_service(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Model not found"
         )
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    values = payload.model_dump(exclude_unset=True)
+    if "api_key" in values:
+        values["api_key"] = encrypt_api_key(values["api_key"])
+    for field, value in values.items():
         setattr(model, field, value)
     return commit_ai_model(db, model)
 

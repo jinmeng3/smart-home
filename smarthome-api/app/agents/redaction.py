@@ -17,16 +17,14 @@ def redact_text(text: str) -> str:
     if not text:
         return text
     for pattern in _SENSITIVE_PATTERNS:
-        text = (
-            pattern.sub(f"\\1⚠ {_MASK}", text)
-            if "sk-" in pattern.pattern
-            else pattern.sub(_MASK, text)
-        )
+        text = pattern.sub(_MASK, text)
     return text
 
 
-def redact_fields(data: dict) -> dict:
-    """递归屏蔽 dict 中 value 属于敏感字段名的值。"""
+def redact_fields(data):
+    """递归屏蔽容器中的敏感字段和值。"""
+    if isinstance(data, list):
+        return [redact_fields(item) for item in data]
     if not isinstance(data, dict):
         return data
     sensitive_keys = {
@@ -44,7 +42,9 @@ def redact_fields(data: dict) -> dict:
             _MASK
             if k in sensitive_keys and isinstance(v, str)
             else redact_fields(v)
-            if isinstance(v, dict)
+            if isinstance(v, (dict, list))
+            else redact_text(v)
+            if isinstance(v, str)
             else v
         )
         for k, v in data.items()

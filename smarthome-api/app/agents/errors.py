@@ -57,3 +57,18 @@ class AgentCheckpointerError(AgentError):
 class AgentToolExecutionError(AgentError):
     code = "AGENT_TOOL_EXECUTION_ERROR"
     http_status = 500
+
+
+class AgentRateLimitError(AgentError):
+    code = "AGENT_RATE_LIMIT_EXCEEDED"
+    http_status = 429
+
+
+class AgentBudgetExceededError(AgentError):
+    code = "AGENT_BUDGET_EXCEEDED"
+    http_status = 429
+
+
+class AgentDeviceReadbackError(AgentError):
+    code = "AGENT_DEVICE_READBACK_FAILED"
+    http_status = 500

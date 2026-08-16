@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,9 +30,11 @@ class Settings(BaseSettings):
 
     # 模型
     supported_ai_providers: list[str] = Field(
-        default_factory=lambda: ["openai", "anthropic", "cohere", "gemini", "deepseek"]
+        default_factory=lambda: ["openai", "deepseek"]
     )
     max_cache_size: int = Field(default=100, ge=1)
+    model_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+    model_max_retries: int = Field(default=2, ge=0, le=5)
 
     # 文件上传
     upload_dir: str = "app/uploads"
@@ -46,6 +49,27 @@ class Settings(BaseSettings):
 
     # Agent 审计日志
     audit_dir: str = "app/agent_audit"
+
+    # Agent 生产化配置
+    agent_rate_limit_per_minute: int = Field(
+        default=10, ge=1, le=120, description="每分钟每个用户最大 agent 请求数"
+    )
+    agent_daily_budget_tokens: int = Field(
+        default=500000, ge=0, description="每个用户每日最大 token 消耗"
+    )
+    checkpointer_type: Literal["sqlite", "db", "postgres"] = Field(
+        default="sqlite",
+        description="checkpointer 类型: sqlite / postgres（db 为兼容别名）",
+    )
+    checkpointer_database_url: str | None = Field(
+        default=None, description="Agent checkpoint 独立数据库地址"
+    )
+    api_key_encryption_secret: str | None = Field(
+        default=None, description="API Key 独立加密密钥；生产环境必须配置"
+    )
+    production_mode: bool = Field(
+        default=False, description="生产模式，启用加密、限流等"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

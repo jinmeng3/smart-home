@@ -109,12 +109,13 @@ def create_automation_operation(db, context, args) -> dict:
             "version": result.version,
             "message": f"自动化规则「{result.name}」已创建",
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
+        db.rollback()
         return {
             "ok": False,
             "status": "failed",
             "code": "AGENT_EXECUTION_ERROR",
-            "error": f"创建自动化失败：{e!s}",
+            "error": "创建自动化失败，请检查参数或稍后重试",
         }
 
 
@@ -173,12 +174,13 @@ def update_automation_operation(db, context, args) -> dict:
             "version": result.version,
             "message": f"自动化规则「{result.name}」已更新",
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
+        db.rollback()
         return {
             "ok": False,
             "status": "failed",
             "code": "AGENT_EXECUTION_ERROR",
-            "error": f"更新自动化失败：{e!s}",
+            "error": "更新自动化失败，请检查版本或参数",
         }
 
 
@@ -190,6 +192,7 @@ def set_automation_enabled_operation(db, context, args) -> dict:
 
         automation = get_automation_service(db, automation_id, context.household_id)
         automation.enabled = enabled
+        automation.version += 1
         db.commit()
 
         return {
@@ -200,12 +203,13 @@ def set_automation_enabled_operation(db, context, args) -> dict:
             "enabled": enabled,
             "message": f"自动化规则「{automation.name}」已{'启用' if enabled else '停用'}",
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
+        db.rollback()
         return {
             "ok": False,
             "status": "failed",
             "code": "AGENT_EXECUTION_ERROR",
-            "error": f"切换自动化状态失败：{e!s}",
+            "error": "切换自动化状态失败，请稍后重试",
         }
 
 
@@ -224,10 +228,11 @@ def delete_automation_operation(db, context, args) -> dict:
             "automation_name": name,
             "message": f"自动化规则「{name}」已删除",
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
+        db.rollback()
         return {
             "ok": False,
             "status": "failed",
             "code": "AGENT_EXECUTION_ERROR",
-            "error": f"删除自动化失败：{e!s}",
+            "error": "删除自动化失败，请稍后重试",
         }

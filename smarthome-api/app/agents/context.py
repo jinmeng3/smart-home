@@ -53,9 +53,13 @@ def agent_context(
         try:
             data = json.loads(user_preferences.preferences_json)
             ai = data.get("ai", {})
-            auto_execute_low_risk = bool(ai.get("auto_execute_low_risk", False))
-            confirm_high_risk = bool(ai.get("confirm_high_risk", True))
-        except (json.JSONDecodeError, AttributeError):
+            if not isinstance(ai, dict):
+                raise TypeError("ai 偏好必须是对象")
+            auto_value = ai.get("auto_execute_low_risk", False)
+            confirm_value = ai.get("confirm_high_risk", True)
+            auto_execute_low_risk = auto_value if isinstance(auto_value, bool) else False
+            confirm_high_risk = confirm_value if isinstance(confirm_value, bool) else True
+        except (json.JSONDecodeError, AttributeError, TypeError):
             auto_execute_low_risk = False
             confirm_high_risk = True
 

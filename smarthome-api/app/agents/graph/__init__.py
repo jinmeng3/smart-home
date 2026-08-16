@@ -66,6 +66,7 @@ def build_graph(
         "risk_check",
         route_after_risk,
         {
+            "model": "model",
             "write_tool": "write_tool",
             "approval_interrupt": "approval_interrupt",
         },

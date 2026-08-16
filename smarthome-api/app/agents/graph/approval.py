@@ -45,7 +45,7 @@ def reject_tool(state: AgentState) -> dict:
                     {
                         "ok": False,
                         "status": "rejected",
-                        "error": "用户拒绝执行该场景",
+                        "error": "用户拒绝执行该操作",
                     },
                     ensure_ascii=False,
                 ),

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from app.agents.context import agent_context
 from app.agents.errors import AgentModelNotFound
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
 from app.models.ai import AIModel
+from app.models.household import Household
 from app.models.user import User
 from app.schemas.agent import (
     AgentDecisionRequest,
@@ -62,12 +63,30 @@ async def agent_run(
     get_chat_session(
         db=db, current_user=current_user, session_id=payload.session_id, messages=[]
     )
+    saver = await get_checkpointer()
+    checkpoint = await saver.aget_tuple(
+        {"configurable": {"thread_id": agent_thread_id(ctx)}}
+    )
+    pending = (
+        checkpoint.checkpoint.get("channel_values", {}).get("pending_approval")
+        if checkpoint is not None
+        else None
+    )
+    if pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="当前会话存在待确认操作，请先处理后再发起新请求",
+        )
+
     model_config = _get_agent_model(db, current_user.id, payload.model)
+    household = db.get(Household, payload.household_id)
+    if household is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="家庭不存在")
 
     return StreamingResponse(
         run_agent(
             context=ctx,
-            household_name=payload.household_name,
+            household_name=household.name,
             message=payload.message,
             model_config=model_config,
             db=db,

@@ -21,8 +21,10 @@ settings.avatar_dir.mkdir(parents=True, exist_ok=True)
 async def lifespan(app: FastAPI):
     create_tables()
     await init_checkpointer()
-    yield
-    await close_checkpointer()
+    try:
+        yield
+    finally:
+        await close_checkpointer()
 
 
 app = FastAPI(lifespan=lifespan, title=settings.app_name)

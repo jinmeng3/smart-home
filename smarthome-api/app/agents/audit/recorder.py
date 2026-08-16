@@ -27,6 +27,7 @@ class AuditRecorder:
             "user_id": context.user_id,
             "household_id": context.household_id,
             "session_id": context.session_id,
+            "auto_execute_low_risk": context.auto_execute_low_risk,
             "ts": datetime.now(timezone.utc).isoformat(),
         }
         self._write(entry)
@@ -100,6 +101,58 @@ class AuditRecorder:
             "approval_id": approval_id,
             "decision": decision,
             "automatic": automatic,
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write(entry)
+
+    def record_run_replay(
+        self,
+        *,
+        run_id: str,
+        context: AgentContext,
+        messages: list[dict],
+        model_name: str,
+        tool_calls: list[dict],
+        approvals: list[dict],
+        status: str,
+        duration_ms: int,
+    ) -> None:
+        """记录完整的运行回放数据，用于事后审计和问题排查。"""
+        entry = {
+            "event": "run_replay",
+            "run_id": run_id,
+            "user_id": context.user_id,
+            "household_id": context.household_id,
+            "session_id": context.session_id,
+            "model_name": model_name,
+            "status": status,
+            "duration_ms": duration_ms,
+            "messages": [
+                {
+                    "role": m.get("role", "unknown"),
+                    "content": redact_text(str(m.get("content", "")))[:1000],
+                    "tool_calls": [
+                        {
+                            "name": tc.get("name", ""),
+                            "args": redact_fields(tc.get("args", {})),
+                        }
+                        for tc in (m.get("tool_calls") or [])
+                    ]
+                    if m.get("tool_calls")
+                    else None,
+                }
+                for m in messages
+            ],
+            "tool_calls": [
+                {
+                    "call_id": tc.get("call_id"),
+                    "tool": tc.get("tool"),
+                    "args": redact_fields(tc.get("args", {})),
+                    "ok": tc.get("ok"),
+                }
+                for tc in tool_calls
+            ],
+            "approvals": redact_fields({"items": approvals})["items"],
             "ts": datetime.now(timezone.utc).isoformat(),
         }
         self._write(entry)

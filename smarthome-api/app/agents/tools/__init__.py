@@ -7,13 +7,14 @@ from app.agents.tools.preview import scenes as preview_scenes
 from app.agents.tools.query import automations, devices, executions, rooms, scenes
 from sqlalchemy.orm import Session
 
-WRITE_TOOL_NAMES = {
-    "execute_scene",
-    "create_automation",
-    "update_automation",
-    "set_automation_enabled",
-    "delete_automation",
+WRITE_TOOL_SCHEMAS = {
+    "execute_scene": execute_scenes.ExecuteSceneInput,
+    "create_automation": execute_automations.CreateAutomationInput,
+    "update_automation": execute_automations.UpdateAutomationInput,
+    "set_automation_enabled": execute_automations.SetAutomationEnabledInput,
+    "delete_automation": execute_automations.DeleteAutomationInput,
 }
+WRITE_TOOL_NAMES = set(WRITE_TOOL_SCHEMAS)
 
 
 def get_household_tools(context: AgentContext, db: Session):

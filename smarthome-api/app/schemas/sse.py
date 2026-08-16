@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AgentEvent(BaseModel):
@@ -46,8 +46,8 @@ class ApprovalRequired(AgentEvent):
     approval_id: str
     operator: str
     risk_level: str = ""
-    reasons: list[str] = []
-    preview: dict = {}
+    reasons: list[str] = Field(default_factory=list)
+    preview: dict = Field(default_factory=dict)
 
 
 class ExecutionStatus(AgentEvent):

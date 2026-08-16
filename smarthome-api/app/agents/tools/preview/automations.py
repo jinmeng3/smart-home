@@ -105,6 +105,7 @@ class DetectAutomationConflictsInput(BaseModel):
 
     automation_id: int | None = Field(default=None)
     proposed_triggers: list[dict] | None = None
+    proposed_actions: list[dict] | None = None
 
 
 def detect_automation_conflicts(
@@ -112,6 +113,7 @@ def detect_automation_conflicts(
     context: AgentContext,
     automation_id=None,
     proposed_triggers=None,
+    proposed_actions=None,
 ):
     """检测自动化规则之间是否存在时间重叠、设备冲突或循环触发风险。"""
     conflicts = []
@@ -126,6 +128,7 @@ def detect_automation_conflicts(
 
     # 解析待检测的触发器
     triggers_to_check = proposed_triggers or []
+    actions_to_check = proposed_actions or []
     if automation_id is not None:
         try:
             current = get_automation_service(db, automation_id, context.household_id)
@@ -133,6 +136,15 @@ def detect_automation_conflicts(
                 triggers_to_check = [
                     {"type": t.type, "config": t.config_json}
                     for t in current.triggers
+                ]
+            if not actions_to_check:
+                actions_to_check = [
+                    {
+                        "type": action.type,
+                        "config": action.config_json,
+                        "device_id": action.device_id,
+                    }
+                    for action in current.actions
                 ]
         except HTTPException:
             pass
@@ -176,7 +188,7 @@ def detect_automation_conflicts(
                             }
                         )
 
-    # 检查同一设备冲突
+    # 检查同一设备动作冲突与设备触发回路。
     trigger_device_ids = set()
     for t in triggers_to_check:
         config = t.get("config", {})
@@ -203,12 +215,42 @@ def detect_automation_conflicts(
             )
         ).all()
     )
-    action_device_map: dict[int, list[int]] = {}
+    action_device_map: dict[int, set[int]] = {}
     for action in all_actions:
         if action.device_id is not None:
-            action_device_map.setdefault(action.automation_id, []).append(
+            action_device_map.setdefault(action.automation_id, set()).add(
                 action.device_id
             )
+
+    proposed_action_device_ids = {
+        action.get("device_id")
+        for action in actions_to_check
+        if action.get("device_id") is not None
+    }
+    for other in others:
+        shared_ids = proposed_action_device_ids & action_device_map.get(other.id, set())
+        if shared_ids:
+            conflicts.append(
+                {
+                    "type": "device_action_overlap",
+                    "severity": "warning",
+                    "message": f"与自动化「{other.name}」操作了相同设备",
+                    "device_ids": sorted(shared_ids),
+                    "target_automation_id": other.id,
+                    "target_automation_name": other.name,
+                }
+            )
+
+    loop_device_ids = trigger_device_ids & proposed_action_device_ids
+    if loop_device_ids:
+        conflicts.append(
+            {
+                "type": "possible_trigger_loop",
+                "severity": "high",
+                "message": "同一规则读取并操作相同设备，可能形成循环触发",
+                "device_ids": sorted(loop_device_ids),
+            }
+        )
 
     return {
         "status": "checked",

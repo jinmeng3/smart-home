@@ -4,20 +4,23 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class AgentRunRequest(BaseModel):
-    session_id: int
-    household_id: int
-    household_name: str
+    session_id: int = Field(gt=0)
+    household_id: int = Field(gt=0)
+    household_name: str | None = Field(default=None, deprecated=True)
     model: str | None = None
     message: str = Field(min_length=1, max_length=4000)
 
     @field_validator("message")
     @classmethod
     def strip_message(cls, value: str) -> str:
-        return value.strip()
+        value = value.strip()
+        if not value:
+            raise ValueError("消息不能为空")
+        return value
 
 
 class AgentDecisionRequest(BaseModel):
-    household_id: int
+    household_id: int = Field(gt=0)
     approval_id: str = Field(min_length=1, max_length=200)
     decision: Literal["approve", "reject"]
 

@@ -44,8 +44,8 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
                 ok = False
             except asyncio.CancelledError:
                 raise
-            except Exception as e:  # noqa: BLE001
-                content = f"{error_prefix}工具 {name} 执行异常: {e!s}"
+            except Exception:  # noqa: BLE001
+                content = f"{error_prefix}工具 {name} 执行失败"
                 ok = False
 
         duration_ms = int((time.perf_counter() - started) * 1000)
@@ -59,6 +59,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
             ToolMessage(
                 content=serialized[: settings.tool_result_max_length],
                 tool_call_id=call_id,
+                name=name,
             )
         )
         if audit is not None:
@@ -89,8 +90,26 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
     tool_name = pending["tool"]
     args = pending["args"]
 
-    # 按工具类型分发到 tools/execute/ 中的实际执行函数
-    result = _dispatch_operation(db, context, tool_name, args, pending)
+    # 用户等待确认期间资源可能变化；所有已有自动化必须重新校验版本。
+    if tool_name in {
+        "update_automation",
+        "set_automation_enabled",
+        "delete_automation",
+    }:
+        from app.services.automation import get_automation
+
+        automation = get_automation(db, int(args["automation_id"]), context.household_id)
+        if str(automation.version) != str(pending.get("resource_version", "")):
+            result = {
+                "ok": False,
+                "status": "failed",
+                "code": "AGENT_APPROVAL_STALE",
+                "error": "自动化规则在确认后已发生变化，请重新预览并确认",
+            }
+        else:
+            result = _dispatch_operation(db, context, tool_name, args, pending)
+    else:
+        result = _dispatch_operation(db, context, tool_name, args, pending)
 
     return {
         "messages": [
