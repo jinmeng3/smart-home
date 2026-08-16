@@ -2,6 +2,7 @@ from app.agents.context import AgentContext
 from app.agents.risk.policy import RiskDecision, RiskLevel
 from app.models.device import Device
 from app.services.scene import get_scene_or_404
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,88 @@ def _is_high_risk_device(device: Device) -> bool:
     )
     return device.type.lower() in HIGH_RISK_DEVICE_TYPES or any(
         keyword in value for keyword in HIGH_RISK_KEYWORDS for value in values
+    )
+
+
+def classify_automation_operation(
+    db: Session,
+    context: AgentContext,
+    operation: str,
+    automation_id: int | None = None,
+    actions: list[dict] | None = None,
+) -> RiskDecision:
+    """分类自动化操作的风险等级。
+
+    Args:
+        operation: 操作类型 (create_automation / update_automation / set_automation_enabled / delete_automation)
+        automation_id: 自动化规则 ID（创建时可为 None）
+        actions: 动作列表（仅创建/更新时需要）
+    """
+    reasons: list[str] = []
+    resource_version = ""
+
+    if operation == "delete_automation":
+        level = RiskLevel.HIGH
+        reasons.append("删除自动化规则可能影响家庭自动化流程")
+
+    elif operation == "set_automation_enabled":
+        level = RiskLevel.LOW
+        reasons.append("仅切换自动化规则的启用状态")
+
+    elif operation in ("create_automation", "update_automation"):
+        action_devices = []
+        if actions:
+            device_ids = [a.get("device_id") for a in actions if a.get("device_id")]
+            if device_ids:
+                action_devices = list(
+                    db.scalars(
+                        select(Device).where(
+                            Device.household_id == context.household_id,
+                            Device.id.in_(device_ids),
+                        )
+                    ).all()
+                )
+
+        high_risk_devices = [d for d in action_devices if _is_high_risk_device(d)]
+
+        if high_risk_devices:
+            level = RiskLevel.HIGH
+            reasons.append(
+                "包含高风险设备：" + "、".join(d.name for d in high_risk_devices)
+            )
+        else:
+            level = RiskLevel.LOW
+            reasons.append("仅包含已识别的普通家居设备操作")
+
+        if operation == "update_automation" and automation_id is not None:
+            try:
+                from app.services.automation import get_automation as get_automation_svc
+
+                automation = get_automation_svc(db, automation_id, context.household_id)
+                resource_version = str(automation.version)
+            except HTTPException:
+                level = RiskLevel.UNKNOWN
+                reasons.append("无法读取自动化规则当前版本")
+
+    else:
+        level = RiskLevel.UNKNOWN
+        reasons.append(f"未知的自动化操作类型：{operation}")
+
+    requires_approval = (
+        level in {RiskLevel.HIGH, RiskLevel.UNKNOWN}
+        or not context.auto_execute_low_risk
+    )
+
+    return RiskDecision(
+        level=level,
+        requires_approval=requires_approval,
+        reasons=reasons,
+        resource_version=resource_version,
+        preview={
+            "operation": operation,
+            "automation_id": automation_id,
+            "risk_level": level,
+        },
     )
 
 

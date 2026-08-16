@@ -3,10 +3,15 @@ import json
 import time
 
 from app.agents.graph.state import AgentState
-from app.agents.risk import classify_scene_execution
 from app.agents.tools import WRITE_TOOL_NAMES
+from app.agents.tools.execute.automations import (
+    create_automation_operation,
+    delete_automation_operation,
+    set_automation_enabled_operation,
+    update_automation_operation,
+)
+from app.agents.tools.execute.scenes import execute_scene_operation
 from app.core.config import get_settings
-from app.services.scene import run_scene_service
 from langchain_core.messages import ToolMessage
 from sqlalchemy.orm import Session
 
@@ -81,46 +86,11 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
         raise ValueError("写操作尚未获得批准")
 
     context = state["context"]
-    scene_id = pending["args"]["scene_id"]
+    tool_name = pending["tool"]
+    args = pending["args"]
 
-    # 执行前重新读取资源并重新分类，防止确认后场景被修改。
-    current = classify_scene_execution(
-        db=db,
-        context=context,
-        scene_id=scene_id,
-    )
-
-    if current.resource_version != pending["resource_version"]:
-        result = {
-            "ok": False,
-            "status": "failed",
-            "code": "AGENT_APPROVAL_STALE",
-            "error": "场景在确认后已发生变化，请重新预览并确认",
-        }
-    elif current.level != pending["risk_level"]:
-        result = {
-            "ok": False,
-            "status": "failed",
-            "code": "AGENT_RISK_CHANGED",
-            "error": "场景风险等级已变化，请重新预览并确认",
-        }
-    else:
-        execution = run_scene_service(
-            db=db,
-            household_id=context.household_id,
-            scene_id=scene_id,
-            confirm_high_risk=True,
-            source="agent",
-            idempotency_key=pending["approval_id"],
-        )
-        result = {
-            "ok": True,
-            # 当前没有真实设备状态回读，只能表达为已提交。
-            "status": "submitted",
-            "execution_id": execution.execution_id,
-            "scene_id": execution.scene_id,
-            "message": "场景已提交到业务执行层，尚未完成设备状态回读验证",
-        }
+    # 按工具类型分发到 tools/execute/ 中的实际执行函数
+    result = _dispatch_operation(db, context, tool_name, args, pending)
 
     return {
         "messages": [
@@ -133,4 +103,29 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
         "pending_approval": None,
         "approval_decision": None,
         "rounds": state.get("rounds", 0) + 1,
+    }
+
+
+def _dispatch_operation(db, context, tool_name: str, args: dict, pending: dict) -> dict:
+    """按工具类型分发到 agents/tools/execute/ 中的执行函数。"""
+    if tool_name == "execute_scene":
+        return execute_scene_operation(db, context, args, pending)
+
+    if tool_name == "create_automation":
+        return create_automation_operation(db, context, args)
+
+    if tool_name == "update_automation":
+        return update_automation_operation(db, context, args)
+
+    if tool_name == "set_automation_enabled":
+        return set_automation_enabled_operation(db, context, args)
+
+    if tool_name == "delete_automation":
+        return delete_automation_operation(db, context, args)
+
+    return {
+        "ok": False,
+        "status": "failed",
+        "code": "AGENT_UNKNOWN_TOOL",
+        "error": f"不支持的写操作工具：{tool_name}",
     }

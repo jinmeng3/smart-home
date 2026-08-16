@@ -66,6 +66,44 @@ class AuditRecorder:
         }
         self._write(entry)
 
+    def record_approval_required(
+        self,
+        *,
+        run_id: str,
+        approval_id: str,
+        tool: str,
+        risk_level: str,
+        reasons: list[str],
+    ) -> None:
+        entry = {
+            "event": "approval_required",
+            "run_id": run_id,
+            "approval_id": approval_id,
+            "tool": tool,
+            "risk_level": risk_level,
+            "reasons": reasons,
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write(entry)
+
+    def record_approval_decision(
+        self,
+        *,
+        run_id: str,
+        approval_id: str,
+        decision: str,
+        automatic: bool = False,
+    ) -> None:
+        entry = {
+            "event": "approval_decision",
+            "run_id": run_id,
+            "approval_id": approval_id,
+            "decision": decision,
+            "automatic": automatic,
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write(entry)
+
 
 _audit: AuditRecorder | None = None
 

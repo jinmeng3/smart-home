@@ -70,6 +70,13 @@ async def resume_agent(
     run_id = pending["run_id"]
     tracker = StreamTracker(run_id)
 
+    # 记录用户的确认决策
+    audit.record_approval_decision(
+        run_id=run_id,
+        approval_id=decision["approval_id"],
+        decision=decision["decision"],
+    )
+
     try:
         async for chunk, metadata in graph.astream(
             Command(resume=decision),

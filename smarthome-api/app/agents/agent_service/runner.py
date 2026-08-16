@@ -146,6 +146,13 @@ async def run_agent(
         audit.record_run_end(
             run_id, status="pending_confirmation", message="等待用户确认"
         )
+        audit.record_approval_required(
+            run_id=run_id,
+            approval_id=pending["approval_id"],
+            tool=pending["tool"],
+            risk_level=pending["risk_level"],
+            reasons=pending["reasons"],
+        )
         yield encode_sse_event(
             ApprovalRequired(
                 event_id=f"{run_id}-approval",

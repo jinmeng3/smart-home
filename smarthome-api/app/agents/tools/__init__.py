@@ -1,11 +1,19 @@
 from app.agents.context import AgentContext
 from app.agents.tools.base import build_query_tool
+from app.agents.tools.execute import automations as execute_automations
 from app.agents.tools.execute import scenes as execute_scenes
+from app.agents.tools.preview import automations as preview_automations
 from app.agents.tools.preview import scenes as preview_scenes
 from app.agents.tools.query import automations, devices, executions, rooms, scenes
 from sqlalchemy.orm import Session
 
-WRITE_TOOL_NAMES = {"execute_scene"}
+WRITE_TOOL_NAMES = {
+    "execute_scene",
+    "create_automation",
+    "update_automation",
+    "set_automation_enabled",
+    "delete_automation",
+}
 
 
 def get_household_tools(context: AgentContext, db: Session):
@@ -98,6 +106,7 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             executions.list_automation_executions,
         ),
+        # 只读预览工具
         build_query_tool(
             "preview_scene",
             "预览指定场景的执行步骤、影响设备和风险等级，不会实际执行场景",
@@ -106,6 +115,23 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             preview_scenes.preview_scene,
         ),
+        build_query_tool(
+            "preview_automation_change",
+            "预览自动化规则的变更内容，对比当前配置与变更后的差异，不会实际修改任何数据",
+            preview_automations.PreviewAutomationChangeInput,
+            context,
+            db,
+            preview_automations.preview_automation_change,
+        ),
+        build_query_tool(
+            "detect_automation_conflicts",
+            "检测自动化规则之间的时间重叠、设备冲突和循环触发风险，不会实际修改任何数据",
+            preview_automations.DetectAutomationConflictsInput,
+            context,
+            db,
+            preview_automations.detect_automation_conflicts,
+        ),
+        # 写工具（注册但实际执行由受控写操作节点完成）
         build_query_tool(
             "execute_scene",
             (
@@ -118,6 +144,62 @@ def get_household_tools(context: AgentContext, db: Session):
             lambda **_: {
                 "ok": False,
                 "error": "execute_scene只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "create_automation",
+            (
+                "在当前家庭中创建自动化规则，包含触发器、条件和动作。"
+                "该操作可能需要用户确认。"
+            ),
+            execute_automations.CreateAutomationInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "create_automation只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "update_automation",
+            (
+                "更新当前家庭中的自动化规则。需携带version参数实现乐观锁。"
+                "该操作可能需要用户确认。"
+            ),
+            execute_automations.UpdateAutomationInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "update_automation只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "set_automation_enabled",
+            (
+                "启用或停用当前家庭中的自动化规则。"
+                "该操作可能需要用户确认。"
+            ),
+            execute_automations.SetAutomationEnabledInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "set_automation_enabled只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "delete_automation",
+            (
+                "删除当前家庭中的自动化规则。"
+                "该操作需要用户确认。"
+            ),
+            execute_automations.DeleteAutomationInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "delete_automation只能由受控写操作节点执行",
             },
         ),
     ]
