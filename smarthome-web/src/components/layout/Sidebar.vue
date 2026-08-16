@@ -53,7 +53,7 @@ const accountInitial = computed(() =>
         : "访",
 );
 
-/* ── 最近会话分组 ─────────────────────────────────────────── */
+/* === 最近会话分组 === */
 const conversationGroups = computed(() => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -82,7 +82,7 @@ const conversationGroups = computed(() => {
 
 const isActiveConversation = (id: string) => store.activeSessionId === id;
 
-/* ── 滚动渐隐 ─────────────────────────────────────────────── */
+/* === 滚动渐隐 === */
 const scrollGroupRef = ref<HTMLElement | null>(null);
 const scrollAtTop = ref(true);
 const scrollAtBottom = ref(true);
@@ -104,14 +104,14 @@ watch(
     () => void nextTick(updateScrollState),
 );
 
-/* ── 紧凑模式会话浮层 ─────────────────────────────────────── */
+/* === 紧凑模式会话浮层 === */
 const compactPanelOpen = ref(false);
 const toggleChatFromCompact = async () => {
     if (props.mode !== "compact") return;
     compactPanelOpen.value = !compactPanelOpen.value;
 };
 
-/* ── 交互 ─────────────────────────────────────────────────── */
+/* === 交互 === */
 const selectMenu = async (item: NavigationItem) => {
     store.setActiveMenu(item.label);
 
@@ -172,7 +172,7 @@ const deleteConversation = async (sessionId: string) => {
     await store.deleteConversation(sessionId);
 };
 
-/* ── 判断分组是否包含当前路由 ─────────────────────────────── */
+/* === 判断分组是否包含当前路由 === */
 const isGroupActive = (group: NavigationGroup) =>
     group.items.some((item) => item.path === route.path);
 </script>
@@ -198,7 +198,7 @@ const isGroupActive = (group: NavigationGroup) =>
             <SvgIcon name="close" size="sm" />
         </button>
 
-        <!-- ── 品牌区（固定） ── -->
+        <!-- === 品牌区（固定） === -->
         <div
             class="mb-5 flex shrink-0 items-center"
             :class="isCollapsed ? 'justify-center' : 'gap-3'"
@@ -243,7 +243,7 @@ const isGroupActive = (group: NavigationGroup) =>
             </button>
         </div>
 
-        <!-- ── 内容区（滚动） ── -->
+        <!-- === 内容区（滚动） === -->
         <div class="sidebar-content flex min-h-0 flex-1 flex-col overflow-hidden">
             <div class="scroll-region">
                 <div
@@ -445,7 +445,7 @@ const isGroupActive = (group: NavigationGroup) =>
             </div>
         </Transition>
 
-        <!-- ── 账户区（固定底部） ── -->
+        <!-- === 账户区（固定底部） === -->
         <button
             class="mt-auto flex h-[68px] w-full shrink-0 items-center justify-start gap-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-gradient-to-r from-[var(--color-card-bg)] to-[var(--color-primary-50)] p-3 transition-all duration-150 hover:border-[var(--color-primary-200)] hover:shadow-sm"
             :class="isCollapsed ? 'justify-center px-0' : ''"
@@ -506,7 +506,7 @@ const isGroupActive = (group: NavigationGroup) =>
 </template>
 
 <style scoped>
-/* ── 布局重置 ── */
+/* === 布局重置 === */
 .is-compact > div:first-of-type {
     justify-content: center;
     margin-bottom: 16px;
@@ -567,7 +567,7 @@ const isGroupActive = (group: NavigationGroup) =>
     padding: 6px;
 }
 
-/* ── 桌面端手动折叠 ── */
+/* === 桌面端手动折叠 === */
 .is-collapsed {
     padding: 14px 10px !important;
 }
@@ -602,7 +602,7 @@ const isGroupActive = (group: NavigationGroup) =>
     padding: 6px;
 }
 
-/* ── 侧边栏本体 ── */
+/* === 侧边栏本体 === */
 aside {
     will-change: transform, opacity;
     transition: padding 300ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -629,7 +629,7 @@ aside > button:last-of-type {
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── 分组标题 ── */
+/* === 分组标题 === */
 .group-header {
     display: flex;
     align-items: center;
@@ -662,7 +662,7 @@ aside > button:last-of-type {
     white-space: nowrap;
 }
 
-/* ── 导航项 ── */
+/* === 导航项 === */
 .nav-item {
     position: relative;
     min-height: 44px;
@@ -718,7 +718,7 @@ aside > button:last-of-type {
     }
 }
 
-/* ── 菜单图标 ── */
+/* === 菜单图标 === */
 .menu-icon {
     display: grid;
     width: 32px;
@@ -757,7 +757,7 @@ aside > button:last-of-type {
     100% { transform: scale(1); }
 }
 
-/* ── 滚动区 ── */
+/* === 滚动区 === */
 .scroll-region {
     position: relative;
     display: flex;
@@ -790,7 +790,7 @@ aside > button:last-of-type {
     background: var(--color-border-strong);
 }
 
-/* ── 渐隐遮罩 ── */
+/* === 渐隐遮罩 === */
 .scroll-fade {
     position: absolute;
     right: 0;
@@ -824,7 +824,7 @@ aside > button:last-of-type {
     opacity: 1;
 }
 
-/* ── 紧凑模式标记 ── */
+/* === 紧凑模式标记 === */
 .compact-panel-trigger {
     position: absolute;
     right: 6px;
@@ -843,7 +843,7 @@ aside > button:last-of-type {
     background: var(--color-primary-600);
 }
 
-/* ── 会话面板 ── */
+/* === 会话面板 === */
 .conversation-panel {
     display: flex;
     flex-direction: column;
@@ -1032,7 +1032,7 @@ aside > button:last-of-type {
     font-weight: 700;
 }
 
-/* ── 账户区 ── */
+/* === 账户区 === */
 .account-dot {
     display: inline-block;
     width: 6px;
@@ -1046,7 +1046,7 @@ aside > button:last-of-type {
     background: var(--color-success);
 }
 
-/* ── 三阶段折叠动画 ── */
+/* === 三阶段折叠动画 === */
 aside.phase-collapsing {
     overflow: hidden;
 }
@@ -1077,7 +1077,7 @@ aside.phase-collapsed .sidebar-detail {
     display: none;
 }
 
-/* ── 抽屉关闭按钮 ── */
+/* === 抽屉关闭按钮 === */
 .drawer-close {
     position: absolute;
     z-index: 1;

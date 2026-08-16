@@ -21,6 +21,7 @@ import {
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
 import type { DeviceQuickActionKey } from "../composables/useDeviceManagementController";
+import type { DeviceStatus } from "../types/device";
 import { defineAsyncDialog } from "../utils/asyncDialog";
 
 const DeviceEditorDialog = defineAsyncDialog(
@@ -33,7 +34,7 @@ const SyncDialog = defineAsyncDialog(
 const controller = useDeviceManagementController();
 const route = useRoute();
 
-/* ── 页面显式解构 refs，模板不再出现 controller.x.value ── */
+/* === 页面显式解构 refs，模板不再出现 controller.x.value === */
 const {
     batchDeleteDialogOpen,
     batchDeleting,
@@ -87,11 +88,11 @@ const clearDeviceFilters = () => {
     }
 };
 
-/* ── 侧栏折叠状态（由 BaseCollapsibleRail 维护，v-model 同步） ── */
+/* === 侧栏折叠状态（由 BaseCollapsibleRail 维护，v-model 同步） === */
 const railCollapsed = ref(false);
 const syncDialogOpen = ref(false);
 
-/* ── 同步弹窗处理 ──────────────────────────────────────────────── */
+/* === 同步弹窗处理 === */
 const handleSync = () => {
     syncDialogOpen.value = true;
 };
@@ -100,7 +101,7 @@ const handlePlatformSync = async (_platformName: string) => {
     return await controller.runSync();
 };
 
-/* ── 侧栏快捷操作分发 ──────────────────────────────────────────── */
+/* === 侧栏快捷操作分发 === */
 const handleRailAction = (key: string) => {
     if (key === "sync") {
         handleSync();
@@ -141,9 +142,9 @@ const handleRailSync = () => {
                     :rooms="rooms"
                     :status="filters.status"
                     @add="controller.addDevice"
-                    @update:keyword="(value) => controller.updateFilter('keyword', value)"
-                    @update:room="(value) => controller.updateFilter('room', value)"
-                    @update:status="(value) => controller.updateFilter('status', value)"
+                    @update:keyword="(value: string) => controller.updateFilter('keyword', value)"
+                    @update:room="(value: string) => controller.updateFilter('room', value)"
+                    @update:status="(value: DeviceStatus | '') => controller.updateFilter('status', value)"
                 />
             </PageHeader>
 
@@ -201,7 +202,7 @@ const handleRailSync = () => {
                 @remove="controller.removeDevice"
                 @select="controller.selectDevice"
                 @sync="handleSync"
-                @update:active-type="(value) => controller.updateFilter('type', value)"
+                @update:active-type="(value: string) => controller.updateFilter('type', value)"
                 @update:page="controller.updatePage"
                 @update:page-size="controller.updatePageSize"
                 @update:sort="sort = $event"
@@ -563,7 +564,7 @@ const handleRailSync = () => {
     gap: 10px;
 }
 
-/* ── 双栏布局（与 components.css 的 .app-page-layout 保持一致） ── */
+/* === 双栏布局（与 components.css 的 .app-page-layout 保持一致） === */
 /* 仅桌面端（≥1024px）为双栏；移动端保持单栏。 */
 /* 使用 auto 列 + rail 自身 width 过渡实现平滑动画。 */
 @media (min-width: 1024px) {
@@ -592,7 +593,7 @@ const handleRailSync = () => {
     }
 }
 
-/* ── 侧栏概览 ↔ 详情模式切换（out-in 交叉淡入） ── */
+/* === 侧栏概览 ↔ 详情模式切换（out-in 交叉淡入） === */
 .rail-mode-enter-active,
 .rail-mode-leave-active {
     transition:
@@ -827,7 +828,7 @@ button:disabled {
     }
 }
 
-/* ── 批量删除弹窗 ───────────────────────────────────────────────────── */
+/* === 批量删除弹窗 === */
 
 .batch-delete-header {
     display: flex;
@@ -1014,7 +1015,7 @@ button:disabled {
     text-align: center;
 }
 
-/* ── 批量删除进度条 ───────────────────────────────────────────── */
+/* === 批量删除进度条 === */
 .batch-delete-progress {
     display: flex;
     flex-direction: column;
@@ -1123,7 +1124,7 @@ button:disabled {
     }
 }
 
-/* ── 日志查看弹窗 ───────────────────────────────────────────────────── */
+/* === 日志查看弹窗 === */
 
 .log-dialog-header {
     display: flex;
@@ -1232,7 +1233,7 @@ button:disabled {
     opacity: 0.4;
 }
 
-/* ── 时间线布局 ── */
+/* === 时间线布局 === */
 
 .log-timeline {
     display: grid;
@@ -1257,7 +1258,7 @@ button:disabled {
     }
 }
 
-/* ── 时间线节点 ── */
+/* === 时间线节点 === */
 
 .log-timeline-node {
     display: flex;
@@ -1315,7 +1316,7 @@ button:disabled {
 .log-line.is-group { background: var(--color-purple-500); opacity: 0.3; }
 .log-line.is-delete { background: var(--color-danger); opacity: 0.3; }
 
-/* ── 日志卡片 ── */
+/* === 日志卡片 === */
 
 .log-card {
     display: grid;

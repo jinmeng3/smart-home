@@ -283,7 +283,7 @@ const close = () => {
     color: var(--color-text-primary);
 }
 
-/* ── 选择平台 ── */
+/* === 选择平台 === */
 .sync-select {
     display: grid;
     gap: 10px;
@@ -433,7 +433,7 @@ const close = () => {
     to { opacity: 1; transform: scale(1); }
 }
 
-/* ── 同步进度 ── */
+/* === 同步进度 === */
 .sync-progress {
     display: flex;
     flex-direction: column;
@@ -488,7 +488,7 @@ const close = () => {
     }
 }
 
-/* ── 同步结果 ── */
+/* === 同步结果 === */
 .sync-result {
     display: flex;
     flex-direction: column;
@@ -550,7 +550,7 @@ const close = () => {
     color: var(--color-text-muted);
 }
 
-/* ── 底部操作栏 ── */
+/* === 底部操作栏 === */
 .sync-dialog-footer {
     display: flex;
     align-items: center;

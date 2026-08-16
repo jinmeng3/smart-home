@@ -170,7 +170,7 @@ const close = () => emit("update:modelValue", false);
     padding: 4px 0;
 }
 
-/* ── Summary Stats Bar ── */
+/* === Summary Stats Bar === */
 .distribution-summary {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -251,7 +251,7 @@ const close = () => emit("update:modelValue", false);
     white-space: nowrap;
 }
 
-/* ── Room Grid ── */
+/* === Room Grid === */
 .room-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -293,7 +293,7 @@ const close = () => emit("update:modelValue", false);
     }
 }
 
-/* ── Card Header ── */
+/* === Card Header === */
 .room-card-header {
     display: flex;
     align-items: center;
@@ -380,7 +380,7 @@ const close = () => emit("update:modelValue", false);
     background: #c0c9d6;
 }
 
-/* ── Card Body ── */
+/* === Card Body === */
 .room-card-body {
     display: grid;
     gap: 6px;
@@ -415,7 +415,7 @@ const close = () => emit("update:modelValue", false);
     font-size: 12px;
 }
 
-/* ── Utilization Bar ── */
+/* === Utilization Bar === */
 .room-util-bar {
     height: 3px;
     margin-top: 12px;
@@ -451,7 +451,7 @@ const close = () => emit("update:modelValue", false);
     background: linear-gradient(90deg, #0d9488, #14b8a6);
 }
 
-/* ── Responsive ── */
+/* === Responsive === */
 @media (max-width: 640px) {
     .distribution-summary {
         grid-template-columns: repeat(2, 1fr);

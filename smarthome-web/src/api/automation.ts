@@ -13,7 +13,7 @@ import type {
 
 /** 自动化规则 HTTP 请求层（SRP：纯请求与查询构建，不含业务编排）。 */
 
-// ── 查询参数构建 ────────────────────────────────────────────────────────────────────
+// === 查询参数构建 ===
 
 const buildAutomationQuery = (params: {
   keyword?: string;
@@ -32,7 +32,7 @@ const buildAutomationQuery = (params: {
   return query.toString();
 };
 
-// ── 自动化规则 CRUD ───────────────────────────────────────────────────────────────
+// === 自动化规则 CRUD ===
 
 export const listAutomations = (
   householdId: number,
@@ -74,7 +74,7 @@ export const toggleAutomationEnabled = (automationId: number, enabled: boolean) 
     body: JSON.stringify({ enabled }),
   });
 
-// ── 执行与记录 ────────────────────────────────────────────────────────────────────
+// === 执行与记录 ===
 
 export const executeAutomation = (
   automationId: number,
@@ -105,7 +105,7 @@ export const listAutomationExecutions = (
   );
 };
 
-// ── 批量操作 ──────────────────────────────────────────────────────────────────────
+// === 批量操作 ===
 
 export const batchEnableAutomations = (payload: {
   ruleIds: number[];

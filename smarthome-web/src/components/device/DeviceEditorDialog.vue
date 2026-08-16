@@ -73,6 +73,9 @@ const isCustomType = computed(() => !PRESET_TYPE_VALUES.has(form.type));
 const selectedTypeMeta = computed(() =>
   deviceTypeOptions.find((item) => item.value === form.type),
 );
+const renderedTypeOptions = computed(() =>
+  deviceTypeOptions.filter((item) => item.value),
+);
 const selectedTypeIcon = computed(() => form.icon || getDeviceTypeIcon(form.type));
 const canSubmit = computed(
   () =>
@@ -403,9 +406,7 @@ onBeforeUnmount(releasePreviewUrl);
                             >
                             <div class="device-type-grid">
                                 <button
-                                    v-for="item in deviceTypeOptions.filter(
-                                        (item) => item.value,
-                                    )"
+                                    v-for="item in renderedTypeOptions"
                                     :key="item.value"
                                     :class="{
                                         active: form.type === item.value,
@@ -497,7 +498,7 @@ onBeforeUnmount(releasePreviewUrl);
 </template>
 
 <style scoped>
-/* ── 弹窗头部 ── */
+/* === 弹窗头部 === */
 
 .device-dialog-header {
     display: flex;
@@ -568,7 +569,7 @@ onBeforeUnmount(releasePreviewUrl);
     transform: translateY(-1px);
 }
 
-/* ── 表单容器 ── */
+/* === 表单容器 === */
 
 .device-form {
     display: grid;
@@ -576,9 +577,9 @@ onBeforeUnmount(releasePreviewUrl);
     padding: 2px 0;
 }
 
-/* ── 顶部预览区 ── */
+/* === 顶部预览区 === */
 
-/* ── 左栏预览卡片 ──────────────────────────────────────────────── */
+/* === 左栏预览卡片 === */
 .device-editor-preview {
     display: flex;
     flex-direction: column;
@@ -742,7 +743,7 @@ onBeforeUnmount(releasePreviewUrl);
     display: none;
 }
 
-/* ── 表单区块 ── */
+/* === 表单区块 === */
 
 .device-form-section {
     display: grid;
@@ -777,7 +778,7 @@ onBeforeUnmount(releasePreviewUrl);
     text-align: right;
 }
 
-/* ── 双列布局 ── */
+/* === 双列布局 === */
 
 .device-form-columns {
     display: grid;
@@ -807,7 +808,7 @@ onBeforeUnmount(releasePreviewUrl);
     flex: 1;
 }
 
-/* ── 设备类型选择器 ── */
+/* === 设备类型选择器 === */
 
 .device-type-picker {
     display: grid;
@@ -894,7 +895,7 @@ onBeforeUnmount(releasePreviewUrl);
     white-space: nowrap;
 }
 
-/* ── 自定义类型输入 ── */
+/* === 自定义类型输入 === */
 
 .device-custom-type-input {
     margin-top: -4px;
@@ -925,7 +926,7 @@ onBeforeUnmount(releasePreviewUrl);
     font-weight: 600;
 }
 
-/* ── 图标选择器 ── */
+/* === 图标选择器 === */
 
 .device-icon-picker {
     display: grid;
@@ -993,7 +994,7 @@ onBeforeUnmount(releasePreviewUrl);
     height: 16px;
 }
 
-/* ── 颜色选择器 ── */
+/* === 颜色选择器 === */
 
 .icon-grid {
     display: grid;
@@ -1031,7 +1032,7 @@ onBeforeUnmount(releasePreviewUrl);
     transform: scale(1.1);
 }
 
-/* ── 表单字段 ── */
+/* === 表单字段 === */
 
 .device-form-grid {
     display: grid;
@@ -1099,7 +1100,7 @@ onBeforeUnmount(releasePreviewUrl);
     box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
-/* ── 按钮共用 ── */
+/* === 按钮共用 === */
 
 .device-upload-button,
 .device-clear-button,
@@ -1172,7 +1173,7 @@ onBeforeUnmount(releasePreviewUrl);
     animation: device-dialog-spin 900ms linear infinite;
 }
 
-/* ── 弹窗底部 ── */
+/* === 弹窗底部 === */
 
 .device-dialog-footer {
     display: flex;
@@ -1207,7 +1208,7 @@ button:disabled {
     }
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 
 @media (max-width: 640px) {
     .device-form-columns {

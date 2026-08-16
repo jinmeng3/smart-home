@@ -37,7 +37,7 @@ const hasStreamingContent = computed(() => {
     return Boolean(message?.content.trim());
 });
 
-/* ── 重新生成状态：点击按钮后延迟执行 splice，让退场动画先播放 ── */
+/* === 重新生成状态：点击按钮后延迟执行 splice，让退场动画先播放 === */
 const regeneratingMessageId = ref<string | null>(null);
 let regeneratingTimer = 0;
 const handleRegenerate = (messageId: string) => {
@@ -50,7 +50,7 @@ const handleRegenerate = (messageId: string) => {
     }, 180);
 };
 
-/* ── 发送与停止 ─────────────────────────────────────────────── */
+/* === 发送与停止 === */
 const handleSend = (content: string) => {
     store.sendMessage(content);
     void scrollToBottom(true);

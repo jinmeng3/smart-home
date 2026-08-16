@@ -5,7 +5,7 @@ import type {
   UserPreferences,
 } from "../types/settings";
 
-// ── DTO 类型 ──────────────────────────────────────────────────────────────────────
+// === DTO 类型 ===
 
 interface AccountRead {
   id: number;
@@ -38,7 +38,7 @@ interface MemberListResponse {
   total: number;
 }
 
-// ── 映射函数 ──────────────────────────────────────────────────────────────────────
+// === 映射函数 ===
 
 const toMember = (member: MemberRead): HouseholdMember => ({
   membershipId: member.membership_id,
@@ -50,7 +50,7 @@ const toMember = (member: MemberRead): HouseholdMember => ({
   joinedAt: member.joined_at,
 });
 
-// ── API 导出函数 ──────────────────────────────────────────────────────────────────
+// === API 导出函数 ===
 
 export const getAccount = () => apiRequest<AccountRead>("/api/account/me");
 

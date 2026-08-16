@@ -473,7 +473,7 @@ const dialogFooterHint = computed(() =>
                                     v-else
                                     :key="device.id"
                                     type="button"
-                                    :class="{ active: actions.some((action) => action.id === (device.deviceId ?? String(device.id))) }"
+                                    :class="{ active: actions.some((action: ActionItem) => action.id === (device.deviceId ?? String(device.id))) }"
                                     @click="toggleDevice(device)"
                                 >
                                     <SvgIcon :name="device.icon || getDeviceTypeIcon(device.type)" size="sm" />
@@ -502,7 +502,7 @@ const dialogFooterHint = computed(() =>
                                 <strong>{{ action.name }}</strong>
                                 <small>{{ action.target }}</small>
                             </div>
-                            <button type="button" class="action-more" title="移除动作" @click="actions = actions.filter((item) => item.id !== action.id)">
+                            <button type="button" class="action-more" title="移除动作" @click="actions = actions.filter((item: ActionItem) => item.id !== action.id)">
                                 ×
                             </button>
                         </li>
@@ -580,7 +580,7 @@ const dialogFooterHint = computed(() =>
 </template>
 
 <style scoped>
-/* ── 布局 ── */
+/* === 布局 === */
 .create-dialog {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -602,7 +602,7 @@ const dialogFooterHint = computed(() =>
     gap: 14px;
 }
 
-/* ── 步骤进度条 ── */
+/* === 步骤进度条 === */
 .create-steps {
     display: flex;
     align-items: center;
@@ -654,7 +654,7 @@ const dialogFooterHint = computed(() =>
     background: var(--color-primary-300);
 }
 
-/* ── 表单区块 ── */
+/* === 表单区块 === */
 .form-block {
     border: 1px solid var(--color-border);
     border-radius: 12px;
@@ -703,7 +703,7 @@ const dialogFooterHint = computed(() =>
     font-weight: 800;
 }
 
-/* ── 表单字段 ── */
+/* === 表单字段 === */
 .form-grid,
 .room-device-row {
     display: grid;
@@ -775,7 +775,7 @@ textarea {
     min-height: 56px;
 }
 
-/* ── 图标选择器 ── */
+/* === 图标选择器 === */
 .option-row {
     display: flex;
     gap: 12px;
@@ -833,7 +833,7 @@ textarea {
     line-height: 1;
 }
 
-/* ── 颜色选择器 ── */
+/* === 颜色选择器 === */
 .color-picker {
     display: flex;
     flex-wrap: wrap;
@@ -881,7 +881,7 @@ textarea {
     color: var(--color-text-primary);
 }
 
-/* ── 触发条件选项卡 ── */
+/* === 触发条件选项卡 === */
 .trigger-tabs {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -949,7 +949,7 @@ textarea {
     max-width: 100%;
 }
 
-/* ── 房间标签 ── */
+/* === 房间标签 === */
 .chips {
     display: flex;
     width: 100%;
@@ -1099,7 +1099,7 @@ textarea {
     text-align: center;
 }
 
-/* ── 执行动作列表 ── */
+/* === 执行动作列表 === */
 .action-list {
     display: grid;
     gap: 6px;
@@ -1212,7 +1212,7 @@ textarea {
     border-color: var(--color-primary-500);
 }
 
-/* ── 预览面板 ── */
+/* === 预览面板 === */
 .preview-header {
     display: flex;
     align-items: center;
@@ -1406,7 +1406,7 @@ textarea {
     margin: 0;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 980px) {
     .create-dialog {
         grid-template-columns: 1fr;

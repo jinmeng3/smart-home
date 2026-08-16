@@ -53,6 +53,11 @@ class PreferencesSchema(BaseModel):
         populate_by_name=True,
     )
 
+    def model_dump(self, **kwargs):
+        """默认使用别名序列化，确保 camelCase 字段名正确输出。"""
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
+
 
 class AppearancePreferences(PreferencesSchema):
     theme_mode: Literal["light", "dark", "system"] = "light"

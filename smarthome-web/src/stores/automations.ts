@@ -22,7 +22,7 @@ import type {
 import type { LoadingState } from "../types/loading";
 import { sleep } from "../utils/async";
 
-// ── 自动化流程步骤 ──────────────────────────────────────────────────────────────────
+// === 自动化流程步骤 ===
 
 export type AutomationStepStatus = "pending" | "running" | "completed";
 
@@ -141,7 +141,7 @@ export const buildAutomationSteps = (
     return steps;
 };
 
-// ── 自动化 Store ────────────────────────────────────────────────────────────────────
+// === 自动化 Store ===
 
 export const useAutomationsStore = defineStore("automations", () => {
     const filters = reactive<AutomationFilters>({

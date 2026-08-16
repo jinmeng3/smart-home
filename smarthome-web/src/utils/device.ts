@@ -6,7 +6,7 @@ import { getDeviceTypeIcon } from "../components/device/deviceMeta";
  * 设备展示层工具（SRP：模型转换与状态解析，不含请求与业务编排）。
  */
 
-/* ── 房间设备视图模型转换 ── */
+/* === 房间设备视图模型转换 === */
 
 export const toRoomDeviceCards = (devices: Room["device"]): RoomDeviceCard[] => {
     if (!devices || devices.length === 0) return [];
@@ -21,7 +21,7 @@ export const toRoomDeviceCards = (devices: Room["device"]): RoomDeviceCard[] => 
     }));
 };
 
-/* ── 设备状态判断 ── */
+/* === 设备状态判断 === */
 
 export const isDeviceActive = (status: string): boolean =>
     status === "online" || status === "running";

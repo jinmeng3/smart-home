@@ -232,7 +232,7 @@ const closeMoreMenu = () => {
     opacity: 0.5;
 }
 
-/* ── 三层布局 ── */
+/* === 三层布局 === */
 .scene-card-layer {
     padding: 8px 12px 0 12px;
 }
@@ -261,7 +261,7 @@ const closeMoreMenu = () => {
     margin-top: 6px;
 }
 
-/* ── 图标 ── */
+/* === 图标 === */
 .scene-icon {
     display: grid;
     width: 36px;
@@ -272,7 +272,7 @@ const closeMoreMenu = () => {
     transition: opacity 180ms var(--motion-ease);
 }
 
-/* ── 标题区域 ── */
+/* === 标题区域 === */
 .scene-title-group {
     min-width: 0;
     flex: 1;
@@ -316,7 +316,7 @@ h3 {
     color: var(--color-warning);
 }
 
-/* ── 底部状态与操作 ── */
+/* === 底部状态与操作 === */
 .scene-bottom-actions {
     display: flex;
     min-width: 0;
@@ -345,7 +345,7 @@ h3 {
     color: var(--color-text-tertiary);
 }
 
-/* ── 描述 ── */
+/* === 描述 === */
 .scene-desc {
     margin: 0;
     overflow: hidden;
@@ -357,7 +357,7 @@ h3 {
     transition: opacity 180ms var(--motion-ease);
 }
 
-/* ── 元信息行 ── */
+/* === 元信息行 === */
 .scene-meta {
     display: flex;
     align-items: center;
@@ -383,7 +383,7 @@ h3 {
     flex: 0 0 auto;
 }
 
-/* ── 执行按钮 ── */
+/* === 执行按钮 === */
 .scene-run-button {
     display: inline-flex;
     align-items: center;
@@ -421,7 +421,7 @@ h3 {
     animation: scene-spin 900ms linear infinite;
 }
 
-/* ── 更多菜单 ── */
+/* === 更多菜单 === */
 .scene-more-wrapper {
     position: relative;
     flex: 0 0 auto;
@@ -492,7 +492,7 @@ h3 {
     border-top: 1px solid var(--color-border-subtle);
 }
 
-/* ── 更多菜单动画 ── */
+/* === 更多菜单动画 === */
 .more-menu-enter-active,
 .more-menu-leave-active {
     transition:

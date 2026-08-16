@@ -12,6 +12,9 @@ from app.schemas.room import (
     RoomDeviceMetaWrite,
     RoomDevicesWrite,
     RoomDeviceWrite,
+    RoomEnvironmentLatestRead,
+    RoomEnvironmentReportRead,
+    RoomEnvironmentTrendRead,
     RoomInput,
     RoomListRead,
     RoomLogListRead,
@@ -23,12 +26,15 @@ from app.schemas.room import (
 from app.schemas.scene import SceneExecutionRead, SceneListRead, ScenePreviewRead
 from app.services.room import (
     add_room_service,
+    create_room_environment_report_service,
     delete_room_service,
     edit_room_device_service,
     edit_room_service,
     execute_room_scene_service,
     get_room_detail_service,
     get_room_devices_service,
+    get_room_environment_latest_service,
+    get_room_environment_trends_service,
     get_room_logs_service,
     get_room_scenes_service,
     list_room_stats_service,
@@ -264,4 +270,55 @@ def execute_room_scene(
     """执行房间场景并记录活动日志。"""
     return ApiResponse.ok(
         execute_room_scene_service(db, current_user, room_id, scene_id, payload)
+    )
+
+
+# === 房间环境 ===
+
+
+@router.get(
+    "/{room_id}/environment/latest",
+    response_model=ApiResponse[RoomEnvironmentLatestRead],
+)
+def get_room_environment_latest(
+    room_id: int,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomEnvironmentLatestRead]:
+    """获取房间最新环境数据（温度、湿度等）。"""
+    return ApiResponse.ok(
+        get_room_environment_latest_service(db, current_user, room_id)
+    )
+
+
+@router.get(
+    "/{room_id}/environment/trends",
+    response_model=ApiResponse[RoomEnvironmentTrendRead],
+)
+def get_room_environment_trends(
+    room_id: int,
+    metrics: str = Query(default="temperature,humidity"),
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomEnvironmentTrendRead]:
+    """获取房间环境趋势数据。"""
+    return ApiResponse.ok(
+        get_room_environment_trends_service(db, current_user, room_id, metrics)
+    )
+
+
+@router.post(
+    "/{room_id}/environment/reports",
+    response_model=ApiResponse[RoomEnvironmentReportRead],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_room_environment_report(
+    room_id: int,
+    db: Session = DB_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+) -> ApiResponse[RoomEnvironmentReportRead]:
+    """创建房间环境报告任务。"""
+    return ApiResponse.ok(
+        create_room_environment_report_service(db, current_user, room_id),
+        message="created",
     )

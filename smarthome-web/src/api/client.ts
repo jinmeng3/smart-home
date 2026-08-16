@@ -114,7 +114,7 @@ export const parseResponse = async <T>(
     return parsed as T;
   }
 
-  // ── 错误处理 ──────────────────────────────────────────────────────────────
+  // === 错误处理 ===
 
   let parsed: unknown;
   try {

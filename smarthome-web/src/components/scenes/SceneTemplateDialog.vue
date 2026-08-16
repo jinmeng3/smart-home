@@ -354,7 +354,7 @@ const importSelectedTemplate = () => {
 </template>
 
 <style scoped>
-/* ── 布局 ── */
+/* === 布局 === */
 .template-dialog {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px;
@@ -377,7 +377,7 @@ const importSelectedTemplate = () => {
     gap: 14px;
 }
 
-/* ── 搜索与分类 ── */
+/* === 搜索与分类 === */
 .template-filters {
     display: flex;
     flex-wrap: wrap;
@@ -478,7 +478,7 @@ const importSelectedTemplate = () => {
     color: var(--color-primary-600);
 }
 
-/* ── 特征快捷入口 ── */
+/* === 特征快捷入口 === */
 .template-summary-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -555,7 +555,7 @@ const importSelectedTemplate = () => {
     margin-top: 1px;
 }
 
-/* ── 骨架屏 ── */
+/* === 骨架屏 === */
 .template-skeleton {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -604,7 +604,7 @@ const importSelectedTemplate = () => {
     50% { opacity: 1; }
 }
 
-/* ── 状态提示 ── */
+/* === 状态提示 === */
 .template-state {
     display: flex;
     align-items: center;
@@ -624,7 +624,7 @@ const importSelectedTemplate = () => {
     background: var(--color-danger-soft);
 }
 
-/* ── 模板网格 ── */
+/* === 模板网格 === */
 .template-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -737,7 +737,7 @@ const importSelectedTemplate = () => {
     color: var(--color-primary-700);
 }
 
-/* ── 预览面板 ── */
+/* === 预览面板 === */
 .preview-header {
     display: flex;
     align-items: center;
@@ -1023,7 +1023,7 @@ const importSelectedTemplate = () => {
     font-size: 12px;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 980px) {
     .template-dialog {
         grid-template-columns: 1fr;

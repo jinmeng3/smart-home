@@ -1351,7 +1351,7 @@ useAuthenticatedLoader(loadAutomations);
     text-align: center;
 }
 
-/* ── 删除确认弹窗 ── */
+/* === 删除确认弹窗 === */
 .dialog-header .dialog-icon svg {
     animation: rule-delete-icon-pulse 1.6s ease-in-out infinite;
 }

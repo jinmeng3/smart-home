@@ -1,4 +1,4 @@
-// ── 家庭日程 ──────────────────────────────────────────────────────────────────────
+// === 家庭日程 ===
 
 export interface ScheduleItem {
   id?: number;
@@ -31,7 +31,7 @@ export interface ScheduleWrite {
   version?: number;
 }
 
-// ── 首页总览 ──────────────────────────────────────────────────────────────────────
+// === 首页总览 ===
 
 /**
  * 注意：概览接口 (OverviewRead 及其嵌套模型) 未继承 OverviewSchema，
@@ -86,7 +86,7 @@ export interface HouseholdOverview {
   alerts: unknown[];
 }
 
-// ── 模式执行 ──────────────────────────────────────────────────────────────────────
+// === 模式执行 ===
 
 export type OverviewMode = "home" | "away" | "sleep" | "guest";
 
@@ -97,7 +97,7 @@ export interface ModeExecuteInput {
   idempotencyKey: string;
 }
 
-// ── 任务结果（模式执行 / 设备巡检） ──────────────────────────────────────────────────
+// === 任务结果（模式执行 / 设备巡检） ===
 
 export interface TaskResult {
   id: number;
@@ -108,7 +108,7 @@ export interface TaskResult {
   estimatedSeconds?: number;
 }
 
-// ── 设备巡检 ──────────────────────────────────────────────────────────────────────
+// === 设备巡检 ===
 
 export type InspectionScope = "all" | "rooms" | "device_types";
 
@@ -119,7 +119,7 @@ export interface InspectionInput {
   checks: string[];
 }
 
-// ── 设备同步任务 ────────────────────────────────────────────────────────────────────
+// === 设备同步任务 ===
 
 export interface SyncJobInput {
   scope?: string;

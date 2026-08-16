@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import date, datetime, time, timezone
 
 from fastapi import HTTPException, status
@@ -21,6 +22,10 @@ from app.schemas.room import (
     RoomDeviceMetaWrite,
     RoomDevicesWrite,
     RoomDeviceWrite,
+    RoomEnvironmentLatestRead,
+    RoomEnvironmentPoint,
+    RoomEnvironmentReportRead,
+    RoomEnvironmentTrendRead,
     RoomInput,
     RoomListRead,
     RoomLogListRead,
@@ -636,3 +641,66 @@ def execute_room_scene_service(
     write_activity(db, room, f"执行场景：{scene_id}", "scene")
     db.commit()
     return result
+
+
+# === 房间环境 ===
+
+
+def get_room_environment_latest_service(
+    db: Session, user: User, room_id: int
+) -> RoomEnvironmentLatestRead:
+    """获取房间最新环境数据。"""
+    get_room_or_404(db, user, room_id)
+    # 返回模拟环境数据，后续可接入真实传感器
+    return RoomEnvironmentLatestRead(
+        sampled_at=datetime.now(timezone.utc),
+        values={
+            "temperature": 24.5,
+            "humidity": 55.0,
+            "pm25": 12.0,
+            "co2": 450.0,
+        },
+    )
+
+
+def get_room_environment_trends_service(
+    db: Session, user: User, room_id: int, metrics: str = "temperature,humidity"
+) -> RoomEnvironmentTrendRead:
+    """获取房间环境趋势数据。"""
+    get_room_or_404(db, user, room_id)
+    metric_list = [m.strip() for m in metrics.split(",") if m.strip()]
+    now = datetime.now(timezone.utc)
+    items = [
+        RoomEnvironmentPoint(
+            sampled_at=now.replace(minute=0, second=0, microsecond=0),
+            values={m: 24.0 + i * 0.5 for m in metric_list},
+        )
+        for i in range(6)
+    ]
+    return RoomEnvironmentTrendRead(metrics=metric_list, items=items)
+
+
+_report_store: dict[str, RoomEnvironmentReportRead] = {}
+
+
+def create_room_environment_report_service(
+    db: Session, user: User, room_id: int
+) -> RoomEnvironmentReportRead:
+    """创建房间环境报告任务。"""
+    get_room_or_404(db, user, room_id)
+    task_id = str(uuid.uuid4())
+    report = RoomEnvironmentReportRead(
+        task_id=task_id,
+        status="pending",
+        download_url=None,
+    )
+    _report_store[task_id] = report
+    return report
+
+
+def get_environment_report_service(task_id: str) -> RoomEnvironmentReportRead:
+    """查询环境报告任务状态。"""
+    report = _report_store.get(task_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="报告任务不存在")
+    return report

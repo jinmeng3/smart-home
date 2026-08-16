@@ -26,7 +26,7 @@ export interface AgentExecutionStep {
   message?: string;
 }
 
-// ── Agent SSE 事件类型 ──────────────────────────────────────────────────
+// === Agent SSE 事件类型 ===
 
 export interface AgentEventBase {
   event_id: string;
@@ -149,7 +149,7 @@ export type AgentEvent =
   | RunCompletedEvent
   | AgentErrorEvent;
 
-// ── Agent 运行请求 ───────────────────────────────────────────────────────
+// === Agent 运行请求 ===
 
 export interface AgentRunRequest {
   session_id: number;

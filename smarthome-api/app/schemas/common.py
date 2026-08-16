@@ -11,6 +11,11 @@ class ApiResponse(BaseModel, Generic[T]):
     message: str = "ok"
     data: T | None = None
 
+    def model_dump(self, **kwargs):
+        """默认使用别名序列化，确保 camelCase 字段名正确输出。"""
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
+
     @classmethod
     def ok(cls, data: T | None = None, message: str = "ok") -> "ApiResponse[T]":
         return cls(code=AppCode.SUCCESS, message=message, data=data)

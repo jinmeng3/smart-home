@@ -30,7 +30,7 @@ export interface RoomDeviceCard {
   status: "online" | "offline" | "warning" | "running";
 }
 
-// ── 添加/编辑房间 ────────────────────────────────────────────────────────────────
+// === 添加/编辑房间 ===
 
 export interface RoomPreferencesInput {
   pin_common_devices: boolean;
@@ -49,7 +49,7 @@ export interface RoomInput {
   version?: number | null;
 }
 
-// ── 房间设备列表 ────────────────────────────────────────────────────────────────
+// === 房间设备列表 ===
 
 export interface RoomDeviceListItem {
   id: number;
@@ -83,7 +83,7 @@ export interface RoomDeviceMetaInput {
   sort_order?: number | null;
 }
 
-// ── 房间活动日志 ────────────────────────────────────────────────────────────────
+// === 房间活动日志 ===
 
 export interface RoomLog {
   id: number;
@@ -103,7 +103,7 @@ export interface RoomLogListResponse {
   items: RoomLog[];
 }
 
-// ── 房间环境 ────────────────────────────────────────────────────────────────────
+// === 房间环境 ===
 
 export interface RoomEnvironmentLatest {
   sampledAt: string;
@@ -126,7 +126,7 @@ export interface RoomEnvironmentReport {
   downloadUrl?: string | null;
 }
 
-// ── 房间场景 ────────────────────────────────────────────────────────────────────
+// === 房间场景 ===
 
 export interface RoomScene {
   id: string;
@@ -183,7 +183,7 @@ export interface RoomSceneExecution {
   steps: RoomSceneExecutionStep[];
 }
 
-// ── 房间详情（含最近活动和当前场景） ────────────────────────────────────────────────
+// === 房间详情（含最近活动和当前场景） ===
 
 export interface RoomDetail {
   room: Room;
@@ -192,7 +192,7 @@ export interface RoomDetail {
   recentActivityTime: string | null;
 }
 
-// ── 房间统计概览 ──────────────────────────────────────────────────────────────────
+// === 房间统计概览 ===
 
 export interface RoomStats {
   roomCount: number;

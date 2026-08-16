@@ -17,7 +17,7 @@ import type {
   OverviewRoom,
 } from "../types/overview";
 
-// ── 概览展示用设备类型 ────────────────────────────────────────────────────────────
+// === 概览展示用设备类型 ===
 
 interface OverviewDeviceDisplay {
   id: number;
@@ -42,7 +42,7 @@ interface OverviewRoomDisplay {
   tone: string;
 }
 
-// ── 设备类型 → 图标/色调映射 ───────────────────────────────────────────────────────
+// === 设备类型 → 图标/色调映射 ===
 
 const DEVICE_TONE_MAP: Record<string, string> = {
   light: "orange",
@@ -72,7 +72,7 @@ const formatDeviceTime = (value: string) => {
     return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 };
 
-// ── 状态 ──────────────────────────────────────────────────────────────────────────
+// === 状态 ===
 
 const settingsStore = useSettingsStore();
 
@@ -95,7 +95,7 @@ const devices = ref<OverviewDeviceDisplay[]>([]);
 const activities = ref<{ time: string; icon: string; title: string; description: string; tone: string }[]>([]);
 const scheduleItems = ref<ScheduleItem[]>([]);
 
-// ── 计算属性 ──────────────────────────────────────────────────────────────────────
+// === 计算属性 ===
 
 const onlineRate = computed(() => {
   if (summary.value.device_total === 0) return "0%";
@@ -124,7 +124,7 @@ const visibleDevices = computed(() => {
     });
 });
 
-// ── 操作函数 ──────────────────────────────────────────────────────────────────────
+// === 操作函数 ===
 
 const toggleFavorite = (deviceId: number) => {
     devices.value = devices.value.map((device) =>
@@ -161,7 +161,7 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
   scheduleItems.value = schedule.items;
 };
 
-// ── 数据加载 ──────────────────────────────────────────────────────────────────────
+// === 数据加载 ===
 
 const loadOverviewData = async () => {
     loading.value = true;
@@ -2181,7 +2181,7 @@ useAuthenticatedLoader(loadOverviewData);</script>
     }
 }
 
-/* ── 加载状态 ────────────────────────────────────────────────────────────────────── */
+/* === 加载状态 === */
 .loading-overlay {
     display: flex;
     flex-direction: column;

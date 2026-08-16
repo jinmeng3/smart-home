@@ -153,9 +153,7 @@ def get_template_preview(
     household_id: int = DEFAULT_HOUSEHOLD_DEPENDENCY,
 ) -> ApiResponse[SceneTemplatePreviewRead]:
     """预览模板步骤及本地设备匹配情况。"""
-    return ApiResponse(
-        data=get_template_preview_service(db, household_id, template_id)
-    )
+    return ApiResponse(data=get_template_preview_service(db, household_id, template_id))
 
 
 @router.post("/templates/{template_id}/use", response_model=ApiResponse[SceneRead])
@@ -290,9 +288,7 @@ def batch_change_enabled(
     household_id: int = DEFAULT_HOUSEHOLD_DEPENDENCY,
 ) -> ApiResponse[SceneBatchEnabledResult]:
     """批量启用或停用场景。"""
-    return ApiResponse(
-        data=batch_change_enabled_service(db, household_id, payload)
-    )
+    return ApiResponse(data=batch_change_enabled_service(db, household_id, payload))
 
 
 @router.post("/batch/schedule", response_model=ApiResponse[SceneBatchScheduleResult])

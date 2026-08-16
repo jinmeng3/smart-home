@@ -290,7 +290,7 @@ const offlineDevices = computed(() =>
     box-shadow: var(--shadow-card);
 }
 
-/* ── 控制区头部 ── */
+/* === 控制区头部 === */
 .control-header {
     display: flex;
     align-items: center;
@@ -436,7 +436,7 @@ const offlineDevices = computed(() =>
     height: 12px;
 }
 
-/* ── 键盘焦点样式 ── */
+/* === 键盘焦点样式 === */
 .room-sidebar button:focus-visible,
 .category-bar button:focus-visible,
 .device-card:focus-visible,

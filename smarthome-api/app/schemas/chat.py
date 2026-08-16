@@ -19,13 +19,7 @@ class ChatCompletionRequest(BaseModel):
 
 
 class ChatSchema(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=lambda value: (
-            value.split("_")[0] + "".join(part.title() for part in value.split("_")[1:])
-        ),
-        populate_by_name=True,
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChatMessageRead(ChatSchema):

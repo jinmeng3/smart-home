@@ -109,7 +109,7 @@ const close = () => emit("update:modelValue", false);
         @update:model-value="close"
     >
         <div class="activity-layout">
-            <!-- ── Summary Bar ── -->
+            <!-- === Summary Bar === -->
             <header class="activity-summary">
                 <div class="as-stat is-primary">
                     <span class="as-icon"><SvgIcon name="clock" size="sm" /></span>
@@ -148,7 +148,7 @@ const close = () => emit("update:modelValue", false);
                 </div>
             </header>
 
-            <!-- ── Toolbar: Category Tabs + Search ── -->
+            <!-- === Toolbar: Category Tabs + Search === -->
             <div class="activity-toolbar">
                 <nav class="category-tabs">
                     <button
@@ -173,7 +173,7 @@ const close = () => emit("update:modelValue", false);
                 </label>
             </div>
 
-            <!-- ── Timeline ── -->
+            <!-- === Timeline === -->
             <div v-if="groupedActivities.length" class="timeline">
                 <template v-for="(group, gi) in groupedActivities" :key="gi">
                     <div class="tl-group-header">
@@ -204,7 +204,7 @@ const close = () => emit("update:modelValue", false);
                 </template>
             </div>
 
-            <!-- ── Empty State ── -->
+            <!-- === Empty State === -->
             <div v-else class="activity-empty">
                 <SvgIcon name="search" size="lg" />
                 <p>未找到匹配的活动记录</p>
@@ -233,7 +233,7 @@ const close = () => emit("update:modelValue", false);
     overflow-y: auto;
 }
 
-/* ── Summary Bar ── */
+/* === Summary Bar === */
 .activity-summary {
     display: flex;
     gap: 0;
@@ -322,7 +322,7 @@ const close = () => emit("update:modelValue", false);
     white-space: nowrap;
 }
 
-/* ── Toolbar ── */
+/* === Toolbar === */
 .activity-toolbar {
     display: flex;
     align-items: center;
@@ -415,7 +415,7 @@ const close = () => emit("update:modelValue", false);
     font-weight: 500;
 }
 
-/* ── Timeline ── */
+/* === Timeline === */
 .timeline {
     display: flex;
     flex-direction: column;
@@ -436,7 +436,7 @@ const close = () => emit("update:modelValue", false);
     border-radius: 2px;
 }
 
-/* ── Group Header ── */
+/* === Group Header === */
 .tl-group-header {
     position: sticky;
     top: 0;
@@ -469,7 +469,7 @@ const close = () => emit("update:modelValue", false);
     background: var(--color-surface-subtle);
 }
 
-/* ── Timeline Item ── */
+/* === Timeline Item === */
 .tl-item {
     display: flex;
     align-items: stretch;
@@ -559,7 +559,7 @@ const close = () => emit("update:modelValue", false);
     box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
-/* ── Card ── */
+/* === Card === */
 .tl-card {
     display: flex;
     flex: 1;
@@ -690,7 +690,7 @@ const close = () => emit("update:modelValue", false);
     overflow: hidden;
 }
 
-/* ── Empty State ── */
+/* === Empty State === */
 .activity-empty {
     display: flex;
     flex-direction: column;
@@ -728,7 +728,7 @@ const close = () => emit("update:modelValue", false);
     background: var(--color-primary-50, #eef4ff);
 }
 
-/* ── Scrollbar ── */
+/* === Scrollbar === */
 .activity-layout::-webkit-scrollbar {
     width: 4px;
 }
@@ -742,7 +742,7 @@ const close = () => emit("update:modelValue", false);
     background: var(--color-border-subtle);
 }
 
-/* ── Responsive ── */
+/* === Responsive === */
 @media (max-width: 560px) {
     .activity-summary {
         flex-wrap: wrap;

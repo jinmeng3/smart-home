@@ -144,7 +144,7 @@ export interface DashboardDevice {
   image?: string;
 }
 
-// ── 自动化相关 ────────────────────────────────────────────────────────────────
+// === 自动化相关 ===
 
 /** 自动化规则（用于仪表盘展示） */
 export interface Automation {

@@ -11,9 +11,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.device import Device
 from app.models.room import Room
 from app.models.scene import (
     Scene,
+    SceneDraft,
     SceneExecutionLog,
     SceneExecutionStep,
     SceneRoom,
@@ -21,6 +23,12 @@ from app.models.scene import (
     SceneTemplate,
 )
 from app.schemas.scene import (
+    SceneBatchEnabledResult,
+    SceneBatchEnabledWrite,
+    SceneBatchScheduleResult,
+    SceneBatchScheduleWrite,
+    SceneDraftRead,
+    SceneDraftWrite,
     SceneExecutionRead,
     SceneExecutionStepRead,
     SceneListRead,
@@ -31,7 +39,13 @@ from app.schemas.scene import (
     ScenePreviewRead,
     ScenePreviewStep,
     SceneRead,
+    SceneStepRead,
     SceneSummaryRead,
+    SceneTemplateListRead,
+    SceneTemplatePreviewRead,
+    SceneTemplatePreviewStep,
+    SceneTemplateRead,
+    SceneTemplateUseWrite,
     SceneWrite,
     TriggerType,
 )
@@ -325,9 +339,7 @@ def run_scene_service(
         started_at=started_at,
         finished_at=None if is_agent_execution else started_at,
         message=(
-            "已提交到业务执行层，等待设备状态回读"
-            if is_agent_execution
-            else "执行成功"
+            "已提交到业务执行层，等待设备状态回读" if is_agent_execution else "执行成功"
         ),
     )
     log.steps = [
@@ -337,11 +349,7 @@ def run_scene_service(
             status="pending" if is_agent_execution else "completed",
             started_at=started_at,
             finished_at=None if is_agent_execution else started_at,
-            message=(
-                "等待设备状态回读"
-                if is_agent_execution
-                else f"{step.name}成功"
-            ),
+            message=("等待设备状态回读" if is_agent_execution else f"{step.name}成功"),
         )
         for index, step in enumerate(scene.steps, 1)
     ]
@@ -537,3 +545,212 @@ def get_execution_service(
             status_code=status.HTTP_404_NOT_FOUND, detail="暂无执行记录"
         )
     return serialize_execution(execution)
+
+
+# === 场景草稿 ===
+
+
+def add_draft_service(
+    db: Session, household_id: int, user_id: int, payload: SceneDraftWrite
+) -> SceneDraftRead:
+    """保存场景表单快照。"""
+    draft_id = f"draft-{uuid4().hex[:12]}"
+    draft = SceneDraft(
+        id=draft_id,
+        household_id=household_id,
+        created_by=user_id,
+        payload_json=payload.model_dump_json(),
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    return SceneDraftRead(draft_id=draft.id, updated_at=draft.updated_at)
+
+
+# === 场景模板 ===
+
+
+def get_templates_service(
+    db: Session, keyword: str | None, category: str | None, limit: int
+) -> SceneTemplateListRead:
+    """按关键字、分类读取可用模板。"""
+    filters = [SceneTemplate.enabled.is_(True)]
+    if keyword and keyword.strip():
+        term = f"%{keyword.strip()}%"
+        filters.append(
+            or_(
+                SceneTemplate.name.like(term),
+                SceneTemplate.description.like(term),
+            )
+        )
+    if category:
+        filters.append(SceneTemplate.category == category)
+    templates = db.scalars(
+        select(SceneTemplate)
+        .where(*filters)
+        .order_by(SceneTemplate.sort_order, SceneTemplate.updated_at.desc())
+        .limit(limit)
+    ).all()
+
+    items = []
+    for t in templates:
+        steps_data = parse_json_list(t.steps_json)
+        steps = [
+            SceneStepRead(
+                id=f"{t.id}-{i}",
+                name=s.get("name", ""),
+                description=s.get("description", ""),
+                device_id=s.get("device_id", ""),
+                order=s.get("order", i + 1),
+            )
+            for i, s in enumerate(steps_data)
+        ]
+        items.append(
+            SceneTemplateRead(
+                id=t.id,
+                name=t.name,
+                description=t.description,
+                icon=t.icon,
+                color=t.color,
+                trigger_type=cast(TriggerType, t.trigger_type),
+                trigger_label=t.trigger_label,
+                room_labels=parse_json_list(t.room_labels),
+                device_count=t.device_count,
+                recommended=t.recommended,
+                category=t.category,
+                steps=steps,
+            )
+        )
+    return SceneTemplateListRead(items=items)
+
+
+def get_template_preview_service(
+    db: Session, household_id: int, template_id: str
+) -> SceneTemplatePreviewRead:
+    """预览模板步骤及本地设备匹配情况。"""
+    template = get_template_or_404(db, template_id)
+    steps_data = parse_json_list(template.steps_json)
+
+    template_device_ids = {
+        s.get("device_id", "")
+        for s in steps_data
+        if s.get("device_id")
+    }
+
+    household_device_ids = (
+        set(
+            db.scalars(
+                select(Device.device_id).where(
+                    Device.household_id == household_id,
+                    Device.device_id.in_(template_device_ids),
+                )
+            )
+        )
+        if template_device_ids
+        else set()
+    )
+
+    preview_steps = []
+    for s in steps_data:
+        device_id = s.get("device_id", "")
+        preview_steps.append(
+            SceneTemplatePreviewStep(
+                name=s.get("name", ""),
+                description=s.get("description", ""),
+                device_id=device_id,
+                matched=device_id in household_device_ids,
+            )
+        )
+
+    matched_count = sum(1 for step in preview_steps if step.matched)
+    missing_count = len(preview_steps) - matched_count
+
+    return SceneTemplatePreviewRead(
+        template_id=template.id,
+        matched_device_count=matched_count,
+        missing_device_count=missing_count,
+        steps=preview_steps,
+    )
+
+
+def import_template_service(
+    db: Session,
+    household_id: int,
+    user_id: int,
+    template_id: str,
+    payload: SceneTemplateUseWrite,
+) -> SceneRead:
+    """复制模板数据并创建可编辑场景。"""
+    template = get_template_or_404(db, template_id)
+    steps_data = parse_json_list(template.steps_json)
+    device_mapping = payload.device_mapping or {}
+
+    scene_payload = SceneWrite(
+        name=payload.name or template.name,
+        description=template.description,
+        icon=template.icon,
+        color=template.color,
+        trigger_type=cast(TriggerType, template.trigger_type),
+        trigger_label=template.trigger_label,
+        room_labels=parse_json_list(template.room_labels),
+        device_ids=[],
+        enabled=payload.enabled,
+        recommended=False,
+        steps=[
+            {
+                "name": s.get("name", ""),
+                "description": s.get("description", ""),
+                "device_id": device_mapping.get(
+                    s.get("device_id", ""), s.get("device_id", "")
+                ),
+                "order": s.get("order", i + 1),
+            }
+            for i, s in enumerate(steps_data)
+        ],
+    )
+    return add_scene_service(db, household_id, user_id, scene_payload)
+
+
+# === 批量操作 ===
+
+
+def batch_change_enabled_service(
+    db: Session, household_id: int, payload: SceneBatchEnabledWrite
+) -> SceneBatchEnabledResult:
+    """批量启用或停用场景。"""
+    filters = [Scene.household_id == household_id]
+    if payload.scene_ids:
+        filters.append(Scene.id.in_(payload.scene_ids))
+    count = db.scalar(
+        select(func.count(Scene.id)).where(*filters)
+    ) or 0
+    db.execute(
+        update(Scene)
+        .where(*filters)
+        .values(enabled=payload.enabled, updated_at=now_utc())
+    )
+    db.commit()
+    return SceneBatchEnabledResult(updated_count=count)
+
+
+def batch_set_schedule_service(
+    db: Session, household_id: int, payload: SceneBatchScheduleWrite
+) -> SceneBatchScheduleResult:
+    """批量设置场景的触发类型和定时描述。"""
+    filters = [Scene.household_id == household_id]
+    if payload.scene_ids:
+        filters.append(Scene.id.in_(payload.scene_ids))
+    count = db.scalar(
+        select(func.count(Scene.id)).where(*filters)
+    ) or 0
+    db.execute(
+        update(Scene)
+        .where(*filters)
+        .values(
+            trigger_type=payload.trigger_type,
+            trigger_label=payload.trigger_label,
+            updated_at=now_utc(),
+        )
+    )
+    db.commit()
+    return SceneBatchScheduleResult(updated_count=count)

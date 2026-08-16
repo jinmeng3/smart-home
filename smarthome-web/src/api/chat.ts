@@ -3,7 +3,7 @@ import type { ChatMessage, RecentConversation } from "../types/chat";
 import type { AgentRunRequest } from "../types/chat";
 import type { AgentEvent, AgentDecisionRequest, PendingApproval } from "../types/chat";
 
-// ── DTO 类型 ──────────────────────────────────────────────────────────────────────
+// === DTO 类型 ===
 
 interface ChatSessionRead {
   id: number;
@@ -40,7 +40,7 @@ interface OpenAICompletionsPayload {
   [key: string]: unknown;
 }
 
-// ── 映射函数 ──────────────────────────────────────────────────────────────────────
+// === 映射函数 ===
 
 const formatConversationTime = (value: string) => {
   const date = new Date(value);
@@ -65,7 +65,7 @@ const toRecentConversation = (session: ChatSessionRead): RecentConversation => (
   updatedAt: session.updated_at || session.created_at,
 });
 
-// ── SSE 流式解析 ──────────────────────────────────────────────────────────────────
+// === SSE 流式解析 ===
 
 const parseContentDelta = (line: string) => {
   if (!line.startsWith("data: ")) return "";
@@ -76,7 +76,7 @@ const parseContentDelta = (line: string) => {
   return payload.choices?.[0]?.delta?.content ?? "";
 };
 
-// ── 统一流式请求（SSE 读取 + 分片缓冲 + 取消 + 错误解析）──────────────────────────
+// === 统一流式请求（SSE 读取 + 分片缓冲 + 取消 + 错误解析） ===
 // 后端 `/api/chat/completions` 与 `/api/v1/chat/completions` 复用同一处理器，
 // 仅路径参数不同，通过 url 参数区分。
 
@@ -102,7 +102,7 @@ const streamCompletions = async (
   );
 };
 
-// ── API 导出函数 ────────────────────────────────────────────────────────────────────
+// === API 导出函数 ===
 
 export const listChatSessions = async () => {
   const sessions = await apiRequest<ChatSessionRead[]>("/api/chat/sessions");
@@ -139,7 +139,7 @@ export const streamChatCompletion = (
 ) =>
   streamCompletions("/api/chat/completions", messages, sessionId, model, onDelta, signal);
 
-// ── OpenAI 兼容接口 ────────────────────────────────────────────────────────────────
+// === OpenAI 兼容接口 ===
 
 const openAICompletions = (payload: OpenAICompletionsPayload) =>
   apiRequest<unknown>("/api/v1/chat/completions", {
@@ -167,7 +167,7 @@ export const streamOpenAICompletions = (
     signal,
   );
 
-// ── Agent SSE 运行 ───────────────────────────────────────────────────────
+// === Agent SSE 运行 ===
 // 解析一行 SSE 数据，返回 { event, data } 或 null
 function parseSseLine(line: string): { event: string; data: string } | null {
   if (line.startsWith("event: ")) {
@@ -234,7 +234,7 @@ export const getPendingAgentOperation = (
     `/api/agent/sessions/${sessionId}/pending?household_id=${householdId}`,
   );
 
-// ── 内部工具函数 ────────────────────────────────────────────────────────────
+// === 内部工具函数 ===
 
 async function streamAgentEvents(
   url: string,

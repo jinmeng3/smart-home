@@ -139,7 +139,7 @@ const close = () => emit("update:modelValue", false);
 </template>
 
 <style scoped>
-/* ── 筛选栏 ── */
+/* === 筛选栏 === */
 .log-filters {
     display: grid;
     grid-template-columns: 1.4fr 1fr 1fr auto;
@@ -214,7 +214,7 @@ const close = () => emit("update:modelValue", false);
     transform: translateY(-1px);
 }
 
-/* ── 日志表格 ── */
+/* === 日志表格 === */
 .log-table {
     overflow: hidden;
     border: 1px solid var(--color-border-subtle);
@@ -273,7 +273,7 @@ const close = () => emit("update:modelValue", false);
     font-weight: 800;
 }
 
-/* ── 来源徽章 ── */
+/* === 来源徽章 === */
 .source-badge {
     display: inline-block;
     padding: 3px 8px;
@@ -284,7 +284,7 @@ const close = () => emit("update:modelValue", false);
     font-weight: 700;
 }
 
-/* ── 结果徽章 ── */
+/* === 结果徽章 === */
 .result-badge {
     display: inline-flex;
     align-items: center;
@@ -310,7 +310,7 @@ const close = () => emit("update:modelValue", false);
     height: 14px;
 }
 
-/* ── 展开图标 ── */
+/* === 展开图标 === */
 .expand-icon {
     display: inline-flex;
     color: var(--color-text-muted);
@@ -321,7 +321,7 @@ const close = () => emit("update:modelValue", false);
     transform: rotate(180deg);
 }
 
-/* ── 展开详情过渡 ── */
+/* === 展开详情过渡 === */
 .detail-expand-enter-active {
     transition: opacity 250ms ease, transform 250ms ease;
 }
@@ -336,7 +336,7 @@ const close = () => emit("update:modelValue", false);
     transform: translateY(-8px);
 }
 
-/* ── 展开详情 ── */
+/* === 展开详情 === */
 .log-detail {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -377,7 +377,7 @@ const close = () => emit("update:modelValue", false);
     background: var(--color-success);
 }
 
-/* ── 详情卡片 ── */
+/* === 详情卡片 === */
 .detail-card {
     display: flex;
     align-items: center;
@@ -396,7 +396,7 @@ const close = () => emit("update:modelValue", false);
     color: var(--color-primary-600);
 }
 
-/* ── 条件列表 ── */
+/* === 条件列表 === */
 .condition-list {
     display: flex;
     flex-wrap: wrap;
@@ -423,7 +423,7 @@ const close = () => emit("update:modelValue", false);
     height: 14px;
 }
 
-/* ── 动作列表 ── */
+/* === 动作列表 === */
 .action-list-detail {
     display: flex;
     flex-direction: column;
@@ -480,7 +480,7 @@ const close = () => emit("update:modelValue", false);
     color: var(--color-success);
 }
 
-/* ── 空状态 ── */
+/* === 空状态 === */
 .log-empty {
     display: flex;
     flex-direction: column;
@@ -498,7 +498,7 @@ const close = () => emit("update:modelValue", false);
     opacity: 0.3;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 760px) {
     .log-filters {
         grid-template-columns: 1fr;

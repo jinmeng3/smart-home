@@ -78,6 +78,10 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     sortBy.value = value;
     sortMenuOpen.value = false;
 };
+
+const currentSortLabel = computed(
+    () => sortOptions.find((o) => o.value === sortBy.value)?.label ?? "",
+);
 </script>
 
 <template>
@@ -99,7 +103,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
                         @blur="sortMenuOpen = false"
                     >
                         <SvgIcon name="layers" size="sm" />
-                        {{ sortOptions.find((o) => o.value === sortBy)?.label }}
+                        {{ currentSortLabel }}
                         <SvgIcon name="chevron-down" size="sm" :class="{ 'is-flipped': sortMenuOpen }" />
                     </button>
                     <Transition name="sort-menu">
@@ -195,7 +199,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     gap: 6px;
 }
 
-/* ── 头部 ── */
+/* === 头部 === */
 .scene-grid-header {
     display: flex;
     align-items: center;
@@ -221,7 +225,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     gap: 8px;
 }
 
-/* ── 排序 ── */
+/* === 排序 === */
 .sort-wrapper {
     position: relative;
 }
@@ -301,7 +305,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     color: var(--color-primary-700);
 }
 
-/* ── 卡片网格 ── */
+/* === 卡片网格 === */
 .scene-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -313,7 +317,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     overflow: visible;
 }
 
-/* ── 展开/收起 ── */
+/* === 展开/收起 === */
 .scene-view-all {
     display: inline-flex;
     align-items: center;
@@ -345,7 +349,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     transition: transform 200ms var(--motion-ease);
 }
 
-/* ── 空状态 ── */
+/* === 空状态 === */
 .scene-empty {
     display: flex;
     flex-direction: column;
@@ -425,7 +429,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     transform: translateY(-1px);
 }
 
-/* ── 排序菜单动画 ── */
+/* === 排序菜单动画 === */
 .sort-menu-enter-active,
 .sort-menu-leave-active {
     transition:
@@ -439,7 +443,7 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
     transform: translateY(-4px) scale(0.96);
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 1280px) {
     .scene-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));

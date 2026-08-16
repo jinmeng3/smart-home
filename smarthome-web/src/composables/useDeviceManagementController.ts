@@ -43,7 +43,7 @@ const quickActionMessages: Record<Exclude<DeviceQuickActionKey, "logs">, string>
  * 异步操作统一走 useAsyncAction（pending/execute），防重复提交并自动清理状态。
  */
 export const useDeviceManagementController = () => {
-  /* ── 选中设备 ─────────────────────────────────────────────────── */
+  /* === 选中设备 === */
   const selectedId = ref<number | null>(null);
   const selectedDevice = ref<DeviceDetail | null>(null);
 
@@ -68,7 +68,7 @@ export const useDeviceManagementController = () => {
     void loadSelectedDevice();
   };
 
-  /* ── 数据查询（useDeviceQuery：筛选/分页/防抖/请求取消） ──────── */
+  /* === 数据查询（useDeviceQuery：筛选/分页/防抖/请求取消） === */
   const query = useDeviceQuery({
     onLoaded: async (items) => {
       const selectedExists = items.some(
@@ -89,11 +89,11 @@ export const useDeviceManagementController = () => {
   const { devices, filters, loading, total } = query;
   const loadDevices = query.loadDevices;
 
-  /* ── 接入平台（usePlatformAccess：平台派生 + 同步入口） ────────── */
+  /* === 接入平台（usePlatformAccess：平台派生 + 同步入口） === */
   const platformAccess = usePlatformAccess(devices);
   const { connectedCount, connectedPlatforms, platforms } = platformAccess;
 
-  /* ── 排序 / 收藏过滤（列表展示层） ─────────────────────────────── */
+  /* === 排序 / 收藏过滤（列表展示层） === */
   const sort = ref<"updated" | "name" | "status">("updated");
 
   const viewMode = ref<"all" | "frequent" | "favorite">("all");
@@ -175,7 +175,7 @@ export const useDeviceManagementController = () => {
     return { online, offline, warning, monthlyNew: items.length };
   });
 
-  /* ── 新增 / 编辑 ───────────────────────────────────────────────── */
+  /* === 新增 / 编辑 === */
   const editorOpen = ref(false);
   const editingDevice = ref<Device | null>(null);
 
@@ -231,7 +231,7 @@ export const useDeviceManagementController = () => {
     editorOpen.value = true;
   };
 
-  /* ── 单个删除 ─────────────────────────────────────────────────── */
+  /* === 单个删除 === */
   const deleteDialogOpen = ref(false);
   const deletingDevice = ref<Device | null>(null);
 
@@ -268,7 +268,7 @@ export const useDeviceManagementController = () => {
     },
   );
 
-  /* ── 批量删除 ─────────────────────────────────────────────────── */
+  /* === 批量删除 === */
   const batchDeleteDialogOpen = ref(false);
   const batchMode = ref(false);
   const selectedDeviceIds = ref<number[]>([]);
@@ -361,7 +361,7 @@ export const useDeviceManagementController = () => {
     },
   );
 
-  /* ── 平台同步 / 快捷操作 / 日志 ───────────────────────────────── */
+  /* === 平台同步 / 快捷操作 / 日志 === */
   const { pending: syncing, execute: runSync } = useAsyncAction(
     async () => {
       const response = await platformAccess.syncAllPlatforms();

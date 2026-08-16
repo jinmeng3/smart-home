@@ -15,6 +15,11 @@ class RoomSchema(BaseModel):
         from_attributes=True,
     )
 
+    def model_dump(self, **kwargs):
+        """默认使用别名序列化，确保 camelCase 字段名正确输出。"""
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
+
 
 class RoomRead(RoomSchema):
     id: int
@@ -174,3 +179,24 @@ class RoomLogListRead(RoomSchema):
 class RoomSceneExecuteWrite(RoomSchema):
     scope: str = Field(default="room", pattern="^(room|all)$")
     sync_automation: bool = True
+
+
+class RoomEnvironmentLatestRead(RoomSchema):
+    sampled_at: datetime
+    values: dict[str, float] = Field(default_factory=dict)
+
+
+class RoomEnvironmentPoint(RoomSchema):
+    sampled_at: datetime
+    values: dict[str, float] = Field(default_factory=dict)
+
+
+class RoomEnvironmentTrendRead(RoomSchema):
+    metrics: list[str] = Field(default_factory=list)
+    items: list[RoomEnvironmentPoint] = Field(default_factory=list)
+
+
+class RoomEnvironmentReportRead(RoomSchema):
+    task_id: str
+    status: str
+    download_url: str | None = None

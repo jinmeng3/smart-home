@@ -12,7 +12,7 @@ import type {
   DeviceUpdatePayload,
 } from "../types/device";
 
-// ── DTO 类型 ──────────────────────────────────────────────────────────────────────
+// === DTO 类型 ===
 
 export interface ApiDevice {
   id: number;
@@ -45,7 +45,7 @@ interface ApiDeviceListResponse {
   items: ApiDevice[];
 }
 
-// ── 映射函数 ──────────────────────────────────────────────────────────────────────
+// === 映射函数 ===
 
 export const mapDevice = (device: ApiDevice): Device => ({
   id: device.id,
@@ -103,7 +103,7 @@ const mapUpdatePayload = (payload: DeviceUpdatePayload) => ({
   image_url: payload.imageUrl,
 });
 
-// ── 查询参数构建 ──────────────────────────────────────────────────────────────────
+// === 查询参数构建 ===
 
 const buildDeviceQuery = (filters: DeviceFilters) => {
   const params = new URLSearchParams({
@@ -126,7 +126,7 @@ const buildDeviceQuery = (filters: DeviceFilters) => {
   return params.toString();
 };
 
-// ── API 导出函数 ──────────────────────────────────────────────────────────────────
+// === API 导出函数 ===
 
 export const listDevices = async (
   filters: DeviceFilters,

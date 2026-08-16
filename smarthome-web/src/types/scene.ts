@@ -101,7 +101,7 @@ export interface SceneTemplateUseInput {
   deviceMapping?: Record<string, string>;
 }
 
-// ── 场景执行日志 ────────────────────────────────────────────────────────────────
+// === 场景执行日志 ===
 
 export interface SceneLog {
   id: string;
@@ -117,7 +117,7 @@ export interface SceneLogListResponse {
   items: SceneLog[];
 }
 
-// ── 场景预览 ────────────────────────────────────────────────────────────────────
+// === 场景预览 ===
 
 export interface ScenePreviewStep {
   stepId: string;
@@ -134,7 +134,7 @@ export interface ScenePreview {
   steps: ScenePreviewStep[];
 }
 
-// ── 场景排序 ────────────────────────────────────────────────────────────────────
+// === 场景排序 ===
 
 export interface SceneOrderItem {
   id: string;
@@ -145,7 +145,7 @@ export interface SceneOrderResult {
   updated: number;
 }
 
-// ── 场景批量操作 ────────────────────────────────────────────────────────────────
+// === 场景批量操作 ===
 
 export interface SceneBatchEnabledInput {
   sceneIds: string[];
@@ -166,7 +166,7 @@ export interface SceneBatchScheduleResult {
   updatedCount: number;
 }
 
-// ── 场景模板预览 ────────────────────────────────────────────────────────────────
+// === 场景模板预览 ===
 
 export interface SceneTemplatePreviewStep {
   name: string;

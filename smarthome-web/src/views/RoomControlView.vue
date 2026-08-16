@@ -653,7 +653,7 @@ useAuthenticatedLoader(load);
     .page-tools select:not(:first-of-type) { display: none; }
 }
 
-/* ── 删除房间弹窗 ─────────────────────────────── */
+/* === 删除房间弹窗 === */
 .delete-dialog-body {
     padding: 4px 0;
 }
@@ -744,7 +744,7 @@ useAuthenticatedLoader(load);
         transition: none;
     }
 }
-/* ── 统计卡片折叠动画（Vue Transition） ── */
+/* === 统计卡片折叠动画（Vue Transition） === */
 .stats-fade-leave-active {
     transition: opacity 180ms var(--motion-ease-in), transform 180ms var(--motion-ease-in);
 }
@@ -767,7 +767,7 @@ useAuthenticatedLoader(load);
     }
 }
 
-/* ── 可折叠房间助手侧栏 ── */
+/* === 可折叠房间助手侧栏 === */
 @media (min-width: 1024px) {
     .app-page-layout {
         grid-template-columns: minmax(0, 1fr) auto;
@@ -780,7 +780,7 @@ useAuthenticatedLoader(load);
     }
 }
 
-/* ── 收起状态指示器 ── */
+/* === 收起状态指示器 === */
 .rail-collapsed-content {
     display: flex;
     flex-direction: column;

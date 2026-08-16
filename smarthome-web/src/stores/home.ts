@@ -12,7 +12,7 @@ import type { LoadingState } from "../types/loading";
 
 import type { Automation, DashboardDevice } from "../types/device";
 
-/* ── 统一 AI 生命周期状态 ─────────────────────────────────── */
+/* === 统一 AI 生命周期状态 === */
 export type ChatPhase =
     | "idle"
     | "waiting"
@@ -41,7 +41,7 @@ export const useHomeStore = defineStore("home", () => {
   const devicesLoading = ref<LoadingState>("idle");
   const securityAlertHandled = ref(false);
 
-  /* ── 左侧导航栏折叠状态 + 三阶段动画（localStorage 持久化） ── */
+  /* === 左侧导航栏折叠状态 + 三阶段动画（localStorage 持久化） === */
   const {
     collapsed: sidebarCollapsed,
     phase: sidebarPhase,
@@ -197,7 +197,7 @@ export const useHomeStore = defineStore("home", () => {
     securityAlertHandled.value = true;
   };
 
-  /* ── 统一 AI 生命周期状态 ─────────────────────────────────── */
+  /* === 统一 AI 生命周期状态 === */
   const chatPhase = computed<ChatPhase>(() => {
     const status = chat.agentStatus.value;
     if (status === "idle") return "idle";

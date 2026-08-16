@@ -43,12 +43,12 @@ const initialAccountSnapshot = ref<string>();
 const initialIntegrationSnapshot = ref<string>();
 const initialPreferencesSnapshot = ref<string>();
 
-/* ── 移动端分区标签（从统一配置生成） ──────────────────────── */
+/* === 移动端分区标签（从统一配置生成） === */
 const mobileSections = computed(() =>
     settingsSections.map((s) => ({ id: s.id, label: s.shortLabel })),
 );
 
-/* ── 更多操作下拉菜单 ────────────────────────────────────────── */
+/* === 更多操作下拉菜单 === */
 const moreActionsOpen = ref(false);
 const moreActionsRef = ref<HTMLElement | null>(null);
 const toggleMoreActions = () => {
@@ -63,7 +63,7 @@ const closeMoreActions = (event: MouseEvent) => {
     }
 };
 
-/* ── 恢复默认确认 ────────────────────────────────────────────── */
+/* === 恢复默认确认 === */
 const confirmReset = async () => {
     try {
         await ElMessageBox.confirm(
@@ -771,7 +771,7 @@ const removeMember = async (membershipId: number) => {
 </template>
 
 <style scoped>
-/* ── 左栏滚动区 ──────────────────────────────────────────────── */
+/* === 左栏滚动区 === */
 .settings-scroll-area {
     container-name: settings-content;
     container-type: inline-size;
@@ -781,7 +781,7 @@ const removeMember = async (membershipId: number) => {
     scrollbar-gutter: stable;
 }
 
-/* ── 设置分组 ────────────────────────────────────────────────── */
+/* === 设置分组 === */
 .settings-group + .settings-group {
     margin-top: 20px;
 }
@@ -810,7 +810,7 @@ const removeMember = async (membershipId: number) => {
     height: 100%;
 }
 
-/* ── 底部操作栏 ──────────────────────────────────────────────── */
+/* === 底部操作栏 === */
 .settings-actions {
     position: relative;
     z-index: 5;
@@ -932,7 +932,7 @@ const removeMember = async (membershipId: number) => {
     }
 }
 
-/* ── 更多操作下拉菜单 ────────────────────────────────────────── */
+/* === 更多操作下拉菜单 === */
 .settings-more-actions {
     position: relative;
 }
@@ -1023,12 +1023,12 @@ const removeMember = async (membershipId: number) => {
     }
 }
 
-/* ── 移动端吸顶标签（桌面端隐藏） ────────────────────────────── */
+/* === 移动端吸顶标签（桌面端隐藏） === */
 .settings-mobile-tabs {
     display: none;
 }
 
-/* ── 响应式 ──────────────────────────────────────────────────── */
+/* === 响应式 === */
 @media (max-width: 1180px) {
     .settings-save-state small {
         display: none;

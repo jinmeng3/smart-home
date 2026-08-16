@@ -13,6 +13,11 @@ class AutomationSchema(BaseModel):
         from_attributes=True,
     )
 
+    def model_dump(self, **kwargs):
+        """默认使用别名序列化，确保 camelCase 字段名正确输出。"""
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
+
 
 class FlowItem(AutomationSchema):
     type: str = Field(min_length=1, max_length=32)

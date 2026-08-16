@@ -11,7 +11,7 @@
     will-change: transform, opacity, max-height;
 }
 
-/* ── 消息列表：垂直入场/退场（更适合聊天场景） ────────────────── */
+/* === 消息列表：垂直入场/退场（更适合聊天场景） === */
 .message-list-enter-active {
     transition:
         opacity 260ms var(--motion-ease),
@@ -45,7 +45,7 @@
     padding-bottom: 0;
 }
 
-/* ── 右侧列表（设备列表、建议列表） ────────────────────────────── */
+/* === 右侧列表（设备列表、建议列表） === */
 .recent-list-enter-active,
 .recent-list-leave-active,
 .suggestion-list-enter-active,

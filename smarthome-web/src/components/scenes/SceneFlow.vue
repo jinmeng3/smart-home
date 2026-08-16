@@ -309,7 +309,7 @@ button:disabled {
     cursor: default;
 }
 
-/* ── 流程主体 ── */
+/* === 流程主体 === */
 
 
 .scene-flow-summary {
@@ -364,7 +364,7 @@ button:disabled {
     color: var(--color-success);
 }
 
-/* ── 步骤列表 ── */
+/* === 步骤列表 === */
 
 
 ol {
@@ -453,7 +453,7 @@ li {
     white-space: nowrap;
 }
 
-/* ── 连接线 ── */
+/* === 连接线 === */
 .step-connector {
     position: absolute;
     top: 50%;
@@ -477,7 +477,7 @@ li {
     transition: border-color 200ms var(--motion-ease);
 }
 
-/* ── 状态样式 ── */
+/* === 状态样式 === */
 
 /* pending — 安静 */
 .is-pending .step-indicator {
@@ -577,7 +577,7 @@ li {
     transform: translateY(-1px);
 }
 
-/* ── 水平滚动渐隐 ── */
+/* === 水平滚动渐隐 === */
 .scroll-fade-right {
     position: absolute;
     top: 0;
@@ -598,7 +598,7 @@ li {
     opacity: 1;
 }
 
-/* ── 执行结果摘要 ── */
+/* === 执行结果摘要 === */
 .scene-flow-result {
     display: flex;
     align-items: center;
@@ -645,7 +645,7 @@ li {
     min-width: 0;
 }
 
-/* ── 空状态 ── */
+/* === 空状态 === */
 .scene-flow-empty {
     display: grid;
     min-height: 80px;
@@ -655,7 +655,7 @@ li {
     font-size: 13px;
 }
 
-/* ── 过渡动画 ── */
+/* === 过渡动画 === */
 .scene-crossfade-enter-active,
 .scene-crossfade-leave-active {
     transition:
@@ -687,7 +687,7 @@ li {
     }
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 980px) {
     .scene-flow-steps {
         overflow-x: auto;

@@ -36,6 +36,7 @@
 | [10-langchain-agent.md](./10-langchain-agent.md) | LangChain 智能家居智能体的目标架构设计：目标、架构、工具、风险策略与 API 协议。 | 📝 设计稿，实现进度见 12 |
 | [11-langchain-agent-guidance.md](./11-langchain-agent-guidance.md) | LangChain 实施方向与开发指导：基于当前项目能力的可落地方向、工具设计、阶段与验收。 | 🚧 实施路线指导 |
 | [12-agent-review-and-roadmap.md](./12-agent-review-and-roadmap.md) | Agent 现状审查与演进路线：对照代码盘点实现差距、风险与修复建议、扩展方向、上线检查清单。 | 📋 现状审查 |
+| [13-frontend-backend-roadmap.md](./13-frontend-backend-roadmap.md) | 以后端真实能力为基准，盘点前端覆盖差距，并给出分阶段任务、接口、交付物和验收标准。 | 🚧 前端实施路线 |
 
 > Agent 相关文档关系：`10` 描述“目标设计”，`11` 给出“如何落地”，`12` 盘点“现状与差距”。
 > 阅读 agent 相关文档前，请先阅读 `12` 的现状盘点，避免把设计稿当成已实现能力。

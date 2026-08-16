@@ -1,4 +1,4 @@
-// ── 流控件项目 ──────────────────────────────────────────────────────────────────────
+// === 流控件项目 ===
 // 触发器 / 条件 / 动作均以 { type, config } 作为基础；
 // 条件额外 carry position；动作额外 carry position 与 target。
 
@@ -17,7 +17,7 @@ export interface ActionWrite extends FlowItem {
   sceneId?: string | null;
 }
 
-// ── 自动化规则 CRUD ──────────────────────────────────────────────────────────────
+// === 自动化规则 CRUD ===
 
 export interface AutomationCreate {
   name: string;
@@ -67,7 +67,7 @@ export interface AutomationRule {
   updatedAt: string;
 }
 
-// ── 列表 ──────────────────────────────────────────────────────────────────────────
+// === 列表 ===
 
 export interface AutomationSummary {
   enabled: number;
@@ -93,14 +93,14 @@ export interface AutomationListResponse {
   total: number;
 }
 
-// ── 启用 / 停用 ───────────────────────────────────────────────────────────────────
+// === 启用 / 停用 ===
 
 export interface EnabledRead {
   id: number;
   enabled: boolean;
 }
 
-// ── 执行与记录 ────────────────────────────────────────────────────────────────────
+// === 执行与记录 ===
 
 export interface ExecuteRead {
   executionId: number;
@@ -123,7 +123,7 @@ export interface ExecutionListRead {
   items: ExecutionRecord[];
 }
 
-// ── 批量操作 ──────────────────────────────────────────────────────────────────────
+// === 批量操作 ===
 
 export interface BatchEnableRead {
   updatedCount: number;

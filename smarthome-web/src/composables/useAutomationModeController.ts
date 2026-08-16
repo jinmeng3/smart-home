@@ -16,7 +16,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
     const deleteDialogOpen = ref(false);
     const deletingRule = ref<AutomationRule | null>(null);
 
-    // ── 对话框开关 ──────────────────────────────────────────────────────────────
+    // === 对话框开关 ===
 
     const openCreateDialog = () => {
         activeDialog.value = "create";
@@ -43,7 +43,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         activeDialog.value = "batch";
     };
 
-    // ── 创建 / 编辑 ─────────────────────────────────────────────────────────────
+    // === 创建 / 编辑 ===
 
     const saveRule = useAsyncAction(
         async (payload: {
@@ -74,7 +74,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         },
     ).execute;
 
-    // ── 删除 ────────────────────────────────────────────────────────────────────
+    // === 删除 ===
 
     const removeRule = (rule: AutomationRule) => {
         deletingRule.value = rule;
@@ -104,7 +104,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         },
     );
 
-    // ── 复制 / 执行 / 启停 ───────────────────────────────────────────────────────
+    // === 复制 / 执行 / 启停 ===
 
     const copyRule = useAsyncAction(
         async (rule: AutomationRule) => {
@@ -145,7 +145,7 @@ export const useAutomationModeController = (store: AutomationsStore) => {
         },
     ).execute;
 
-    // ── 导入 / 批量操作 ──────────────────────────────────────────────────────────
+    // === 导入 / 批量操作 ===
 
     const importRules = useAsyncAction(
         async (count: number) => {

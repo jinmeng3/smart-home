@@ -17,7 +17,7 @@ import type {
   RoomStats,
 } from "../types/room";
 
-// ── DTO 类型（后端 snake_case）与映射函数 ───────────────────────────────────────────
+// === DTO 类型（后端 snake_case）与映射函数 ===
 // 后端响应使用 Pydantic camelCase alias；组件/store 只消费领域模型。
 
 interface ApiRoom {
@@ -91,7 +91,7 @@ const mapRoomStats = (data: ApiRoomStats): RoomStats => ({
   pendingAlertCount: data.pendingAlertCount ?? 0,
 });
 
-// ── API 导出函数 ──────────────────────────────────────────────────────────────────
+// === API 导出函数 ===
 
 // fetchRooms 通过 mapper 统一 API DTO 与前端领域模型。
 export const fetchRooms = async (floor = "", roomType = "") => {
@@ -151,7 +151,7 @@ export const runRoomQuickAction = (roomId: number, action: string) =>
     body: JSON.stringify({ action }),
   }).then(mapRoom);
 
-// ── 房间日志 ────────────────────────────────────────────────────────────────────
+// === 房间日志 ===
 
 export const getRoomLogs = (
   roomId: number,
@@ -174,7 +174,7 @@ export const getRoomLogs = (
   return apiRequest<RoomLogListResponse>(`/api/rooms/${roomId}/logs?${qs}`);
 };
 
-// ── 房间设备绑定 ────────────────────────────────────────────────────────────────
+// === 房间设备绑定 ===
 
 export const getRoomDevices = (
   roomId: number,
@@ -212,7 +212,7 @@ export const updateRoomDeviceMeta = (
     },
   );
 
-// ── 房间环境 ────────────────────────────────────────────────────────────────────
+// === 房间环境 ===
 
 export const getRoomEnvironmentLatest = (roomId: number) =>
   apiRequest<RoomEnvironmentLatest>(
@@ -237,7 +237,7 @@ export const createEnvironmentReport = (roomId: number) =>
 export const getEnvironmentReport = (taskId: string) =>
   apiRequest<RoomEnvironmentReport>(`/api/environment/reports/${taskId}`);
 
-// ── 房间场景 ────────────────────────────────────────────────────────────────────
+// === 房间场景 ===
 
 export const getRoomScenes = (roomId: number) =>
   apiRequest<RoomSceneListResponse>(`/api/rooms/${roomId}/scenes`);
@@ -263,7 +263,7 @@ export const executeRoomScene = (
     },
   );
 
-// ── 房间详情 ──────────────────────────────────────────────────────────────────
+// === 房间详情 ===
 
 // 使用 GET /api/rooms/{id}，并通过 mapper 统一领域模型。
 export const fetchRoomDetail = async (roomId: number) => {
@@ -271,14 +271,14 @@ export const fetchRoomDetail = async (roomId: number) => {
   return mapRoomDetail(data);
 };
 
-// ── 房间统计概览 ──────────────────────────────────────────────────────────────
+// === 房间统计概览 ===
 
 export const fetchRoomStats = async () => {
   const data = await apiRequest<ApiRoomStats>("/api/rooms/stats");
   return mapRoomStats(data);
 };
 
-// ── 房间删除 ──────────────────────────────────────────────────────────────────
+// === 房间删除 ===
 
 export const deleteRoom = (roomId: number) =>
   apiRequest<null>(`/api/rooms/${roomId}`, {

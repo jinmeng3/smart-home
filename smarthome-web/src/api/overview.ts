@@ -21,7 +21,7 @@ export type {
 
 /** 总览与日程 HTTP 请求层（SRP：纯请求与查询构建，不含业务编排）。 */
 
-// ── 首页总览 ──────────────────────────────────────────────────────────────────────
+// === 首页总览 ===
 
 export const getHouseholdOverview = (householdId: number) =>
   apiRequest<HouseholdOverview>(`/api/households/${householdId}/overview`);
@@ -44,7 +44,7 @@ export const syncHouseholdDevices = (householdId: number) =>
     { method: "POST" },
   );
 
-// ── 模式执行 ──────────────────────────────────────────────────────────────────────
+// === 模式执行 ===
 
 export const executeMode = (payload: ModeExecuteInput) =>
   apiRequest<TaskResult>("/api/overview/modes/execute", {
@@ -57,7 +57,7 @@ export const executeMode = (payload: ModeExecuteInput) =>
     }),
   });
 
-// ── 设备巡检 ──────────────────────────────────────────────────────────────────────
+// === 设备巡检 ===
 
 export const createInspection = (payload: InspectionInput) =>
   apiRequest<TaskResult>("/api/inspections", {
@@ -73,7 +73,7 @@ export const createInspection = (payload: InspectionInput) =>
 export const getInspection = (inspectionId: number) =>
   apiRequest<TaskResult>(`/api/inspections/${inspectionId}`);
 
-// ── 设备同步任务 ────────────────────────────────────────────────────────────────────
+// === 设备同步任务 ===
 
 export const createSyncJob = (payload: SyncJobInput) =>
   apiRequest<SyncJobResult>("/api/device-sync-jobs", {
@@ -89,7 +89,7 @@ export const createSyncJob = (payload: SyncJobInput) =>
 export const getSyncJob = (jobId: number) =>
   apiRequest<SyncJobResult>(`/api/device-sync-jobs/${jobId}`);
 
-// ── 家庭日程 ───────────────────────────────────────────────────────────────────────
+// === 家庭日程 ===
 
 export const getSchedule = (date: string) =>
   apiRequest<HouseholdSchedule | null>(`/api/schedules/${date}`);

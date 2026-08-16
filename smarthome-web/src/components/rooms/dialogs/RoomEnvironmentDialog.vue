@@ -22,7 +22,7 @@ const description = `查看${props.room?.name ?? "房间"}的实时环境指标�
 
 const close = () => emit("update:modelValue", false);
 
-// ── 环境指标获取 ──────────────────────────────────────────────────────────────────
+// === 环境指标获取 ===
 
 const env = ref<RoomEnvironmentLatest>();
 const { run } = useLatestRequest();
@@ -48,7 +48,7 @@ watch(
 const metricValue = (name: string, fallback: number): number =>
     env.value?.values?.[name] ?? fallback;
 
-// ── 舒适度等级 ──────────────────────────────────────────────────────────────────
+// === 舒适度等级 ===
 
 const comfortLevel = computed(() => {
     const c = props.room?.comfort ?? 83;
@@ -60,7 +60,7 @@ const comfortLevel = computed(() => {
 
 const comfortPercent = computed(() => props.room?.comfort ?? 83);
 
-// ── 环境指标配置 ─────────────────────────────────────────────────────────────────
+// === 环境指标配置 ===
 
 interface MetricItem {
     n: string;
@@ -160,7 +160,7 @@ const getIdealFill = (item: MetricItem) => {
     return { left: `${left}%`, width: `${width}%` };
 };
 
-// ── 时间格式化 ──────────────────────────────────────────────────────────────────
+// === 时间格式化 ===
 
 const trendPoints = computed(() => {
     const base = metricValue("temperature", 24);
@@ -183,7 +183,7 @@ const trendPoints = computed(() => {
         @update:model-value="close"
     >
         <div class="environment-dialog">
-            <!-- ─── 顶部概览 ─── -->
+            <!-- === 顶部概览 === -->
             <div class="overview-grid">
                 <div class="overview-room">
                     <div class="room-badge">
@@ -244,7 +244,7 @@ const trendPoints = computed(() => {
                 </div>
             </div>
 
-            <!-- ─── 环境指标网格 ─── -->
+            <!-- === 环境指标网格 === -->
             <div class="metrics-grid">
                 <article
                     v-for="item in metrics"
@@ -301,7 +301,7 @@ const trendPoints = computed(() => {
                 </article>
             </div>
 
-            <!-- ─── 环境趋势 ─── -->
+            <!-- === 环境趋势 === -->
             <section class="trend-card">
                 <header>
                     <h3>
@@ -384,7 +384,7 @@ const trendPoints = computed(() => {
                 </div>
             </section>
 
-            <!-- ─── 建议 ─── -->
+            <!-- === 建议 === -->
             <div class="suggestions">
                 <article class="suggestion-card air-quality">
                     <div class="suggestion-icon">
@@ -429,7 +429,7 @@ const trendPoints = computed(() => {
     gap: 16px;
 }
 
-/* ─── 顶部概览 ─── */
+/* === 顶部概览 === */
 
 .overview-grid {
     display: grid;
@@ -642,7 +642,7 @@ const trendPoints = computed(() => {
     color: var(--color-text-tertiary);
 }
 
-/* ─── 环境指标网格 ─── */
+/* === 环境指标网格 === */
 
 .metrics-grid {
     display: grid;
@@ -792,7 +792,7 @@ const trendPoints = computed(() => {
     opacity: 0.9;
 }
 
-/* ─── 环境趋势 ─── */
+/* === 环境趋势 === */
 
 .trend-card {
     border: 1px solid var(--color-border);
@@ -934,7 +934,7 @@ const trendPoints = computed(() => {
     fill: #60a5fa;
 }
 
-/* ─── 建议卡片 ─── */
+/* === 建议卡片 === */
 
 .suggestions {
     display: grid;
@@ -1034,7 +1034,7 @@ const trendPoints = computed(() => {
     line-height: 1.4;
 }
 
-/* ─── 响应式 ─── */
+/* === 响应式 === */
 
 @media (max-width: 900px) {
     .overview-grid {

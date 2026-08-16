@@ -294,7 +294,7 @@ const handleAction = (key: string) => {
     border-radius: 5px;
 }
 
-/* ── 语义色调：浅色底 + 描边 + 彩色图标/数值 ── */
+/* === 语义色调：浅色底 + 描边 + 彩色图标/数值 === */
 .rail-info-item.is-indigo {
     border-color: color-mix(in srgb, var(--tone-indigo) 30%, transparent);
     background: color-mix(in srgb, var(--tone-indigo-soft) 42%, var(--color-panel-secondary));

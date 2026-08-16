@@ -202,7 +202,7 @@ button:hover {
     transform: translateY(-1px);
 }
 
-/* ── 批量操作 ── */
+/* === 批量操作 === */
 .batch-actions-wrapper {
     position: relative;
 }

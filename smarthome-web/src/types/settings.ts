@@ -98,7 +98,7 @@ export interface UserPreferences {
 
 export type HouseholdRole = 'admin' | 'member'
 
-// ── 表单与展示类型 (原 types/account.ts) ─────────────────────────────────────
+// === 表单与展示类型 (原 types/account.ts) ===
 
 export interface AccountForm {
   name: string;

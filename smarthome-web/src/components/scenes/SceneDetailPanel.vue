@@ -237,7 +237,7 @@ const manageActions = [
     box-shadow: var(--shadow-card);
 }
 
-/* ── 吸顶 ── */
+/* === 吸顶 === */
 .scene-detail-sticky {
     position: sticky;
     top: 0;
@@ -619,7 +619,7 @@ const manageActions = [
     font-weight: 700;
 }
 
-/* ── 过渡 ── */
+/* === 过渡 === */
 .scene-detail-crossfade-enter-active,
 .scene-detail-crossfade-leave-active {
     transition:

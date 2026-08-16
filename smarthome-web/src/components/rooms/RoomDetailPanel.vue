@@ -38,7 +38,7 @@ const emit = defineEmits<{
     send: [content: string];
 }>();
 
-/* ── 输入框 ── */
+/* === 输入框 === */
 const inputValue = ref("");
 const inputRef = ref<HTMLTextAreaElement | null>(null);
 
@@ -66,7 +66,7 @@ const autoResize = () => {
     el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
 };
 
-/* ── 房间摘要文本 ── */
+/* === 房间摘要文本 === */
 const roomSummary = computed(() => {
     if (!props.room) return "";
     const name = props.room.name;
@@ -76,7 +76,7 @@ const roomSummary = computed(() => {
     return `${name}环境整体${comfort}，${online}/${total} 台设备在线。`;
 });
 
-/* ── 环境指标摘要 ── */
+/* === 环境指标摘要 === */
 const envSummary = computed(() => {
     const parts: string[] = [];
     for (const item of props.environment) {
@@ -87,7 +87,7 @@ const envSummary = computed(() => {
     return parts.length > 0 ? parts.join("，") + "。" : "";
 });
 
-/* ── 建议 ── */
+/* === 建议 === */
 interface Suggestion {
     text: string;
     action: string;
@@ -144,7 +144,7 @@ const hasRecentActivity = computed(
     () => props.recentActivityTime && props.recentActivity,
 );
 
-/* ── 环境指标颜色 ── */
+/* === 环境指标颜色 === */
 const envCardColors: Record<string, [string, string]> = {
     "温度": ["#f97316", "#fff7ed"],
     "湿度": ["#0ea5e9", "#f0f9ff"],
@@ -158,7 +158,7 @@ const getEnvStyle = (name: string) => {
     return colors ? { '--mc': colors[0], '--ms': colors[1] } : {};
 };
 
-/* ── 暴露给父组件用于 collapsed 状态 ── */
+/* === 暴露给父组件用于 collapsed 状态 === */
 const envFirst = computed(() => props.environment[0]);
 const envSecond = computed(() => props.environment[1]);
 const alertCount = computed(() => {
@@ -304,7 +304,7 @@ const alertCount = computed(() => {
     min-height: 100%;
 }
 
-/* ── 助手状态卡 ── */
+/* === 助手状态卡 === */
 .assistant-card {
     border: 1px solid var(--color-border);
     border-radius: 16px;
@@ -381,7 +381,7 @@ const alertCount = computed(() => {
     font-weight: 700;
 }
 
-/* ── 建议卡 ── */
+/* === 建议卡 === */
 .suggestion-card {
     border: 1px solid color-mix(in srgb, #8b5cf6 20%, transparent);
     border-radius: 14px;
@@ -461,7 +461,7 @@ const alertCount = computed(() => {
     background: var(--color-surface-hover);
 }
 
-/* ── 快捷指令 ── */
+/* === 快捷指令 === */
 .quick-section {
     border: 1px solid var(--color-border);
     border-radius: 14px;
@@ -618,7 +618,7 @@ const alertCount = computed(() => {
     color: var(--color-primary-600);
 }
 
-/* ── 最近执行 ── */
+/* === 最近执行 === */
 .recent-section {
     border: 1px solid var(--color-border);
     border-radius: 14px;
@@ -661,7 +661,7 @@ const alertCount = computed(() => {
     white-space: nowrap;
 }
 
-/* ── 空状态 ── */
+/* === 空状态 === */
 .ra-empty {
     display: flex;
     flex-direction: column;
@@ -685,7 +685,7 @@ const alertCount = computed(() => {
     font-weight: 700;
 }
 
-/* ── 输入区（sticky 固定于底部） ── */
+/* === 输入区（sticky 固定于底部） === */
 .ra-composer {
     position: sticky;
     bottom: 0;
@@ -776,7 +776,7 @@ const alertCount = computed(() => {
     stroke-width: 2.5;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 720px) {
     .ac-metrics {
         grid-template-columns: repeat(2, 1fr);

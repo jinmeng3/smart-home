@@ -424,7 +424,7 @@ onBeforeUnmount(() => {
     background: var(--color-surface-hover);
 }
 
-/* ── 设备详情卡片 ── */
+/* === 设备详情卡片 === */
 
 .device-detail-card {
     display: grid;
@@ -500,7 +500,7 @@ onBeforeUnmount(() => {
     line-height: 1.4;
 }
 
-/* ── 详情字段列表 ── */
+/* === 详情字段列表 === */
 
 .device-detail-card dl {
     display: grid;

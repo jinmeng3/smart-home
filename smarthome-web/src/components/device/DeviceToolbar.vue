@@ -88,7 +88,7 @@ defineEmits<{
     align-items: center;
 }
 
-/* ── 搜索框 ── */
+/* === 搜索框 === */
 .device-search {
     position: relative;
     display: flex;
@@ -162,7 +162,7 @@ defineEmits<{
     font-weight: 600;
 }
 
-/* ── 筛选下拉框 ── */
+/* === 筛选下拉框 === */
 .filter-group {
     position: relative;
     display: flex;
@@ -226,7 +226,7 @@ defineEmits<{
     color: var(--color-text-tertiary);
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 900px) {
     .device-toolbar {
         width: 100%;

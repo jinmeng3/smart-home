@@ -121,7 +121,7 @@ const confirm = () => {
 </template>
 
 <style scoped>
-/* ── 上传区域 ── */
+/* === 上传区域 === */
 .upload-zone {
     display: flex;
     align-items: center;
@@ -214,7 +214,7 @@ const confirm = () => {
     color: #fff;
 }
 
-/* ── 格式信息 ── */
+/* === 格式信息 === */
 .format-bar {
     display: flex;
     align-items: center;
@@ -267,7 +267,7 @@ const confirm = () => {
     text-decoration: underline;
 }
 
-/* ── 导入选项 ── */
+/* === 导入选项 === */
 .options-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -315,7 +315,7 @@ const confirm = () => {
     color: var(--color-text-primary);
 }
 
-/* ── 复选框 ── */
+/* === 复选框 === */
 .checkbox-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -366,7 +366,7 @@ const confirm = () => {
     font-weight: 700;
 }
 
-/* ── 规则列表 ── */
+/* === 规则列表 === */
 .rule-section {
     margin-top: 4px;
 }
@@ -473,7 +473,7 @@ const confirm = () => {
     font-weight: 800;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 760px) {
     .options-grid {
         grid-template-columns: 1fr;

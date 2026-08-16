@@ -8,7 +8,7 @@ const md = new MarkdownIt({
     typographer: true,
 });
 
-// ── 工具函数 ──────────────────────────────────────────────────────────
+// === 工具函数 ===
 
 const escapeHtml = (s: string): string =>
     md.utils?.escapeHtml(s) ?? s;
@@ -23,7 +23,7 @@ const tokenAttr = (tokens: import("markdown-it").Token[], idx: number, name: str
     return val === undefined || val === null ? "" : String(val);
 };
 
-// ── 自定义 renderer 规则 ──────────────────────────────────────────────
+// === 自定义 renderer 规则 ===
 
 // 代码块
 md.renderer.rules.fence = (tokens, idx) => {

@@ -25,7 +25,7 @@ const refreshHomeData = () => {
 
 useAuthenticatedLoader(refreshHomeData);
 
-/* ── 对话状态（来自 AssistantRail 迁移） ────────────────────────── */
+/* === 对话状态（来自 AssistantRail 迁移） === */
 const hasConversation = computed(
     () => store.messages.length > 0 || store.agentStatus !== "idle",
 );
@@ -149,7 +149,7 @@ const alertCount = computed(() => store.alertCount);
     }
 }
 
-/* ── 折叠状态栏指示器（来自 AssistantRail） ───────────────────── */
+/* === 折叠状态栏指示器（来自 AssistantRail） === */
 .rail-task-dot {
     width: 9px;
     height: 9px;

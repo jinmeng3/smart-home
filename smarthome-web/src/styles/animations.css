@@ -7,14 +7,14 @@
     --motion-slow: 320ms;
 }
 
-/* ── 性能提示 ───────────────────────────────────────────────── */
+/* === 性能提示 === */
 /* 仅保留 hover/常驻交互元素的 will-change；一次性入场动画不需要常驻 */
 .motion-card,
 .motion-button {
     will-change: transform;
 }
 
-/* ── 悬浮上浮 ───────────────────────────────────────────────── */
+/* === 悬浮上浮 === */
 .float-y {
     animation: float-y 3s var(--motion-ease-out) infinite;
 }
@@ -24,7 +24,7 @@
     50% { transform: translateY(-6px); }
 }
 
-/* ── 闪烁骨架屏 ─────────────────────────────────────────────── */
+/* === 闪烁骨架屏 === */
 .shimmer {
     background: linear-gradient(
         90deg,
@@ -226,7 +226,7 @@
     }
 }
 
-/* ── 脉冲光环 ─────────────────────────────────────────────────── */
+/* === 脉冲光环 === */
 .pulse-ring {
     position: relative;
 }
@@ -253,7 +253,7 @@
     }
 }
 
-/* ── 微弹出 ──────────────────────────────────────────────────── */
+/* === 微弹出 === */
 .pop-enter {
     animation: pop-enter 300ms var(--motion-ease-out) both;
 }
@@ -269,7 +269,7 @@
     }
 }
 
-/* ── 下滑入（用于下拉菜单） ─────────────────────────────────── */
+/* === 下滑入（用于下拉菜单） === */
 .dropdown-enter {
     animation: dropdown-enter 180ms var(--motion-ease-out) both;
     transform-origin: bottom center;
@@ -286,7 +286,7 @@
     }
 }
 
-/* ── 改进的思考点动画 ───────────────────────────────────────── */
+/* === 改进的思考点动画 === */
 @keyframes thinking-dot {
     0%, 80%, 100% {
         transform: translateY(0) scale(1);
@@ -298,7 +298,7 @@
     }
 }
 
-/* ── 状态卡不确定进度条 ─────────────────────────────────────── */
+/* === 状态卡不确定进度条 === */
 .thinking-progress {
     animation: progress-indeterminate 2000ms ease-in-out infinite;
 }
@@ -326,7 +326,7 @@
     }
 }
 
-/* ── 流式光标 ─────────────────────────────────────────────────── */
+/* === 流式光标 === */
 .streaming-cursor {
     display: inline-block;
     width: 2px;
@@ -342,7 +342,7 @@
     50% { opacity: 0.25; }
 }
 
-/* ── 空状态切换过渡 ─────────────────────────────────────────── */
+/* === 空状态切换过渡 === */
 .empty-to-chat-enter-active {
     transition: opacity 240ms var(--motion-ease), transform 240ms var(--motion-ease);
 }
@@ -358,7 +358,7 @@
     transform: translateY(-8px);
 }
 
-/* ── 头像分层入场 ───────────────────────────────────────────── */
+/* === 头像分层入场 === */
 @keyframes avatar-in {
     from {
         opacity: 0;
@@ -370,7 +370,7 @@
     }
 }
 
-/* ── 操作按钮淡入 ───────────────────────────────────────────── */
+/* === 操作按钮淡入 === */
 @keyframes actions-fade-in {
     from {
         opacity: 0;

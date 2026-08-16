@@ -24,7 +24,7 @@ const sendDisabled = computed(
         (!generating.value && !inputValue.value.trim()),
 );
 
-/* ── 输入框自动增高 ─────────────────────────────────────────── */
+/* === 输入框自动增高 === */
 const inputMaxHeight = 132;
 const resizeInput = () => {
     const el = inputRef.value;
@@ -60,7 +60,7 @@ const submit = () => {
     resetInputHeight();
 };
 
-/* ── 模型菜单 ───────────────────────────────────────────────── */
+/* === 模型菜单 === */
 const onClickOutside = (event: MouseEvent) => {
     if (
         modelMenuRef.value &&

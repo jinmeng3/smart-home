@@ -476,7 +476,7 @@ const submitForm = () => {
 </template>
 
 <style scoped>
-/* ── 布局 ── */
+/* === 布局 === */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -492,7 +492,7 @@ const submitForm = () => {
     border-left: 1px solid var(--color-border-subtle);
 }
 
-/* ── 节卡片 ── */
+/* === 节卡片 === */
 .form-section {
     position: relative;
     padding: 0;
@@ -525,7 +525,7 @@ const submitForm = () => {
     background: var(--color-surface-subtle);
 }
 
-/* ── 节标题 ── */
+/* === 节标题 === */
 .section-header {
     display: flex;
     align-items: center;
@@ -576,7 +576,7 @@ const submitForm = () => {
 .section-step.is-purple { background: linear-gradient(135deg, #a855f7, #9333ea); }
 .section-step.is-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
 
-/* ── 节内容 ── */
+/* === 节内容 === */
 .section-body {
     padding: 14px 20px 18px;
 }
@@ -601,7 +601,7 @@ const submitForm = () => {
     color: var(--color-danger);
 }
 
-/* ── 输入框 ── */
+/* === 输入框 === */
 .input-wrap {
     position: relative;
 }
@@ -679,7 +679,7 @@ const submitForm = () => {
     pointer-events: none;
 }
 
-/* ── 触发类型选择 ── */
+/* === 触发类型选择 === */
 .trigger-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -745,7 +745,7 @@ const submitForm = () => {
     color: var(--color-primary-500);
 }
 
-/* ── 触发详情过渡 ── */
+/* === 触发详情过渡 === */
 .trigger-detail {
     margin-bottom: 12px;
 }
@@ -761,7 +761,7 @@ const submitForm = () => {
     transform: translateY(-6px);
 }
 
-/* ── 内联选择 ── */
+/* === 内联选择 === */
 .inline-field {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -773,7 +773,7 @@ const submitForm = () => {
     grid-template-columns: 1fr 1fr;
 }
 
-/* ── 添加按钮 ── */
+/* === 添加按钮 === */
 .add-btn {
     display: inline-flex;
     align-items: center;
@@ -806,7 +806,7 @@ const submitForm = () => {
     transform: rotate(90deg);
 }
 
-/* ── Chip 标签 ── */
+/* === Chip 标签 === */
 .chip-group {
     display: flex;
     flex-wrap: wrap;
@@ -856,7 +856,7 @@ const submitForm = () => {
     color: var(--color-primary-600);
 }
 
-/* ── 动作卡片 ── */
+/* === 动作卡片 === */
 .action-list {
     display: flex;
     flex-direction: column;
@@ -993,7 +993,7 @@ const submitForm = () => {
     color: var(--color-danger);
 }
 
-/* ── 后缀输入 ── */
+/* === 后缀输入 === */
 .suffix-input {
     display: flex;
 }
@@ -1015,7 +1015,7 @@ const submitForm = () => {
     font-weight: 700;
 }
 
-/* ── 底部流程预览 ── */
+/* === 底部流程预览 === */
 .flow-preview {
     display: flex;
     align-items: center;
@@ -1107,7 +1107,7 @@ const submitForm = () => {
     opacity: 0.5;
 }
 
-/* ── 响应式 ── */
+/* === 响应式 === */
 @media (max-width: 760px) {
     .form-grid {
         grid-template-columns: 1fr;

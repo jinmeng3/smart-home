@@ -35,7 +35,9 @@ from app.schemas.overview import (
     SyncJobWrite,
     TaskRead,
 )
+from app.schemas.room import RoomEnvironmentReportRead
 from app.services.household import get_default_household_id
+from app.services.room import get_environment_report_service
 
 router = APIRouter(tags=["overview"])
 
@@ -59,11 +61,11 @@ def get_overview(
     )
     device_rows = (
         db.execute(
-                select(RoomDevice.room_id, Device)
-                .join(RoomDevice, RoomDevice.device_id == Device.id)
-                .where(RoomDevice.room_id.in_([room.id for room in rooms]))
-                .order_by(Device.updated_at.desc())
-            ).all()
+            select(RoomDevice.room_id, Device)
+            .join(RoomDevice, RoomDevice.device_id == Device.id)
+            .where(RoomDevice.room_id.in_([room.id for room in rooms]))
+            .order_by(Device.updated_at.desc())
+        ).all()
         if rooms
         else []
     )
@@ -114,7 +116,9 @@ def get_overview(
         }
         for item in devices[:10]
     ]
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_start = datetime.combine(
+        datetime.now(timezone.utc).date(), datetime.min.time()
+    )
     activity_items: list[tuple[datetime, dict]] = []
 
     room_logs = db.execute(
@@ -128,15 +132,20 @@ def get_overview(
         .limit(20)
     ).all()
     for log, room_name in room_logs:
-        activity_items.append((log.occurred_at, {
-            "id": f"room-{log.id}",
-            "time": log.occurred_at.strftime("%H:%M"),
-            "created_at": log.occurred_at.isoformat(),
-            "icon": "room",
-            "title": log.event,
-            "description": f"{room_name} · {log.source} · {'成功' if log.result == 'success' else '失败'}",
-            "tone": "blue" if log.result == "success" else "red",
-        }))
+        activity_items.append(
+            (
+                log.occurred_at,
+                {
+                    "id": f"room-{log.id}",
+                    "time": log.occurred_at.strftime("%H:%M"),
+                    "created_at": log.occurred_at.isoformat(),
+                    "icon": "room",
+                    "title": log.event,
+                    "description": f"{room_name} · {log.source} · {'成功' if log.result == 'success' else '失败'}",
+                    "tone": "blue" if log.result == "success" else "red",
+                },
+            )
+        )
 
     device_logs = db.execute(
         select(DeviceLog, Device)
@@ -149,15 +158,20 @@ def get_overview(
         .limit(20)
     ).all()
     for log, device in device_logs:
-        activity_items.append((log.created_at, {
-            "id": f"device-{log.id}",
-            "time": log.created_at.strftime("%H:%M"),
-            "created_at": log.created_at.isoformat(),
-            "icon": device.icon or "device-management",
-            "title": log.message,
-            "description": f"{device.room} · {device.name}",
-            "tone": "orange" if device.type == "light" else "teal",
-        }))
+        activity_items.append(
+            (
+                log.created_at,
+                {
+                    "id": f"device-{log.id}",
+                    "time": log.created_at.strftime("%H:%M"),
+                    "created_at": log.created_at.isoformat(),
+                    "icon": device.icon or "device-management",
+                    "title": log.message,
+                    "description": f"{device.room} · {device.name}",
+                    "tone": "orange" if device.type == "light" else "teal",
+                },
+            )
+        )
 
     automation_logs = db.execute(
         select(AutomationExecution, Automation.name)
@@ -170,17 +184,26 @@ def get_overview(
         .limit(20)
     ).all()
     for execution, automation_name in automation_logs:
-        activity_items.append((execution.started_at, {
-            "id": f"automation-{execution.id}",
-            "time": execution.started_at.strftime("%H:%M"),
-            "created_at": execution.started_at.isoformat(),
-            "icon": "automation",
-            "title": f"自动化“{automation_name}”已执行",
-            "description": execution.error_message or f"{execution.source} · {execution.status}",
-            "tone": "green" if execution.status == "success" else "purple",
-        }))
+        activity_items.append(
+            (
+                execution.started_at,
+                {
+                    "id": f"automation-{execution.id}",
+                    "time": execution.started_at.strftime("%H:%M"),
+                    "created_at": execution.started_at.isoformat(),
+                    "icon": "automation",
+                    "title": f"自动化“{automation_name}”已执行",
+                    "description": execution.error_message
+                    or f"{execution.source} · {execution.status}",
+                    "tone": "green" if execution.status == "success" else "purple",
+                },
+            )
+        )
     activities = [
-        item for _, item in sorted(activity_items, key=lambda entry: entry[0], reverse=True)[:30]
+        item
+        for _, item in sorted(activity_items, key=lambda entry: entry[0], reverse=True)[
+            :30
+        ]
     ]
     return ApiResponse.ok(
         OverviewRead(
@@ -539,3 +562,17 @@ def get_sync_job(
             id=job.id, status=job.status, statistics=json.loads(job.statistics_json)
         )
     )
+
+
+# === 环境报告 ===
+
+
+@router.get(
+    "/environment/reports/{task_id}",
+    response_model=ApiResponse[RoomEnvironmentReportRead],
+)
+def get_environment_report(
+    task_id: str,
+) -> ApiResponse[RoomEnvironmentReportRead]:
+    """查询环境报告任务状态。"""
+    return ApiResponse.ok(get_environment_report_service(task_id))

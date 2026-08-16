@@ -108,7 +108,7 @@ export const useSceneTemplate = (
     body: JSON.stringify(payload),
   });
 
-// ── 场景更新与排序 ──────────────────────────────────────────────────────────────
+// === 场景更新与排序 ===
 
 export const updateScene = (sceneId: string, payload: SceneInput) =>
   apiRequest<Scene>(`/api/scenes/${sceneId}`, {
@@ -125,7 +125,7 @@ export const updateSceneOrder = (items: SceneOrderItem[]) =>
     body: JSON.stringify({ items }),
   });
 
-// ── 场景执行查询 ────────────────────────────────────────────────────────────────
+// === 场景执行查询 ===
 
 export const getSceneLogs = async (sceneId: string, limit = 20) => {
   const result = await apiRequest<SceneLogListResponse>(
@@ -137,7 +137,7 @@ export const getSceneLogs = async (sceneId: string, limit = 20) => {
 export const getSceneExecution = (executionId: string) =>
   apiRequest<SceneExecution>(`/api/scenes/executions/${executionId}`);
 
-// ── 场景预览与批量操作 ──────────────────────────────────────────────────────────
+// === 场景预览与批量操作 ===
 
 export const previewScene = (sceneId: string, source = "manual") =>
   apiRequest<ScenePreview>(`/api/scenes/${sceneId}/preview`, {

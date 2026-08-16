@@ -703,7 +703,7 @@ button:disabled {
     opacity: 0.45;
 }
 
-/* ── 骨架屏 ── */
+/* === 骨架屏 === */
 .skeleton-body {
     pointer-events: none;
 }
@@ -731,7 +731,7 @@ button:disabled {
     to { background-position: -200% 0; }
 }
 
-/* ── 列表/网格切换过渡 ── */
+/* === 列表/网格切换过渡 === */
 .view-switch-enter-active,
 .view-switch-leave-active {
     transition: opacity 140ms var(--motion-ease), transform 140ms var(--motion-ease);
@@ -745,14 +745,14 @@ button:disabled {
     transform: scale(0.985);
 }
 
-/* ── 加载中保留旧数据降透明度 ── */
+/* === 加载中保留旧数据降透明度 === */
 .device-grid.is-loading {
     opacity: 0.55;
     pointer-events: none;
     transition: opacity 180ms var(--motion-ease);
 }
 
-/* ── 空状态增加图标和操作入口 ── */
+/* === 空状态增加图标和操作入口 === */
 .device-empty {
     display: grid;
     place-items: center;
@@ -830,7 +830,7 @@ button:disabled {
     }
 }
 
-/* ── 刷新遮罩 ───────────────────────────────────────────────────── */
+/* === 刷新遮罩 === */
 
 .device-refresh-overlay {
     position: absolute;
@@ -904,7 +904,7 @@ button:disabled {
     }
 }
 
-/* ── 同步按钮旋转 ─────────────────────────────────────────────────── */
+/* === 同步按钮旋转 === */
 
 .device-list-sync svg.is-spinning {
     animation: device-sync-spin 800ms linear infinite;
@@ -914,7 +914,7 @@ button:disabled {
     to { transform: rotate(360deg); }
 }
 
-/* ── 行/卡片增删过渡 ──────────────────────────────────────────────── */
+/* === 行/卡片增删过渡 === */
 
 .device-row-enter-active,
 .device-row-leave-active {

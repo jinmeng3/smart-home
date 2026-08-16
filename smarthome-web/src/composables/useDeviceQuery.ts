@@ -92,7 +92,7 @@ export const useDeviceQuery = (hooks: DeviceQueryHooks = {}) => {
         void runLoad(next.signal);
     };
 
-    // ── 单一筛选监听：筛选变化 → 页码重置 + 防抖加载 ────────────
+    // === 单一筛选监听：筛选变化 → 页码重置 + 防抖加载 ===
     watch(
         () =>
             [
@@ -111,7 +111,7 @@ export const useDeviceQuery = (hooks: DeviceQueryHooks = {}) => {
         },
     );
 
-    // ── 分页监听：立即加载（页码重置导致的触发被抑制） ─────────
+    // === 分页监听：立即加载（页码重置导致的触发被抑制） ===
     watch(
         () => [filters.page, filters.pageSize] as const,
         () => {

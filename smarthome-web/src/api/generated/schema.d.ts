@@ -2,11 +2,11 @@
 // 来源：后端 openapi.json（npm run api:generate）。
 // 前端组件不应直接引用此文件，应通过 api/ 模块导出。
 
-// ── 通用响应包装 ──
+// === 通用响应包装 ===
 export type ApiResponse<T = unknown> = { code: number; message: string; data: T | null };
 export type Paginated<T> = { items: T[]; total: number; page: number; page_size: number };
 
-// ── 组件 Schema ──
+// === 组件 Schema ===
 export interface AIModelCreate {
   name: string;
   provider: string;
@@ -1200,7 +1200,7 @@ export interface ValidationError {
   ctx?: Record<string, unknown>;
 }
 
-// ── 操作路径与方法 ──
+// === 操作路径与方法 ===
 // Read Me
 export type read_me_api_account_me_get = { path: "/api/account/me"; method: "GET" };
 // Update Me

@@ -57,7 +57,7 @@ const {
 
 skipAnimation();
 
-/* ── 中等屏幕（1024–1279px）且用户从未设置过时，进入时默认折叠一次 ── */
+/* === 中等屏幕（1024–1279px）且用户从未设置过时，进入时默认折叠一次 === */
 const mediumMediaQuery = window.matchMedia(
     "(min-width: 1024px) and (max-width: 1279px)",
 );
@@ -85,7 +85,7 @@ watch(
     },
 );
 
-/* ── 滚动渐隐 ─────────────────────────────────────────────────── */
+/* === 滚动渐隐 === */
 const railScrollRef = ref<HTMLElement | null>(null);
 const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, {
     deactivated: collapsed,
@@ -164,7 +164,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
     width: var(--rail-width-collapsed, 46px);
 }
 
-/* ── 收起状态 ─────────────────────────────────────────────── */
+/* === 收起状态 === */
 .rail-collapsed {
     display: flex;
     width: 46px;
@@ -193,7 +193,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
     color: var(--color-text-primary);
 }
 
-/* ── 展开头部 ─────────────────────────────────────────────── */
+/* === 展开头部 === */
 .rail-header {
     display: flex;
     min-height: 40px;
@@ -245,7 +245,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
     background: var(--color-border);
 }
 
-/* ── 底部渐隐遮罩 ─────────────────────────────────────────── */
+/* === 底部渐隐遮罩 === */
 .rail-fade {
     position: absolute;
     right: 0;
@@ -267,7 +267,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
     opacity: 1;
 }
 
-/* ── 三阶段折叠动画 ─────────────────────────────────────── */
+/* === 三阶段折叠动画 === */
 aside.phase-collapsing {
     overflow: hidden;
 }

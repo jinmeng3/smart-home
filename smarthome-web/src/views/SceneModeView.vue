@@ -269,7 +269,7 @@ const handleViewAllTemplates = () => {
     padding: 12px;
 }
 
-/* ── 头部 ── */
+/* === 头部 === */
 .scene-page-header {
     display: grid;
     grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
@@ -381,7 +381,7 @@ const handleViewAllTemplates = () => {
     }
 }
 
-/* ── 删除确认弹窗 ── */
+/* === 删除确认弹窗 === */
 /* 头部 / 底部复用 BaseSmartModal 通用 .dialog-header / .dialog-footer 样式 */
 
 /* 头部图标保留轻微脉冲动效 */
