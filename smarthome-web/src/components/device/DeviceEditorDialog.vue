@@ -116,6 +116,22 @@ const handleImageChange = (event: Event) => {
         return;
     }
 
+    // 文件大小校验：设备图片限制 10MB
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        ElMessage.warning("设备图片文件大小不能超过 10MB");
+        input.value = "";
+        return;
+    }
+
+    // 文件类型校验
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+        ElMessage.warning("仅支持 JPEG、PNG、WebP、GIF 或 SVG 格式的设备图片");
+        input.value = "";
+        return;
+    }
+
     releasePreviewUrl();
     pendingImageFile.value = file;
     imagePreviewUrl.value = URL.createObjectURL(file);

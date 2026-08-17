@@ -5,6 +5,8 @@ import {
   listChatMessages as apiListChatMessages,
   listChatSessions as apiListChatSessions,
   runAgent as apiRunAgent,
+  decideAgentOperation as apiDecideAgentOperation,
+  getPendingAgentOperation as apiGetPendingAgentOperation,
 } from "../api/chat";
 import { listAIModels, getAIModel, activateAIModel, type AIModelRead } from "../api/aiModel";
 import { useHouseholdStore } from "../stores/households";
@@ -18,11 +20,15 @@ import type {
   ToolFailedEvent,
   AgentErrorEvent,
   RunCompletedEvent,
+  ApprovalRequiredEvent,
+  ExecutionStatusEvent,
   HouseholdInfo,
+  PendingApproval,
 } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
 const maxMessages = 100;
+const pageSize = 50;
 
 const createMessageId = () =>
   `message-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -34,6 +40,27 @@ const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 const currentTime = () => timeFormatter.format(new Date());
+
+/**
+ * 将后端错误码映射为面向用户的友好消息。
+ * 覆盖：模型错误、工具错误、权限拒绝、限流、预算耗尽、确认超时、用户取消。
+ */
+const errorCodeMap: Record<string, string> = {
+  model_error: "模型调用失败，请检查模型配置或稍后重试",
+  tool_error: "工具执行异常，请稍后重试",
+  permission_denied: "权限不足，无法执行该操作",
+  rate_limited: "请求过于频繁，请稍后重试",
+  budget_exhausted: "预算已用尽，请联系管理员",
+  timeout: "请求超时，请稍后重试",
+  user_cancelled: "用户已取消操作",
+  approval_expired: "确认请求已过期，请重新发起",
+  approval_consumed: "该确认请求已被处理",
+  approval_not_found: "确认请求不存在",
+  version_conflict: "版本冲突，请刷新后重试",
+};
+
+const getFriendlyError = (code: string, fallback: string): string =>
+  errorCodeMap[code] || fallback;
 
 export const useHomeChat = (initialMessages: ChatMessage[]) => {
   const householdStore = useHouseholdStore();
@@ -47,13 +74,23 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   const eventReceived = ref(false);
   const pendingStatus = ref("");
   const household = ref<HouseholdInfo | null>(null);
+  // 待确认操作数据（审批卡片使用）
+  const pendingApproval = ref<PendingApproval | null>(null);
+  const decisionSubmitting = ref(false);
+  // 聊天模式："agent"（Agent 执行，默认）|"chat"（普通对话补全）
+  const agentMode = ref<"agent" | "chat">("agent");
+  // 消息分页：是否还有更早的消息
+  const hasMoreMessages = ref(false);
+  const loadedMessagePage = ref(1);
   let replyTimerIds: number[] = [];
   let chatController: AbortController | null = null;
   let streamFrameId = 0;
   let pendingContent = "";
   let streamDrainResolver: (() => void) | null = null;
-    let stepIdCounter = 0;
-    let activeToolCallId = "";
+  let stepIdCounter = 0;
+  let activeToolCallId = "";
+  // 事件 ID 去重集合：同一 SSE 事件重复到达不会重复追加消息或重复更新步骤
+  let seenEventIds = new Set<string>();
 
   const clearReplyTimers = () => {
     replyTimerIds.forEach((id) => window.clearTimeout(id));
@@ -160,6 +197,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     stopGenerating();
     messages.value = [];
     activeSessionId.value = null;
+    pendingApproval.value = null;
     await fetchHousehold();
 
     try {
@@ -179,12 +217,67 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   const loadConversation = async (sessionId: string) => {
     stopGenerating();
     activeSessionId.value = sessionId;
+    pendingApproval.value = null;
+    loadedMessagePage.value = 1;
+    hasMoreMessages.value = false;
     await fetchHousehold();
 
     try {
-      messages.value = await apiListChatMessages(sessionId);
+      // 分页加载最新消息
+      const msgs = await apiListChatMessages(sessionId, {
+        page: 1,
+        page_size: pageSize,
+      });
+      messages.value = msgs;
+      // 如果返回的消息数等于 pageSize，说明可能还有更早的消息
+      hasMoreMessages.value = msgs.length >= pageSize;
+      loadedMessagePage.value = 1;
+
+      // 加载完成后查询待确认操作，恢复确认卡片
+      if (household.value && sessionId) {
+        try {
+          const pending = await apiGetPendingAgentOperation(
+            Number(sessionId),
+            household.value.id,
+          );
+          if (pending) {
+            pendingApproval.value = pending as PendingApproval;
+            agentStatus.value = "awaiting_approval";
+            pendingStatus.value = "等待用户确认场景执行";
+          }
+        } catch {
+          // 静默忽略查询失败
+        }
+      }
     } catch {
       messages.value = [];
+      hasMoreMessages.value = false;
+    }
+  };
+
+  /** 加载更早的消息（增量加载，避免历史不可达） */
+  const loadEarlierMessages = async () => {
+    if (!activeSessionId.value || !hasMoreMessages.value) return;
+    const nextPage = loadedMessagePage.value + 1;
+    try {
+      const msgs = await apiListChatMessages(activeSessionId.value, {
+        page: nextPage,
+        page_size: pageSize,
+      });
+      if (msgs.length === 0) {
+        hasMoreMessages.value = false;
+        return;
+      }
+      // 将更早的消息插入到当前消息列表头部
+      messages.value = [...msgs, ...messages.value];
+      loadedMessagePage.value = nextPage;
+      hasMoreMessages.value = msgs.length >= pageSize;
+      // 保持不超过 maxMessages 条
+      if (messages.value.length > maxMessages) {
+        messages.value = messages.value.slice(messages.value.length - maxMessages);
+      }
+    } catch {
+      // 加载失败时保持当前状态
     }
   };
 
@@ -194,14 +287,70 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     if (activeSessionId.value === sessionId) {
       activeSessionId.value = null;
       messages.value = [];
+      pendingApproval.value = null;
     }
     recentConversations.value = recentConversations.value.filter(
       (item) => item.id !== sessionId,
     );
   };
 
+  const handleDecision = async (decision: "approve" | "reject") => {
+    if (decisionSubmitting.value || !pendingApproval.value || !activeSessionId.value) return;
+    decisionSubmitting.value = true;
+    try {
+      await apiDecideAgentOperation(
+        Number(activeSessionId.value),
+        {
+          household_id: pendingApproval.value.session_id,
+          approval_id: pendingApproval.value.approval_id,
+          decision,
+        },
+        () => {
+          // 决策提交后，等待后续 SSE 事件驱动状态更新
+        },
+      );
+      if (decision === "reject") {
+        pendingApproval.value = null;
+        agentStatus.value = "idle";
+        pendingStatus.value = "已拒绝操作";
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "决策提交失败";
+      // 映射 409/404/410 等错误码
+      if (error instanceof Error) {
+        if (errMsg.includes("expired") || errMsg.includes("过期")) {
+          pendingStatus.value = getFriendlyError("approval_expired", "确认请求已过期");
+        } else if (errMsg.includes("consumed") || errMsg.includes("已处理")) {
+          pendingStatus.value = getFriendlyError("approval_consumed", "该确认请求已被处理");
+          pendingApproval.value = null;
+        } else {
+          pendingStatus.value = errMsg;
+        }
+      } else {
+        pendingStatus.value = errMsg;
+      }
+    } finally {
+      decisionSubmitting.value = false;
+    }
+  };
+
   const runAgentFlow = async () => {
     stopGenerating();
+    pendingApproval.value = null;
+    // 每次新运行重置事件 ID 去重集合
+    seenEventIds = new Set<string>();
+
+    // 检查是否存在活动模型
+    if (!activeModel.value && availableModels.value.length === 0) {
+      const lastMsg = messages.value[messages.value.length - 1];
+      if (lastMsg && lastMsg.role === "user") {
+        messages.value[messages.value.length - 1] = {
+          ...lastMsg,
+          content: lastMsg.content + "\n\n（错误：未配置 AI 模型，请先在设置中添加模型）",
+        };
+      }
+      return;
+    }
 
     if (!household.value) {
       await fetchHousehold();
@@ -246,8 +395,6 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         return;
       }
 
-      // 部分模型会一次返回完整大段内容。按帧揭示适量字符，既保留
-      // 真实 token 流，又避免大块增量瞬间铺满整个回复。
       const chunkSize = Math.min(18, Math.max(4, Math.ceil(pendingContent.length / 24)));
       const visibleChunk = pendingContent.slice(0, chunkSize);
       pendingContent = pendingContent.slice(chunkSize);
@@ -281,7 +428,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       });
     };
 
-    // 更新或添加执行步骤
+    // 更新或添加执行步骤（带事件 ID 去重）
     const updateStep = (id: string, label: string, status: "executing" | "completed" | "failed", message?: string) => {
       const idx = executionSteps.value.findIndex((s) => s.id === id);
       if (idx !== -1) {
@@ -294,8 +441,16 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       }
     };
 
-    // 处理 SSE 事件
+    // 处理 SSE 事件（带事件 ID 去重）
     const handleEvent = (event: AgentEvent) => {
+      // 使用事件 ID 去重：忽略已处理过的重复事件
+      if (event.event_id && seenEventIds.has(event.event_id)) {
+        return;
+      }
+      if (event.event_id) {
+        seenEventIds.add(event.event_id);
+      }
+
       if (!streamStarted) {
         streamStarted = true;
       }
@@ -330,6 +485,30 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           updateStep(ev.call_id || activeToolCallId, `${ev.tool} 执行失败`, "failed", ev.error);
           break;
         }
+        case "approval_required": {
+          eventReceived.value = true;
+          const ev = event as ApprovalRequiredEvent;
+          pendingApproval.value = {
+            approval_id: ev.approval_id,
+            run_id: event.run_id,
+            session_id: ev.session_id,
+            call_id: "",
+            tool: "",
+            args: {},
+            risk_level: ev.risk_level,
+            reasons: ev.reasons,
+            preview: ev.preview,
+            resource_version: "",
+          };
+          agentStatus.value = "awaiting_approval";
+          pendingStatus.value = "需要确认场景执行";
+          break;
+        }
+        case "execution_status": {
+          const ev = event as ExecutionStatusEvent;
+          pendingStatus.value = ev.message || `执行状态：${ev.status}`;
+          break;
+        }
         case "run_completed": {
           eventReceived.value = true;
           const ev = event as RunCompletedEvent;
@@ -341,19 +520,23 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         case "error": {
           eventReceived.value = true;
           const ev = event as AgentErrorEvent;
+          const friendlyMsg = ev.code
+            ? getFriendlyError(ev.code, ev.message || "智能体执行出错")
+            : ev.message || "智能体执行出错";
           const currentMessage = messages.value[assistantMessageIndex];
           if (currentMessage) {
             messages.value[assistantMessageIndex] = {
               ...currentMessage,
-              content: ev.message || "智能体执行出错",
+              content: friendlyMsg,
             };
           }
           agentStatus.value = "error";
+          pendingStatus.value = friendlyMsg;
           updateStep(
             `error-${executionSteps.value.length + 1}`,
-            "智能体执行失败",
+            getFriendlyError(ev.code, "智能体执行失败"),
             "failed",
-            ev.message || "智能体执行出错",
+            friendlyMsg,
           );
           break;
         }
@@ -378,6 +561,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
       if (runCompleted && agentStatus.value === "executing") {
         finishAiReply();
+        // 工具执行完成后刷新受影响的场景、自动化、房间或设备数据
+        void refreshRecentConversations();
       }
 
       // 如果 run_completed 没有触发 finishAiReply（例如事件流提前结束）
@@ -397,21 +582,38 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
+      const errMsg = error instanceof Error ? error.message : "请求大模型失败";
       const currentMessage = messages.value[assistantMessageIndex];
       if (currentMessage) {
         messages.value[assistantMessageIndex] = {
           ...currentMessage,
-          content: error instanceof Error ? error.message : "请求大模型失败",
+          content: errMsg,
         };
       }
-      const message = error instanceof Error ? error.message : "请求大模型失败";
       agentStatus.value = "error";
+      pendingStatus.value = errMsg;
       updateStep(
         `error-${executionSteps.value.length + 1}`,
         "请求执行失败",
         "failed",
-        message,
+        errMsg,
       );
+      // 断线后查询待确认操作，若存在则恢复确认卡片
+      if (activeSessionId.value && household.value) {
+        try {
+          const pending = await apiGetPendingAgentOperation(
+            Number(activeSessionId.value),
+            household.value.id,
+          );
+          if (pending) {
+            pendingApproval.value = pending as PendingApproval;
+            agentStatus.value = "awaiting_approval";
+            pendingStatus.value = "连接已恢复，等待确认场景执行";
+          }
+        } catch {
+          // 静默忽略
+        }
+      }
     } finally {
       if (chatController === controller) {
         chatController = null;
@@ -425,6 +627,19 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     if (!trimmedContent) return;
 
     stopGenerating();
+    pendingApproval.value = null;
+
+    // 检查可用模型
+    if (!activeModel.value && availableModels.value.length === 0) {
+      messages.value.push({
+        id: createMessageId(),
+        role: "assistant",
+        content: "请先在设置中添加并启用 AI 模型，然后返回对话。",
+        timestamp: currentTime(),
+      });
+      return;
+    }
+
     messages.value.push({
       id: createMessageId(),
       role: "user",
@@ -463,18 +678,24 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeModel,
     agentStatus,
     availableModels,
+    decisionSubmitting,
     eventReceived,
     executionSteps,
     fetchModels,
+    handleDecision,
     loadConversation,
     deleteConversation,
     messages,
+    pendingApproval,
     pendingStatus,
     recentConversations,
     regenerateMessage,
     refreshRecentConversations,
     sendMessage,
     selectModel,
+    agentMode,
+    loadEarlierMessages,
+    hasMoreMessages,
     startNewConversation,
     stopGenerating,
   };

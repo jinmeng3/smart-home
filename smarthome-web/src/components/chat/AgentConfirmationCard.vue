@@ -59,6 +59,17 @@ defineEmits<{
       </div>
     </div>
 
+    <div class="approval-meta">
+      <div class="meta-row">
+        <span class="meta-label">确认 ID</span>
+        <span class="meta-value">{{ approval.approval_id.slice(0, 12) }}...</span>
+      </div>
+      <div v-if="approval.resource_version" class="meta-row">
+        <span class="meta-label">资源版本</span>
+        <span class="meta-value">{{ approval.resource_version }}</span>
+      </div>
+    </div>
+
     <footer class="approval-actions">
       <button
         type="button"
@@ -66,7 +77,7 @@ defineEmits<{
         :disabled="submitting"
         @click="$emit('reject')"
       >
-        拒绝
+        {{ submitting ? "处理中…" : "拒绝" }}
       </button>
 
       <button
@@ -198,6 +209,33 @@ defineEmits<{
   margin: 0;
   font-size: 12px;
   color: var(--color-text-secondary);
+}
+
+.approval-meta {
+  margin: 12px 16px 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.meta-label {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+}
+
+.meta-value {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-family: monospace;
 }
 
 .approval-actions {

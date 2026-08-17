@@ -58,11 +58,15 @@ def create_session(
 )
 def list_chat_messages(
     session_id: int,
+    page: int = 1,
+    page_size: int = 50,
     current_user: User = CURRENT_USER_DEPENDENCY,
     db: Session = DB_DEPENDENCY,
 ) -> ApiResponse[list[ChatMessageRead]]:
-    """读取指定会话的历史消息。"""
-    return ApiResponse(data=list_chat_messages_service(db, current_user, session_id))
+    """读取指定会话的历史消息，支持分页（按时间倒序取最新消息）。"""
+    return ApiResponse(
+        data=list_chat_messages_service(db, current_user, session_id, page, page_size)
+    )
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)

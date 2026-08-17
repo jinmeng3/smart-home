@@ -204,26 +204,51 @@ export const createApiHeaders = (init?: HeadersInit) => {
   return headers;
 };
 
+/** 幂等 GET 请求的重试延迟（毫秒），指数退避：第一次 500ms，第二次 1000ms */
+const RETRY_DELAYS = [500, 1000];
+
+/** 只对幂等 GET 做有限重试；写请求不自动重放。 */
+const shouldRetry = (method: string, status: number): boolean =>
+  method === "GET" &&
+  (status >= 500 || status === 429 || status === 0);
+
 /**
  * 请求后端 ApiResponse 包装接口。
  * 自动添加 Content-Type 和 Authorization 头。
+ * 对幂等 GET 请求自动重试（指数退避），写请求不重放。
  */
 export const apiRequest = async <T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> => {
-  const headers = createApiHeaders(init.headers);
+  const method = (init.method || "GET").toUpperCase();
 
-  if (!(init.body instanceof FormData) && init.body !== undefined) {
-    headers.set("Content-Type", "application/json");
-  }
+  const doFetch = async (attempt: number): Promise<T> => {
+    const headers = createApiHeaders(init.headers);
 
-  const response = await fetch(path, {
-    ...init,
-    headers,
-  });
+    if (!(init.body instanceof FormData) && init.body !== undefined) {
+      headers.set("Content-Type", "application/json");
+    }
 
-  return parseResponse<T>(response, headers.has("Authorization"));
+    const response = await fetch(path, { ...init, headers });
+
+    try {
+      return await parseResponse<T>(response, headers.has("Authorization"));
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        shouldRetry(method, error.status) &&
+        attempt < RETRY_DELAYS.length
+      ) {
+        const delay = RETRY_DELAYS[attempt];
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return doFetch(attempt + 1);
+      }
+      throw error;
+    }
+  };
+
+  return doFetch(0);
 };
 
 /**

@@ -116,9 +116,16 @@ export const createChatSession = async () => {
   return toRecentConversation(session);
 };
 
-export const listChatMessages = async (sessionId: string) => {
+export const listChatMessages = async (
+  sessionId: string,
+  params: { page?: number; page_size?: number } = {},
+) => {
+  const query = new URLSearchParams();
+  if (params.page !== undefined) query.set("page", String(params.page));
+  if (params.page_size !== undefined) query.set("page_size", String(params.page_size));
+  const qs = query.toString();
   const messages = await apiRequest<ChatMessageRead[]>(
-    `/api/chat/sessions/${sessionId}/messages`,
+    `/api/chat/sessions/${sessionId}/messages${qs ? `?${qs}` : ""}`,
   );
   return messages.map(toChatMessage);
 };

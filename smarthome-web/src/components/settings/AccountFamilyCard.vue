@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
@@ -89,6 +89,22 @@ const uploadAvatar = (event: Event) => {
     const file = target.files?.[0];
 
     if (!file) {
+        return;
+    }
+
+    // 文件类型校验（已有 accept 属性兜底，这里做二次校验）
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+        ElMessage.warning("仅支持 JPEG、PNG 或 WebP 格式的头像");
+        target.value = "";
+        return;
+    }
+
+    // 文件大小校验：头像限制 5MB
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        ElMessage.warning("头像文件大小不能超过 5MB");
+        target.value = "";
         return;
     }
 

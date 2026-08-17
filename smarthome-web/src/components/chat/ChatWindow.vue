@@ -7,6 +7,7 @@ import AnimatedList from "../animation/AnimatedList.vue";
 import ChatComposer from "./ChatComposer.vue";
 import ChatInlineStatus from "./ChatInlineStatus.vue";
 import ChatMessage from "./ChatMessage.vue";
+import AgentConfirmationCard from "./AgentConfirmationCard.vue";
 
 const store = useHomeStore();
 const authStore = useAuthStore();
@@ -58,6 +59,14 @@ const handleSend = (content: string) => {
 
 const handleStop = () => {
     store.stopGenerating();
+};
+
+const handleApprove = () => {
+    store.handleDecision("approve");
+};
+
+const handleReject = () => {
+    store.handleDecision("reject");
 };
 
 const fillPrompt = (prompt: string) => {
@@ -191,6 +200,15 @@ const starterPrompts = [
                 </div>
                     </div>
                     <template v-else>
+                <div v-if="store.hasMoreMessages" class="load-earlier-wrapper">
+                    <button
+                        class="load-earlier-btn"
+                        type="button"
+                        @click="store.loadEarlierMessages"
+                    >
+                        加载更早消息
+                    </button>
+                </div>
                 <AnimatedList tag="div" name="message-list">
                     <ChatMessage
                         v-for="message in visibleMessages"
@@ -208,6 +226,16 @@ const starterPrompts = [
                         !hasStreamingContent
                     "
                     :label="store.pendingStatus || '正在等待智能体响应'"
+                />
+                <AgentConfirmationCard
+                    v-if="
+                        store.agentStatus === 'awaiting_approval' &&
+                        store.pendingApproval
+                    "
+                    :approval="store.pendingApproval"
+                    :submitting="store.decisionSubmitting"
+                    @approve="handleApprove"
+                    @reject="handleReject"
                 />
             </template>
                 </div>
@@ -228,6 +256,25 @@ const starterPrompts = [
                 </svg>
             </button>
         </Transition>
+
+        <div class="mode-toggle">
+            <button
+                class="mode-btn"
+                :class="{ active: store.agentMode === 'agent' }"
+                type="button"
+                @click="store.agentMode = 'agent'"
+            >
+                Agent
+            </button>
+            <button
+                class="mode-btn"
+                :class="{ active: store.agentMode === 'chat' }"
+                type="button"
+                @click="store.agentMode = 'chat'"
+            >
+                对话
+            </button>
+        </div>
 
         <ChatComposer
             :prompt="pendingPrompt"
@@ -543,13 +590,69 @@ const starterPrompts = [
 
 @media (max-width: 760px) {
     .empty-chat-illustration {
-        width: 136px;
-        max-width: 58vw;
-        max-height: 128px;
+        width: 140px;
+        height: 112px;
     }
-
+	
     .starter-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* === 加载更早消息按钮 === */
+.load-earlier-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.load-earlier-btn {
+    padding: 6px 18px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 999px;
+    background: var(--color-card-bg);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms;
+}
+
+.load-earlier-btn:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-primary-400);
+}
+
+/* === 模式切换按钮 === */
+.mode-toggle {
+    display: flex;
+    gap: 4px;
+    padding: 4px 6px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    background: var(--color-surface-subtle);
+    margin: 0 6px 6px;
+    align-self: flex-start;
+}
+
+.mode-btn {
+    padding: 3px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms, color 150ms;
+}
+
+.mode-btn.active {
+    background: var(--color-primary-50);
+    color: var(--color-primary-700);
+}
+
+.mode-btn:hover:not(.active) {
+    color: var(--color-text-secondary);
 }
 </style>

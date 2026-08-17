@@ -62,17 +62,24 @@ def list_chat_sessions_service(db: Session, current_user: User) -> list[ChatSess
 
 
 def list_chat_messages_service(
-    db: Session, current_user: User, session_id: int
+    db: Session,
+    current_user: User,
+    session_id: int,
+    page: int = 1,
+    page_size: int = 50,
 ) -> list[ChatMessage]:
-    """列出指定会话下的消息。"""
+    """列出指定会话下的消息，支持分页（按时间倒序取最新消息）。"""
     get_chat_session(db, current_user, session_id, [])
+    offset = max(0, (page - 1) * page_size)
     return list(
         db.scalars(
             select(ChatMessage)
             .where(ChatMessage.session_id == session_id)
-            .order_by(ChatMessage.created_at)
+            .order_by(ChatMessage.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
         ).all()
-    )
+    )[::-1]
 
 
 def delete_chat_session_service(
