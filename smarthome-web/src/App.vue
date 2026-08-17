@@ -128,6 +128,25 @@ onMounted(() => {
     }
 });
 
+// 登录/退出/会话失效联动：
+// - 登录成功后恢复用户与家庭资料；
+// - 退出或 401 后回到 “/” 智能对话页，避免停留在受保护页面。
+watch(
+    () => authStore.isAuthenticated,
+    (authenticated) => {
+        if (authenticated) {
+            void Promise.all([
+                settingsStore.loadAccountHome(),
+                settingsStore.loadUserPreferences(),
+            ]).catch(() => undefined);
+            return;
+        }
+        if (route.path !== "/") {
+            void router.push("/");
+        }
+    },
+);
+
 onUnmounted(() => {
     systemThemeQuery?.removeEventListener("change", systemThemeHandler);
     window.removeEventListener("keydown", handleGlobalKeydown);

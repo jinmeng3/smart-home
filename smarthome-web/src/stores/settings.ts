@@ -4,9 +4,6 @@ import {
   createHousehold as apiCreateHousehold,
   getAccount,
   getUserPreferences as apiGetUserPreferences,
-  getHouseholdDetail,
-  listHouseholds,
-  listMembers,
   updateAccount as apiUpdateAccount,
   updateUserPreferences as apiUpdateUserPreferences,
   updateHousehold as apiUpdateHousehold,
@@ -25,6 +22,7 @@ import {
   type AIModelRead,
 } from "../api/aiModel";
 import { ApiError } from "../api/client";
+import { useHouseholdStore } from "./households";
 import {
   cloneSettings,
   formatLocalTime,
@@ -39,13 +37,12 @@ import {
 } from "../utils/settingsPersistence";
 import type {
   BackupRecord,
+  HouseholdContext,
+  HouseholdMember,
   HouseholdRole,
   SecurityMeta,
   SettingsState,
 } from "../types/settings";
-
-const isAdminRole = (role: string | undefined) =>
-  role?.toLowerCase() === "admin";
 
 const createDefaultSecurityMeta = (): SecurityMeta => ({
   passwordUpdatedAt: null,
@@ -118,15 +115,14 @@ export const useSettingsStore = defineStore("settings", () => {
       ...settings.value.backup,
       ...preferences.backup,
     };
-    persistSettings(settings.value);
+    // 服务端是偏好唯一真相：不回写本地缓存，避免与服务端双真相。
+    // 无需跨端同步的 UI 偏好（如侧栏折叠）仍由各自模块本地保存。
   };
 
   const saveSettings = async () => {
     await apiUpdateUserPreferences(getUserPreferencesPayload());
     if (settings.value.backup.autoBackup) {
       recordBackup("auto", "设置已保存时执行自动备份");
-    } else {
-      persistSettings(settings.value);
     }
     savedAt.value = new Intl.DateTimeFormat("zh-CN", {
       hour: "2-digit",
@@ -141,6 +137,29 @@ export const useSettingsStore = defineStore("settings", () => {
     }, 1600);
   };
 
+  /** 将家庭上下文（活动家庭 + 成员 + 角色）镜像到设置 store，供既有组件消费。 */
+  const applyHouseholdContext = (
+    household: HouseholdContext | null,
+    members: HouseholdMember[],
+  ) => {
+    const roleLabel = household
+      ? household.role === "admin"
+        ? "管理员"
+        : "成员"
+      : "";
+    settings.value.account = {
+      ...settings.value.account,
+      familyName: household?.name ?? "",
+      householdId: household?.id,
+      householdAddress: household?.address ?? null,
+      householdTimezone: household?.timezone ?? "Asia/Shanghai",
+      role: roleLabel,
+      members,
+    };
+    settings.value.summary.currentHome = household?.name ?? "";
+    settings.value.summary.accountStatus = roleLabel;
+  };
+
   const loadAccountHome = (force = false) => {
     if (accountHomeLoaded.value && !force) {
       return Promise.resolve();
@@ -151,45 +170,21 @@ export const useSettingsStore = defineStore("settings", () => {
 
     loading.value = true;
     accountHomePromise = (async () => {
-      const [account, households] = await Promise.all([
-        getAccount(),
-        listHouseholds(),
-      ]);
-      const householdEntries = await Promise.all(
-        households.map(async (household) => ({
-          household,
-          members: await listMembers(household.id),
-        })),
+      const account = await getAccount();
+      // 家庭列表 / 活动家庭 / 角色 / 成员以全局家庭上下文为唯一真相。
+      const householdStore = useHouseholdStore();
+      await householdStore.load(force);
+      applyHouseholdContext(
+        householdStore.activeHousehold,
+        householdStore.members,
       );
-      const householdEntry =
-        householdEntries.find(({ members }) =>
-          members.some((member) => member.userId === account.id),
-        ) ?? householdEntries[0];
-      const household = householdEntry?.household;
-      const members = householdEntry?.members ?? [];
-      const role = isAdminRole(household?.role) ? "管理员" : "成员";
-
-      // 若当前用户是所加入家庭的一员，则拉取其家庭详情以确保数据最新。
-      const detail = household
-        ? await getHouseholdDetail(household.id).catch(() => household)
-        : null;
-      const resolved = detail ?? household;
-
       settings.value.account = {
         ...settings.value.account,
         id: account.id,
         username: account.name,
         email: account.email,
         avatarUrl: account.avatar_url,
-        familyName: resolved?.name ?? "",
-        householdId: resolved?.id,
-        householdAddress: resolved?.address ?? null,
-        householdTimezone: resolved?.timezone ?? "Asia/Shanghai",
-        role,
-        members,
       };
-      settings.value.summary.currentHome = resolved?.name ?? "";
-      settings.value.summary.accountStatus = role;
       accountHomeLoaded.value = true;
     })().finally(() => {
       loading.value = false;
@@ -256,18 +251,52 @@ export const useSettingsStore = defineStore("settings", () => {
       householdRequest,
     ]);
 
+    // 家庭数据以全局上下文为准：刷新列表并保持新/当前家庭为活动家庭。
+    const householdStore = useHouseholdStore();
+    await householdStore.load(true);
+    if (household?.id) {
+      await householdStore.switchHousehold(household.id);
+    }
+    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+
     settings.value.account = {
       ...settings.value.account,
+      id: account.id,
       username: account.name,
       email: account.email,
       avatarUrl: account.avatar_url,
-      householdId: household?.id ?? settings.value.account.householdId,
-      familyName: household?.name ?? settings.value.account.familyName,
-      householdAddress:
-        household?.address ?? settings.value.account.householdAddress,
-      householdTimezone:
-        household?.timezone ?? settings.value.account.householdTimezone,
     };
+  };
+
+  const createHousehold = async (payload: {
+    name: string;
+    address?: string | null;
+    timezone?: string;
+  }) => {
+    const created = await apiCreateHousehold(payload);
+    const householdStore = useHouseholdStore();
+    await householdStore.load(true);
+    await householdStore.switchHousehold(created.id);
+    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    return created;
+  };
+
+  const resetAccountState = () => {
+    settings.value.account = {
+      id: undefined,
+      username: "",
+      email: "",
+      avatarUrl: null,
+      familyName: "",
+      householdId: undefined,
+      householdAddress: null,
+      householdTimezone: "Asia/Shanghai",
+      role: "",
+      members: [],
+    };
+    settings.value.summary.currentHome = "";
+    settings.value.summary.accountStatus = "";
+    accountHomeLoaded.value = false;
   };
 
   const saveAIModel = async () => {
@@ -367,42 +396,48 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const addHouseholdMember = async (email: string, role: HouseholdRole) => {
-    const householdId = settings.value.account.householdId;
-    if (!householdId) return;
+    const householdStore = useHouseholdStore();
+    const householdId = householdStore.activeHouseholdId;
+    if (!householdId) {
+      throw new Error("请先创建或选择家庭");
+    }
 
     const member = await apiAddMember(householdId, { email, role });
-    settings.value.account.members = [
-      ...(settings.value.account.members ?? []),
-      member,
-    ];
+    await householdStore.refreshMembers();
+    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    return member;
   };
 
   const updateMemberRole = async (
     membershipId: number,
     role: HouseholdRole,
   ) => {
-    const householdId = settings.value.account.householdId;
-    if (!householdId) return;
+    const householdStore = useHouseholdStore();
+    const householdId = householdStore.activeHouseholdId;
+    if (!householdId) {
+      throw new Error("请先创建或选择家庭");
+    }
 
     const updatedMember = await apiUpdateMemberRole(
       householdId,
       membershipId,
       role,
     );
-    settings.value.account.members = (settings.value.account.members ?? []).map(
-      (member) =>
-        member.membershipId === membershipId ? updatedMember : member,
-    );
+    await householdStore.refreshMembers();
+    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    return updatedMember;
   };
 
   const deleteHouseholdMember = async (membershipId: number) => {
-    const householdId = settings.value.account.householdId;
-    if (!householdId) return;
+    const householdStore = useHouseholdStore();
+    const householdId = householdStore.activeHouseholdId;
+    if (!householdId) {
+      throw new Error("请先创建或选择家庭");
+    }
 
     await apiDeleteMember(householdId, membershipId);
-    settings.value.account.members = (
-      settings.value.account.members ?? []
-    ).filter((member) => member.membershipId !== membershipId);
+    await householdStore.refreshMembers();
+    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
   };
 
   const resetSettings = () => {
@@ -526,6 +561,8 @@ export const useSettingsStore = defineStore("settings", () => {
     aiModels,
     accountHomeLoaded,
     addHouseholdMember,
+    applyHouseholdContext,
+    createHousehold,
     deleteAccountAvatar,
     deleteHouseholdMember,
     getExportSettings,
@@ -534,6 +571,7 @@ export const useSettingsStore = defineStore("settings", () => {
     loadUserPreferences,
     loadAccountHome,
     loading,
+    resetAccountState,
     resetSettings,
     saveAccountHome,
     saveAIModel,

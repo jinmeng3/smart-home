@@ -12,7 +12,7 @@ const props = defineProps<{
 defineEmits<{
     edit: [];
     preview: [];
-    retryStep: [stepId: string];
+    run: [];
 }>();
 
 const completedCount = computed(() => {
@@ -35,24 +35,16 @@ const isAllCompleted = computed(
     () => props.scene && completedCount.value === totalSteps.value,
 );
 
-const elapsedTime = computed(() => {
-    if (!props.scene || !props.running) return "";
-    // 模拟耗时，实际应由后端返回
-    const runningSteps = props.scene.steps.filter(
-        (step) => props.stepStatuses[step.id] === "running",
-    ).length;
-    const doneSteps = completedCount.value;
-    const estimated = (doneSteps + runningSteps) * 0.3;
-    return `${estimated.toFixed(1)} 秒`;
-});
-
 const resultText = computed(() => {
     if (!props.scene) return "";
     if (failedCount.value > 0) {
         return `已完成 ${completedCount.value}/${totalSteps.value} 个动作 · ${failedCount.value} 步失败`;
     }
     if (isAllCompleted.value) {
-        return `已完成 ${totalSteps.value}/${totalSteps.value} 个动作 · 用时 ${elapsedTime.value || "< 1 秒"}`;
+        return `已完成 ${totalSteps.value}/${totalSteps.value} 个动作`;
+    }
+    if (props.running) {
+        return `正在执行 ${completedCount.value}/共 ${totalSteps.value} 步操作`;
     }
     return `共 ${totalSteps.value} 步操作`;
 });
@@ -146,7 +138,7 @@ const resultText = computed(() => {
                                     aria-hidden="true"
                                 />
                             </div>
-                            <!-- 失败状态：显示重试按钮 -->
+                            <!-- 失败状态：后端暂无步骤级重试接口，展示提示并支持重新执行场景 -->
                             <div
                                 v-if="stepStatuses[step.id] === 'failed'"
                                 class="step-error"
@@ -154,15 +146,12 @@ const resultText = computed(() => {
                                 <span class="step-error-msg">执行失败</span>
                                 <button
                                     class="step-retry-btn"
+                                    :disabled="running"
                                     type="button"
-                                    @click="
-                                        $emit(
-                                            'retryStep',
-                                            step.id,
-                                        )
-                                    "
+                                    @click="$emit('run')"
                                 >
-                                    <SvgIcon name="refresh" size="sm" /> 重试
+                                    <SvgIcon name="refresh" size="sm" />
+                                    重新执行场景
                                 </button>
                             </div>
                         </li>

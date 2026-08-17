@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type {
+  HouseholdContext,
   HouseholdMember,
   HouseholdRole,
   UserPreferences,
@@ -50,6 +51,15 @@ const toMember = (member: MemberRead): HouseholdMember => ({
   joinedAt: member.joined_at,
 });
 
+const toHousehold = (household: HouseholdRead): HouseholdContext => ({
+  id: household.id,
+  name: household.name,
+  address: household.address,
+  timezone: household.timezone,
+  role: household.role?.toLowerCase() === "admin" ? "admin" : "member",
+  memberCount: household.member_count ?? 0,
+});
+
 // === API 导出函数 ===
 
 export const getAccount = () => apiRequest<AccountRead>("/api/account/me");
@@ -75,30 +85,38 @@ export const deleteAvatar = () =>
     method: "DELETE",
   });
 
-export const listHouseholds = () =>
-  apiRequest<HouseholdRead[]>("/api/households");
+export const listHouseholds = async () => {
+  const households = await apiRequest<HouseholdRead[]>("/api/households");
+  return households.map(toHousehold);
+};
 
-export const createHousehold = (payload: {
+export const createHousehold = async (payload: {
   name: string;
   address?: string | null;
   timezone?: string;
 }) =>
-  apiRequest<HouseholdRead>("/api/households", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  toHousehold(
+    await apiRequest<HouseholdRead>("/api/households", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  );
 
-export const getHouseholdDetail = (householdId: number) =>
-  apiRequest<HouseholdRead>(`/api/households/${householdId}`);
+export const getHouseholdDetail = async (householdId: number) =>
+  toHousehold(
+    await apiRequest<HouseholdRead>(`/api/households/${householdId}`),
+  );
 
-export const updateHousehold = (
+export const updateHousehold = async (
   householdId: number,
   payload: { name?: string; address?: string | null; timezone?: string },
 ) =>
-  apiRequest<HouseholdRead>(`/api/households/${householdId}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  toHousehold(
+    await apiRequest<HouseholdRead>(`/api/households/${householdId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  );
 
 export const listMembers = async (householdId: number) => {
   const response = await apiRequest<MemberListResponse>(

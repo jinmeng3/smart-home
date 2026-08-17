@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { useHomeStore } from "../../stores/home";
 import { useSettingsStore } from "../../stores/settings";
+import { useHouseholdStore } from "../../stores/households";
 import {
     navigationItems,
     navigationGroups,
@@ -30,6 +31,7 @@ const emit = defineEmits<{
 
 const store = useHomeStore();
 const settingsStore = useSettingsStore();
+const householdStore = useHouseholdStore();
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -52,6 +54,16 @@ const accountInitial = computed(() =>
         ? account.value.username.trim().slice(0, 1).toUpperCase()
         : "访",
 );
+const accountSubline = computed(() => {
+    if (!authStore.isAuthenticated) return "登录后同步个人信息";
+    const active = householdStore.activeHousehold;
+    if (active) {
+        return `${active.name} · ${
+            active.role === "admin" ? "管理员" : "成员"
+        }`;
+    }
+    return account.value.email;
+});
 
 /* === 最近会话分组 === */
 const conversationGroups = computed(() => {
@@ -486,11 +498,7 @@ const isGroupActive = (group: NavigationGroup) =>
                         class="account-dot"
                         :class="authStore.isAuthenticated ? 'is-online' : ''"
                     ></i>
-                    {{
-                        authStore.isAuthenticated
-                            ? account.email
-                            : "登录后同步个人信息"
-                    }}
+                    {{ accountSubline }}
                 </span>
             </div>
             <span

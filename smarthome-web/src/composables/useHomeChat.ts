@@ -1,4 +1,4 @@
-import { onScopeDispose, ref } from "vue";
+import { onScopeDispose, ref, watch } from "vue";
 import {
   createChatSession as apiCreateChatSession,
   deleteChatSession as apiDeleteChatSession,
@@ -7,7 +7,7 @@ import {
   runAgent as apiRunAgent,
 } from "../api/chat";
 import { listAIModels, getAIModel, activateAIModel, type AIModelRead } from "../api/aiModel";
-import { listHouseholds } from "../api/account";
+import { useHouseholdStore } from "../stores/households";
 import type {
   AgentExecutionStep,
   AgentStatus,
@@ -36,6 +36,7 @@ const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
 const currentTime = () => timeFormatter.format(new Date());
 
 export const useHomeChat = (initialMessages: ChatMessage[]) => {
+  const householdStore = useHouseholdStore();
   const messages = ref<ChatMessage[]>(initialMessages);
   const recentConversations = ref<RecentConversation[]>([]);
   const activeSessionId = ref<string | null>(null);
@@ -99,18 +100,20 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   };
 
   const fetchHousehold = async () => {
-    try {
-      const list = await listHouseholds();
-      if (list.length > 0) {
-        const first = list[0];
-        if (first) {
-          household.value = { id: first.id, name: first.name };
-        }
-      }
-    } catch {
-      household.value = null;
-    }
+    const active = householdStore.activeHousehold;
+    household.value = active ? { id: active.id, name: active.name } : null;
   };
+
+  // 切换活动家庭后同步聊天上下文：清空进行中的生成并刷新会话列表。
+  watch(
+    () => householdStore.activeHouseholdId,
+    () => {
+      if (!householdStore.loadedOnce) return;
+      stopGenerating();
+      void fetchHousehold();
+      void refreshRecentConversations();
+    },
+  );
 
   const refreshRecentConversations = async () => {
     try {

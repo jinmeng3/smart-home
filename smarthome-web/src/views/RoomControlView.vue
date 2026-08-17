@@ -3,6 +3,8 @@ import { computed, ref } from "vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { ElMessage } from "element-plus";
+import { ApiError } from "../api/client";
+import { getErrorMessage } from "../utils/error";
 import {
   createRoom,
   deleteRoom,
@@ -34,7 +36,6 @@ import type {
     RoomStats,
 } from "../types/room";
 import type { RoomEnvironmentItem } from "../components/rooms/RoomDetailPanel.vue";
-import { getErrorMessage } from "../utils/error";
 
 const rooms = ref<Room[]>([]);
 const selectedId = ref<number>();
@@ -239,6 +240,15 @@ const handleRoomUpdated = async (room: Room) => {
     replaceRoom(updated);
     ElMessage.success("房间已更新");
   } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      ElMessage.warning("房间已被其他会话修改，已为你重新加载最新数据");
+      if (selectedId.value) {
+        void loadRoomDetail(selectedId.value).then(() => {
+          if (selected.value) replaceRoom(selected.value);
+        }).catch(() => undefined);
+      }
+      return;
+    }
     ElMessage.error(getErrorMessage(error, "房间更新失败"));
   } finally {
     roomSaving.value = false;
@@ -270,6 +280,10 @@ const handleRoomCreated = async (
     activeDialog.value = null;
     ElMessage.success("房间已创建");
   } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      ElMessage.warning("创建失败，房间名或标识冲突，请重试");
+      return;
+    }
     ElMessage.error(getErrorMessage(error, "房间创建失败"));
   } finally {
     roomSaving.value = false;

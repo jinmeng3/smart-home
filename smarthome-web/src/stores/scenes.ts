@@ -9,6 +9,7 @@ import {
     executeScene as apiExecuteScene,
     fetchSceneSummary,
     fetchScenes,
+    getSceneExecution as apiGetSceneExecution,
     getSceneLogs as apiGetSceneLogs,
     previewScene as apiPreviewScene,
     previewSceneTemplate as apiPreviewSceneTemplate,
@@ -114,21 +115,52 @@ export const useScenesStore = defineStore("scenes", () => {
         selectedSceneId.value = scene.id;
         resetStepStatuses();
 
-        try {
-            const nextStatuses = { ...stepStatuses.value };
+        const toStepStatus = (value: string): SceneStepStatus => {
+            if (value === "completed") return "completed";
+            if (value === "failed") return "failed";
+            if (value === "running") return "running";
+            return "pending";
+        };
 
+        const applyExecution = (next: {
+            steps: { stepId: string; status: string }[];
+        }) => {
+            const nextStatuses: Record<string, SceneStepStatus> = {};
             for (const step of scene.steps) {
-                nextStatuses[step.id] = "running";
-                stepStatuses.value = nextStatuses;
-                await sleep(180);
-                nextStatuses[step.id] = "completed";
-                stepStatuses.value = nextStatuses;
+                const found = next.steps.find((item) => item.stepId === step.id);
+                nextStatuses[step.id] = found
+                    ? toStepStatus(found.status)
+                    : "pending";
+            }
+            stepStatuses.value = nextStatuses;
+        };
+
+        const isExecutionTerminal = (next: { status: string }) =>
+            !["queued", "pending", "running", "processing"].includes(next.status);
+
+        try {
+            // 先提交执行，再由后端返回的 step 状态驱动 UI（不再在前端模拟耗时）。
+            const execution = await apiExecuteScene(scene.id, confirmHighRisk);
+
+            // 轮询执行详情直到终态；刷新后仍可通过 executionId 恢复。
+            let current = await apiGetSceneExecution(execution.executionId);
+            applyExecution(current);
+
+            while (
+                runningSceneId.value === scene.id &&
+                !isExecutionTerminal(current)
+            ) {
+                await sleep(1200);
+                current = await apiGetSceneExecution(execution.executionId);
+                applyExecution(current);
             }
 
-            const execution = await apiExecuteScene(scene.id, confirmHighRisk);
+            if (current.status === "failed") {
+                throw new Error("场景执行失败");
+            }
             scenes.value = scenes.value.map((item) =>
                 item.id === scene.id
-                    ? { ...item, updatedAt: execution.finishedAt ?? execution.startedAt }
+                    ? { ...item, updatedAt: current.finishedAt ?? execution.startedAt }
                     : item,
             );
             summary.value = await fetchSceneSummary();

@@ -128,6 +128,16 @@ export interface HouseholdMember {
   joinedAt: string
 }
 
+/** 全局家庭上下文：家庭列表项 + 当前用户在其中的角色 */
+export interface HouseholdContext {
+  id: number
+  name: string
+  address: string | null
+  timezone: string
+  role: HouseholdRole
+  memberCount: number
+}
+
 export interface SecurityDevice {
   id: number
   name: string

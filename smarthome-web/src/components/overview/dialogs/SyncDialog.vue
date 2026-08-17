@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
-import { useModalConfirm } from "../../../composables/useModalConfirm";
+import SvgIcon from "../../common/SvgIcon.vue";
+import { createSyncJob, getSyncJob } from "../../../api/overview";
+import { useTaskPolling } from "../../../composables/useTaskPolling";
+import type { SyncJobResult } from "../../../types/overview";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -10,17 +13,67 @@ const emit = defineEmits<{
     synced: [];
 }>();
 
-const syncOptions = reactive([
-    "名称与房间归属",
-    "电量与在线状态",
-    "检测新接入设备",
-]);
+const sourceNames = [
+    "Home Assistant",
+    "Zigbee 网关",
+    "蓝牙设备",
+    "Matter 设备",
+] as const;
+const sources = ref<string[]>(["Home Assistant"]);
+const submitting = ref(false);
+const job = ref<SyncJobResult | null>(null);
 
-const { loading, confirm } = useModalConfirm(() => {
-    emit("synced");
-    ElMessage.success("同步设备状态操作成功");
-    emit("update:modelValue", false);
-});
+const isJobTerminal = (result: SyncJobResult) =>
+    !["queued", "pending", "running", "processing"].includes(result.status);
+
+const { error: pollError, polling, start: startPolling } = useTaskPolling<SyncJobResult>(
+    () => {
+        const id = job.value?.id;
+        if (id == null) throw new Error("同步任务不存在");
+        return getSyncJob(id);
+    },
+    (result) => {
+        job.value = result;
+        if (isJobTerminal(result)) {
+            if (result.status === "failed") {
+                ElMessage.error("同步任务执行失败");
+            } else {
+                ElMessage.success("设备同步完成");
+                emit("synced");
+            }
+        }
+    },
+    { intervalMs: 1500, maxAttempts: 60, isTerminal: isJobTerminal },
+);
+
+const statKeys = computed(() => Object.keys(job.value?.statistics ?? {}));
+
+const toggleSource = (name: string) => {
+    sources.value = sources.value.includes(name)
+        ? sources.value.filter((item) => item !== name)
+        : [...sources.value, name];
+};
+
+const confirm = async () => {
+    if (submitting.value) return;
+    if (!sources.value.length) {
+        ElMessage.warning("请至少选择一个设备来源");
+        return;
+    }
+    submitting.value = true;
+    try {
+        job.value = await createSyncJob({
+            scope: "all",
+            sources: sources.value,
+            idempotencyKey: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        });
+        void startPolling();
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "同步任务创建失败");
+    } finally {
+        submitting.value = false;
+    }
+};
 </script>
 
 <template>
@@ -30,69 +83,81 @@ const { loading, confirm } = useModalConfirm(() => {
         description="刷新并同步全屋设备的最新状态与连接信息"
         icon="refresh"
         :width="720"
-        :loading="loading"
+        :loading="submitting"
         confirm-text="开始同步"
         @confirm="confirm"
         @update:model-value="emit('update:modelValue', false)"
     >
-        <div class="sync-layout">
+        <div v-if="!job" class="sync-layout">
             <section class="box">
                 <b>同步范围</b>
-                <p class="section-label">设备范围</p>
-                <div class="chips wide">
-                    <button
-                        v-for="item in [
-                            '全部设备',
-                            '在线设备',
-                            '离线设备',
-                            '常用设备',
-                        ]"
-                        :key="item"
-                        type="button"
-                        :class="{ active: item === '全部设备' }"
-                    >
-                        {{ item }}
-                    </button>
-                </div>
                 <p class="section-label">设备来源</p>
                 <div class="chips wide">
                     <button
-                        v-for="item in [
-                            'Home Assistant',
-                            'Zigbee 网关',
-                            '蓝牙设备',
-                            'Matter 设备',
-                        ]"
+                        v-for="item in sourceNames"
                         :key="item"
                         type="button"
-                        :class="{ active: item === 'Home Assistant' }"
+                        :class="{ active: sources.includes(item) }"
+                        @click="toggleSource(item)"
                     >
                         {{ item }}
                     </button>
                 </div>
-                <p class="section-label">同步选项</p>
-                <label
-                    v-for="item in syncOptions"
-                    :key="item"
-                    class="switch-row"
-                    ><span>{{ item }}<small>更新设备的最新信息</small></span
-                    ><input type="checkbox" checked
-                /></label>
+                <p class="sync-note">
+                    同步范围覆盖当前家庭全部房间与设备；提交后系统会创建异步任务并回读真实统计。
+                </p>
             </section>
-            <aside class="side-stack">
-                <div class="box sync-summary">
-                    <b>同步概览</b>
-                    <p>当前设备总数 <strong>36</strong></p>
-                    <p>在线 <strong>28</strong></p>
-                    <p>离线 <strong>8</strong></p>
-                    <p>预计新增 <strong>2</strong></p>
+        </div>
+
+        <div v-else class="sync-result">
+            <span
+                class="result-mark"
+                :class="{
+                    'is-success': job.status === 'completed',
+                    'is-failed': job.status === 'failed',
+                    'is-running': !['completed', 'failed'].includes(job.status),
+                }"
+                aria-hidden="true"
+                >{{ job.status === "failed" ? "×" : job.status === "completed" ? "✓" : "" }}</span
+            >
+            <strong>{{
+                job.status === "failed"
+                    ? "同步失败"
+                    : job.status === "completed"
+                      ? "同步完成"
+                      : "同步进行中"
+            }}</strong>
+            <p v-if="!['completed', 'failed'].includes(job.status)">
+                任务已提交，正在等待后端执行结果。
+                <template v-if="pollError"> · {{ pollError }}</template>
+            </p>
+            <dl class="task-meta">
+                <div><dt>任务 ID</dt><dd>{{ job.id }}</dd></div>
+                <div><dt>状态</dt><dd>{{ job.status }}</dd></div>
+            </dl>
+            <div v-if="statKeys.length" class="sync-stats">
+                <div v-for="key in statKeys" :key="key">
+                    <strong>{{ job.statistics[key] }}</strong>
+                    <span>{{ key }}</span>
                 </div>
-                <div class="box">
-                    <b>同步历史</b>
-                    <p>今天 09:55　手动同步　<em class="good-tag">成功</em></p>
-                    <p>昨天 22:10　自动同步　<em class="good-tag">成功</em></p>
-                </div>
-            </aside>
+            </div>
+            <div class="result-actions">
+                <button
+                    v-if="polling"
+                    class="secondary-button"
+                    type="button"
+                    @click="emit('update:modelValue', false)"
+                >
+                    后台继续
+                </button>
+                <button
+                    class="primary-button"
+                    type="button"
+                    @click="emit('update:modelValue', false)"
+                >
+                    完成
+                </button>
+            </div>
         </div>
     </BaseSmartModal>
 </template>
@@ -100,34 +165,118 @@ const { loading, confirm } = useModalConfirm(() => {
 <style scoped>
 .sync-layout {
     display: grid;
-    grid-template-columns: 1.65fr 1fr;
+    grid-template-columns: 1fr;
     gap: 16px;
-}
-.sync-summary p {
-    display: flex;
-    gap: 8px;
-    margin: 10px 0;
-    border-bottom: 1px solid var(--color-border-default);
-    padding-bottom: 8px;
-}
-.sync-summary strong {
-    margin-left: auto;
 }
 .section-label {
     margin-top: 16px;
     color: var(--color-text-secondary);
     font-size: 12px;
 }
-.good-tag {
-    border-radius: 10px;
-    padding: 3px 8px;
-    font-style: normal;
+.sync-note {
+    margin-top: 16px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+.sync-result {
+    display: flex;
+    min-height: 300px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+}
+.result-mark {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 900;
+}
+.result-mark.is-success {
     background: var(--color-success-soft);
     color: var(--color-success);
 }
-@media (max-width: 760px) {
-    .sync-layout {
-        grid-template-columns: 1fr;
+.result-mark.is-failed {
+    background: var(--color-warning-soft, var(--color-danger-soft));
+    color: var(--color-danger);
+}
+.result-mark.is-running {
+    animation: result-pulse 1.2s ease-in-out infinite;
+    background: var(--color-primary-100);
+}
+.sync-result strong {
+    font-size: 16px;
+}
+.sync-result p {
+    max-width: 380px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+}
+.task-meta {
+    display: grid;
+    width: 100%;
+    max-width: 420px;
+    gap: 8px;
+    margin-top: 8px;
+}
+.task-meta > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 6px;
+    font-size: 13px;
+}
+.task-meta dt {
+    color: var(--color-text-tertiary);
+}
+.task-meta dd {
+    font-weight: 700;
+}
+.sync-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.sync-stats > div {
+    display: grid;
+    min-width: 84px;
+    gap: 2px;
+    place-items: center;
+    border: 1px solid var(--color-border-default);
+    border-radius: 10px;
+    padding: 8px 12px;
+    background: var(--color-card-bg);
+}
+.sync-stats strong {
+    color: var(--color-primary-600);
+    font-size: 18px;
+}
+.sync-stats span {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+}
+.result-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+@keyframes result-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.06);
+        opacity: 1;
     }
 }
 </style>

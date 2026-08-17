@@ -12,6 +12,7 @@ const props = defineProps<{
     adminCount: number;
     canManage: boolean;
     currentMemberId: number | null;
+    fieldErrors?: Record<string, string>;
     loadingMemberId: number | null;
     members: FamilyMember[];
     submitting: boolean;
@@ -19,6 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     addMember: [email: string, role: HouseholdRole];
+    clearFieldErrors: [];
     removeMember: [id: number];
     updateMemberRole: [id: number, role: HouseholdRole];
 }>();
@@ -130,9 +132,16 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
             <input
                 v-model="memberEmail"
                 class="settings-input w-full"
+                :class="{ 'has-error': props.fieldErrors?.email }"
                 :disabled="!canManage || submitting"
                 placeholder="成员邮箱"
+                @input="emit('clearFieldErrors')"
             />
+            <small
+                v-if="props.fieldErrors?.email"
+                class="member-field-error"
+                >{{ props.fieldErrors.email }}</small
+            >
             <select
                 v-model="memberRole"
                 class="settings-input w-full px-2"
@@ -281,6 +290,17 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
     border-radius: 16px;
     background: var(--color-card-bg);
     box-shadow: var(--shadow-card);
+}
+
+.member-toolbar .settings-input.has-error {
+    border-color: var(--color-danger);
+}
+
+.member-field-error {
+    grid-column: 1 / -1;
+    margin-top: -8px;
+    color: var(--color-danger);
+    font-size: 12px;
 }
 
 .member-list {

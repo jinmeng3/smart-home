@@ -84,8 +84,11 @@ const headerSummary = computed(() => {
     return `共 ${total} 个场景 · ${enabled} 个已启用 · 今日执行 ${monthlyExe} 次`;
 });
 
-const handleRetryStep = (stepId: string) => {
-    ElMessage.info("重试步骤：重新执行该步骤");
+const handleRetryStep = () => {
+    if (selectedScene.value) {
+        ElMessage.info("将重新执行场景并走完整风险确认");
+        void controller.runScene(selectedScene.value);
+    }
 };
 
 const handleViewAllTemplates = () => {
@@ -162,7 +165,7 @@ const handleViewAllTemplates = () => {
                     :step-statuses="stepStatuses"
                     @edit="selectedScene && controller.editScene(selectedScene)"
                     @preview="selectedScene && controller.previewScene(selectedScene)"
-                    @retry-step="handleRetryStep"
+                    @run="handleRetryStep"
                 />
             </div>
         </section>

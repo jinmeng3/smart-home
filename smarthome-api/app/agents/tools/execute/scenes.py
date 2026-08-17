@@ -1,8 +1,15 @@
 from app.agents.risk import classify_scene_execution
 from app.models.device import Device
 from app.services.scene import run_scene_service
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+
+class ExecuteSceneInput(BaseModel):
+    """执行场景的参数。"""
+
+    scene_id: str = Field(min_length=1, max_length=64)
 
 
 def execute_scene_operation(db, context, args, pending) -> dict:
@@ -18,7 +25,9 @@ def execute_scene_operation(db, context, args, pending) -> dict:
     )
 
     target_device_ids = {
-        step["device_id"] for step in current.preview.get("steps", []) if step.get("device_id")
+        step["device_id"]
+        for step in current.preview.get("steps", [])
+        if step.get("device_id")
     }
     before_devices = _get_device_status_snapshot(
         db, context.household_id, target_device_ids

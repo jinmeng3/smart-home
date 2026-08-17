@@ -25,23 +25,32 @@ import SettingsSuggestionPanel from "../components/settings/SettingsSuggestionPa
 import SettingsSummaryPanel from "../components/settings/SettingsSummaryPanel.vue";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import { useSettingsStore } from "../stores/settings";
+import { useHouseholdStore } from "../stores/households";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { getErrorMessage } from "../utils/error";
+import { ApiError } from "../api/client";
 import { settingsSections, sectionIds } from "../constants/settingsSections";
 import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
 import type { SettingsSectionId } from "../types/settings";
 
 const settingsStore = useSettingsStore();
+const householdStore = useHouseholdStore();
 const authStore = useAuthStore();
 
 const activeSection = ref<SettingsSectionId>("account");
 const savingAccount = ref(false);
 const addingMember = ref(false);
 const loadingMemberId = ref<number | null>(null);
+const switchingHousehold = ref(false);
 const initialAccountSnapshot = ref<string>();
 const initialIntegrationSnapshot = ref<string>();
 const initialPreferencesSnapshot = ref<string>();
+
+/** 表单字段级错误（来自 ApiError.fieldErrors，422 校验定位到具体字段） */
+const accountFieldErrors = ref<Record<string, string>>({});
+/** 成员添加表单的字段级错误 */
+const memberFieldErrors = ref<Record<string, string>>({});
 
 /* === 移动端分区标签（从统一配置生成） === */
 const mobileSections = computed(() =>
@@ -233,7 +242,11 @@ const adminCount = computed(
         householdMembers.value.filter((member) => member.role === "admin")
             .length,
 );
-const canManageMembers = computed(() => currentMemberRole.value === "admin");
+const canManageMembers = computed(
+    () =>
+        householdStore.activeRole === "admin" ||
+        currentMemberRole.value === "admin",
+);
 
 const syncAccountForm = () => {
     accountForm.name = settings.value.account.username;
@@ -326,6 +339,17 @@ watch(
     { deep: true, immediate: true },
 );
 
+// 表单内容变化时清除字段级校验错误
+watch(
+    accountForm,
+    () => {
+        if (Object.keys(accountFieldErrors.value).length) {
+            accountFieldErrors.value = {};
+        }
+    },
+    { deep: true },
+);
+
 onBeforeRouteLeave(() => {
     if (!settingsDirty.value) {
         return true;
@@ -339,6 +363,7 @@ onBeforeRouteLeave(() => {
 
 
 const saveAccountFamily = async () => {
+    accountFieldErrors.value = {};
     if (!emailPattern.test(accountForm.email.trim())) {
         ElMessage.warning("请输入正确的邮箱");
         return;
@@ -359,9 +384,72 @@ const saveAccountFamily = async () => {
         syncPreferencesSnapshot();
         ElMessage.success("账户与家庭已保存");
     } catch (error) {
-        ElMessage.error(getErrorMessage(error, "保存失败"));
+        // 将 422 字段校验错误定位到具体字段
+        if (error instanceof ApiError && error.fieldErrors) {
+            accountFieldErrors.value = error.fieldErrors;
+            const firstMessage = Object.values(error.fieldErrors)[0];
+            if (firstMessage) ElMessage.error(firstMessage);
+        } else {
+            ElMessage.error(getErrorMessage(error, "保存失败"));
+        }
     } finally {
         savingAccount.value = false;
+    }
+};
+
+const switchHousehold = async (householdId: number) => {
+    // 有未保存的账户/家庭修改时先确认，避免切换家庭丢编辑
+    if (accountDirty.value) {
+        try {
+            await ElMessageBox.confirm(
+                "切换家庭将丢弃当前未保存的账户与家庭修改，确定继续吗？",
+                "切换家庭",
+                {
+                    confirmButtonText: "继续切换",
+                    cancelButtonText: "取消",
+                    type: "warning",
+                },
+            );
+        } catch {
+            return;
+        }
+    }
+
+    switchingHousehold.value = true;
+    try {
+        await householdStore.switchHousehold(householdId);
+        settingsStore.applyHouseholdContext(
+            householdStore.activeHousehold,
+            householdStore.members,
+        );
+        syncAccountForm();
+        const name = householdStore.activeHousehold?.name ?? "";
+        ElMessage.success(`已切换到「${name}」`);
+    } catch (error) {
+        ElMessage.error(getErrorMessage(error, "家庭切换失败"));
+    } finally {
+        switchingHousehold.value = false;
+    }
+};
+
+const createHousehold = async (payload: { name: string; address: string }) => {
+    try {
+        await settingsStore.createHousehold({
+            name: payload.name,
+            address: payload.address || null,
+            timezone: accountForm.timezone,
+        });
+        syncAccountForm();
+        ElMessage.success("家庭已创建并切换");
+    } catch (error) {
+        if (error instanceof ApiError && error.fieldErrors) {
+            const firstMessage = Object.values(error.fieldErrors)[0];
+            if (firstMessage) {
+                ElMessage.error(firstMessage);
+                return;
+            }
+        }
+        ElMessage.error(getErrorMessage(error, "家庭创建失败"));
     }
 };
 
@@ -448,14 +536,23 @@ const addMember = async (email: string, role: HouseholdRole) => {
 
     try {
         await settingsStore.addHouseholdMember(email, role);
+        memberFieldErrors.value = {};
         ElMessage.success("成员已添加");
     } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "成员添加失败"),
-        );
+        if (error instanceof ApiError && error.fieldErrors) {
+            memberFieldErrors.value = error.fieldErrors;
+            const firstMessage = Object.values(error.fieldErrors)[0];
+            if (firstMessage) ElMessage.error(firstMessage);
+        } else {
+            ElMessage.error(getErrorMessage(error, "成员添加失败"));
+        }
     } finally {
         addingMember.value = false;
     }
+};
+
+const clearMemberFieldErrors = () => {
+    memberFieldErrors.value = {};
 };
 
 const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
@@ -470,6 +567,23 @@ const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
     if (member.role === "admin" && role === "member" && adminCount.value <= 1) {
         ElMessage.error("家庭至少保留一名管理员");
         return;
+    }
+
+    // 高影响操作（管理员降级）二次确认
+    if (member.role === "admin" && role === "member") {
+        try {
+            await ElMessageBox.confirm(
+                `确认将 ${member.name} 的角色从管理员降为普通成员？`,
+                "修改角色",
+                {
+                    confirmButtonText: "确认降级",
+                    cancelButtonText: "取消",
+                    type: "warning",
+                },
+            );
+        } catch {
+            return;
+        }
     }
 
     loadingMemberId.value = membershipId;
@@ -589,11 +703,17 @@ const removeMember = async (membershipId: number) => {
                     </header>
                     <div class="settings-group-grid">
                         <AccountFamilyCard
+                            :active-household-id="householdStore.activeHouseholdId"
                             :dirty="accountDirty"
+                            :field-errors="accountFieldErrors"
                             :form="accountForm"
+                            :households="householdStore.households"
                             :loading="savingAccount"
+                            :switching="switchingHousehold"
+                            @create-household="createHousehold"
                             @delete-avatar="deleteAvatar"
                             @save="saveAccountFamily"
+                            @switch-household="switchHousehold"
                             @update-form="Object.assign(accountForm, $event)"
                             @upload-avatar="uploadAvatar"
                         />
@@ -601,10 +721,12 @@ const removeMember = async (membershipId: number) => {
                             :admin-count="adminCount"
                             :can-manage="canManageMembers"
                             :current-member-id="currentMemberId"
+                            :field-errors="memberFieldErrors"
                             :loading-member-id="loadingMemberId"
                             :members="members"
                             :submitting="addingMember"
                             @add-member="addMember"
+                            @clear-field-errors="clearMemberFieldErrors"
                             @remove-member="removeMember"
                             @update-member-role="updateMemberRole"
                         />

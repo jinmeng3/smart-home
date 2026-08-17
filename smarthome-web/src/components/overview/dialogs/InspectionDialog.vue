@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
-import { useModalConfirm } from "../../../composables/useModalConfirm";
+import { createInspection, getInspection } from "../../../api/overview";
+import { useTaskPolling } from "../../../composables/useTaskPolling";
+import type { TaskResult } from "../../../types/overview";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>();
 
-const inspectionScope = ref("all");
-const inspectionItems = reactive([
+const checks = ref([
     "在线状态",
     "电量",
     "网络连接",
@@ -16,11 +17,60 @@ const inspectionItems = reactive([
     "固件版本",
     "异常告警",
 ]);
+const submitting = ref(false);
+const task = ref<TaskResult | null>(null);
 
-const { loading, confirm } = useModalConfirm(() => {
-    ElMessage.success("全屋巡检操作成功");
-    emit("update:modelValue", false);
+const isTerminalByTask = (result: TaskResult) =>
+    !["queued", "pending", "running", "processing"].includes(result.status);
+
+const { error: pollError, polling, start: startPolling } = useTaskPolling<TaskResult>(
+    () => {
+        const id = task.value?.id;
+        if (id == null) throw new Error("巡检任务不存在");
+        return getInspection(id);
+    },
+    (result) => {
+        task.value = result;
+        if (isTerminalByTask(result)) {
+            if (result.status === "failed") {
+                ElMessage.error("巡检执行失败");
+            } else {
+                ElMessage.success("巡检完成");
+            }
+        }
+    },
+    { intervalMs: 1500, maxAttempts: 60, isTerminal: isTerminalByTask },
+);
+
+const progressText = computed(() => {
+    if (!task.value) return "";
+    const { checkedCount, deviceCount } = task.value;
+    if (deviceCount != null) return `已检查 ${checkedCount ?? 0} / ${deviceCount} 台`;
+    return "任务进行中";
 });
+
+const confirm = async () => {
+    if (submitting.value) return;
+    submitting.value = true;
+    try {
+        const created = await createInspection({
+            scope: "all",
+            roomIds: [],
+            deviceTypes: [],
+            checks: checks.value,
+        });
+        task.value = created;
+        void startPolling();
+    } catch (error) {
+        ElMessage.error(error instanceof Error ? error.message : "巡检创建失败");
+    } finally {
+        submitting.value = false;
+    }
+};
+
+const close = () => {
+    emit("update:modelValue", false);
+};
 </script>
 
 <template>
@@ -29,66 +79,76 @@ const { loading, confirm } = useModalConfirm(() => {
         title="全屋巡检"
         description="快速检测全屋设备、网络与自动化状态"
         :width="720"
-        :loading="loading"
+        :loading="submitting"
         confirm-text="开始巡检"
         @confirm="confirm"
-        @update:model-value="emit('update:modelValue', false)"
+        @update:model-value="close"
     >
-        <div class="inspection">
-            <div class="inspection-top">
-                <section class="box">
-                    <b>巡检范围</b>
-                    <div class="chips wide">
-                        <button
-                            v-for="item in [
-                                ['all', '全部设备'],
-                                ['light', '灯光'],
-                                ['air', '空调'],
-                                ['lock', '门锁'],
-                                ['sensor', '传感器'],
-                                ['automation', '自动化'],
-                            ]"
-                            :key="item[0]"
-                            type="button"
-                            :class="{ active: inspectionScope === item[0] }"
-                            @click="inspectionScope = item[0]"
-                        >
-                            {{ item[1] }}
-                        </button>
-                    </div>
-                    <b>巡检项目</b>
-                    <div class="check-grid">
-                        <label v-for="item in inspectionItems" :key="item"
-                            ><input type="checkbox" checked />{{ item }}</label
-                        >
-                    </div>
-                </section>
-                <aside class="estimate">
-                    <small>预计检测</small><strong>36</strong
-                    ><span>台设备</span>
-                    <hr />
-                    <b>◷ 2 <small>分钟</small></b
-                    ><span>预计耗时</span>
-                </aside>
-            </div>
-            <section class="box issues">
-                <b>最近问题预览 <small>（可能发现）</small></b>
-                <p>⚠️ 厨房烟感电池电量低 <em>厨房</em></p>
-                <p>⚠️ 阳台门磁长时间未关闭 <em>阳台</em></p>
-                <p>♻ 主卧空调滤网需要清洁 <em>主卧</em></p>
+        <div v-if="!task" class="inspection">
+            <section class="box">
+                <b>巡检范围</b>
+                <p class="scope-note">全部设备（含网络与自动化状态）</p>
+                <b>巡检项目</b>
+                <div class="check-grid">
+                    <label v-for="item in checks" :key="item"
+                        ><input type="checkbox" checked />{{ item }}</label
+                    >
+                </div>
             </section>
+        </div>
+
+        <div v-else class="inspection-result">
+            <span
+                class="result-mark"
+                :class="{
+                    'is-success': task.status === 'completed',
+                    'is-failed': task.status === 'failed',
+                    'is-running': !['completed', 'failed'].includes(task.status),
+                }"
+                aria-hidden="true"
+                >{{ task.status === "failed" ? "×" : task.status === "completed" ? "✓" : "" }}</span
+            >
+            <strong>{{
+                task.status === "failed"
+                    ? "巡检失败"
+                    : task.status === "completed"
+                      ? "巡检完成"
+                      : "巡检进行中"
+            }}</strong>
+            <p v-if="!['completed', 'failed'].includes(task.status)">
+                {{ progressText }}
+                <template v-if="pollError"> · {{ pollError }}</template>
+            </p>
+            <dl class="task-meta">
+                <div><dt>任务 ID</dt><dd>{{ task.id }}</dd></div>
+                <div><dt>状态</dt><dd>{{ task.status }}</dd></div>
+                <div v-if="task.deviceCount !== undefined">
+                    <dt>设备总数</dt><dd>{{ task.deviceCount }}</dd>
+                </div>
+                <div v-if="task.checkedCount !== undefined">
+                    <dt>已检查</dt><dd>{{ task.checkedCount }}</dd>
+                </div>
+            </dl>
+            <div class="result-actions">
+                <button
+                    v-if="polling"
+                    class="secondary-button"
+                    type="button"
+                    @click="close"
+                >
+                    后台继续
+                </button>
+                <button class="primary-button" type="button" @click="close">完成</button>
+            </div>
         </div>
     </BaseSmartModal>
 </template>
 
 <style scoped>
-.inspection-top {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 12px;
-}
-.wide {
-    margin-bottom: 18px;
+.scope-note {
+    margin: 4px 0 14px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
 }
 .check-grid {
     display: grid;
@@ -99,40 +159,83 @@ const { loading, confirm } = useModalConfirm(() => {
 .check-grid input {
     accent-color: var(--color-primary-500);
 }
-.estimate {
+.inspection-result {
     display: flex;
+    min-height: 300px;
     align-items: center;
-    flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    background: var(--color-panel-background);
-    padding: 16px;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
 }
-.estimate strong {
-    color: var(--color-primary-600);
-    font-size: 30px;
+.result-mark {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 900;
 }
-.estimate hr {
-    width: 80%;
-    border: 0;
-    border-top: 1px solid var(--color-border-default);
+.result-mark.is-success {
+    background: var(--color-success-soft);
+    color: var(--color-success);
 }
-.issues {
-    margin-top: 12px;
+.result-mark.is-failed {
+    background: var(--color-warning-soft, var(--color-danger-soft));
+    color: var(--color-danger);
 }
-.issues p {
-    display: flex;
+.result-mark.is-running {
+    animation: result-pulse 1.2s ease-in-out infinite;
+    background: var(--color-primary-100);
+}
+.inspection-result strong {
+    font-size: 16px;
+}
+.inspection-result p {
+    max-width: 380px;
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+}
+.task-meta {
+    display: grid;
+    width: 100%;
+    max-width: 420px;
+    gap: 8px;
     margin-top: 8px;
-    border-top: 1px solid var(--color-border-default);
-    padding-top: 8px;
 }
-.issues em {
-    margin-left: auto;
+.task-meta > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 6px;
+    font-size: 13px;
+}
+.task-meta dt {
+    color: var(--color-text-tertiary);
+}
+.task-meta dd {
+    font-weight: 700;
+}
+.result-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+@keyframes result-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.06);
+        opacity: 1;
+    }
 }
 @media (max-width: 760px) {
-    .inspection-top {
+    .check-grid {
         grid-template-columns: 1fr;
     }
 }

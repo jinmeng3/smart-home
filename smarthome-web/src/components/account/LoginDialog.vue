@@ -3,6 +3,7 @@ import { computed, nextTick, reactive, ref, watch } from "vue";
 import { ElInput } from "element-plus";
 import { useAuthStore } from "../../stores/auth";
 import { useSettingsStore } from "../../stores/settings";
+import { ApiError } from "../../api/client";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
@@ -21,6 +22,8 @@ const submitting = ref(false);
 const feedback = ref<Feedback | null>(null);
 const shaking = ref(false);
 const outcome = ref<AuthOutcome | null>(null);
+/** 表单字段级校验错误（来自 ApiError.fieldErrors，422 定位到具体字段） */
+const fieldErrors = ref<Record<string, string>>({});
 const accountInput = ref<{ focus: () => void } | null>(null);
 const loginForm = reactive({ account: "", password: "" });
 const registerForm = reactive({
@@ -155,13 +158,18 @@ const submit = async () => {
         // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
         void settingsStore.loadAccountHome().catch(() => undefined);
     } catch (error) {
+        const apiError =
+            error instanceof ApiError ? error : null;
+        fieldErrors.value = apiError?.fieldErrors ?? {};
+        const firstFieldMessage = Object.values(fieldErrors.value)[0];
         showFeedback(
             "error",
-            error instanceof Error
-                ? error.message
-                : mode.value === "login"
-                  ? "登录失败"
-                  : "注册失败",
+            firstFieldMessage ??
+                (error instanceof Error
+                    ? error.message
+                    : mode.value === "login"
+                      ? "登录失败"
+                      : "注册失败"),
             true,
         );
     } finally {
@@ -183,6 +191,7 @@ watch(
 
 watch([loginForm, registerForm], () => {
     if (feedback.value) feedback.value = null;
+    if (Object.keys(fieldErrors.value).length) fieldErrors.value = {};
 });
 
 const logout = async () => {
@@ -311,6 +320,11 @@ const logout = async () => {
                             placeholder="name@example.com"
                             type="email"
                         />
+                        <small
+                            v-if="fieldErrors.account"
+                            class="field-error"
+                            >{{ fieldErrors.account }}</small
+                        >
                     </label>
                     <label class="login-field">
                         <span>密码</span>
@@ -321,6 +335,11 @@ const logout = async () => {
                             show-password
                             type="password"
                         />
+                        <small
+                            v-if="fieldErrors.password"
+                            class="field-error"
+                            >{{ fieldErrors.password }}</small
+                        >
                     </label>
                 </template>
                 <template v-else>
@@ -330,7 +349,12 @@ const logout = async () => {
                             v-model="registerForm.username"
                             autocomplete="username"
                             placeholder="请输入用户名"
-                    /></label>
+                        /><small
+                            v-if="fieldErrors.username"
+                            class="field-error"
+                            >{{ fieldErrors.username }}</small
+                        ></label
+                    >
                     <label class="login-field"
                         ><span>邮箱</span
                         ><ElInput
@@ -338,7 +362,12 @@ const logout = async () => {
                             autocomplete="email"
                             placeholder="name@example.com"
                             type="email"
-                    /></label>
+                        /><small
+                            v-if="fieldErrors.email"
+                            class="field-error"
+                            >{{ fieldErrors.email }}</small
+                        ></label
+                    >
                     <div class="password-grid">
                         <label class="login-field"
                             ><span>密码</span
@@ -348,7 +377,12 @@ const logout = async () => {
                                 placeholder="至少 6 位字符"
                                 show-password
                                 type="password"
-                        /></label>
+                            /><small
+                                v-if="fieldErrors.password"
+                                class="field-error"
+                                >{{ fieldErrors.password }}</small
+                            ></label
+                        >
                         <label class="login-field"
                             ><span>确认密码</span
                             ><ElInput
@@ -718,8 +752,13 @@ const logout = async () => {
 
 .login-field {
     display: grid;
-    gap: 8px;
-    margin: 0 !important;
+    gap: 6px;
+}
+
+.login-field .field-error {
+    color: var(--color-danger);
+    font-size: 12px;
+    font-weight: 500;
 }
 .login-field > span {
     color: var(--color-text-tertiary);

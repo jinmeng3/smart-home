@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
@@ -11,6 +11,7 @@ import OverviewDialogs, {
 import type { HouseholdSchedule, ScheduleItem } from "../api/overview";
 import { getHouseholdOverview, getHouseholdDevices } from "../api/overview";
 import { useSettingsStore } from "../stores/settings";
+import { useHouseholdStore } from "../stores/households";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import type {
   OverviewSummary,
@@ -75,6 +76,7 @@ const formatDeviceTime = (value: string) => {
 // === 状态 ===
 
 const settingsStore = useSettingsStore();
+const householdStore = useHouseholdStore();
 
 const selectedTab = ref("全部设备");
 const searchKeyword = ref("");
@@ -94,6 +96,7 @@ const rooms = ref<OverviewRoomDisplay[]>([]);
 const devices = ref<OverviewDeviceDisplay[]>([]);
 const activities = ref<{ time: string; icon: string; title: string; description: string; tone: string }[]>([]);
 const scheduleItems = ref<ScheduleItem[]>([]);
+const alerts = ref<{ level: string; title: string; location: string }[]>([]);
 
 // === 计算属性 ===
 
@@ -122,6 +125,16 @@ const visibleDevices = computed(() => {
 
         return matchesTab && matchesKeyword;
     });
+});
+
+/** 侧栏日程面板默认展示今天的日期 */
+const todayLabel = computed(() => {
+    const now = new Date();
+    return new Intl.DateTimeFormat("zh-CN", {
+        month: "long",
+        day: "numeric",
+        weekday: "long",
+    }).format(now);
 });
 
 // === 操作函数 ===
@@ -166,9 +179,9 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
 const loadOverviewData = async () => {
     loading.value = true;
     try {
-        // 先确保账户与家庭信息已加载，再获取 householdId
-        await settingsStore.loadAccountHome();
-        const householdId = settingsStore.settings.account.householdId;
+        // 活动家庭来自全局上下文，切换家庭后自动重新拉取本家庭数据。
+        await householdStore.load();
+        const householdId = householdStore.activeHouseholdId;
         if (!householdId) return;
         const [overview, deviceList] = await Promise.all([
             getHouseholdOverview(householdId),
@@ -228,6 +241,17 @@ const loadOverviewData = async () => {
             scheduleItems.value = [];
         }
 
+        // 从后端获取告警数据
+        if (overview.alerts && overview.alerts.length > 0) {
+            alerts.value = (overview.alerts as any[]).map((alert: Record<string, unknown>) => ({
+                level: (alert.level || alert.severity || "warning") as string,
+                title: (alert.title || alert.message || alert.name || "") as string,
+                location: (alert.location || alert.room_name || "") as string,
+            }));
+        } else {
+            alerts.value = [];
+        }
+
         refreshed.value = "刚刚";
     } catch (err) {
         refreshed.value = "加载失败";
@@ -237,7 +261,17 @@ const loadOverviewData = async () => {
     }
 };
 
-useAuthenticatedLoader(loadOverviewData);</script>
+useAuthenticatedLoader(loadOverviewData);
+
+// 切换活动家庭后，总览数据随之刷新，避免展示上一家庭缓存的设备/房间。
+watch(
+    () => householdStore.activeHouseholdId,
+    (next, previous) => {
+        if (next !== previous) {
+            void loadOverviewData().catch(() => undefined);
+        }
+    },
+);</script>
 
 <template>
     <div class="app-page-layout">
@@ -399,16 +433,10 @@ useAuthenticatedLoader(loadOverviewData);</script>
                     <a role="button" tabindex="0" @click="openDialog('schedule')">更多</a>
                 </header>
                 <div class="date-nav">
-                    <button class="date-arrow" type="button" aria-label="上一个日期">
-                        <SvgIcon name="chevron-left" size="sm" />
-                    </button>
                     <div class="date-info">
-                        <strong>5月20日 星期二</strong>
+                        <strong>{{ todayLabel }}</strong>
                         <span class="today-badge"><i></i>今天</span>
                     </div>
-                    <button class="date-arrow" type="button" aria-label="下一个日期">
-                        <SvgIcon name="chevron-right" size="sm" />
-                    </button>
                 </div>
                 <div class="schedule-list">
                     <article
@@ -441,9 +469,16 @@ useAuthenticatedLoader(loadOverviewData);</script>
                     ><span>离线设备<b class="warn">• {{ offlineCount }}</b></span>
                 </div>
                 <h3>重点提醒</h3>
-                <p class="alert">⚠ 厨房烟感电池电量低 <em>厨房</em></p>
-                <p class="alert">⚠ 阳台门磁长时间未关闭 <em>阳台</em></p>
-                <p class="alert">♟ 主卧空调滤网需要清洁 <em>主卧</em></p>
+                <p
+                    v-for="(alert, index) in alerts.slice(0, 3)"
+                    :key="alert.title + index"
+                    class="alert"
+                >
+                    ⚠ {{ alert.title }} <em>{{ alert.location }}</em>
+                </p>
+                <p v-if="!alerts.length" class="alert-empty">
+                    暂无重点提醒
+                </p>
             </section>
             <section class="panel">
                 <h2>快捷操作</h2>

@@ -10,6 +10,7 @@ import {
   listDeviceLogs as apiListDeviceLogs,
   updateDevice as apiUpdateDevice,
 } from "../api/device";
+import { ApiError } from "../api/client";
 import type {
   Device,
   DeviceCreatePayload,
@@ -215,8 +216,14 @@ export const useDeviceManagementController = () => {
       await query.loadDevices();
     },
     {
-      onError: (error) =>
-        ElMessage.error(error instanceof Error ? error.message : "设备保存失败"),
+      onError: (error) => {
+        if (error instanceof ApiError && error.status === 409) {
+          ElMessage.warning("设备已被其他会话修改，已为你重新加载最新");
+          void query.loadDevices();
+          return;
+        }
+        ElMessage.error(error instanceof Error ? error.message : "设备保存失败");
+      },
     },
   );
 

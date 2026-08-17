@@ -9,6 +9,8 @@ import {
   type RegisterPayload,
 } from "../api/auth";
 import { authExpiredEvent, tokenKey } from "../api/client";
+import { useHouseholdStore } from "./households";
+import { useSettingsStore } from "./settings";
 
 export const useAuthStore = defineStore("auth", () => {
   const storedAccessToken = window.sessionStorage.getItem(tokenKey);
@@ -38,6 +40,9 @@ export const useAuthStore = defineStore("auth", () => {
   const clearSession = () => {
     accessToken.value = null;
     window.sessionStorage.removeItem(tokenKey);
+    // 清理全部用户级状态：家庭上下文 + 账户资料镜像
+    useHouseholdStore().clear();
+    useSettingsStore().resetAccountState();
   };
 
   const handleAuthExpired = () => {

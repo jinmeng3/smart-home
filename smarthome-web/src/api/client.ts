@@ -47,19 +47,50 @@ const isApiResponse = <T>(data: unknown): data is ApiResponse<T> => {
 const parseFieldErrors = (data: unknown): Record<string, string> => {
   if (!data || typeof data !== "object") return {};
   const d = data as Record<string, unknown>;
-  if (!Array.isArray(d.errors)) return {};
   const fields: Record<string, string> = {};
-  for (const err of d.errors) {
-    if (err && typeof err === "object") {
-      const e = err as Record<string, unknown>;
-      const field = e.field;
-      const message = e.message;
-      if (typeof field === "string" && typeof message === "string" && field) {
-        fields[field] = message;
+
+  // ApiResponse 包装的错误：{ errors: [{ field, message }] }
+  if (Array.isArray(d.errors)) {
+    for (const err of d.errors) {
+      if (err && typeof err === "object") {
+        const e = err as Record<string, unknown>;
+        const field = e.field;
+        const message = e.message;
+        if (typeof field === "string" && typeof message === "string" && field) {
+          fields[field] = message;
+        }
       }
     }
   }
+
+  // FastAPI 原生 422：{ detail: [{ loc: [...], msg, type }] }
+  if (Array.isArray(d.detail)) {
+    for (const err of d.detail) {
+      if (err && typeof err === "object") {
+        const e = err as Record<string, unknown>;
+        const loc = Array.isArray(e.loc) ? e.loc : [];
+        const field = loc.length ? String(loc[loc.length - 1]) : "";
+        const message = typeof e.msg === "string" ? e.msg : "";
+        if (field && message && !fields[field]) {
+          fields[field] = message;
+        }
+      }
+    }
+  }
+
   return fields;
+};
+
+const getValidationMessage = (data: unknown): string | null => {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  if (!Array.isArray(d.detail)) return null;
+  const first = d.detail[0];
+  if (first && typeof first === "object") {
+    const msg = (first as Record<string, unknown>).msg;
+    return typeof msg === "string" ? msg : null;
+  }
+  return null;
 };
 
 const clearAuthSession = () => {
@@ -135,13 +166,17 @@ export const parseResponse = async <T>(
 
   const apiResp = isApiResponse(parsed) ? (parsed as ApiResponse<unknown>) : null;
 
-  if (response.status === 422 && apiResp) {
-    const fieldErrors = parseFieldErrors(apiResp.data);
+  if (response.status === 422) {
+    const fieldErrors = apiResp
+      ? parseFieldErrors(apiResp.data)
+      : parseFieldErrors(parsed);
     throw new ApiError(
-      apiResp.message ?? "请求参数校验失败",
+      apiResp?.message ??
+        getValidationMessage(parsed) ??
+        "请求参数校验失败",
       response.status,
       42200,
-      apiResp.data,
+      parsed,
       fieldErrors,
     );
   }

@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import BaseSmartModal from "../../common/BaseSmartModal.vue";
+import { getRoomLogs } from "../../../api/room";
+import { useLatestRequest } from "../../../composables/useLatestRequest";
 import type { Room } from "../../../types/room";
+import type { RoomLog } from "../../../types/room";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -14,46 +17,56 @@ const emit = defineEmits<{
 
 const logKeyword = ref("");
 const logPage = ref(1);
+const logTotal = ref(0);
+const logs = ref<RoomLog[]>([]);
+const pageSize = 10;
+const { loading, run } = useLatestRequest();
 
-const title = "房间活动日志";
-const description = `查看${props.room?.name ?? "房间"}最近的设备操作、环境变化与自动化执行记录`;
+const totalPages = Math.max(1, Math.ceil(logTotal.value / pageSize));
 
-const logs = computed(() =>
-    [
-        ["2026-08-04 10:15:32", "手动操作", "灯光开启", "成功", "灯光　客厅"],
-        [
-            "2026-08-04 10:12:08",
-            "语音助手",
-            "空调切换制冷 24°C",
-            "成功",
-            "空调　温度",
-        ],
-        ["2026-08-04 09:58:41", "手机 App", "窗帘打开", "成功", "窗帘　遮阳"],
-        [
-            "2026-08-04 09:30:00",
-            "自动化",
-            "自动化执行“休闲模式”",
-            "成功",
-            "场景　自动化",
-        ],
-        [
-            "2026-08-04 08:45:21",
-            "环境监测",
-            "PM2.5 变化提醒",
-            "提醒",
-            "环境　PM2.5",
-        ],
-    ].filter((row) => row.join(" ").includes(logKeyword.value.trim())),
-);
+const load = async () => {
+    if (!props.room) return;
+    await run(
+        () =>
+            getRoomLogs(props.room!.id, {
+                keyword: logKeyword.value.trim() || undefined,
+                page: logPage.value,
+                page_size: pageSize,
+            }),
+        (result) => {
+            logs.value = result.items;
+            logTotal.value = result.total;
+        },
+        () => {
+            logs.value = [];
+            logTotal.value = 0;
+        },
+    );
+};
+
+const goPage = (page: number) => {
+    if (page < 1 || page > totalPages || page === logPage.value) return;
+    logPage.value = page;
+    void load();
+};
 
 const close = () => emit("update:modelValue", false);
+
+watch([logKeyword, () => props.modelValue], () => {
+    logPage.value = 1;
+    if (props.modelValue) void load();
+});
+
+onMounted(() => {
+    if (props.modelValue) void load();
+});
 </script>
 
 <template>
     <BaseSmartModal
         :model-value="modelValue"
-        :title="title"
-        :description="description"
+        :title="`房间活动日志`"
+        :description="`查看${props.room?.name ?? '房间'}最近的设备操作、环境变化与自动化执行记录`"
         confirm-text="关闭"
         width="large"
         @cancel="close"
@@ -61,17 +74,10 @@ const close = () => emit("update:modelValue", false);
     >
         <div class="logs-dialog">
             <div class="dialog-filters">
-                <label>日期范围<input value="2026-07-29 ~ 2026-08-04" /></label
-                ><label
-                    >日志类型<select>
-                        <option>全部类型</option>
-                    </select></label
-                ><label
-                    >设备名称<select>
-                        <option>全部设备</option>
-                    </select></label
-                ><label
-                    >搜索<input v-model="logKeyword" placeholder="搜索事件内容"
+                <label
+                    >搜索<input
+                        v-model="logKeyword"
+                        placeholder="搜索事件内容"
                 /></label>
             </div>
             <div class="data-table">
@@ -79,25 +85,53 @@ const close = () => emit("update:modelValue", false);
                     <span>时间</span><span>来源</span><span>事件内容</span
                     ><span>执行结果</span><span>标签</span>
                 </div>
-                <article v-for="row in logs" :key="row[0]">
-                    <time>{{ row[0] }}</time
-                    ><span>{{ row[1] }}</span
-                    ><strong>{{ row[2] }}</strong
-                    ><span class="success">● {{ row[3] }}</span
-                    ><small>{{ row[4] }}</small>
+                <template v-if="loading">
+                    <div class="table-state">加载中…</div>
+                </template>
+                <template v-else-if="logs.length === 0">
+                    <div class="table-state">暂无日志记录</div>
+                </template>
+                <article v-for="log in logs" :key="log.id">
+                    <time>{{ log.occurredAt }}</time
+                    ><span>{{ log.source }}</span
+                    ><strong>{{ log.event }}</strong
+                    ><span
+                        :class="
+                            log.result === 'success'
+                                ? 'success'
+                                : log.result === 'failed'
+                                  ? 'failed'
+                                  : ''
+                        "
+                        >● {{ log.result }}</span
+                    ><small>{{ (log.tags ?? []).join("、") }}</small>
                 </article>
             </div>
             <div class="pagination">
-                <span>共 32 条记录</span><button type="button">‹</button
-                ><button
-                    v-for="page in [1, 2, 3, 4]"
+                <span>共 {{ logTotal }} 条记录</span>
+                <button
+                    type="button"
+                    :disabled="logPage <= 1"
+                    @click="goPage(logPage - 1)"
+                >
+                    ‹
+                </button>
+                <button
+                    v-for="page in totalPages > 5 ? [logPage] : Array.from({ length: totalPages }, (_, i) => i + 1)"
                     :key="page"
                     :class="{ active: logPage === page }"
                     type="button"
-                    @click="logPage = page"
+                    @click="goPage(page)"
                 >
-                    {{ page }}</button
-                ><button type="button">›</button>
+                    {{ page }}
+                </button>
+                <button
+                    type="button"
+                    :disabled="logPage >= totalPages"
+                    @click="goPage(logPage + 1)"
+                >
+                    ›
+                </button>
             </div>
         </div>
     </BaseSmartModal>
@@ -106,7 +140,7 @@ const close = () => emit("update:modelValue", false);
 <style scoped>
 .dialog-filters {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1.1fr;
+    grid-template-columns: 1fr;
     gap: 10px;
     margin-bottom: 12px;
 }
@@ -127,7 +161,6 @@ const close = () => emit("update:modelValue", false);
     padding: 0 10px;
     color: var(--color-text-primary);
 }
-
 .dialog-filters select option {
     background: var(--color-card-bg);
     color: var(--color-text-primary);
@@ -157,8 +190,17 @@ const close = () => emit("update:modelValue", false);
 .data-table small {
     color: var(--color-primary-600);
 }
+.table-state {
+    padding: 28px 12px;
+    color: var(--color-text-tertiary);
+    text-align: center;
+    font-size: 12px;
+}
 .success {
     color: var(--color-success) !important;
+}
+.failed {
+    color: var(--color-danger) !important;
 }
 .pagination {
     display: flex;

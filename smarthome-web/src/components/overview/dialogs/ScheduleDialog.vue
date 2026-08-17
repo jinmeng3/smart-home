@@ -13,12 +13,13 @@ import {
 import { useLatestRequest } from "../../../composables/useLatestRequest";
 import { fetchScenes } from "../../../api/scenes";
 import { listAutomations } from "../../../api/automation";
-import { useSettingsStore } from "../../../stores/settings";
+import { useHouseholdStore } from "../../../stores/households";
+import { ApiError } from "../../../api/client";
 import type { Scene } from "../../../types/scene";
 import type { AutomationListItem } from "../../../types/automation";
 
 const props = defineProps<{ modelValue: boolean }>();
-const settingsStore = useSettingsStore();
+const householdStore = useHouseholdStore();
 const emit = defineEmits<{
     "update:modelValue": [value: boolean];
     saved: [value: HouseholdSchedule];
@@ -71,7 +72,7 @@ const load = async () => {
     );
 };
 const loadAssociations = async () => {
-    const householdId = settingsStore.settings.account.householdId;
+    const householdId = householdStore.activeHouseholdId;
     if (!householdId) return;
     const [scenes, automations] = await Promise.all([
         fetchScenes({ keyword: "", triggerType: "", enabled: "all" }),
@@ -114,6 +115,12 @@ const confirm = async () => {
         ElMessage.success("家庭日程已保存并同步到后端");
         emit("update:modelValue", false);
     } catch (error) {
+        // 409 版本冲突：重新拉取最新日程并提示用户对比，避免覆盖他人修改
+        if (error instanceof ApiError && error.status === 409) {
+            ElMessage.warning("日程已被其他会话修改，已为你加载最新版本");
+            void load();
+            return;
+        }
         ElMessage.error(error instanceof Error ? error.message : "日程保存失败");
     } finally { loading.value = false; }
 };

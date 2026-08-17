@@ -4,19 +4,25 @@ import { ElMessageBox } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
-import type { AccountForm } from "../../types/settings";
+import type { AccountForm, HouseholdContext } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import "element-plus/theme-chalk/el-message-box.css";
 
 const props = defineProps<{
+    activeHouseholdId: number | null;
+    fieldErrors: Record<string, string>;
     form: AccountForm;
+    households: HouseholdContext[];
     loading: boolean;
     dirty: boolean;
+    switching: boolean;
 }>();
 
 const emit = defineEmits<{
+    createHousehold: [payload: { name: string; address: string }];
     deleteAvatar: [];
     save: [];
+    switchHousehold: [id: number];
     uploadAvatar: [file: File];
     updateForm: [form: AccountForm];
 }>();
@@ -25,6 +31,9 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const dialogVisible = ref(false);
 const previewUrl = ref<string | null>(null);
 const avatarLoadError = ref(false);
+const creating = ref(false);
+const createName = ref("");
+const createAddress = ref("");
 const timezones = [
     "Asia/Shanghai",
     "Asia/Tokyo",
@@ -103,6 +112,23 @@ const deleteAvatar = async () => {
     } catch {
         // User cancelled.
     }
+};
+
+const toggleCreate = () => {
+    if (creating.value) {
+        createName.value = "";
+        createAddress.value = "";
+    }
+    creating.value = !creating.value;
+};
+
+const submitCreate = () => {
+    const name = createName.value.trim();
+    if (!name) return;
+    emit("createHousehold", { name, address: createAddress.value.trim() });
+    createName.value = "";
+    createAddress.value = "";
+    creating.value = false;
 };
 </script>
 
@@ -197,11 +223,83 @@ const deleteAvatar = async () => {
             />
         </section>
 
+        <!-- 家庭切换器 + 新建家庭 -->
+        <section class="household-switcher">
+            <div class="household-heading">
+                <span>我的家庭</span>
+                <button
+                    class="household-create-toggle"
+                    type="button"
+                    @click="toggleCreate"
+                >
+                    {{ creating ? "收起" : "＋ 新建家庭" }}
+                </button>
+            </div>
+
+            <div v-if="creating" class="household-create-form">
+                <input
+                    v-model="createName"
+                    class="settings-input"
+                    placeholder="家庭名称（必填）"
+                />
+                <input
+                    v-model="createAddress"
+                    class="settings-input"
+                    placeholder="地址（可选）"
+                />
+                <div class="household-create-actions">
+                    <BaseButton size="sm" @click="creating = false">
+                        取消
+                    </BaseButton>
+                    <BaseButton
+                        :disabled="!createName.trim()"
+                        size="sm"
+                        variant="primary"
+                        @click="submitCreate"
+                    >
+                        创建并切换
+                    </BaseButton>
+                </div>
+            </div>
+
+            <div v-if="props.households.length" class="household-list">
+                <button
+                    v-for="household in props.households"
+                    :key="household.id"
+                    class="household-item"
+                    :class="{ 'is-active': household.id === props.activeHouseholdId }"
+                    :disabled="props.switching"
+                    type="button"
+                    @click="emit('switchHousehold', household.id)"
+                >
+                    <span class="household-item-main">
+                        <strong>{{ household.name }}</strong>
+                        <small
+                            >{{ household.memberCount }} 位成员 ·
+                            {{ household.role === "admin" ? "管理员" : "成员" }}</small
+                        >
+                    </span>
+                    <span
+                        v-if="household.id === props.activeHouseholdId"
+                        class="household-current"
+                        >当前</span
+                    >
+                </button>
+            </div>
+            <p
+                v-else-if="!creating"
+                class="household-empty"
+            >
+                尚未创建家庭，请先新建家庭
+            </p>
+        </section>
+
         <div class="form-grid">
             <label class="account-field"
                 ><span>姓名</span
                 ><input
                     class="settings-input"
+                    :class="{ 'has-error': props.fieldErrors.name }"
                     :value="form.name"
                     @input="
                         updateField(
@@ -209,11 +307,17 @@ const deleteAvatar = async () => {
                             ($event.target as HTMLInputElement).value,
                         )
                     "
-            /></label>
+                /><small
+                    v-if="props.fieldErrors.name"
+                    class="field-error"
+                    >{{ props.fieldErrors.name }}</small
+                ></label
+            >
             <label class="account-field"
                 ><span>邮箱</span
                 ><input
                     class="settings-input"
+                    :class="{ 'has-error': props.fieldErrors.email }"
                     :value="form.email"
                     @input="
                         updateField(
@@ -221,11 +325,17 @@ const deleteAvatar = async () => {
                             ($event.target as HTMLInputElement).value,
                         )
                     "
-            /></label>
+                /><small
+                    v-if="props.fieldErrors.email"
+                    class="field-error"
+                    >{{ props.fieldErrors.email }}</small
+                ></label
+            >
             <label class="account-field"
                 ><span>家庭名称</span
                 ><input
                     class="settings-input"
+                    :class="{ 'has-error': props.fieldErrors.name }"
                     :value="form.householdName"
                     @input="
                         updateField(
@@ -446,6 +556,136 @@ const deleteAvatar = async () => {
 .account-field .settings-input {
     width: 100%;
     height: 38px;
+}
+
+.account-field .settings-input.has-error {
+    border-color: var(--color-danger);
+}
+
+.account-field .field-error {
+    color: var(--color-danger);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* === 家庭切换器 === */
+
+.household-switcher {
+    margin: 4px 0;
+    padding: 0 20px 6px;
+}
+
+.household-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.household-create-toggle {
+    border: 0;
+    color: var(--color-primary-600);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.household-create-form {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px dashed var(--color-primary-300);
+    border-radius: 12px;
+    background: var(--color-primary-50);
+}
+
+.household-create-form .settings-input {
+    height: 34px;
+}
+
+.household-create-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.household-list {
+    display: grid;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.household-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 7px 10px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms;
+}
+
+.household-item:hover:not(:disabled) {
+    border-color: var(--color-primary-400);
+    background: var(--color-surface-hover);
+}
+
+.household-item:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.household-item.is-active {
+    border-color: var(--color-primary-500);
+    background: var(--color-primary-50);
+}
+
+.household-item-main {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.household-item-main strong {
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.household-item-main small {
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+}
+
+.household-current {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: white;
+    background: var(--color-primary-600);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.household-empty {
+    margin: 0;
+    padding: 10px 0;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
 }
 
 .address-field {

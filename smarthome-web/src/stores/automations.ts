@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import {
     listAutomations as apiListAutomations,
@@ -20,6 +20,7 @@ import type {
     ExecutionRecord,
 } from "../types/automation";
 import type { LoadingState } from "../types/loading";
+import { useHouseholdStore } from "./households";
 import { sleep } from "../utils/async";
 
 // === 自动化流程步骤 ===
@@ -144,6 +145,16 @@ export const buildAutomationSteps = (
 // === 自动化 Store ===
 
 export const useAutomationsStore = defineStore("automations", () => {
+    const householdStore = useHouseholdStore();
+
+    const requireHouseholdId = () => {
+        const id = householdStore.activeHouseholdId;
+        if (!id) {
+            throw new Error("请先创建或选择家庭");
+        }
+        return id;
+    };
+
     const filters = reactive<AutomationFilters>({
         keyword: "",
         triggerType: "",
@@ -211,7 +222,18 @@ export const useAutomationsStore = defineStore("automations", () => {
     const loadAutomations = async () => {
         loading.value = "loading";
         try {
-            const result = await apiListAutomations(1, {
+            const householdId = householdStore.activeHouseholdId;
+            if (!householdId) {
+                automations.value = [];
+                backendSummary.value = null;
+                selectedId.value = null;
+                selectedDetail.value = null;
+                executions.value = [];
+                resetStepStatuses();
+                loading.value = "success";
+                return;
+            }
+            const result = await apiListAutomations(householdId, {
                 keyword: filters.keyword || undefined,
                 triggerType: filters.triggerType || undefined,
                 enabled:
@@ -236,6 +258,16 @@ export const useAutomationsStore = defineStore("automations", () => {
         }
     };
 
+    // 切换活动家庭后，自动化列表随全局上下文同步刷新。
+    watch(
+        () => householdStore.activeHouseholdId,
+        () => {
+            if (householdStore.loadedOnce) {
+                void loadAutomations().catch(() => undefined);
+            }
+        },
+    );
+
     const selectAutomation = (ruleId: number) => {
         selectedId.value = ruleId;
         selectedDetail.value = null;
@@ -245,10 +277,16 @@ export const useAutomationsStore = defineStore("automations", () => {
     };
 
     const setAutomationEnabled = async (ruleId: number, enabled: boolean) => {
-        await apiToggleEnabled(ruleId, enabled);
         const rule = automations.value.find((item) => item.id === ruleId);
         if (rule) rule.enabled = enabled;
-        if (backendSummary.value) backendSummary.value.enabled += enabled ? 1 : -1;
+        try {
+            await apiToggleEnabled(ruleId, enabled);
+            if (backendSummary.value) backendSummary.value.enabled += enabled ? 1 : -1;
+        } catch (error) {
+            // 乐观更新失败时回滚本地状态，避免 UI 与后端不一致
+            if (rule) rule.enabled = !enabled;
+            throw error;
+        }
     };
 
     const runAutomation = async (rule: AutomationDisplayRule) => {
@@ -288,7 +326,7 @@ export const useAutomationsStore = defineStore("automations", () => {
             delaySeconds: payload.delay,
             note: payload.note || payload.rooms.join("、"),
         };
-        const created = await apiCreateAutomation(1, createPayload);
+        const created = await apiCreateAutomation(requireHouseholdId(), createPayload);
         const rule = toDisplayRule(created);
         automations.value.unshift(rule);
         selectedId.value = rule.id;
@@ -335,7 +373,7 @@ export const useAutomationsStore = defineStore("automations", () => {
             triggers: [{ type: "manual", config: {} }],
             actions: [{ type: "device_command", position: 0, deviceId: null, config: {} }],
         };
-        const created = await apiCreateAutomation(1, createPayload);
+        const created = await apiCreateAutomation(requireHouseholdId(), createPayload);
         const copy = toDisplayRule(created);
         copy.name = `${rule.name} 副本`;
         automations.value.unshift(copy);
@@ -345,9 +383,10 @@ export const useAutomationsStore = defineStore("automations", () => {
     };
 
     const importRules = async (count: number) => {
+        const householdId = requireHouseholdId();
         const created = await Promise.all(
             TEMPLATE_POOL.slice(0, count).map((template) =>
-                apiCreateAutomation(1, {
+                apiCreateAutomation(householdId, {
                     name: template.name,
                     description: template.description,
                     triggers: [{ type: "manual", config: {} }],
@@ -364,7 +403,7 @@ export const useAutomationsStore = defineStore("automations", () => {
 
     const useTemplate = async (name: string) => {
         const template = TEMPLATE_POOL.find((item) => item.name === name) ?? TEMPLATE_POOL[0]!;
-        const created = await apiCreateAutomation(1, {
+        const created = await apiCreateAutomation(requireHouseholdId(), {
             name: template.name,
             description: template.description,
             triggers: [{ type: "manual", config: {} }],
