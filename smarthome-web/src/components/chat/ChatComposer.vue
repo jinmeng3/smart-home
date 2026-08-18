@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useHomeStore } from "../../stores/home";
 import { useAuthStore } from "../../stores/auth";
 
@@ -95,9 +96,7 @@ onUnmounted(() => {
             type="button"
             title="添加附件"
         >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 5v14M5 12h14" />
-            </svg>
+            <SvgIcon name="plus" />
         </button>
 
         <textarea
@@ -120,9 +119,12 @@ onUnmounted(() => {
                 <span class="truncate">
                     {{ store.activeModel || "选择模型" }}
                 </span>
-                <svg viewBox="0 0 24 24" class="h-3 w-3 fill-none stroke-current transition-transform duration-200" :class="{ 'rotate-180': modelMenuOpen }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
+                <SvgIcon
+                    name="chevron-down"
+                    size="sm"
+                    class="orion-chevron"
+                    :class="{ 'rotate-180': modelMenuOpen }"
+                />
             </button>
             <div
                 v-if="modelMenuOpen"
@@ -144,16 +146,11 @@ onUnmounted(() => {
                         :class="{ 'pulse-ring': model.name === store.activeModel }"
                     ></span>
                     {{ model.name }}
-                    <svg
+                    <SvgIcon
                         v-if="model.name === store.activeModel"
-                        viewBox="0 0 24 24"
-                        class="ml-auto h-3.5 w-3.5 fill-none stroke-[var(--color-primary-600)]"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                    >
-                        <path d="M5 13l4 4L19 7" />
-                    </svg>
+                        name="check"
+                        size="sm"
+                    />
                 </button>
                 <div
                     v-if="store.availableModels.length === 0"
@@ -165,10 +162,7 @@ onUnmounted(() => {
         </div>
 
         <button class="composer-icon-button motion-button" type="button" title="语音输入">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
-            </svg>
+            <SvgIcon name="mic" />
         </button>
 
         <button
@@ -177,14 +171,8 @@ onUnmounted(() => {
             :disabled="sendDisabled"
             :title="generating ? '停止生成' : '发送'"
         >
-            <Transition name="send-icon" mode="out-in">
-                <svg v-if="generating" key="stop" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="7" y="7" width="10" height="10" rx="1" />
-                </svg>
-                <svg v-else key="send" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 12h10M13 8l4 4-4 4" />
-                </svg>
-            </Transition>
+            <!-- 单个 SvgIcon 实例通过动态 name 切换实现连续 Morph 动画 -->
+            <SvgIcon :name="generating ? 'square' : 'send'" />
         </button>
     </form>
 </template>
@@ -204,36 +192,9 @@ onUnmounted(() => {
     background: var(--color-surface-hover);
 }
 
-.composer-icon-button svg,
-.send-btn svg {
-    width: 22px;
-    height: 22px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2;
-}
-
-.send-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-/* 发送/停止图标切换过渡 */
-.send-icon-enter-active,
-.send-icon-leave-active {
-    transition:
-        opacity 160ms ease,
-        transform 160ms var(--motion-ease);
-}
-.send-icon-enter-from {
-    opacity: 0;
-    transform: rotate(-90deg) scale(0.6);
-}
-.send-icon-leave-to {
-    opacity: 0;
-    transform: rotate(90deg) scale(0.6);
+/* 模型下拉箭头旋转 */
+.orion-chevron.rotate-180 {
+    transform: rotate(180deg);
 }
 
 .model-menu {

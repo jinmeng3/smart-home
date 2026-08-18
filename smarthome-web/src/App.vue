@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import {
     computed,
-    markRaw,
-    nextTick,
     onMounted,
     onUnmounted,
     ref,
-    shallowRef,
     watch,
     watchEffect,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Sidebar from "./components/layout/Sidebar.vue";
 import ModalTransition from "./components/common/ModalTransition.vue";
-import SvgCore from "./components/common/SvgCore.vue";
 import { useAuthStore } from "./stores/auth";
 import { useHomeStore } from "./stores/home";
 import { useSettingsStore } from "./stores/settings";
@@ -35,32 +31,6 @@ const activePageTitle = computed(
         navigationItems.find((item) => item.path === route.path)?.label ??
         "Orion Home",
 );
-
-const SvgSprite = shallowRef();
-const extrasLoaded = ref(false);
-let spritePromise: Promise<void> | null = null;
-let isInitialNavigation = true;
-
-router.beforeEach(async () => {
-    if (isInitialNavigation) {
-        isInitialNavigation = false;
-        if (!extrasLoaded.value) {
-            spritePromise = import("./components/common/SvgSprite.vue").then(
-                (mod) => {
-                    SvgSprite.value = markRaw(mod.default);
-                    extrasLoaded.value = true;
-                    return nextTick();
-                },
-            );
-        }
-        return;
-    }
-
-    if (!extrasLoaded.value && spritePromise) {
-        await spritePromise;
-        await nextTick();
-    }
-});
 
 const systemDark = ref(
     window.matchMedia("(prefers-color-scheme: dark)").matches,
@@ -157,8 +127,6 @@ onUnmounted(() => {
 
 <template>
     <main class="app-viewport">
-        <SvgCore />
-        <component :is="SvgSprite" v-if="extrasLoaded" />
         <div class="app-shell" :class="{ 'is-sidebar-collapsed': store.sidebarCollapsed }">
             <Sidebar class="desktop-sidebar" mode="full" :phase="store.sidebarPhase" />
             <Sidebar class="tablet-sidebar" mode="compact" />

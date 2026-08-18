@@ -249,9 +249,7 @@ const isGroupActive = (group: NavigationGroup) =>
                 :title="'折叠菜单'"
                 @click="store.toggleSidebar"
             >
-                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2">
-                    <path d="M15 18l-6-6 6-6" />
-                </svg>
+                <SvgIcon name="chevron-left" />
             </button>
         </div>
 
@@ -375,14 +373,7 @@ const isGroupActive = (group: NavigationGroup) =>
                                             title="删除会话"
                                             @click.stop="deleteConversation(conversation.id)"
                                         >
-                                            <svg
-                                                viewBox="0 0 24 24"
-                                                aria-hidden="true"
-                                            >
-                                                <path
-                                                    d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                                                />
-                                            </svg>
+                                            <SvgIcon name="delete" />
                                         </button>
                                     </div>
                                 </div>
@@ -505,9 +496,7 @@ const isGroupActive = (group: NavigationGroup) =>
                 v-show="!isCollapsed"
                 class="ml-auto text-[var(--color-text-muted)] transition-transform duration-150 sidebar-detail"
             >
-                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-                    <path d="M9 18l6-6-6-6" />
-                </svg>
+                <SvgIcon name="chevron-right" />
             </span>
         </button>
     </aside>
@@ -1013,15 +1002,7 @@ aside > button:last-of-type {
         color 160ms var(--motion-ease);
 }
 
-.conversation-delete svg {
-    width: 13px;
-    height: 13px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.6;
-}
+/* SvgIcon 接管图标渲染，不再需要内联 SVG 样式 */
 
 .conversation-item:hover .conversation-delete,
 .conversation-item.is-active .conversation-delete {

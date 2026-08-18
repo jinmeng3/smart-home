@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { ChatMessage } from "../../types/chat";
 import MarkdownRenderer from "./MarkdownRenderer.vue";
 import ChatMessageShell from "./ChatMessageShell.vue";
@@ -80,9 +81,7 @@ onBeforeUnmount(() => {
                     title="复制"
                     @click="copyMessage(message.content)"
                 >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M16 10h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2" />
-                    </svg>
+                    <SvgIcon name="copy" size="sm" />
                     <span>{{ copied ? "已复制" : "复制" }}</span>
                 </button>
                 <button
@@ -92,15 +91,11 @@ onBeforeUnmount(() => {
                     title="重新生成"
                     @click="handleRegenerateClick"
                 >
-                    <svg
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
+                    <SvgIcon
+                        name="rotate-cw"
+                        size="sm"
                         :class="{ 'is-spinning': regeneratingBtn }"
-                    >
-                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                        <path d="M21 21v-5h-5" />
-                    </svg>
+                    />
                     <span>重新生成</span>
                 </button>
             </div>
@@ -128,19 +123,15 @@ onBeforeUnmount(() => {
         background-color 150ms ease;
 }
 
-.action-btn svg {
-    width: 15px;
-    height: 15px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.8;
-    transition: transform 300ms var(--motion-ease-out);
+/* 图标按钮样式 —— SvgIcon 接管图标渲染 */
+.action-btn .is-spinning {
+    animation: btn-spin 300ms ease;
 }
 
-.action-btn svg.is-spinning {
-    transform: rotate(360deg);
+@keyframes btn-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .action-btn:hover {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useSettingsStore } from "../../stores/settings";
 import { useAuthStore } from "../../stores/auth";
 
@@ -52,13 +53,7 @@ const greeting = computed(() => {
             </h1>
             <Transition name="expand">
                 <p v-if="!compact" class="date-chip">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M7 3v4M17 3v4M4 9h16" />
-                        <path
-                            d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-                        />
-                        <path d="M8 13h3M8 16h6" />
-                    </svg>
+                    <SvgIcon name="calendar" />
                     <span>今天是 {{ today }}</span>
                 </p>
             </Transition>

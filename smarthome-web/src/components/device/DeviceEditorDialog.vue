@@ -339,15 +339,7 @@ onBeforeUnmount(releasePreviewUrl);
                                     :title="c.label"
                                     @click="form.color = c.value"
                                 >
-                                    <svg
-                                        v-if="form.color === c.value"
-                                        viewBox="0 0 16 16"
-                                        fill="currentColor"
-                                        width="14"
-                                        height="14"
-                                    >
-                                        <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
-                                    </svg>
+                                    <SvgIcon v-if="form.color === c.value" name="check" size="sm" />
                                 </button>
                             </div>
                         </div>

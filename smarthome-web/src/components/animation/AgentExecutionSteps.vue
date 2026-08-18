@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SvgIcon from "../common/SvgIcon.vue";
 import type { AgentExecutionStep } from "../../types/chat";
 
 defineProps<{
@@ -17,9 +18,7 @@ defineProps<{
             class="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-white shadow-md shadow-blue-500/10"
             key="icon"
         >
-            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
-                <path d="M12 2v4M12 18v4M4 12H2M22 12h-2M6.3 6.3l-1.4-1.4M19.1 19.1l-1.4-1.4M17.7 6.3l1.4-1.4M4.9 19.1l1.4-1.4" />
-            </svg>
+            <SvgIcon name="crosshair" size="md" />
         </div>
         <div
             class="step-card rounded-xl border border-[var(--color-ai-border)] bg-gradient-to-br from-[var(--color-card-bg)] to-[var(--color-ai-soft)] px-5 py-4 shadow-sm"
@@ -48,26 +47,11 @@ defineProps<{
                                     step.status === 'failed',
                             }"
                         >
-                            <svg
-                                v-if="step.status === 'completed'"
-                                viewBox="0 0 24 24"
-                                class="h-3 w-3 fill-none stroke-white"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="3"
-                            >
-                                <path d="M5 13l4 4L19 7" />
-                            </svg>
-                            <svg
-                                v-else-if="step.status === 'failed'"
-                                viewBox="0 0 24 24"
-                                class="h-3 w-3 fill-none stroke-[var(--color-danger)]"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="3"
-                            >
-                                <path d="M18 6L6 18M6 6l12 12" />
-                            </svg>
+                            <SvgIcon
+                                v-if="step.status === 'completed' || step.status === 'failed'"
+                                :name="step.status === 'completed' ? 'check' : 'x'"
+                                size="sm"
+                            />
                         </span>
                         <div class="flex min-w-0 flex-col gap-0.5">
                             <span

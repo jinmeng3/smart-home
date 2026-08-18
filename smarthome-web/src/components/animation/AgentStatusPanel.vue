@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, ref } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { AgentExecutionStep } from "../../types/chat";
 
 const props = defineProps<{
@@ -57,28 +58,9 @@ watch(
         <div
             class="status-icon grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-sky-400 text-white shadow-md shadow-blue-500/10"
         >
-            <!-- 完成：对勾图标；进行中：脉冲思考图标 -->
-            <svg
-                v-if="phase === 'done'"
-                viewBox="0 0 24 24"
-                class="h-5 w-5 fill-none stroke-white"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-            >
-                <path d="M5 13l4 4L19 7" />
-            </svg>
-            <div v-else class="status-icon-pulse">
-                <svg
-                    viewBox="0 0 24 24"
-                    class="h-4 w-4 fill-none stroke-white"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                >
-                    <path d="M9 18h6M10 21h4" />
-                    <path d="M12 3a4 4 0 0 1 4 4c0 2-2 3-2 5v1h-4v-1c0-2-2-3-2-5a4 4 0 0 1 4-4Z" />
-                </svg>
+            <!-- 完成：对勾；进行中：脉冲思考灯泡（动态 name 连续 Morph） -->
+            <div :class="{ 'status-icon-pulse': phase !== 'done' }">
+                <SvgIcon :name="phase === 'done' ? 'check' : 'light'" />
             </div>
         </div>
 
@@ -135,26 +117,11 @@ watch(
                                             step.status === 'failed',
                                     }"
                                 >
-                                    <svg
-                                        v-if="step.status === 'completed'"
-                                        viewBox="0 0 24 24"
-                                        class="h-3 w-3 fill-none stroke-white"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="3"
-                                    >
-                                        <path d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <svg
-                                        v-else-if="step.status === 'failed'"
-                                        viewBox="0 0 24 24"
-                                        class="h-3 w-3 fill-none stroke-[var(--color-danger)]"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="3"
-                                    >
-                                        <path d="M18 6L6 18M6 6l12 12" />
-                                    </svg>
+                                    <SvgIcon
+                                        v-if="step.status === 'completed' || step.status === 'failed'"
+                                        :name="step.status === 'completed' ? 'check' : 'x'"
+                                        size="sm"
+                                    />
                                 </span>
                                 <div class="flex min-w-0 flex-col gap-0.5">
                                     <span

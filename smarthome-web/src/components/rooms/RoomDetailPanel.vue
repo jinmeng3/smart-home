@@ -286,9 +286,7 @@ const alertCount = computed(() => {
                     :disabled="!inputValue.trim() || !room"
                     :aria-label="inputValue.trim() ? '发送' : '输入问题'"
                 >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
+                <SvgIcon name="arrow-right" />
                 </button>
             </form>
         </div>
@@ -766,15 +764,7 @@ const alertCount = computed(() => {
     cursor: not-allowed;
 }
 
-.composer-send svg {
-    width: 18px;
-    height: 18px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2.5;
-}
+/* SvgIcon 接管图标渲染 */
 
 /* === 响应式 === */
 @media (max-width: 720px) {

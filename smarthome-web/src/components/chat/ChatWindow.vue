@@ -4,6 +4,7 @@ import { useAutoScroll } from "../../composables/useAutoScroll";
 import { useHomeStore } from "../../stores/home";
 import { useAuthStore } from "../../stores/auth";
 import AnimatedList from "../animation/AnimatedList.vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import ChatComposer from "./ChatComposer.vue";
 import ChatInlineStatus from "./ChatInlineStatus.vue";
 import ChatMessage from "./ChatMessage.vue";
@@ -173,26 +174,7 @@ const starterPrompts = [
                         @click="fillPrompt(item.prompt)"
                     >
                         <span class="starter-icon" aria-hidden="true">
-                            <svg
-                                v-if="item.icon === 'scan'"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    d="M5 8V5h3M16 5h3v3M19 16v3h-3M8 19H5v-3"
-                                />
-                                <path d="M8 12h8M12 8v8" />
-                            </svg>
-                            <svg
-                                v-else-if="item.icon === 'home'"
-                                viewBox="0 0 24 24"
-                            >
-                                <path d="M4 11 12 5l8 6" />
-                                <path d="M7 10v9h10v-9" />
-                                <path d="M10 19v-5h4v5" />
-                            </svg>
-                            <svg v-else viewBox="0 0 24 24">
-                                <path d="M13 3 6 13h5l-1 8 8-11h-5l1-7Z" />
-                            </svg>
+                            <SvgIcon :name="item.icon" />
                         </span>
                         <strong>{{ item.title }}</strong>
                         <span>{{ item.prompt }}</span>
@@ -251,9 +233,7 @@ const starterPrompts = [
                 title="滚动到最新消息"
                 @click="scrollToBottom(true)"
             >
-                <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
+                <SvgIcon name="chevron-down" size="sm" />
             </button>
         </Transition>
 
@@ -502,13 +482,6 @@ const starterPrompts = [
 }
 
 .starter-icon svg {
-    width: 21px;
-    height: 21px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2;
     transition: transform 200ms var(--motion-ease-out);
 }
 

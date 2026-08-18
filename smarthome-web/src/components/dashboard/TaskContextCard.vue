@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import { useHomeStore } from "../../stores/home";
 
 const store = useHomeStore();
@@ -116,26 +117,11 @@ const showTask = computed(
                             step.status === 'failed',
                     }"
                 >
-                    <svg
-                        v-if="step.status === 'completed'"
-                        viewBox="0 0 24 24"
-                        class="h-2.5 w-2.5 fill-none stroke-white"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                    >
-                        <path d="M5 13l4 4L19 7" />
-                    </svg>
-                    <svg
-                        v-else-if="step.status === 'failed'"
-                        viewBox="0 0 24 24"
-                        class="h-2.5 w-2.5 fill-none stroke-current"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                    >
-                        <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
+                    <SvgIcon
+                        v-if="step.status === 'completed' || step.status === 'failed'"
+                        :name="step.status === 'completed' ? 'check' : 'x'"
+                        size="sm"
+                    />
                 </span>
                 <span class="min-w-0">
                     <strong class="block truncate font-bold">{{ step.label }}</strong>
