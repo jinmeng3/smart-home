@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
+const root = ref<HTMLElement | null>(null);
+defineExpose({ root });
+
 withDefaults(
     defineProps<{
         tag?: string;
@@ -12,7 +17,7 @@ withDefaults(
 </script>
 
 <template>
-    <TransitionGroup :tag="tag" :name="name">
+    <TransitionGroup ref="root" :tag="tag" :name="name">
         <slot />
     </TransitionGroup>
 </template>

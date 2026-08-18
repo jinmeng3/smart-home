@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onScopeDispose, ref, watch, nextTick } from "vue";
 import { useAutoScroll } from "../../composables/useAutoScroll";
 import { useHomeStore } from "../../stores/home";
 import { useAuthStore } from "../../stores/auth";
 import AnimatedList from "../animation/AnimatedList.vue";
+import { useGsapFlip } from "../../composables/useGsapFlip";
+import { gsap, useMotionMode } from "../../motion";
 import SvgIcon from "../common/SvgIcon.vue";
 import ChatComposer from "./ChatComposer.vue";
 import ChatInlineStatus from "./ChatInlineStatus.vue";
@@ -18,6 +20,23 @@ const visibleMessages = computed(() => store.messages.slice(-30));
 const hasMessages = computed(() => visibleMessages.value.length > 0);
 const { scrollToBottom, shouldStickToBottom, updateStickiness } = useAutoScroll(
     chatScrollRef,
+);
+
+/* === GSAP Flip 消息列表重排 === */
+const msgListRef = ref<InstanceType<typeof AnimatedList> | null>(null);
+const msgListContainer = computed<HTMLElement | null>(
+    () => msgListRef.value?.root ?? null,
+);
+const { captureAndFlip } = useGsapFlip({
+    container: msgListContainer,
+    itemSelector: ":scope > *",
+    duration: 240,
+});
+watch(
+    () => store.messages.length,
+    async () => {
+        await captureAndFlip();
+    },
 );
 
 /** 用于填充提示词到输入框 */
@@ -39,17 +58,16 @@ const hasStreamingContent = computed(() => {
     return Boolean(message?.content.trim());
 });
 
-/* === 重新生成状态：点击按钮后延迟执行 splice，让退场动画先播放 === */
+/* === 重新生成状态：点击按钮后立即执行 splice，退场动画由 TransitionGroup 负责 === */
 const regeneratingMessageId = ref<string | null>(null);
-let regeneratingTimer = 0;
 const handleRegenerate = (messageId: string) => {
     if (regeneratingMessageId.value) return; // 正在处理中
     regeneratingMessageId.value = messageId;
-    window.clearTimeout(regeneratingTimer);
-    regeneratingTimer = window.setTimeout(() => {
+    store.regenerateMessage(messageId);
+    // 退场动画开始后清除 regenerating 标记
+    void nextTick(() => {
         regeneratingMessageId.value = null;
-        store.regenerateMessage(messageId);
-    }, 180);
+    });
 };
 
 /* === 发送与停止 === */
@@ -76,6 +94,37 @@ const fillPrompt = (prompt: string) => {
 
 onMounted(() => {
     void store.fetchModels();
+});
+
+/* === GSAP 空状态入场 stagger === */
+const { isReduced } = useMotionMode();
+const emptyChatRef = ref<HTMLElement | null>(null);
+let staggerCtx: gsap.Context | null = null;
+watch(emptyChatRef, (el) => {
+    // 清除之前的 context
+    staggerCtx?.revert();
+    staggerCtx = null;
+    if (!el || isReduced.value) return;
+    staggerCtx = gsap.context(() => {
+        gsap.from(".stagger-in", {
+            y: 12,
+            autoAlpha: 0,
+            duration: 0.36,
+            ease: "power3.out",
+            stagger: 0.08,
+            overwrite: "auto",
+            onComplete: () => {
+                gsap.set(".stagger-in", {
+                    clearProps: "transform,opacity,visibility",
+                });
+            },
+        });
+    }, el);
+});
+
+onScopeDispose(() => {
+    staggerCtx?.revert();
+    staggerCtx = null;
 });
 
 const starterPrompts = [
@@ -116,8 +165,9 @@ const starterPrompts = [
                     <div
                         v-if="!hasMessages && store.agentStatus === 'idle'"
                         class="empty-chat"
+                        ref="emptyChatRef"
                     >
-                        <div class="empty-chat-illustration stagger-in" style="animation-delay: 60ms">
+                        <div class="empty-chat-illustration stagger-in">
                     <svg viewBox="0 0 200 160" class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <linearGradient id="orb-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -156,10 +206,10 @@ const starterPrompts = [
                         <circle cx="148" cy="72" r="1.5" fill="var(--color-primary-400)" opacity="0.2" class="particle p8" />
                     </svg>
                 </div>
-                <h2 class="stagger-in" style="animation-delay: 140ms">
+                <h2 class="stagger-in">
                     今天想让家里怎么配合你？
                 </h2>
-                <p class="stagger-in" style="animation-delay: 220ms">
+                <p class="stagger-in">
                     从设备巡检、场景联动到节能建议，Orion Home
                     可以先帮你整理可执行方案。
                 </p>
@@ -169,7 +219,6 @@ const starterPrompts = [
                         :key="item.title"
                         class="starter-card stagger-in"
                         :class="`is-${item.icon}`"
-                        :style="{ animationDelay: `${300 + index * 90}ms` }"
                         type="button"
                         @click="fillPrompt(item.prompt)"
                     >
@@ -191,7 +240,7 @@ const starterPrompts = [
                         加载更早消息
                     </button>
                 </div>
-                <AnimatedList tag="div" name="message-list">
+                <AnimatedList ref="msgListRef" tag="div" name="message-list">
                     <ChatMessage
                         v-for="message in visibleMessages"
                         :key="message.id"
@@ -282,21 +331,6 @@ const starterPrompts = [
     justify-items: center;
     padding: 20px 0;
     text-align: center;
-}
-
-.stagger-in {
-    animation: fade-up 360ms var(--motion-ease) both;
-}
-
-@keyframes fade-up {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .empty-chat-illustration {

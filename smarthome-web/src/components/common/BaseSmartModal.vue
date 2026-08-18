@@ -7,6 +7,9 @@ import {
     useId,
     watch,
 } from "vue";
+import { gsap } from "../../motion/gsap";
+import { useMotionMode } from "../../motion/motionMode";
+import { motionDuration, motionEase } from "../../motion/tokens";
 import BaseButton from "./BaseButton.vue";
 import SvgIcon from "./SvgIcon.vue";
 
@@ -60,6 +63,8 @@ const focusableSelector = [
     "textarea:not([disabled])",
     "[tabindex]:not([tabindex='-1'])",
 ].join(",");
+
+const { isReduced } = useMotionMode();
 
 const props = withDefaults(defineProps<SmartModalProps>(), {
     description: "",
@@ -209,21 +214,132 @@ watch(
 onBeforeUnmount(() => {
     document.removeEventListener("keydown", handleKeydown);
     unregisterModal(modalId);
+    activeTimeline?.kill();
+    activeTimeline = null;
 });
+
+/* === GSAP 统一时间轴：遮罩 + 面板入场/退场 === */
+let activeTimeline: gsap.core.Timeline | null = null;
+
+const onBeforeEnter = (el: Element) => {
+    if (isReduced.value) return;
+    const overlay = el as HTMLElement;
+    const panel = overlay.querySelector<HTMLElement>(".smart-modal");
+    gsap.set(overlay, { autoAlpha: 0 });
+    if (panel) gsap.set(panel, { autoAlpha: 0, y: 20, scale: 0.96 });
+};
+
+const onEnter = (el: Element, done: () => void) => {
+    if (isReduced.value) {
+        done();
+        return;
+    }
+    const overlay = el as HTMLElement;
+    const panel = overlay.querySelector<HTMLElement>(".smart-modal");
+    const staggerEls = overlay.querySelectorAll<HTMLElement>("[data-modal-stagger]");
+    const tl = gsap.timeline({
+        defaults: { ease: motionEase.ease },
+        onComplete: () => {
+            activeTimeline = null;
+            done();
+        },
+    });
+    activeTimeline = tl;
+    tl.to(overlay, { autoAlpha: 1, duration: motionDuration.modalIn / 1000 }, 0);
+    if (panel) {
+        tl.to(
+            panel,
+            {
+                autoAlpha: 1,
+                y: 0,
+                scale: 1,
+                duration: motionDuration.modalIn / 1000,
+            },
+            0.04,
+        );
+    }
+    // 内容分段入场：GSAP stagger 替代硬编码 CSS 延迟
+    if (staggerEls.length) {
+        tl.from(
+            staggerEls,
+            {
+                autoAlpha: 0,
+                y: 6,
+                duration: 0.24,
+                stagger: 0.06,
+            },
+            0.1,
+        );
+    }
+};
+
+const onAfterEnter = (el: Element) => {
+    // 交还 CSS 控制，避免 GSAP 内联样式残留
+    gsap.set(el as HTMLElement, { clearProps: "all" });
+};
+
+const onBeforeLeave = (el: Element) => {
+    if (isReduced.value) return;
+    const overlay = el as HTMLElement;
+    const panel = overlay.querySelector<HTMLElement>(".smart-modal");
+    gsap.set(overlay, { autoAlpha: 1 });
+    if (panel) gsap.set(panel, { autoAlpha: 1, y: 0, scale: 1 });
+};
+
+const onLeave = (el: Element, done: () => void) => {
+    if (isReduced.value) {
+        done();
+        return;
+    }
+    const overlay = el as HTMLElement;
+    const panel = overlay.querySelector<HTMLElement>(".smart-modal");
+    const tl = gsap.timeline({
+        defaults: { ease: motionEase.easeIn },
+        onComplete: () => {
+            activeTimeline = null;
+            done();
+        },
+    });
+    activeTimeline = tl;
+    tl.to(overlay, { autoAlpha: 0, duration: motionDuration.modalOut / 1000 }, 0);
+    if (panel) {
+        tl.to(
+            panel,
+            {
+                autoAlpha: 0,
+                y: 12,
+                scale: 0.97,
+                duration: motionDuration.modalOut / 1000,
+            },
+            0,
+        );
+    }
+};
+
+const onAfterLeave = () => {
+    // 无需额外清理
+};
 </script>
 
 <template>
     <Teleport to="body">
-        <Transition name="smart-modal-overlay">
+        <Transition
+            :css="false"
+            @before-enter="onBeforeEnter"
+            @enter="onEnter"
+            @after-enter="onAfterEnter"
+            @before-leave="onBeforeLeave"
+            @leave="onLeave"
+            @after-leave="onAfterLeave"
+        >
             <div
                 v-if="modelValue"
                 class="smart-modal-overlay"
                 @click.self="closeOnOverlay && close()"
             >
-                <Transition name="smart-modal" appear>
-                    <article
-                        ref="dialogRef"
-                        class="smart-modal"
+                <article
+                    ref="dialogRef"
+                    class="smart-modal"
                         :class="[
                             widthClass,
                             `tone-${tone}`,
@@ -240,7 +356,8 @@ onBeforeUnmount(() => {
                     >
                         <slot name="header">
                             <header
-                                class="dialog-header smart-modal-stagger-1"
+                                class="dialog-header"
+                                data-modal-stagger="1"
                             >
                                 <slot name="icon">
                                     <span
@@ -273,24 +390,28 @@ onBeforeUnmount(() => {
                         >
                             <div
                                 v-if="$slots.status"
-                                class="smart-modal-status smart-modal-stagger-2"
+                                class="smart-modal-status"
+                                data-modal-stagger="2"
                             >
                                 <slot name="status" />
                             </div>
                             <div
-                                class="smart-modal-content smart-modal-stagger-3"
+                                class="smart-modal-content"
+                                data-modal-stagger="3"
                             >
                                 <slot />
                             </div>
                             <div
                                 v-if="$slots.warning"
-                                class="smart-modal-warning smart-modal-stagger-4"
+                                class="smart-modal-warning"
+                                data-modal-stagger="4"
                             >
                                 <slot name="warning" />
                             </div>
                             <div
                                 v-if="$slots.preview"
-                                class="smart-modal-preview smart-modal-stagger-5"
+                                class="smart-modal-preview"
+                                data-modal-stagger="5"
                             >
                                 <slot name="preview" />
                             </div>
@@ -336,7 +457,6 @@ onBeforeUnmount(() => {
                             </footer>
                         </slot>
                     </article>
-                </Transition>
             </div>
         </Transition>
     </Teleport>
@@ -731,76 +851,8 @@ onBeforeUnmount(() => {
     transform: scale(0.98);
 }
 
-.smart-modal-overlay-enter-active,
-.smart-modal-overlay-leave-active {
-    transition: opacity 180ms var(--motion-ease);
-}
-
-.smart-modal-overlay-enter-from,
-.smart-modal-overlay-leave-to {
-    opacity: 0;
-}
-
-.smart-modal-enter-active {
-    transition:
-        opacity 240ms var(--motion-ease),
-        transform 240ms var(--motion-ease);
-}
-
-.smart-modal-leave-active {
-    transition:
-        opacity 160ms var(--motion-ease-in),
-        transform 160ms var(--motion-ease-in);
-}
-
-.smart-modal-enter-from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-}
-
-.smart-modal-leave-to {
-    opacity: 0;
-    transform: translateY(6px) scale(0.985);
-}
-
-.smart-modal-stagger-1,
-.smart-modal-stagger-2,
-.smart-modal-stagger-3,
-.smart-modal-stagger-4,
-.smart-modal-stagger-5,
-.smart-modal-stagger-6 {
-    animation: smart-modal-content-enter 200ms var(--motion-ease) both;
-}
-
-.smart-modal-stagger-1 {
-    animation-delay: 30ms;
-}
-.smart-modal-stagger-2 {
-    animation-delay: 60ms;
-}
-.smart-modal-stagger-3 {
-    animation-delay: 90ms;
-}
-.smart-modal-stagger-4 {
-    animation-delay: 120ms;
-}
-.smart-modal-stagger-5 {
-    animation-delay: 150ms;
-}
-.smart-modal-stagger-6 {
-    animation-delay: 180ms;
-}
-
-@keyframes smart-modal-content-enter {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+/* 遮罩 + 面板过渡由 BaseSmartModal 的 GSAP 统一时间轴驱动 */
+/* 内容分段入场由 GSAP stagger 替代 */
 
 @media (max-width: 720px) {
     .smart-modal-overlay {
@@ -862,28 +914,6 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .smart-modal-enter-active,
-    .smart-modal-leave-active,
-    .smart-modal-overlay-enter-active,
-    .smart-modal-overlay-leave-active {
-        transition-duration: 80ms;
-    }
-
-    .smart-modal-enter-from,
-    .smart-modal-leave-to {
-        transform: none;
-    }
-
-    .smart-modal-stagger-1,
-    .smart-modal-stagger-2,
-    .smart-modal-stagger-3,
-    .smart-modal-stagger-4,
-    .smart-modal-stagger-5,
-    .smart-modal-stagger-6 {
-        animation-duration: 1ms;
-        animation-delay: 1ms;
-    }
-
     .smart-modal-actions :deep(.base-button:hover),
     .smart-modal-close:hover {
         transform: none;

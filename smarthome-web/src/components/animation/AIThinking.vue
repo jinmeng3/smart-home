@@ -38,111 +38,99 @@ defineProps<{
     </article>
 </template>
 
-<style scoped>
-.thinking-icon {
-    animation: icon-pulse 2500ms ease-in-out infinite;
-}
+        <style scoped>
+        .thinking-icon {
+            animation: icon-pulse 2500ms ease-in-out infinite;
+        }
 
-.thinking-avatar {
-    box-shadow:
-        0 6px 14px color-mix(in srgb, var(--color-primary-600) 18%, transparent),
-        inset 0 0 0 3px var(--color-primary-50);
-}
+        .thinking-avatar {
+            box-shadow:
+                0 6px 14px color-mix(in srgb, var(--color-primary-600) 18%, transparent),
+                inset 0 0 0 3px var(--color-primary-50);
+        }
 
-.thinking-avatar img {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    filter: saturate(1.12) contrast(1.08);
-}
+        .thinking-avatar img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            filter: saturate(1.12) contrast(1.08);
+        }
 
-.thinking-ring {
-    position: absolute;
-    inset: -3px;
-    border-radius: 999px;
-    border: 2px solid var(--color-primary-300, #93c5fd);
-    animation: ring-expand 2500ms ease-out infinite;
-    opacity: 0;
-}
+        .thinking-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 999px;
+            border: 2px solid var(--color-primary-300, #93c5fd);
+            animation: ring-expand 2500ms ease-out infinite;
+            opacity: 0;
+        }
 
-.thinking-card {
-    animation: card-glide 320ms ease-out both;
-}
+        .thinking-card {
+            animation: card-glide 320ms ease-out both;
+        }
 
-.thinking-text {
-    animation: text-fade 300ms ease-out;
-}
+        .thinking-text {
+            animation: text-fade 300ms ease-out;
+        }
 
-.thinking-progress {
-    animation: progress-indeterminate 2000ms ease-in-out infinite;
-}
+        /* 不确定进度条：使用 xPercent 和 scaleX 替换 width/margin-left 布局动画 */
+        .thinking-progress {
+            animation: progress-indeterminate 2000ms ease-in-out infinite;
+            transform-origin: left center;
+        }
 
-@keyframes icon-pulse {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.06);
-    }
-}
+        @keyframes ring-expand {
+            0% {
+                transform: scale(0.85);
+                opacity: 0.6;
+            }
+            60% {
+                opacity: 0.2;
+            }
+            100% {
+                transform: scale(1.35);
+                opacity: 0;
+            }
+        }
 
-@keyframes ring-expand {
-    0% {
-        transform: scale(0.85);
-        opacity: 0.6;
-    }
-    60% {
-        opacity: 0.2;
-    }
-    100% {
-        transform: scale(1.35);
-        opacity: 0;
-    }
-}
+        @keyframes card-glide {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-@keyframes card-glide {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+        @keyframes text-fade {
+            from {
+                opacity: 0;
+                transform: translateY(-2px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-@keyframes text-fade {
-    from {
-        opacity: 0;
-        transform: translateY(-2px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes progress-indeterminate {
-    0% {
-        width: 8%;
-        margin-left: 0%;
-    }
-    25% {
-        width: 30%;
-        margin-left: 20%;
-    }
-    50% {
-        width: 18%;
-        margin-left: 60%;
-    }
-    75% {
-        width: 40%;
-        margin-left: 30%;
-    }
-    100% {
-        width: 8%;
-        margin-left: 92%;
-    }
-}
-</style>
+        /* 使用 transform 替换 xPercent/scaleX（CSS 不支持 xPercent 属性） */
+        @keyframes progress-indeterminate {
+            0% {
+                transform: translateX(0%) scaleX(0.08);
+            }
+            25% {
+                transform: translateX(20%) scaleX(0.3);
+            }
+            50% {
+                transform: translateX(60%) scaleX(0.18);
+            }
+            75% {
+                transform: translateX(30%) scaleX(0.4);
+            }
+            100% {
+                transform: translateX(92%) scaleX(0.08);
+            }
+        }
+        </style>

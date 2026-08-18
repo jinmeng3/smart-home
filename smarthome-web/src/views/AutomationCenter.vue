@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAutomationsStore, buildAutomationSteps } from "../stores/automations";
 import { useAutomationModeController } from "../composables/useAutomationModeController";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { useCardGridEnter } from "../composables/useCardGridEnter";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
@@ -55,11 +56,18 @@ const loadAutomations = async () => {
 };
 
 useAuthenticatedLoader(loadAutomations);
+
+const { root, play: playCardGrid } = useCardGridEnter();
+
+// 卡片入场 stagger：数据加载完成后 + 展开/收起状态变更时
+onMounted(() => void playCardGrid());
+watch(() => visibleCards.value.length, (n) => { if (n > 0) void playCardGrid(); });
+watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
 </script>
 
 <template>
     <div class="app-page-layout">
-        <main class="automation page-shell page-enter">
+        <main ref="root" class="automation page-shell page-enter">
             <header class="automation-page-header">
                 <div class="automation-page-title">
                     <span

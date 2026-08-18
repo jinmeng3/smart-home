@@ -43,17 +43,36 @@ const resolveInitial = (): boolean => {
     return isMediumScreen();
 };
 
+/* === 折叠容器 ref === */
+const railRef = ref<HTMLElement | null>(null);
+
 const {
     collapsed,
     phase,
     toggle,
     skipAnimation,
-} = useCollapsePhase(resolveInitial(), (value) => {
-    if (props.storageKey) {
-        localStorage.setItem(props.storageKey, String(value));
-    }
-    emit("update:collapsed", value);
-});
+} = useCollapsePhase(
+    resolveInitial(),
+    (value) => {
+        if (props.storageKey) {
+            localStorage.setItem(props.storageKey, String(value));
+        }
+        emit("update:collapsed", value);
+    },
+    {
+        /** 提供 DOM 目标，启用 GSAP 时间轴动画 */
+        targets: () => {
+            const el = railRef.value;
+            if (!el) return null;
+            return {
+                container: el,
+                detail: Array.from(
+                    el.querySelectorAll(".rail-detail"),
+                ),
+            };
+        },
+    },
+);
 
 skipAnimation();
 
@@ -94,6 +113,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
 
 <template>
     <aside
+        ref="railRef"
         class="base-collapsible-rail flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-rail-bg, var(--color-workspace-background))] shadow-soft"
         :class="[collapsed ? 'is-collapsed' : '', `phase-${phase}`]"
         :style="{
@@ -154,8 +174,9 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
 .base-collapsible-rail {
     position: relative;
     width: var(--rail-width-expanded, 330px);
+    /* 宽度过渡由 GSAP 时间轴驱动，移除 CSS 过渡避免冲突；
+       收起/展开后的宽度由 .is-collapsed 类控制，GSAP clearProps 后交还 */
     transition:
-        width 300ms cubic-bezier(0.22, 1, 0.36, 1),
         border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),
         box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -267,21 +288,9 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
     opacity: 1;
 }
 
-/* === 三阶段折叠动画 === */
+/* === 三阶段折叠动画（GSAP 接管，移除 CSS 过渡避免冲突） === */
 aside.phase-collapsing {
     overflow: hidden;
-}
-
-aside.phase-collapsing .rail-detail,
-aside.phase-expanding .rail-detail {
-    transition:
-        opacity 140ms ease,
-        transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-aside.phase-collapsing .rail-detail {
-    opacity: 0;
-    transform: translateX(8px);
 }
 
 aside.phase-collapsed .rail-detail,
@@ -289,22 +298,7 @@ aside.phase-collapsing .rail-detail {
     pointer-events: none;
 }
 
-aside.phase-expanding .rail-detail {
-    opacity: 1;
-    transform: translateX(0);
-}
-
 aside.phase-collapsed .rail-detail {
     display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .base-collapsible-rail,
-    .rail-collapsed,
-    .rail-header,
-    .rail-scroll {
-        animation: none;
-        transition-duration: 1ms;
-    }
 }
 </style>

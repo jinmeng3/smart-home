@@ -15,15 +15,19 @@
 .message-list-enter-active {
     transition:
         opacity 260ms var(--motion-ease),
-        transform 260ms var(--motion-ease),
-        max-height 260ms var(--motion-ease);
+        transform 260ms var(--motion-ease);
 }
 
+/* 退场：脱离文档流原位淡出，剩余消息由 GSAP Flip 负责平滑上移；
+   不再依赖 max-height: 1000px 固定上限插值 */
 .message-list-leave-active {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
     transition:
         opacity 160ms var(--motion-ease-in),
-        transform 160ms var(--motion-ease-in),
-        max-height 180ms var(--motion-ease-in);
+        transform 160ms var(--motion-ease-in);
 }
 
 .message-list-enter-from {
@@ -31,18 +35,9 @@
     transform: translateY(12px);
 }
 
-/* 使用固定上限值让 max-height 可插值（none→0 无法平滑过渡） */
-.message-list-leave-active {
-    max-height: 1000px;
-}
-
 .message-list-leave-to {
     opacity: 0;
     transform: translateY(-10px);
-    max-height: 0;
-    margin-bottom: 0;
-    padding-top: 0;
-    padding-bottom: 0;
 }
 
 /* === 右侧列表（设备列表、建议列表） === */
@@ -70,12 +65,6 @@
 .suggestion-list-enter-from {
     opacity: 0;
     transform: translateY(8px);
-}
-
-.message-list-move,
-.recent-list-move,
-.suggestion-list-move {
-    transition: transform 240ms var(--motion-ease);
 }
 
 .status-crossfade-enter-from {

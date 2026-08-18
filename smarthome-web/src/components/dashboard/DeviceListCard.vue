@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, ref, watch } from "vue";
 import { useHomeStore } from "../../stores/home";
 import { statusColorMap } from "../../constants/status-colors";
 import type { DashboardDevice } from "../../types/device";
@@ -10,6 +10,7 @@ import AnimatedList from "../animation/AnimatedList.vue";
 import AnimatedStatus from "../animation/AnimatedStatus.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { useGsapFlip } from "../../composables/useGsapFlip";
 
 const props = withDefaults(
     defineProps<{
@@ -48,6 +49,23 @@ watch(
 const isHighlighted = (id: string) => highlightedIds.value.has(id);
 const MAX_DISPLAY_DEVICES = 4;
 const displayDevices = computed(() => store.devices.slice(0, MAX_DISPLAY_DEVICES));
+
+/* === GSAP Flip 设备列表重排 === */
+const deviceListRef = ref<InstanceType<typeof AnimatedList> | null>(null);
+const deviceListContainer = computed<HTMLElement | null>(
+    () => deviceListRef.value?.root ?? null,
+);
+const { captureAndFlip: deviceListFlip } = useGsapFlip({
+    container: deviceListContainer,
+    itemSelector: ":scope > *",
+    duration: 240,
+});
+watch(
+    () => displayDevices.value.length,
+    async () => {
+        await deviceListFlip();
+    },
+);
 
 const platformToneMap: Record<string, string> = {
     "Home Assistant": "orange",
@@ -176,7 +194,7 @@ onBeforeUnmount(() => {
             </span>
         </div>
 
-        <AnimatedList tag="div" name="recent-list" class="grid gap-1">
+        <AnimatedList ref="deviceListRef" tag="div" name="recent-list" class="grid gap-1">
             <button
                 v-for="device in displayDevices"
                 :key="device.id"

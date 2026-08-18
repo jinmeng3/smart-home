@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, watch, ref } from "vue";
+import { computed, watch, ref, onScopeDispose } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import type { AgentExecutionStep } from "../../types/chat";
+import { gsap, useMotionMode } from "../../motion";
 
 const props = defineProps<{
     status: string;
@@ -35,19 +36,38 @@ const label = computed(() => {
 
 // 折叠控制：完成后收起步骤列表
 const collapsed = ref(false);
+const { isReduced } = useMotionMode();
+let collapseTimer: gsap.core.Tween | null = null;
 watch(
     () => props.phase,
     (phase) => {
+        if (collapseTimer) {
+            collapseTimer.kill();
+            collapseTimer = null;
+        }
         if (phase === "done") {
-            // 等"正在整理结果"文案展示一小段时间后折叠
-            window.setTimeout(() => {
+            if (isReduced.value) {
+                // 减少动态效果下直接折叠，无需等待
                 collapsed.value = true;
-            }, 420);
+            } else {
+                // 等"正在整理结果"文案展示一小段时间后折叠
+                collapseTimer = gsap.delayedCall(0.42, () => {
+                    collapsed.value = true;
+                    collapseTimer = null;
+                });
+            }
         } else {
             collapsed.value = false;
         }
     },
 );
+
+onScopeDispose(() => {
+    if (collapseTimer) {
+        collapseTimer.kill();
+        collapseTimer = null;
+    }
+});
 </script>
 
 <template>
@@ -219,16 +239,6 @@ watch(
 
 .status-icon-pulse {
     animation: icon-pulse 2500ms ease-in-out infinite;
-}
-
-@keyframes icon-pulse {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.08);
-    }
 }
 
 .step-item-enter-active {

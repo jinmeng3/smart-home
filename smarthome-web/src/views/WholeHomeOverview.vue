@@ -13,6 +13,7 @@ import { getHouseholdOverview, getHouseholdDevices } from "../api/overview";
 import { useSettingsStore } from "../stores/settings";
 import { useHouseholdStore } from "../stores/households";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { useCardGridEnter } from "../composables/useCardGridEnter";
 import type {
   OverviewSummary,
   OverviewRoom,
@@ -83,6 +84,8 @@ const searchKeyword = ref("");
 const refreshed = ref("加载中…");
 const activeDialog = ref<OverviewDialog>(null);
 const loading = ref(false);
+
+const { root, play: playCardGrid } = useCardGridEnter();
 
 const summary = ref<OverviewSummary>({
   device_total: 0,
@@ -263,6 +266,9 @@ const loadOverviewData = async () => {
 
 useAuthenticatedLoader(loadOverviewData);
 
+// 加载完成后播放卡片 stagger 入场
+watch(loading, (l) => { if (!l) void playCardGrid(); });
+
 // 切换活动家庭后，总览数据随之刷新，避免展示上一家庭缓存的设备/房间。
 watch(
     () => householdStore.activeHouseholdId,
@@ -275,7 +281,7 @@ watch(
 
 <template>
     <div class="app-page-layout">
-        <main class="overview page-shell page-enter">
+        <main ref="root" class="overview page-shell page-enter">
             <PageHeader
                 title="全屋总览"
                 description="查看家庭运行状态、房间分布与设备总览"

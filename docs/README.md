@@ -38,6 +38,7 @@
 | [12-agent-review-and-roadmap.md](./12-agent-review-and-roadmap.md) | Agent 现状审查与演进路线：对照代码盘点实现差距、风险与修复建议、扩展方向、上线检查清单。 | 📋 现状审查 |
 | [13-frontend-backend-roadmap.md](./13-frontend-backend-roadmap.md) | 以后端真实能力为基准，盘点前端覆盖差距，并给出分阶段任务、接口、交付物和验收标准。 | 🚧 前端实施路线 |
 | [14-morphicons-migration-roadmap.md](./14-morphicons-migration-roadmap.md) | 将现有 SVG 图标分阶段迁移到 Morphicons，说明统一适配层、替换边界、验收和回滚策略。 | 📝 迁移计划 |
+| [gsap-animation-optimization-roadmap.md](./gsap-animation-optimization-roadmap.md) | 基于 GSAP 官方实践盘点前端动画架构，并给出基础设施、试点、模块推广和插件评估阶段。 | 📝 优化计划 |
 
 > Agent 相关文档关系：`10` 描述“目标设计”，`11` 给出“如何落地”，`12` 盘点“现状与差距”。
 > 阅读 agent 相关文档前，请先阅读 `12` 的现状盘点，避免把设计稿当成已实现能力。

@@ -1,35 +1,17 @@
-import { onScopeDispose, readonly, ref } from "vue";
+import { useMotionMode } from "../motion";
 
-const prefersReducedMotion = ref(false);
-let mediaQuery: MediaQueryList | null = null;
-let consumers = 0;
-
-const updatePreference = () => {
-  prefersReducedMotion.value = Boolean(mediaQuery?.matches);
-};
-
-const connect = () => {
-  consumers += 1;
-  if (consumers === 1) {
-    mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    updatePreference();
-    mediaQuery.addEventListener("change", updatePreference);
-  }
-};
-
-const disconnect = () => {
-  consumers -= 1;
-  if (consumers === 0) {
-    mediaQuery?.removeEventListener("change", updatePreference);
-    mediaQuery = null;
-  }
-};
-
+/**
+ * 减少动态效果检测。
+ *
+ * 兼容旧版导入路径，内部委托给统一的 `useMotionMode`。
+ * 新代码请直接使用 `useMotionMode`。
+ *
+ * @deprecated 使用 `useMotionMode` 替代
+ */
 export const useReducedMotion = () => {
-  connect();
-  onScopeDispose(disconnect);
+  const { isReduced } = useMotionMode();
 
   return {
-    prefersReducedMotion: readonly(prefersReducedMotion),
+    prefersReducedMotion: isReduced,
   };
 };

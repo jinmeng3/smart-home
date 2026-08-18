@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { useCardGridEnter } from "../composables/useCardGridEnter";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { getErrorMessage } from "../utils/error";
@@ -56,6 +57,13 @@ const deleteDialogOpen = ref(false);
 const deletingRoom = ref<Room | null>(null);
 
 const roomGridExpanded = ref(false);
+
+/* === GSAP 房间网格入场 stagger === */
+const { root, play: playRoomGrid } = useCardGridEnter({ selector: ".room-grid" });
+watch(
+    () => visibleRooms.value.length,
+    () => { void playRoomGrid(); },
+);
 
 const toggleRoomGrid = () => {
     roomGridExpanded.value = !roomGridExpanded.value;
@@ -332,7 +340,7 @@ useAuthenticatedLoader(load);
 
 <template>
     <div class="app-page-layout">
-        <main class="workspace page-shell page-enter">
+        <main ref="root" class="workspace page-shell page-enter">
             <PageHeader
                 title="房间控制"
                 description="房间设备与环境控制"
@@ -538,9 +546,7 @@ useAuthenticatedLoader(load);
 }
 
 /* TransitionGroup room-grid animations */
-.room-grid-enter-active {
-    animation: room-grid-enter 280ms var(--motion-ease-out) both;
-}
+/* 入场由 GSAP stagger 接管（useCardGridEnter），CSS 不再维护 nth-child 延迟表 */
 .room-grid-leave-active {
     animation: room-grid-leave 180ms var(--motion-ease-in) both;
 }
@@ -548,19 +554,6 @@ useAuthenticatedLoader(load);
     transition: transform 280ms var(--motion-ease-out);
 }
 
-.room-grid-enter-active:nth-child(1) { animation-delay: 0ms; }
-.room-grid-enter-active:nth-child(2) { animation-delay: 30ms; }
-.room-grid-enter-active:nth-child(3) { animation-delay: 60ms; }
-.room-grid-enter-active:nth-child(4) { animation-delay: 90ms; }
-.room-grid-enter-active:nth-child(5) { animation-delay: 120ms; }
-.room-grid-enter-active:nth-child(6) { animation-delay: 150ms; }
-.room-grid-enter-active:nth-child(7) { animation-delay: 180ms; }
-.room-grid-enter-active:nth-child(8) { animation-delay: 210ms; }
-
-@keyframes room-grid-enter {
-    from { opacity: 0; transform: translateY(10px) scale(0.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
 @keyframes room-grid-leave {
     from { opacity: 1; transform: translateY(0) scale(1); }
     to { opacity: 0; transform: translateY(-8px) scale(0.96); }
@@ -739,9 +732,6 @@ useAuthenticatedLoader(load);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .room-grid-enter-active {
-        animation: none;
-    }
     .room-grid-leave-active {
         animation: none;
     }
