@@ -58,13 +58,6 @@ const deletingRoom = ref<Room | null>(null);
 
 const roomGridExpanded = ref(false);
 
-/* === GSAP 房间网格入场 stagger === */
-const { root, play: playRoomGrid } = useCardGridEnter({ selector: ".room-grid" });
-watch(
-    () => visibleRooms.value.length,
-    () => { void playRoomGrid(); },
-);
-
 const toggleRoomGrid = () => {
     roomGridExpanded.value = !roomGridExpanded.value;
 };
@@ -92,6 +85,15 @@ const visibleRooms = computed(() => {
     if (roomGridExpanded.value) return filtered;
     return filtered.slice(0, 3);
 });
+
+/* === GSAP 房间网格入场 stagger === */
+const { root, play: playRoomGrid } = useCardGridEnter({ selector: ".room-grid" });
+watch(
+    () => visibleRooms.value.length,
+    () => {
+        void playRoomGrid();
+    },
+);
 const online = computed(() =>
     rooms.value.reduce((sum, room) => sum + room.onlineCount, 0),
 );
