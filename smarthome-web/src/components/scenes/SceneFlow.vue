@@ -486,7 +486,7 @@ li {
 }
 
 .is-running .step-indicator svg {
-    animation: scene-flow-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 
 .is-running .step-content strong {
@@ -656,10 +656,7 @@ li {
 .scene-crossfade-leave-to {
     opacity: 0;
     transform: translateY(8px);
-}
-
-@keyframes scene-flow-spin {
-    to { transform: rotate(360deg); }
+animation: spin 900ms linear infinite;
 }
 
 @keyframes result-glow {

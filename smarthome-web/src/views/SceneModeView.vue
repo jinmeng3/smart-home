@@ -389,17 +389,7 @@ const handleViewAllTemplates = () => {
 
 /* 头部图标保留轻微脉冲动效 */
 .dialog-header .dialog-icon svg {
-    animation: scene-delete-icon-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes scene-delete-icon-pulse {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.06);
-    }
+    animation: icon-pulse 1.6s ease-in-out infinite;
 }
 
 .scene-delete-dialog-body {
@@ -544,13 +534,7 @@ const handleViewAllTemplates = () => {
 }
 
 .scene-delete-confirm-button:disabled svg {
-    animation: scene-delete-spin 900ms linear infinite;
-}
-
-@keyframes scene-delete-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 900ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

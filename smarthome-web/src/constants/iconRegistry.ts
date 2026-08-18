@@ -224,6 +224,7 @@ export const iconRegistry = new Map<string, IconNode>([
     ["chevron-right", ChevronRight],
     ["close", X],
     ["delete", Trash2],
+    ["curtain", curtain],
     ["device-management", deviceManagement],
     ["edit", Pencil],
     ["energy", energy],

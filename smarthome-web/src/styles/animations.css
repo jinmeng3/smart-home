@@ -368,6 +368,14 @@
     }
 }
 
+/* === 通用旋转动画 === */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.is-spinning {
+    animation: spin 900ms linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

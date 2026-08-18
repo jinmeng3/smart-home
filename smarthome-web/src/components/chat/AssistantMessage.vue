@@ -125,13 +125,7 @@ onBeforeUnmount(() => {
 
 /* 图标按钮样式 —— SvgIcon 接管图标渲染 */
 .action-btn .is-spinning {
-    animation: btn-spin 300ms ease;
-}
-
-@keyframes btn-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 300ms ease;
 }
 
 .action-btn:hover {

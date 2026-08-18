@@ -883,16 +883,12 @@ button:disabled {
     border: 3px solid var(--color-border);
     border-top-color: var(--color-primary-500);
     border-radius: 50%;
-    animation: device-refresh-spin 600ms linear infinite;
+    animation: spin 600ms linear infinite;
 }
 
 @keyframes device-refresh-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-@keyframes device-refresh-spin {
-    to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -907,11 +903,7 @@ button:disabled {
 /* === 同步按钮旋转 === */
 
 .device-list-sync svg.is-spinning {
-    animation: device-sync-spin 800ms linear infinite;
-}
-
-@keyframes device-sync-spin {
-    to { transform: rotate(360deg); }
+    animation-duration: 800ms;
 }
 
 /* === 行/卡片增删过渡 === */

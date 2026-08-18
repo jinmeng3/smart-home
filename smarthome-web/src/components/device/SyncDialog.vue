@@ -448,13 +448,7 @@ const close = () => {
     border: 3px solid var(--color-border);
     border-top-color: var(--color-primary-500);
     border-radius: 50%;
-    animation: sync-spin 800ms linear infinite;
-}
-
-@keyframes sync-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 800ms linear infinite;
 }
 
 .sync-progress-label {

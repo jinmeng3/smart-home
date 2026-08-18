@@ -142,13 +142,7 @@ button.is-purple .rail-action-icon { color: var(--tone-purple); }
 button.is-success .rail-action-icon { color: var(--color-success); }
 
 svg.is-spinning {
-    animation: rail-action-spin 800ms linear infinite;
-}
-
-@keyframes rail-action-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation-duration: 800ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -680,7 +680,7 @@ const removeMember = (membershipId: number) => {
         :inert="!authStore.isAuthenticated"
     >
         <section
-            class="settings-main page-enter flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
+            class="settings-main flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] p-5 shadow-soft"
         >
             <header
                 class="shrink-0 border-b border-[var(--color-divider)] pb-4 mb-4"
@@ -1106,13 +1106,7 @@ const removeMember = (membershipId: number) => {
 }
 
 .settings-save-button.button-loading svg {
-    animation: settings-save-spin 800ms linear infinite;
-}
-
-@keyframes settings-save-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 800ms linear infinite;
 }
 
 /* === 更多操作下拉菜单 === */

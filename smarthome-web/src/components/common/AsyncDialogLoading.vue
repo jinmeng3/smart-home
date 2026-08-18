@@ -29,12 +29,6 @@
     border: 3px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: async-dialog-spin 600ms linear infinite;
-}
-
-@keyframes async-dialog-spin {
-    to {
-        transform: rotate(1turn);
-    }
+    animation: spin 600ms linear infinite;
 }
 </style>

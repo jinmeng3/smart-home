@@ -100,11 +100,7 @@ const handleRefresh = () => {
 }
 
 .summary-refresh.is-refreshing svg {
-    animation: summary-refresh-spin 600ms linear infinite;
-}
-
-@keyframes summary-refresh-spin {
-    to { transform: rotate(360deg); }
+    animation: spin 600ms linear infinite;
 }
 
 .summary-grid {

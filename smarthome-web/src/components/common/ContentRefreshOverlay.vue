@@ -53,12 +53,7 @@ withDefaults(
     to {
         opacity: 1;
     }
-}
-
-@keyframes cro-spin {
-    to {
-        transform: rotate(360deg);
-    }
+animation: spin 600ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

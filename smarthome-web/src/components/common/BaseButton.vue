@@ -168,12 +168,6 @@ withDefaults(
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    animation: base-button-spin 600ms linear infinite;
-}
-
-@keyframes base-button-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 600ms linear infinite;
 }
 </style>

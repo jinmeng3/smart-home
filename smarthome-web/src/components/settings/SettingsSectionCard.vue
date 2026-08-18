@@ -44,4 +44,9 @@ defineProps<{
     min-width: 0;
     box-shadow: var(--shadow-card);
 }
+
+/* motion-card hover 只对交互卡片生效，设置卡片不产生上浮效果 */
+.settings-section.motion-card:hover {
+    transform: none;
+}
 </style>

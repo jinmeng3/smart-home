@@ -2241,9 +2241,6 @@ watch(
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
 
 /* 设备概览使用独立滚动区，底部入口始终保留在可视区域。 */
 .overview {

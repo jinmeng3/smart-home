@@ -24,9 +24,10 @@ const { scrollToBottom, shouldStickToBottom, updateStickiness } = useAutoScroll(
 
 /* === GSAP Flip 消息列表重排 === */
 const msgListRef = ref<InstanceType<typeof AnimatedList> | null>(null);
-const msgListContainer = computed<HTMLElement | null>(
-    () => msgListRef.value?.root ?? null,
-);
+const msgListContainer = computed<HTMLElement | null>(() => {
+    const el = (msgListRef.value as any)?.root?.$el;
+    return el instanceof HTMLElement ? el : null;
+});
 const { captureAndFlip } = useGsapFlip({
     container: msgListContainer,
     itemSelector: ":scope > *",

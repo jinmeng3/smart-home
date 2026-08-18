@@ -757,7 +757,7 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
     opacity: 0.55;
 }
 .cards footer button:disabled svg {
-    animation: automation-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 .cards article.disabled {
     opacity: 0.7;
@@ -908,16 +908,11 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-info) 20%, transparent);
 }
 .steps > div.is-running .step-card i svg {
-    animation: automation-step-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 .steps > div.is-completed .step-card i {
     background: var(--color-success-soft);
     color: var(--color-success);
-}
-@keyframes automation-step-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .step-card {
@@ -1361,17 +1356,7 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
 
 /* === 删除确认弹窗 === */
 .dialog-header .dialog-icon svg {
-    animation: rule-delete-icon-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes rule-delete-icon-pulse {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.06);
-    }
+    animation: icon-pulse 1.6s ease-in-out infinite;
 }
 
 .rule-delete-dialog-body {
@@ -1503,19 +1488,7 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
 }
 
 .rule-delete-confirm-button:disabled svg {
-    animation: rule-delete-spin 900ms linear infinite;
-}
-
-@keyframes rule-delete-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes automation-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 900ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

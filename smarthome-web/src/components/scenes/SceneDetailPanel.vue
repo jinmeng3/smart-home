@@ -465,7 +465,7 @@ const manageActions = [
 }
 
 .scene-execute-button:disabled .is-spinning {
-    animation: scene-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 
 /* ═══ 第二部分：场景管理 ═══ */
@@ -631,10 +631,6 @@ const manageActions = [
 .scene-detail-crossfade-leave-to {
     opacity: 0;
     transform: translateY(8px);
-}
-
-@keyframes scene-spin {
-    to { transform: rotate(360deg); }
 }
 
 button:disabled {

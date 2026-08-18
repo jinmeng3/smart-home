@@ -309,13 +309,7 @@ const statusLabel = computed(
 }
 
 svg.is-spinning {
-    animation: platform-sync-spin 800ms linear infinite;
-}
-
-@keyframes platform-sync-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation-duration: 800ms;
 }
 
 /* 高度 + 透明度展开动画 */

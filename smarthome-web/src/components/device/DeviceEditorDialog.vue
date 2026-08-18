@@ -1178,7 +1178,7 @@ onBeforeUnmount(releasePreviewUrl);
 }
 
 .device-submit-button:disabled svg {
-    animation: device-dialog-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 
 /* === 弹窗底部 === */
@@ -1208,12 +1208,6 @@ onBeforeUnmount(releasePreviewUrl);
 button:disabled {
     cursor: default;
     opacity: 0.55;
-}
-
-@keyframes device-dialog-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* === 响应式 === */

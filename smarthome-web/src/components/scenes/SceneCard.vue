@@ -418,7 +418,7 @@ h3 {
 }
 
 .scene-run-button:disabled .is-spinning {
-    animation: scene-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 
 /* === 更多菜单 === */
@@ -514,10 +514,6 @@ button:disabled {
 @keyframes scene-card-enter {
     from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes scene-spin {
-    to { transform: rotate(360deg); }
 }
 
 @media (max-width: 1380px) {

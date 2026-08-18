@@ -112,7 +112,7 @@ const onClose = () => emit("update:modelValue", false);
 }
 
 .preview-loading svg {
-    animation: preview-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
     color: var(--color-primary-600);
 }
 
@@ -265,11 +265,6 @@ const onClose = () => emit("update:modelValue", false);
     padding: 24px 0;
     text-align: center;
     font-weight: 800;
-}
-
-@keyframes preview-spin {
-    to {
-        transform: rotate(360deg);
-    }
+animation: spin 900ms linear infinite;
 }
 </style>

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./db/orion_home.db"
 
     # 身份认证
-    jwt_secret_key: str
+    jwt_secret_key: str = "dev-secret-key-change-in-production"
     access_token_expire_seconds: int = 3600
     max_failed_login_attempts: int = Field(default=5, ge=1, le=20)
     login_lock_seconds: int = Field(default=900, ge=60, le=86400)

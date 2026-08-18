@@ -57,6 +57,11 @@ const householdSummary = computed(
             .join(" · ") || "尚未设置家庭信息",
 );
 
+// 显示完整 householdSummary 文本，用于 title 属性
+const fullAddress = computed(
+    () => [props.form.householdName, props.form.address].filter(Boolean).join(" · ") || "",
+);
+
 watch(
     () => props.form.avatarUrl,
     () => {
@@ -176,7 +181,7 @@ const submitCreate = () => {
                     >{{ form.email || "未设置邮箱" }}</span
                 >
                 <span
-                    class="mt-1 block truncate text-xs text-[var(--color-text-tertiary)]"
+                    class="mt-1 block text-xs text-[var(--color-text-tertiary)]"
                 >
                     {{ householdSummary }}
                 </span>
@@ -389,7 +394,6 @@ const submitCreate = () => {
 /* 账户与家庭：首页卡片式布局，模块色柔和渐变背景 */
 .account-summary {
     position: relative;
-    overflow: hidden;
     padding: 16px 18px;
     border: 1px solid color-mix(in srgb, var(--color-primary-600) 18%, var(--color-border));
     border-radius: 16px;
@@ -404,13 +408,13 @@ const submitCreate = () => {
 .account-summary::before {
     content: "";
     position: absolute;
-    top: -30px;
-    right: -30px;
+    top: 0;
+    right: 0;
     width: 110px;
     height: 110px;
     border-radius: 50%;
     background: radial-gradient(
-        circle,
+        circle at 80% 20%,
         color-mix(in srgb, var(--color-primary-600) 16%, transparent),
         transparent 70%
     );

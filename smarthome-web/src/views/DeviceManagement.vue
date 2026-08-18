@@ -779,18 +779,12 @@ const handleRailSync = () => {
 }
 
 .delete-confirm-button:disabled svg {
-    animation: delete-dialog-spin 900ms linear infinite;
+    animation: spin 900ms linear infinite;
 }
 
 button:disabled {
     cursor: default;
     opacity: 0.55;
-}
-
-@keyframes delete-dialog-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 @media (max-width: 1180px) {
@@ -1115,13 +1109,7 @@ button:disabled {
 }
 
 .batch-delete-confirm:disabled svg {
-    animation: batch-delete-spin 900ms linear infinite;
-}
-
-@keyframes batch-delete-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 900ms linear infinite;
 }
 
 /* === 日志查看弹窗 === */
