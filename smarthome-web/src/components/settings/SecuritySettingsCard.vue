@@ -27,7 +27,7 @@ const logsDialogVisible = ref(false);
 <template>
     <SettingsSectionCard id="security" icon="security" title="安全" tone="danger">
         <div class="grid gap-2">
-            <SettingsField icon="lock" label="修改密码" description="定期更新密码，保护账户安全" tone="danger">
+            <SettingsField icon="key" label="修改密码" description="定期更新密码，保护账户安全" tone="danger">
                 <button
                     class="sf-secondary-btn"
                     type="button"
@@ -38,10 +38,10 @@ const logsDialogVisible = ref(false);
                     修改密码 <SvgIcon name="chevron-right" size="sm" />
                 </button>
             </SettingsField>
-            <SettingsField icon="security" label="双重认证" :description="security.twoFactorEnabled ? '额外验证保护已开启' : '建议开启额外身份验证'" tone="danger">
+            <SettingsField icon="fingerprint" label="双重认证" :description="security.twoFactorEnabled ? '额外验证保护已开启' : '建议开启额外身份验证'" tone="danger">
                 <BaseSwitch v-model="security.twoFactorEnabled" />
             </SettingsField>
-            <SettingsField icon="device-management" label="登录设备" description="查看并管理已记录的登录终端" tone="danger">
+            <SettingsField icon="smartphone" label="登录设备" description="查看并管理已记录的登录终端" tone="danger">
                 <button
                     class="sf-secondary-btn"
                     type="button"

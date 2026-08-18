@@ -163,7 +163,7 @@ const submitCreate = () => {
         <div class="account-summary">
             <img
                 v-if="visibleAvatarUrl"
-                class="h-14 w-14 shrink-0 rounded-full object-cover"
+                class="account-summary-avatar shrink-0 rounded-full object-cover"
                 :src="visibleAvatarUrl"
                 :alt="form.name"
                 @error="avatarLoadError = true"
@@ -181,7 +181,8 @@ const submitCreate = () => {
                     >{{ form.email || "未设置邮箱" }}</span
                 >
                 <span
-                    class="mt-1 block text-xs text-[var(--color-text-tertiary)]"
+                    class="account-household-summary block truncate text-xs text-[var(--color-text-tertiary)]"
+                    :title="fullAddress"
                 >
                     {{ householdSummary }}
                 </span>
@@ -193,7 +194,7 @@ const submitCreate = () => {
             type="button"
             @click="openDialog"
         >
-            <span class="entry-icon"><SvgIcon name="account" /></span>
+            <span class="entry-icon"><SvgIcon name="edit" /></span>
             <span class="entry-copy">
                 <strong>账户信息</strong>
                 <small>查看与编辑个人资料、家庭及所在时区</small>
@@ -388,15 +389,16 @@ const submitCreate = () => {
 .current-account {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 }
 
 /* 账户与家庭：首页卡片式布局，模块色柔和渐变背景 */
 .account-summary {
     position: relative;
-    padding: 16px 18px;
+    min-height: 58px;
+    padding: 9px 12px;
     border: 1px solid color-mix(in srgb, var(--color-primary-600) 18%, var(--color-border));
-    border-radius: 16px;
+    border-radius: 14px;
     background: linear-gradient(
         135deg,
         color-mix(in srgb, var(--color-primary-600) 8%, var(--color-card-bg)),
@@ -410,8 +412,8 @@ const submitCreate = () => {
     position: absolute;
     top: 0;
     right: 0;
-    width: 110px;
-    height: 110px;
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
     background: radial-gradient(
         circle at 80% 20%,
@@ -423,6 +425,17 @@ const submitCreate = () => {
 
 .account-summary > div.min-w-0 {
     position: relative;
+}
+
+.account-summary-avatar,
+.account-avatar-large {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+}
+
+.account-household-summary {
+    margin-top: 2px;
 }
 
 .settings-entry-button {
@@ -516,10 +529,7 @@ const submitCreate = () => {
 }
 
 .account-avatar-large {
-    width: 56px;
-    height: 56px;
-    flex: 0 0 56px;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .current-account span,

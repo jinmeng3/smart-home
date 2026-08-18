@@ -57,7 +57,7 @@ export const settingsSections: SettingsSectionConfig[] = [
         shortLabel: "Home",
         group: "service",
         groupLabel: "智能服务",
-        icon: "platform",
+        icon: "home-assistant",
         tone: "orange",
     },
     {

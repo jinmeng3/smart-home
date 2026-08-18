@@ -166,7 +166,7 @@ const submit = async () => {
         width="680px"
         title="添加模型"
         description="添加新的模型服务配置，不会自动切换当前模型"
-        icon="platform"
+        icon="new-device"
         tone="orange"
         body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"

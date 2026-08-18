@@ -39,7 +39,7 @@ const runBackup = (type: "manual" | "auto") => {
                     {{ backup.lastBackupTime }}
                 </strong>
             </SettingsField>
-            <SettingsField icon="backup" label="备份历史" :description="`共 ${settingsStore.backupHistory.length} 条本地记录`" tone="success">
+            <SettingsField icon="history" label="备份历史" :description="`共 ${settingsStore.backupHistory.length} 条本地记录`" tone="success">
                 <div class="flex gap-2">
                     <button class="sf-secondary-btn" type="button" @click="runBackup('manual')">
                         立即备份

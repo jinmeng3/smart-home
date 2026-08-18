@@ -118,7 +118,7 @@ const confirmRemove = async () => {
         width="820px"
         title="管理模型"
         description="查看并维护模型连接，默认模型将用于新的智能对话"
-        icon="platform"
+        icon="sliders"
         tone="orange"
         body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"
@@ -139,7 +139,7 @@ const confirmRemove = async () => {
                 </div>
             </article>
         </div>
-        <div v-else class="empty-state"><span><SvgIcon name="platform" /></span><strong>还没有模型</strong><p>关闭窗口后使用“添加模型”创建第一个模型配置。</p></div>
+        <div v-else class="empty-state"><span><SvgIcon name="database" /></span><strong>还没有模型</strong><p>关闭窗口后使用“添加模型”创建第一个模型配置。</p></div>
 
         <template #footer>
             <footer class="dialog-footer"><span>当前默认：{{ activeModel?.name ?? "未配置" }}</span><BaseButton @click="emit('update:modelValue', false)">完成</BaseButton></footer>

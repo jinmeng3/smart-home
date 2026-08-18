@@ -117,7 +117,8 @@ const applySettings = async () => {
 <template>
     <SettingsSectionCard id="ai" icon="ai" title="智能助手" tone="indigo">
         <label class="settings-field">
-            <span>模型选择</span>
+            <span class="settings-field-icon is-indigo"><SvgIcon name="ai" size="sm" /></span>
+            <span class="settings-field-label">模型选择</span>
             <select
                 v-model="ai.model"
                 class="settings-input"
@@ -136,15 +137,18 @@ const applySettings = async () => {
             </select>
         </label>
         <div class="settings-field">
-            <span>低风险操作自动执行</span
+            <span class="settings-field-icon is-indigo"><SvgIcon name="check" size="sm" /></span>
+            <span class="settings-field-label">低风险操作自动执行</span
             ><BaseSwitch v-model="ai.autoExecuteLowRisk" />
         </div>
         <div class="settings-field">
-            <span>高风险操作二次确认</span
+            <span class="settings-field-icon is-indigo"><SvgIcon name="security" size="sm" /></span>
+            <span class="settings-field-label">高风险操作二次确认</span
             ><BaseSwitch v-model="ai.confirmHighRisk" />
         </div>
         <div class="settings-field">
-            <span>模型高级参数</span>
+            <span class="settings-field-icon is-indigo"><SvgIcon name="sliders" size="sm" /></span>
+            <span class="settings-field-label">模型高级参数</span>
             <BaseButton plain variant="primary" @click="openDialog"
                 >更多设置</BaseButton
             >
