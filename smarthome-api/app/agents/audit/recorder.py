@@ -1,4 +1,5 @@
 import json
+import typing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,12 +14,29 @@ class AuditRecorder:
     def __init__(self, log_dir: str | Path = DEFAULT_AUDIT_DIR):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        self._current_bucket: str | None = None
+        self._current_file: typing.IO | None = None
 
     def _write(self, entry: dict) -> None:
-        time_stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        """
+        将审计记录追加到当前小时桶的 .json 文件。
+        每个小时一个文件，避免单次写入产生大量小文件，
+        同一个桶内复用文件句柄，不重复 open/close。
+        文件名示例：audit_20260418_14.json
+        """
+        bucket = datetime.now(timezone.utc).strftime("%Y%m%d_%H")
         line = json.dumps(entry, ensure_ascii=False, default=str)
-        with open(self.log_dir / f"{time_stamp}.json", "w", encoding="utf-8") as f:
-            f.write(line + "\n")
+        if bucket != self._current_bucket:
+            if self._current_file is not None:
+                self._current_file.close()
+            self._current_file = open(  # noqa: SIM115  # 有意保持文件句柄打开跨多次写入
+                self.log_dir / f"audit_{bucket}.json", "a", encoding="utf-8"
+            )
+            self._current_bucket = bucket
+        # _current_file 在此处保证为 not None（刚打开或已有）
+        assert self._current_file is not None
+        self._current_file.write(line + "\n")
+        self._current_file.flush()
 
     def record_run_start(self, context: AgentContext, run_id: str) -> None:
         entry = {

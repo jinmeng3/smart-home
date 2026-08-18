@@ -42,9 +42,6 @@ class Settings(BaseSettings):
         """兼容逗号分隔与 JSON 数组两种 env 写法：
         SUPPORTED_AI_PROVIDERS=openai,deepseek
         SUPPORTED_AI_PROVIDERS=["openai","deepseek"]
-
-        先尝试 JSON 解析（pydantic-settings 对 list 的默认值），
-        失败（如纯逗号字符串）再按逗号拆分。
         """
         if not isinstance(value, str):
             return value
@@ -72,7 +69,7 @@ class Settings(BaseSettings):
     )
 
     # Agent 审计日志
-    audit_dir: str = "app/agent_audit"
+    audit_dir: str = "agent_audit"
 
     # Agent 生产化配置
     agent_rate_limit_per_minute: int = Field(
