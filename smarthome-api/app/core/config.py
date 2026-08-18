@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,30 @@ class Settings(BaseSettings):
     max_cache_size: int = Field(default=100, ge=1)
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     model_max_retries: int = Field(default=2, ge=0, le=5)
+
+    @field_validator("supported_ai_providers", mode="before")
+    @classmethod
+    def split_providers(cls, value):
+        """兼容逗号分隔与 JSON 数组两种 env 写法：
+        SUPPORTED_AI_PROVIDERS=openai,deepseek
+        SUPPORTED_AI_PROVIDERS=["openai","deepseek"]
+
+        先尝试 JSON 解析（pydantic-settings 对 list 的默认值），
+        失败（如纯逗号字符串）再按逗号拆分。
+        """
+        if not isinstance(value, str):
+            return value
+        stripped = value.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            import json as _json
+
+            try:
+                parsed = _json.loads(stripped)
+                if isinstance(parsed, list):
+                    return parsed
+            except ValueError:
+                pass
+        return [v.strip() for v in value.split(",") if v.strip()]
 
     # 文件上传
     upload_dir: str = "app/uploads"

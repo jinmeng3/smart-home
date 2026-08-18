@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { computed, ref } from "vue";
+import { ElMessage } from "element-plus";
+import type { SecurityDevice } from "../../types/settings";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../common/ConfirmEntitySummary.vue";
 import { useSettingsStore } from "../../stores/settings";
-import "element-plus/theme-chalk/el-message-box.css";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -19,6 +21,7 @@ const devices = computed(() => settingsStore.securityMeta.devices);
 const trustedDeviceCount = computed(
     () => devices.value.filter((device) => device.trusted).length,
 );
+const pendingRevokeDevice = ref<SecurityDevice | null>(null);
 
 const closeDialog = () => {
     emit("update:modelValue", false);
@@ -28,28 +31,18 @@ const toggleDeviceTrust = (deviceId: number, trusted: boolean) => {
     settingsStore.updateDeviceTrust(deviceId, trusted);
 };
 
-const revokeDevice = async (deviceId: number) => {
+const revokeDevice = (deviceId: number) => {
     const device = devices.value.find((item) => item.id === deviceId);
+    if (!device || device.current) return;
+    pendingRevokeDevice.value = device;
+};
 
-    if (!device || device.current) {
-        return;
-    }
-
-    try {
-        await ElMessageBox.confirm(
-            `确认移除 ${device.name}？`,
-            "移除登录设备",
-            {
-                confirmButtonText: "移除",
-                cancelButtonText: "取消",
-                type: "warning",
-            },
-        );
-        settingsStore.revokeSecurityDevice(deviceId);
-        ElMessage.success("设备已移除");
-    } catch {
-        // User cancelled.
-    }
+const confirmRevoke = () => {
+    const device = pendingRevokeDevice.value;
+    if (!device) return;
+    settingsStore.revokeSecurityDevice(device.id);
+    pendingRevokeDevice.value = null;
+    ElMessage.success("设备已移除");
 };
 </script>
 
@@ -61,6 +54,7 @@ const revokeDevice = async (deviceId: number) => {
         description="管理当前账户已记录的登录设备"
         icon="device-management"
         tone="teal"
+        body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"
     >
 
@@ -158,6 +152,24 @@ const revokeDevice = async (deviceId: number) => {
             </footer>
         </template>
     </BaseSmartModal>
+
+    <ConfirmActionDialog
+        v-if="pendingRevokeDevice"
+        :model-value="true"
+        title="移除登录设备"
+        description="移除后，该设备将无法再访问当前账户。"
+        confirm-text="移除"
+        warning="移除后需重新登录才能恢复访问。"
+        @confirm="confirmRevoke"
+        @update:model-value="!$event && (pendingRevokeDevice = null)"
+    >
+        <ConfirmEntitySummary
+            icon="device-management"
+            :title="pendingRevokeDevice.name"
+            :description="pendingRevokeDevice.location"
+            color="var(--color-danger)"
+        />
+    </ConfirmActionDialog>
 </template>
 
 <style scoped>
@@ -269,8 +281,8 @@ const revokeDevice = async (deviceId: number) => {
 }
 
 .device-item:hover {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
+    border-color: var(--color-teal-border);
+    background: var(--tone-teal-soft);
 }
 
 .device-main,
@@ -306,8 +318,8 @@ const revokeDevice = async (deviceId: number) => {
 }
 
 .device-badge-current {
-    color: var(--color-primary-700);
-    background: var(--color-primary-50);
+    color: var(--tone-teal);
+    background: var(--tone-teal-soft);
 }
 
 .device-badge-trusted {
@@ -323,11 +335,11 @@ const revokeDevice = async (deviceId: number) => {
 .device-summary {
     align-content: start;
     gap: 12px;
-    border-color: var(--color-primary-200);
+    border-color: var(--color-teal-border);
     background: linear-gradient(
         160deg,
         var(--color-card-bg),
-        var(--color-primary-50)
+        var(--tone-teal-soft)
     );
 }
 

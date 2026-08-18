@@ -158,7 +158,6 @@ const progressPercent = computed(() => {
     border: 1px solid var(--color-border-default);
     border-radius: 12px;
     box-shadow: none;
-    max-height: 45vh;
 }
 
 .directory-header {
@@ -177,24 +176,7 @@ const progressPercent = computed(() => {
 }
 
 .directory-scroll {
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
     padding: 6px 14px 10px;
-    flex: 1 1 auto;
-}
-
-.directory-scroll::-webkit-scrollbar {
-    width: 3px;
-}
-
-.directory-scroll::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: transparent;
-}
-
-.directory-scroll:hover::-webkit-scrollbar-thumb {
-    background: var(--color-border);
 }
 
 .directory-list {

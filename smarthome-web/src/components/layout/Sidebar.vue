@@ -232,12 +232,12 @@ const isGroupActive = (group: NavigationGroup) =>
                 class="min-w-0 sidebar-detail"
             >
                 <strong
-                    class="block truncate text-lg font-extrabold text-[var(--color-primary-700)]"
+                    class="block truncate text-2xl font-extrabold text-[var(--color-primary-700)]"
                 >
                     Orion
                 </strong>
                 <span
-                    class="block truncate text-[11px] font-semibold text-[var(--color-text-tertiary)]"
+                    class="block truncate text-sm font-semibold text-[var(--color-text-tertiary)]"
                 >
                     Home Assistant
                 </span>

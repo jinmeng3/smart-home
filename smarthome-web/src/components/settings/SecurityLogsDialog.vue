@@ -28,6 +28,7 @@ const closeDialog = () => {
         description="查看最近的本地安全变更"
         icon="log"
         tone="primary"
+        body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"
     >
 

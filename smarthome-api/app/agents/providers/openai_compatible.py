@@ -13,9 +13,8 @@ class OpenAICompatibleProvider(Provider):
     auth: ProviderAuth
     supported_api: tuple[str, ...] = ("openai-completions", "openai-responses")
 
-    def __init__(self, provider_id: str, name: str, settings: Settings):
+    def __init__(self, provider_id: str, settings: Settings):
         self.id = provider_id
-        self.name = name
         self.auth = ProviderAuth(api_key=True)
         self._settings = settings
 

@@ -159,6 +159,7 @@ const applySettings = async () => {
         description="调整回复的创造性和长度上限。"
         icon="ai"
         tone="indigo"
+        body-tone="neutral"
         title="模型高级设置"
         width="medium"
         @cancel="requestClose"
@@ -445,7 +446,7 @@ const applySettings = async () => {
     place-items: center;
     border-radius: 9px;
     background: var(--color-primary-50);
-    color: var(--color-primary-600);
+    color: var(--tone-indigo);
 }
 .token-unit {
     color: var(--color-text-tertiary);

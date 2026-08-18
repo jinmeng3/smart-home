@@ -167,7 +167,7 @@ const handleAction = (key: string) => {
 .rail-detail-block {
     display: grid;
     gap: 12px;
-    padding: 14px 14px 0;
+    padding: 14px;
 }
 
 .rail-detail-content {

@@ -105,17 +105,17 @@ const alertCount = computed(() => store.alertCount);
             </template>
 
             <template #default>
-                <template v-if="hasConversation">
-                    <div class="rail-task-sticky">
+                <div class="assistant-rail-content">
+                    <div v-if="hasConversation" class="rail-task-sticky">
                         <TaskContextCard />
                     </div>
-                </template>
 
-                <div class="rail-card-list grid gap-2.5">
-                    <ScheduleCard />
-                    <DeviceListCard :highlight-names="relatedDeviceNames" />
-                    <EnergyCard />
-                    <SecurityCard />
+                    <div class="rail-card-list grid gap-2.5">
+                        <ScheduleCard />
+                        <DeviceListCard :highlight-names="relatedDeviceNames" />
+                        <EnergyCard />
+                        <SecurityCard />
+                    </div>
                 </div>
             </template>
         </BaseCollapsibleRail>
@@ -189,15 +189,20 @@ const alertCount = computed(() => store.alertCount);
 }
 
 /* 任务卡吸顶 */
+.assistant-rail-content {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+}
+
 .rail-task-sticky {
     position: sticky;
     top: 0;
     z-index: 3;
-    margin-bottom: 12px;
 }
 
 .rail-card-list {
-    padding-top: 10px;
+    min-width: 0;
 }
 
 .rail-card-list > :deep(section) {

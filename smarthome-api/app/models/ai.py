@@ -38,6 +38,21 @@ class AIModel(Base):
     )
     api_key: Mapped[str] = mapped_column(Text, nullable=True, comment="API 密钥")
     parameters: Mapped[dict] = mapped_column(JSON, default=dict, comment="模型参数")
+    reasoning: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="0", comment="是否支持思考/推理"
+    )
+    thinking_level_map: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, comment="思考等级映射 {off/low/medium/...: 供应商取值或 null}"
+    )
+    context_window: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, comment="上下文窗口 tokens"
+    )
+    cost: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, comment="$/百万tokens {input,output,cacheRead,cacheWrite,tiers?}"
+    )
+    headers: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, comment="附加请求头"
+    )
     compat: Mapped[dict | None] = mapped_column(
         JSON, nullable=True, comment="兼容配置（按 api 协议校验）"
     )
@@ -78,3 +93,8 @@ class AIModel(Base):
         onupdate=func.now(),
         comment="更新时间",
     )
+
+    @property
+    def has_api_key(self) -> bool:
+        """仅暴露密钥是否已配置，绝不序列化密钥内容。"""
+        return bool(self.api_key)

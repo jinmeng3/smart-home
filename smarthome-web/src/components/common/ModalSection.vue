@@ -1,10 +1,12 @@
 <script setup lang="ts">
 withDefaults(
     defineProps<{
+        tone?: string;
         title?: string;
         description?: string;
     }>(),
     {
+        tone: "",
         title: "",
         description: "",
     },
@@ -12,9 +14,12 @@ withDefaults(
 </script>
 
 <template>
-    <section class="smart-modal-section">
+    <section
+        class="smart-modal-section"
+        :style="tone ? { '--section-tone': tone } : undefined"
+    >
         <header v-if="title || description" class="smart-modal-section-header">
-            <h3 v-if="title">{{ title }}</h3>
+            <h3 v-if="title" :class="{ 'has-tone': tone }">{{ title }}</h3>
             <p v-if="description">{{ description }}</p>
         </header>
         <slot />
@@ -24,47 +29,32 @@ withDefaults(
 <style scoped>
 .smart-modal-section {
     min-width: 0;
-    border: 1px solid var(--color-border-default);
-    border-radius: 16px;
-    padding: 18px;
-    background: var(--color-surface-subtle);
-    transition:
-        border-color 180ms var(--motion-ease),
-        box-shadow 180ms var(--motion-ease),
-        transform 180ms var(--motion-ease);
-}
-
-.smart-modal-section:hover {
-    border-color: var(--color-primary-200);
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
+    border: 1px solid
+        color-mix(in srgb, var(--section-tone, var(--color-primary-600)) 16%, var(--color-border-subtle));
+    border-radius: 13px;
+    background: var(--color-card-bg);
+    padding: 14px;
 }
 
 .smart-modal-section-header {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .smart-modal-section-header h3 {
     color: var(--color-text-primary);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 800;
-    line-height: 1.25;
+    line-height: 1.3;
+}
+
+.smart-modal-section-header h3.has-tone {
+    color: var(--section-tone);
 }
 
 .smart-modal-section-header p {
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--color-text-tertiary);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .smart-modal-section {
-        transition-duration: 1ms;
-    }
-
-    .smart-modal-section:hover {
-        transform: none;
-    }
 }
 </style>

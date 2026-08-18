@@ -9,7 +9,9 @@ import {
     watch,
 } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
 import AccountFamilyCard from "../components/settings/AccountFamilyCard.vue";
 import AiAssistantSettingsCard from "../components/settings/AiAssistantSettingsCard.vue";
 import AppearanceSettingsCard from "../components/settings/AppearanceSettingsCard.vue";
@@ -52,6 +54,35 @@ const accountFieldErrors = ref<Record<string, string>>({});
 /** 成员添加表单的字段级错误 */
 const memberFieldErrors = ref<Record<string, string>>({});
 
+/* === 集中式确认弹窗 === */
+interface ConfirmRequest {
+    tone: "warning" | "danger";
+    title: string;
+    description: string;
+    confirmText: string;
+    cancelText?: string;
+    warning: string;
+    footerHint?: string;
+    summary?: { icon: string; title: string; description?: string; color: string };
+    onConfirm: () => void | Promise<void>;
+}
+const confirmRequest = ref<ConfirmRequest | null>(null);
+const confirmLoading = ref(false);
+const runConfirm = async () => {
+    const request = confirmRequest.value;
+    if (!request || confirmLoading.value) return;
+    confirmLoading.value = true;
+    try {
+        await request.onConfirm();
+        confirmRequest.value = null;
+    } catch {
+        // 业务异常已由调用方处理，保持弹窗关闭
+        confirmRequest.value = null;
+    } finally {
+        confirmLoading.value = false;
+    }
+};
+
 /* === 移动端分区标签（从统一配置生成） === */
 const mobileSections = computed(() =>
     settingsSections.map((s) => ({ id: s.id, label: s.shortLabel })),
@@ -73,34 +104,29 @@ const closeMoreActions = (event: MouseEvent) => {
 };
 
 /* === 恢复默认确认 === */
-const confirmReset = async () => {
-    try {
-        await ElMessageBox.confirm(
-            "此操作将重置以下设置为出厂默认值：<br><br>" +
-                "• 界面外观（主题、语言、时区）<br>" +
-                "• 智能助手配置（模型参数、自动执行规则）<br>" +
-                "• Home Assistant 接入凭证将清空<br>" +
-                "• 通知与安全偏好<br><br>" +
-                "<strong>账户与家庭信息不受影响。</strong>",
-            "恢复默认设置",
-            {
-                confirmButtonText: "确认恢复",
-                cancelButtonText: "取消",
-                type: "warning",
-                dangerouslyUseHTMLString: true,
-                confirmButtonClass: "el-button--danger",
-            },
-        );
-        settingsStore.resetSettings();
-        syncAccountForm();
-        syncIntegrationSnapshot();
-        syncPreferencesSnapshot();
-        ElMessage.success("已恢复默认设置");
-    } catch {
-        // 用户取消
-    } finally {
-        moreActionsOpen.value = false;
-    }
+const confirmReset = () => {
+    confirmRequest.value = {
+        tone: "danger",
+        title: "恢复默认设置",
+        description: "以下配置将恢复为出厂默认值：界面外观、智能助手配置、Home Assistant 接入凭证、通知与安全偏好。",
+        confirmText: "确认恢复",
+        warning: "此操作不可撤销；账户与家庭信息不受影响。",
+        footerHint: "确认后会立即执行重置",
+        summary: {
+            icon: "refresh",
+            title: "恢复默认设置",
+            description: "界面 · 智能助手 · 接入凭证 · 通知与安全",
+            color: "var(--color-danger)",
+        },
+        onConfirm: () => {
+            settingsStore.resetSettings();
+            syncAccountForm();
+            syncIntegrationSnapshot();
+            syncPreferencesSnapshot();
+            ElMessage.success("已恢复默认设置");
+            moreActionsOpen.value = false;
+        },
+    };
 };
 
 // 滚动监听（单 IntersectionObserver 实例）
@@ -397,24 +423,7 @@ const saveAccountFamily = async () => {
     }
 };
 
-const switchHousehold = async (householdId: number) => {
-    // 有未保存的账户/家庭修改时先确认，避免切换家庭丢编辑
-    if (accountDirty.value) {
-        try {
-            await ElMessageBox.confirm(
-                "切换家庭将丢弃当前未保存的账户与家庭修改，确定继续吗？",
-                "切换家庭",
-                {
-                    confirmButtonText: "继续切换",
-                    cancelButtonText: "取消",
-                    type: "warning",
-                },
-            );
-        } catch {
-            return;
-        }
-    }
-
+const performSwitchHousehold = async (householdId: number) => {
     switchingHousehold.value = true;
     try {
         await householdStore.switchHousehold(householdId);
@@ -430,6 +439,31 @@ const switchHousehold = async (householdId: number) => {
     } finally {
         switchingHousehold.value = false;
     }
+};
+
+const switchHousehold = (householdId: number) => {
+    // 有未保存的账户/家庭修改时先确认，避免切换家庭丢编辑
+    if (accountDirty.value) {
+        confirmRequest.value = {
+            tone: "warning",
+            title: "切换家庭",
+            description: "切换家庭将丢弃当前未保存的账户与家庭修改。",
+            confirmText: "继续切换",
+            cancelText: "取消",
+            warning: "未保存的修改将被丢弃，且无法恢复。",
+            footerHint: "可先保存再切换",
+            summary: {
+                icon: "home",
+                title: "切换活动家庭",
+                description: "未保存的账户与家庭修改将被丢弃",
+                color: "var(--color-warning)",
+            },
+            onConfirm: () => performSwitchHousehold(householdId),
+        };
+        return;
+    }
+
+    void performSwitchHousehold(householdId);
 };
 
 const createHousehold = async (payload: { name: string; address: string }) => {
@@ -479,17 +513,6 @@ const saveAllSettings = async () => {
     }
 
     await Promise.all(tasks);
-};
-
-const syncDevices = async () => {
-    try {
-        await settingsStore.syncDevices();
-        ElMessage.success("设备同步完成");
-    } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "WebSocket 状态刷新失败"),
-        );
-    }
 };
 
 const uploadAvatar = async (file: File) => {
@@ -555,14 +578,24 @@ const clearMemberFieldErrors = () => {
     memberFieldErrors.value = {};
 };
 
-const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
+const performUpdateMemberRole = async (membershipId: number, role: HouseholdRole) => {
+    loadingMemberId.value = membershipId;
+    try {
+        await settingsStore.updateMemberRole(membershipId, role);
+        ElMessage.success("成员角色已更新");
+    } catch (error) {
+        ElMessage.error(getErrorMessage(error, "成员角色更新失败"));
+    } finally {
+        loadingMemberId.value = null;
+    }
+};
+
+const updateMemberRole = (membershipId: number, role: HouseholdRole) => {
     const member = householdMembers.value.find(
         (item) => item.membershipId === membershipId,
     );
 
-    if (!member) {
-        return;
-    }
+    if (!member) return;
 
     if (member.role === "admin" && role === "member" && adminCount.value <= 1) {
         ElMessage.error("家庭至少保留一名管理员");
@@ -571,43 +604,46 @@ const updateMemberRole = async (membershipId: number, role: HouseholdRole) => {
 
     // 高影响操作（管理员降级）二次确认
     if (member.role === "admin" && role === "member") {
-        try {
-            await ElMessageBox.confirm(
-                `确认将 ${member.name} 的角色从管理员降为普通成员？`,
-                "修改角色",
-                {
-                    confirmButtonText: "确认降级",
-                    cancelButtonText: "取消",
-                    type: "warning",
-                },
-            );
-        } catch {
-            return;
-        }
+        confirmRequest.value = {
+            tone: "warning",
+            title: "修改角色",
+            description: `将 ${member.name} 的角色从管理员降为普通成员。`,
+            confirmText: "确认降级",
+            cancelText: "取消",
+            warning: "降级后该成员将无法管理本家庭。",
+            footerHint: "可在成员管理中改回",
+            summary: {
+                icon: "members",
+                title: member.name,
+                description: `管理员 → 普通成员`,
+                color: "var(--color-warning)",
+            },
+            onConfirm: () => performUpdateMemberRole(membershipId, role),
+        };
+        return;
     }
 
-    loadingMemberId.value = membershipId;
+    void performUpdateMemberRole(membershipId, role);
+};
 
+const performRemoveMember = async (membershipId: number) => {
+    loadingMemberId.value = membershipId;
     try {
-        await settingsStore.updateMemberRole(membershipId, role);
-        ElMessage.success("成员角色已更新");
+        await settingsStore.deleteHouseholdMember(membershipId);
+        ElMessage.success("成员已移除");
     } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "成员角色更新失败"),
-        );
+        ElMessage.error(getErrorMessage(error, "成员移除失败"));
     } finally {
         loadingMemberId.value = null;
     }
 };
 
-const removeMember = async (membershipId: number) => {
+const removeMember = (membershipId: number) => {
     const member = householdMembers.value.find(
         (item) => item.membershipId === membershipId,
     );
 
-    if (!member) {
-        return;
-    }
+    if (!member) return;
 
     if (membershipId === currentMemberId.value) {
         ElMessage.error("不能移除当前用户");
@@ -619,28 +655,22 @@ const removeMember = async (membershipId: number) => {
         return;
     }
 
-    try {
-        await ElMessageBox.confirm(`确认移除 ${member.name}？`, "移除成员", {
-            confirmButtonText: "移除",
-            cancelButtonText: "取消",
-            type: "warning",
-        });
-    } catch {
-        return;
-    }
-
-    loadingMemberId.value = membershipId;
-
-    try {
-        await settingsStore.deleteHouseholdMember(membershipId);
-        ElMessage.success("成员已移除");
-    } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "成员移除失败"),
-        );
-    } finally {
-        loadingMemberId.value = null;
-    }
+    confirmRequest.value = {
+        tone: "danger",
+        title: "移除成员",
+        description: `移除后，${member.name} 将无法访问本家庭。`,
+        confirmText: "移除",
+        cancelText: "取消",
+        warning: "移除后需重新邀请才能恢复访问。",
+        footerHint: "此操作不可撤销",
+        summary: {
+            icon: "members",
+            title: member.name,
+            description: member.email,
+            color: "var(--color-danger)",
+        },
+        onConfirm: () => performRemoveMember(membershipId),
+    };
 };
 </script>
 
@@ -758,7 +788,6 @@ const removeMember = async (membershipId: number) => {
                         <HomeAssistantSettingsCard
                             :ai="settings.aiAssistant"
                             :home-assistant="settings.homeAssistant"
-                            @sync="syncDevices"
                         />
                     </div>
                 </section>
@@ -865,34 +894,66 @@ const removeMember = async (membershipId: number) => {
             </template>
 
             <template #default>
-                <SettingsDirectory
-                    :active="activeSection"
-                    :total-items="8"
-                    :completed-items="completedConfigCount"
-                    @select="selectSection"
-                />
-                <ConfigHealthCard
-                    :security="settings.security"
-                    :backup="settings.backup"
-                    :notifications="settings.notifications"
-                    :account-status="settings.summary.accountStatus"
-                    :home-assistant-connected="settings.summary.homeAssistantStatus === 'online'"
-                    @navigate="selectSection"
-                />
-                <SettingsSummaryPanel
-                    :summary="settings.summary"
-                    :member-count="householdMembers.length"
-                />
-                <SettingsSuggestionPanel
-                    :suggestions="settings.suggestions"
-                    @select="selectSection"
-                />
+                <div class="settings-rail-card-list">
+                    <SettingsDirectory
+                        :active="activeSection"
+                        :total-items="8"
+                        :completed-items="completedConfigCount"
+                        @select="selectSection"
+                    />
+                    <ConfigHealthCard
+                        :security="settings.security"
+                        :backup="settings.backup"
+                        :notifications="settings.notifications"
+                        :account-status="settings.summary.accountStatus"
+                        :home-assistant-connected="settings.summary.homeAssistantStatus === 'online'"
+                        @navigate="selectSection"
+                    />
+                    <SettingsSummaryPanel
+                        :summary="settings.summary"
+                        :member-count="householdMembers.length"
+                    />
+                    <SettingsSuggestionPanel
+                        :suggestions="settings.suggestions"
+                        @select="selectSection"
+                    />
+                </div>
             </template>
         </BaseCollapsibleRail>
+
+        <ConfirmActionDialog
+            v-if="confirmRequest"
+            :model-value="true"
+            :tone="confirmRequest.tone"
+            :title="confirmRequest.title"
+            :description="confirmRequest.description"
+            :confirm-text="confirmRequest.confirmText"
+            :cancel-text="confirmRequest.cancelText"
+            :loading="confirmLoading"
+            :warning="confirmRequest.warning"
+            :footer-hint="confirmRequest.footerHint"
+            @confirm="runConfirm"
+            @update:model-value="!$event && (confirmRequest = null)"
+        >
+            <ConfirmEntitySummary
+                v-if="confirmRequest.summary"
+                :icon="confirmRequest.summary.icon"
+                :title="confirmRequest.summary.title"
+                :description="confirmRequest.summary.description"
+                :color="confirmRequest.summary.color"
+            />
+        </ConfirmActionDialog>
     </div>
 </template>
 
 <style scoped>
+/* === 右侧导航卡片列表 === */
+.settings-rail-card-list {
+    display: grid;
+    gap: 16px;
+    padding: 12px;
+}
+
 /* === 左栏滚动区 === */
 .settings-scroll-area {
     container-name: settings-content;

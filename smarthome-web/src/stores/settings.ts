@@ -19,7 +19,10 @@ import {
   updateAIModel as apiUpdateAIModel,
   createAIModel as apiCreateAIModel,
   activateAIModel as apiActivateAIModel,
+  updateAIModelById as apiUpdateAIModelById,
+  deleteAIModelById as apiDeleteAIModelById,
   type AIModelRead,
+  type AIModelPayload,
 } from "../api/aiModel";
 import { ApiError } from "../api/client";
 import { useHouseholdStore } from "./households";
@@ -401,6 +404,43 @@ export const useSettingsStore = defineStore("settings", () => {
     };
   };
 
+  const refreshAIModels = async () => {
+    aiModels.value = await apiListAIModels();
+    return aiModels.value;
+  };
+
+  const createModel = async (payload: AIModelPayload) => {
+    const created = await apiCreateAIModel(payload);
+    await refreshAIModels();
+    if (created.is_active) await loadAIModel();
+    return created;
+  };
+
+  const updateModel = async (modelId: number, payload: AIModelPayload) => {
+    const updated = await apiUpdateAIModelById(modelId, payload);
+    await refreshAIModels();
+    if (updated.is_active) await loadAIModel();
+    return updated;
+  };
+
+  const activateModel = async (modelId: number) => {
+    const activeModel = await apiActivateAIModel(modelId);
+    await loadAIModel();
+    return activeModel;
+  };
+
+  const removeModel = async (modelId: number) => {
+    await apiDeleteAIModelById(modelId);
+    await refreshAIModels();
+    if (!aiModels.value.length) {
+      settings.value.aiAssistant.model = "";
+      settings.value.homeAssistant.serviceUrl = "";
+      settings.value.homeAssistant.tokenConfigured = false;
+      settings.value.homeAssistant.websocketStatus = "disconnected";
+      settings.value.summary.homeAssistantStatus = "offline";
+    }
+  };
+
   const uploadAccountAvatar = async (file: File) => {
     const response = await apiUploadAvatar(file);
     settings.value.account.avatarUrl = response.avatar_url;
@@ -575,20 +615,24 @@ export const useSettingsStore = defineStore("settings", () => {
 
   return {
     aiModels,
+    activateModel,
     accountHomeLoaded,
     addHouseholdMember,
     applyHouseholdContext,
     createHousehold,
+    createModel,
     deleteAccountAvatar,
     deleteHouseholdMember,
     getExportSettings,
     importSettings,
     loadAIModel,
+    refreshAIModels,
     loadUserPreferences,
     loadAccountHome,
     loading,
     resetAccountState,
     resetSettings,
+    removeModel,
     saveAccountHome,
     saveAIModel,
     selectAIModel,
@@ -603,6 +647,7 @@ export const useSettingsStore = defineStore("settings", () => {
     syncDevices,
     securityMeta,
     updateBackupTime,
+    updateModel,
     updateDeviceTrust,
     updateMemberRole,
     uploadAccountAvatar,

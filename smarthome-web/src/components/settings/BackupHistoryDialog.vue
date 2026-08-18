@@ -40,6 +40,7 @@ const runBackup = (type: "manual" | "auto") => {
         description="查看最近生成的本地备份记录"
         icon="backup"
         tone="green"
+        body-tone="neutral"
         @update:model-value="close"
     >
         <div class="backup-dialog-body">
@@ -176,8 +177,8 @@ const runBackup = (type: "manual" | "auto") => {
 }
 
 .backup-action:hover {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
+    border-color: var(--color-success-border);
+    background: var(--color-success-soft);
     box-shadow: 0 4px 12px var(--color-focus-ring);
     transform: translateY(-1px);
 }
@@ -198,11 +199,11 @@ const runBackup = (type: "manual" | "auto") => {
     gap: 12px;
     align-content: start;
     padding: 16px;
-    border-color: var(--color-primary-200);
+    border-color: var(--color-success-border);
     background: linear-gradient(
         160deg,
         var(--color-card-bg),
-        var(--color-primary-50)
+        var(--color-success-soft)
     );
 }
 
@@ -241,8 +242,8 @@ const runBackup = (type: "manual" | "auto") => {
 }
 
 .backup-history-item:hover {
-    border-color: var(--color-primary-200);
-    background: var(--color-primary-50);
+    border-color: var(--color-success-border);
+    background: var(--color-success-soft);
 }
 
 .backup-history-head {

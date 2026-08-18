@@ -1,5 +1,4 @@
 import base64
-import binascii
 import hashlib
 from functools import lru_cache
 
@@ -7,7 +6,6 @@ from app.core.config import get_settings
 from cryptography.fernet import Fernet, InvalidToken
 
 _ENVELOPE_PREFIX = "enc:v1:"
-_LEGACY_PREFIX = "enc:"
 _FERNET_PREFIX = "gAAAA"
 _MAX_PLAINTEXT_LENGTH = 4096
 _MAX_CIPHERTEXT_LENGTH = 16384
@@ -72,7 +70,7 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
         decrypt_api_key(value)  # 验证完整性，防止损坏密文继续入库
         return value
     if is_encrypted(value):
-        # 保存配置时顺带把历史裸 Fernet/XOR 密文迁移到当前版本和密钥。
+        # 保存配置时顺带把历史裸 Fernet 密文迁移到当前版本和密钥。
         value = decrypt_api_key(value) or ""
         if not value:
             return None
@@ -86,7 +84,7 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
 def decrypt_api_key(ciphertext: str | None) -> str | None:
     """解密 API Key。
 
-    支持当前 ``enc:v1:``、历史裸 Fernet token 和旧版 ``enc:`` XOR 数据。
+    支持当前 ``enc:v1:`` 与历史裸 Fernet token。
     开发环境暂时兼容迁移前明文；生产环境遇到明文时拒绝使用。
     """
     if ciphertext is None:
@@ -105,9 +103,6 @@ def decrypt_api_key(ciphertext: str | None) -> str | None:
     if value.startswith(_FERNET_PREFIX):
         return _decrypt_fernet_token(value)
 
-    if value.startswith(_LEGACY_PREFIX):
-        return _decrypt_legacy_xor(value)
-
     if get_settings().production_mode:
         raise ApiKeyCryptoError("检测到未加密的 API Key，请重新保存模型配置")
     return value
@@ -118,7 +113,7 @@ def is_encrypted(value: str | None) -> bool:
     if not value:
         return False
     candidate = value.strip()
-    return candidate.startswith((_ENVELOPE_PREFIX, _FERNET_PREFIX, _LEGACY_PREFIX))
+    return candidate.startswith((_ENVELOPE_PREFIX, _FERNET_PREFIX))
 
 
 def _decrypt_fernet_token(token: str) -> str:
@@ -138,34 +133,6 @@ def _decrypt_fernet_token(token: str) -> str:
             raise ApiKeyCryptoError("API Key 密文内容不是有效文本") from exc
 
     raise ApiKeyCryptoError("API Key 密文无法解密，请重新保存模型配置")
-
-
-def _decrypt_legacy_xor(ciphertext: str) -> str:
-    """只读兼容旧版 XOR 数据；新数据禁止使用该弱加密格式。"""
-    payload = ciphertext.removeprefix(_LEGACY_PREFIX)
-    try:
-        encrypted = base64.urlsafe_b64decode(payload.encode("ascii"))
-    except (ValueError, UnicodeEncodeError, binascii.Error) as exc:
-        raise ApiKeyCryptoError("旧版 API Key 密文格式无效") from exc
-
-    settings = get_settings()
-    secrets = [settings.jwt_secret_key]
-    current_secret = (settings.api_key_encryption_secret or "").strip()
-    if current_secret and current_secret != settings.jwt_secret_key:
-        secrets.append(current_secret)
-
-    for secret in secrets:
-        digest = hashlib.sha256(secret.encode("utf-8")).digest()
-        for key in (digest, base64.urlsafe_b64encode(digest)):
-            decoded = bytes(
-                byte ^ key[index % len(key)] for index, byte in enumerate(encrypted)
-            )
-            try:
-                return decoded.decode("utf-8")
-            except UnicodeDecodeError:
-                continue
-
-    raise ApiKeyCryptoError("旧版 API Key 密文无法解密，请重新保存模型配置")
 
 
 def clear_crypto_cache() -> None:

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
     defineProps<{
-        variant?: "default" | "primary" | "danger" | "text";
+        variant?: "default" | "primary" | "danger" | "warning" | "text";
         size?: "sm" | "md";
         plain?: boolean;
         loading?: boolean;
@@ -144,6 +144,22 @@ withDefaults(
         var(--color-danger)
     );
     box-shadow: 0 8px 18px var(--color-danger-soft);
+}
+
+.base-button.is-warning {
+    border-color: var(--color-warning);
+    background: var(--color-warning);
+    color: var(--color-text-on-primary);
+}
+
+.base-button.is-warning:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-warning) 82%, black);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-warning) 82%, black),
+        var(--color-warning)
+    );
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--color-warning) 24%, transparent);
 }
 
 .base-button-spinner {

@@ -126,65 +126,28 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
         description="查看家庭成员，并管理每位成员的访问权限"
         icon="members"
         tone="teal"
+        body-tone="neutral"
         :close-button-disabled="submitting || loadingMemberId !== null"
     >
-        <div class="member-toolbar">
-            <input
-                v-model="memberEmail"
-                class="settings-input w-full"
-                :class="{ 'has-error': props.fieldErrors?.email }"
-                :disabled="!canManage || submitting"
-                placeholder="成员邮箱"
-                @input="emit('clearFieldErrors')"
-            />
-            <small
-                v-if="props.fieldErrors?.email"
-                class="member-field-error"
-                >{{ props.fieldErrors.email }}</small
-            >
-            <select
-                v-model="memberRole"
-                class="settings-input w-full px-2"
-                :disabled="!canManage || submitting"
-            >
-                <option value="admin">管理员</option>
-                <option value="member">成员</option>
-            </select>
-            <button
-                class="secondary-button min-w-0 px-2"
-                :disabled="!canManage || submitting"
-                type="button"
-                @click="addMember"
-            >
-                {{ submitting ? "添加中" : "添加" }}
-            </button>
-        </div>
+        <div class="member-dialog-layout">
+            <section class="member-invite-card">
+                <header><div><strong>添加成员</strong><small>通过邮箱邀请成员并设置初始角色</small></div><span>{{ canManage ? "可管理" : "只读" }}</span></header>
+                <div class="member-toolbar">
+                    <input v-model="memberEmail" class="settings-input w-full" :class="{ 'has-error': props.fieldErrors?.email }" :disabled="!canManage || submitting" placeholder="成员邮箱" @input="emit('clearFieldErrors')" />
+                    <select v-model="memberRole" class="settings-input w-full px-2" :disabled="!canManage || submitting"><option value="admin">管理员</option><option value="member">成员</option></select>
+                    <button class="secondary-button min-w-0 px-2" :disabled="!canManage || submitting" type="button" @click="addMember">{{ submitting ? "添加中" : "添加" }}</button>
+                    <small v-if="props.fieldErrors?.email" class="member-field-error">{{ props.fieldErrors.email }}</small>
+                </div>
+                <p v-if="readonlyMessage" class="readonly-message">{{ readonlyMessage }}</p>
+            </section>
 
-        <p
-            v-if="readonlyMessage"
-            class="mb-3 text-xs font-medium text-[var(--color-text-tertiary)]"
-        >
-            {{ readonlyMessage }}
-        </p>
-
-        <div class="member-list">
-            <MemberListItem
-                v-for="member in members"
-                :key="member.id"
-                :can-edit="canManage"
-                :can-remove="canRemove(member)"
-                :member="member"
-                :remove-loading="loadingMemberId === member.id"
-                :role-loading="loadingMemberId === member.id"
-                @remove="emit('removeMember', member.id)"
-                @update-role="(_, role) => updateMemberRole(member, role)"
-            />
-            <div
-                v-if="!members.length"
-                class="rounded-lg border border-dashed border-[var(--color-border-default)] py-10 text-center text-sm text-[var(--color-text-tertiary)]"
-            >
-                暂无成员
-            </div>
+            <section class="member-list-card">
+                <header><div><strong>家庭成员</strong><small>管理成员角色与访问权限</small></div><span>{{ members.length }} 人</span></header>
+                <div class="member-list">
+                    <MemberListItem v-for="member in members" :key="member.id" :can-edit="canManage" :can-remove="canRemove(member)" :member="member" :remove-loading="loadingMemberId === member.id" :role-loading="loadingMemberId === member.id" @remove="emit('removeMember', member.id)" @update-role="(_, role) => updateMemberRole(member, role)" />
+                    <div v-if="!members.length" class="rounded-lg border border-dashed border-[var(--color-border-default)] py-10 text-center text-sm text-[var(--color-text-tertiary)]">暂无成员</div>
+                </div>
+            </section>
         </div>
 
         <template #footer>
@@ -261,7 +224,7 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
 }
 
 .member-summary strong {
-    color: var(--color-primary-600);
+    color: var(--tone-teal);
     font-size: 18px;
 }
 
@@ -274,22 +237,108 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
     justify-self: end;
     padding: 6px 9px;
     border-radius: 999px;
-    color: var(--color-primary-600);
+    color: var(--tone-teal);
     font-size: 11px;
     font-weight: 700;
     background: var(--color-ai-soft);
+}
+
+.member-dialog-layout {
+    display: grid;
+    gap: 14px;
+    border: 1px solid color-mix(
+        in srgb,
+        var(--tone-teal) 12%,
+        var(--color-border-subtle)
+    );
+    border-radius: 16px;
+    background: linear-gradient(
+        155deg,
+        color-mix(in srgb, var(--tone-teal-soft) 48%, var(--color-card-bg)),
+        color-mix(in srgb, var(--tone-teal-soft) 72%, var(--color-card-bg))
+    );
+    padding: 12px;
+}
+
+.member-invite-card,
+.member-list-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid color-mix(
+        in srgb,
+        var(--tone-teal) 18%,
+        var(--color-border)
+    );
+    border-radius: 14px;
+    background: color-mix(
+        in srgb,
+        var(--color-card-bg) 96%,
+        var(--tone-teal-soft)
+    );
+    padding: 14px;
+}
+
+.member-invite-card > header,
+.member-list-card > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.member-invite-card > header > div,
+.member-list-card > header > div {
+    display: grid;
+    gap: 3px;
+}
+
+.member-invite-card header strong,
+.member-list-card header strong {
+    color: var(--color-text-primary);
+    font-size: 13px;
+}
+
+.member-invite-card header small,
+.member-list-card header small {
+    color: var(--color-text-tertiary);
+    font-size: 10px;
+}
+
+.member-invite-card header > span,
+.member-list-card header > span {
+    border-radius: 999px;
+    background: var(--tone-teal-soft);
+    padding: 3px 8px;
+    color: var(--tone-teal);
+    font-size: 10px;
+    font-weight: 800;
 }
 
 .member-toolbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 112px 84px;
     gap: 8px;
-    margin: 0 0 16px;
-    padding: 14px;
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.member-toolbar .settings-input {
     background: var(--color-card-bg);
-    box-shadow: var(--shadow-card);
+}
+
+.member-toolbar .settings-input:focus {
+    border-color: var(--tone-teal);
+    box-shadow: 0 0 0 3px color-mix(
+        in srgb,
+        var(--tone-teal) 14%,
+        transparent
+    );
 }
 
 .member-toolbar .settings-input.has-error {
@@ -308,7 +357,19 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
     max-height: 390px;
     gap: 8px;
     overflow-y: auto;
-    padding: 0 20px 18px;
+    padding: 0 3px 0 0;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.readonly-message {
+    margin: 0;
+    border-radius: 9px;
+    background: var(--tone-teal-soft);
+    padding: 8px 10px;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
 }
 
 @media (max-width: 640px) {

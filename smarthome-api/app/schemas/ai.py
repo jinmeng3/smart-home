@@ -24,6 +24,7 @@ class AIModelRead(BaseModel):
     temperature: float
     max_tokens: int
     is_active: bool
+    has_api_key: bool
     description: str | None
     created_at: datetime
     updated_at: datetime | None
@@ -68,9 +69,11 @@ class AIModelCreate(BaseModel):
 class AIModelUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     provider: str | None = Field(default=None, min_length=1, max_length=50)
+    api: str | None = None
     api_endpoint: str | None = Field(default=None, min_length=1, max_length=200)
     api_key: str | None = None
     parameters: dict | None = None
+    compat: dict | None = None
     temperature: float | None = Field(default=None, ge=0, le=2)
     max_tokens: int | None = Field(default=None, gt=0)
     is_active: bool | None = None
@@ -86,6 +89,37 @@ class AIModelUpdate(BaseModel):
         if not self.model_fields_set:
             raise ValueError("至少需要提供一个更新字段")
         return self
+
+
+class AIModelTestRequest(BaseModel):
+    """测试连接：使用前端表单的暂存配置（不落库）。"""
+
+    name: str = Field(min_length=1, max_length=100)
+    provider: str = Field(min_length=1, max_length=50)
+    api: str = "openai-completions"
+    api_endpoint: str = Field(min_length=1, max_length=200)
+    api_key: str | None = None
+    parameters: dict = Field(default_factory=dict)
+    compat: dict | None = None
+    temperature: float = Field(default=0.7, ge=0, le=2)
+    max_tokens: int = Field(default=1024, gt=0, le=8192)
+
+    @field_validator("name", "provider", "api_endpoint", "api_key", mode="before")
+    @classmethod
+    def strip_text(cls, value: str | None) -> str | None:
+        return value.strip() if isinstance(value, str) else value
+
+
+class AIModelTestResult(BaseModel):
+    ok: bool
+    latency_ms: int | None = None
+    message: str
+
+
+class AIModelProviderRead(BaseModel):
+    """受支持的供应商"""
+
+    id: str
 
 
 class ModelCostRates(BaseModel):

@@ -8,6 +8,8 @@ withDefaults(
         modelValue: boolean;
         title: string;
         description: string;
+        /** danger = 危险红色（删除类）；warning = 警告橙色（高影响但非破坏） */
+        tone?: "warning" | "danger";
         confirmText?: string;
         cancelText?: string;
         loading?: boolean;
@@ -15,6 +17,7 @@ withDefaults(
         footerHint?: string;
     }>(),
     {
+        tone: "danger",
         confirmText: "确认删除",
         cancelText: "取消",
         loading: false,
@@ -42,7 +45,9 @@ const close = () => {
         :model-value="modelValue"
         :title="title"
         :description="description"
-        icon="warning"
+        :icon="tone === 'warning' ? 'warning' : 'warning'"
+        :tone="tone === 'warning' ? 'orange' : 'red'"
+        body-tone="neutral"
         width="520px"
         @confirm="emit('confirm')"
         @update:model-value="$event ? undefined : close()"
@@ -52,7 +57,10 @@ const close = () => {
         </div>
 
         <template #warning>
-            <p class="confirm-action-warning">
+            <p
+                class="confirm-action-warning"
+                :class="`is-${tone}`"
+            >
                 <SvgIcon name="warning" size="sm" />
                 {{ warning }}
             </p>
@@ -69,8 +77,8 @@ const close = () => {
                         {{ cancelText }}
                     </BaseButton>
                     <BaseButton
-                        variant="danger"
                         :loading="loading"
+                        :variant="tone === 'warning' ? 'warning' : 'danger'"
                         @click="emit('confirm')"
                     >
                         <SvgIcon v-if="!loading" name="warning" size="sm" />
@@ -95,6 +103,14 @@ const close = () => {
     margin: 0;
 }
 
+.confirm-action-warning.is-danger {
+    color: var(--color-danger);
+}
+
+.confirm-action-warning.is-warning {
+    color: var(--color-warning);
+}
+
 .confirm-action-footer {
     display: flex;
     align-items: center;
@@ -112,5 +128,4 @@ const close = () => {
     display: flex;
     gap: 10px;
 }
-
 </style>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
+import ConfirmActionDialog from "../common/ConfirmActionDialog.vue";
+import ConfirmEntitySummary from "../common/ConfirmEntitySummary.vue";
 import { useSettingsStore } from "../../stores/settings";
-import "element-plus/theme-chalk/el-message-box.css";
 
 interface PasswordForm {
     newPassword: string;
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 }>();
 
 const settingsStore = useSettingsStore();
+/** 关闭前未保存时，是否弹确认（仅本地弹窗状态） */
+const discardConfirmOpen = ref(false);
 const form = reactive<PasswordForm>({
     newPassword: "",
     confirmPassword: "",
@@ -101,44 +104,25 @@ watch(
     { immediate: true },
 );
 
-const requestClose = async () => {
+const requestClose = () => {
     if (hasChanges.value) {
-        try {
-            await ElMessageBox.confirm(
-                "当前修改尚未保存，确定关闭吗？",
-                "放弃修改",
-                {
-                    confirmButtonText: "关闭",
-                    cancelButtonText: "继续编辑",
-                    type: "warning",
-                },
-            );
-        } catch {
-            return;
-        }
+        discardConfirmOpen.value = true;
+        return;
     }
-
     emit("update:modelValue", false);
 };
 
-const confirmBeforeClose = async () => {
+const confirmBeforeClose = () => {
     if (hasChanges.value) {
-        try {
-            await ElMessageBox.confirm(
-                "当前修改尚未保存，确定关闭吗？",
-                "放弃修改",
-                {
-                    confirmButtonText: "关闭",
-                    cancelButtonText: "继续编辑",
-                    type: "warning",
-                },
-            );
-        } catch {
-            return false;
-        }
+        discardConfirmOpen.value = true;
+        return false;
     }
-
     return true;
+};
+
+const confirmDiscard = () => {
+    discardConfirmOpen.value = false;
+    emit("update:modelValue", false);
 };
 
 const savePassword = async () => {
@@ -168,6 +152,7 @@ const savePassword = async () => {
         description="更新当前账户的本地安全记录"
         icon="lock"
         tone="purple"
+        body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"
     >
         <div class="password-dialog-body">
@@ -268,6 +253,27 @@ const savePassword = async () => {
             </footer>
         </template>
     </BaseSmartModal>
+
+    <ConfirmActionDialog
+        v-if="discardConfirmOpen"
+        :model-value="true"
+        tone="warning"
+        title="放弃修改"
+        description="当前密码修改尚未保存，关闭后修改将丢失。"
+        confirm-text="关闭"
+        cancel-text="继续编辑"
+        warning="未保存的密码修改将被丢弃。"
+        footer-hint="可返回继续编辑"
+        @confirm="confirmDiscard"
+        @update:model-value="!$event && (discardConfirmOpen = false)"
+    >
+        <ConfirmEntitySummary
+            icon="lock"
+            title="修改密码"
+            description="新密码尚未保存"
+            color="var(--color-warning)"
+        />
+    </ConfirmActionDialog>
 </template>
 
 <style scoped>
@@ -357,7 +363,7 @@ const savePassword = async () => {
     top: 50%;
     right: 10px;
     translate: 0 -50%;
-    color: var(--color-primary-700);
+    color: var(--tone-purple);
     font-size: 12px;
     font-weight: 700;
 }
@@ -412,11 +418,11 @@ const savePassword = async () => {
     gap: 12px;
     align-content: start;
     padding: 16px;
-    border-color: var(--color-primary-200);
+    border-color: color-mix(in srgb, var(--tone-purple) 28%, var(--color-border));
     background: linear-gradient(
         160deg,
         var(--color-card-bg),
-        var(--color-primary-50)
+        var(--tone-purple-soft)
     );
 }
 

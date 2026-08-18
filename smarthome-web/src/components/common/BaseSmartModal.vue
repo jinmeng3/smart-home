@@ -48,6 +48,7 @@ interface SmartModalProps {
     dirtyText?: string;
     sheet?: boolean;
     bodyScrollable?: boolean;
+    bodyTone?: "subtle" | "neutral";
     tone?: "primary" | "indigo" | "orange" | "teal" | "green" | "purple" | "red";
 }
 
@@ -77,6 +78,7 @@ const props = withDefaults(defineProps<SmartModalProps>(), {
     dirtyText: "有尚未保存的更改",
     sheet: false,
     bodyScrollable: true,
+    bodyTone: "subtle",
     tone: "primary",
 });
 
@@ -225,7 +227,10 @@ onBeforeUnmount(() => {
                         :class="[
                             widthClass,
                             `tone-${tone}`,
-                            { 'is-sheet': sheet },
+                            {
+                                'is-sheet': sheet,
+                                'has-neutral-body': bodyTone === 'neutral',
+                            },
                         ]"
                         :style="widthStyle"
                         role="dialog"
@@ -454,6 +459,14 @@ onBeforeUnmount(() => {
     scrollbar-width: thin;
 }
 
+.smart-modal.has-neutral-body .smart-modal-body {
+    background: color-mix(
+        in srgb,
+        var(--color-card-bg) 94%,
+        var(--modal-accent-soft)
+    );
+}
+
 .smart-modal-body.is-scroll-locked {
     overflow: hidden;
 }
@@ -603,6 +616,32 @@ onBeforeUnmount(() => {
         var(--modal-accent)
     ) !important;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--modal-accent) 22%, transparent);
+}
+
+.smart-modal :deep(.base-button.is-primary:not(.is-plain)) {
+    border-color: var(--modal-accent);
+    background: var(--modal-accent);
+}
+
+.smart-modal :deep(.base-button.is-primary:not(.is-plain):hover:not(:disabled)) {
+    border-color: color-mix(in srgb, var(--modal-accent) 82%, black);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--modal-accent) 82%, black),
+        var(--modal-accent)
+    );
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--modal-accent) 20%, transparent);
+}
+
+.smart-modal :deep(.base-button.is-plain.is-primary) {
+    border-color: var(--modal-accent);
+    color: var(--modal-accent);
+}
+
+.smart-modal :deep(.base-button.is-plain.is-primary:hover:not(:disabled)) {
+    border-color: var(--modal-accent);
+    background: var(--modal-accent-soft);
+    color: var(--modal-accent);
 }
 
 .smart-modal :deep(.dialog-header h2) {

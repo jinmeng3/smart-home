@@ -15,9 +15,6 @@ from langchain_core.language_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
 
-# 未显式填写协议时使用的默认值（服务端兜底）
-DEFAULT_API_PROTOCOL = "openai-completions"
-
 
 class ModelsRegistry:
     """Models 容器（前台）——按 `provider` + `api` 双条件路由到对应 Provider。
@@ -35,11 +32,14 @@ class ModelsRegistry:
         self._register_defaults()
 
     def _register_defaults(self):
-        for provider_id, name in (
-            ("openai", "OpenAI"),
-            ("deepseek", "DeepSeek"),
-        ):
-            self.register(OpenAICompatibleProvider(provider_id, name, self._settings))
+
+        for provider_id in self._settings.supported_ai_providers:
+            self.register(
+                OpenAICompatibleProvider(
+                    provider_id,
+                    self._settings,
+                )
+            )
 
     def register(self, provider: Provider) -> None:
         self._providers[provider.id.lower()] = provider
@@ -48,7 +48,7 @@ class ModelsRegistry:
         provider = self._providers.get((cfg.provider or "").strip().lower())
         if provider is None:
             raise UnsupportedModelProvider(f"不支持模型提供商: {cfg.provider}")
-        api = (cfg.api or DEFAULT_API_PROTOCOL).strip().lower()
+        api = (cfg.api or "openai-completions").strip().lower()
         if api not in provider.supported_api:
             raise ModelProtocolMismatch(
                 f"{cfg.provider} 不支持协议 {api}（支持: {', '.join(provider.supported_api)}）"
