@@ -1,3 +1,5 @@
+import type { ApiProtocol } from "../api/aiModel";
+
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type FontSize = 'small' | 'medium' | 'large'
 export type WebSocketStatus = 'connected' | 'disconnected'
@@ -39,6 +41,8 @@ export interface HomeAssistantSettings {
   serviceUrl: string
   accessToken: string
   parameters: string
+  apiProtocol: ApiProtocol
+  compat: string
   tokenConfigured: boolean
   websocketStatus: WebSocketStatus
 }

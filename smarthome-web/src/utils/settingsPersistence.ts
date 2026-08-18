@@ -42,6 +42,8 @@ const defaultSettings: SettingsState = {
     serviceUrl: "https://home.example.com:8123",
     accessToken: "",
     parameters: "{}",
+    apiProtocol: "openai-completions",
+    compat: "",
     tokenConfigured: false,
     websocketStatus: "disconnected",
   },

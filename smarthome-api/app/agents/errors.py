@@ -28,6 +28,12 @@ class ModelToolCallingUnsupported(AgentError):
     http_status = 400
 
 
+class ModelProtocolMismatch(AgentError):
+    code = "MODEL_PROTOCOL_MISMATCH"
+    http_status = 400
+    retryable = False
+
+
 class AgentContextError(AgentError):
     code = "AGENT_CONTEXT_UNAUTHORIZED"
     http_status = 403

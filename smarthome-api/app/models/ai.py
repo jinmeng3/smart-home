@@ -27,11 +27,20 @@ class AIModel(Base):
         String(100), nullable=False, unique=True, comment="模型名称"
     )
     provider: Mapped[str] = mapped_column(String(50), comment="模型提供商")
+    api: Mapped[str] = mapped_column(
+        String(40),
+        nullable=False,
+        server_default="openai-completions",
+        comment="API 协议：openai-completions / openai-responses / anthropic-messages / bedrock-converse-stream",
+    )
     api_endpoint: Mapped[str] = mapped_column(
         String(200), nullable=False, comment="API 地址"
     )
     api_key: Mapped[str] = mapped_column(Text, nullable=True, comment="API 密钥")
     parameters: Mapped[dict] = mapped_column(JSON, default=dict, comment="模型参数")
+    compat: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, comment="兼容配置（按 api 协议校验）"
+    )
     temperature: Mapped[float] = mapped_column(
         Float,
         default=0.7,

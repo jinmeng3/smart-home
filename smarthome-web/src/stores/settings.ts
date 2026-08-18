@@ -216,6 +216,8 @@ export const useSettingsStore = defineStore("settings", () => {
         serviceUrl: model.api_endpoint,
         accessToken: "",
         parameters: JSON.stringify(model.parameters ?? {}, null, 2),
+        apiProtocol: model.api ?? "openai-completions",
+        compat: JSON.stringify(model.compat ?? {}, null, 2),
         tokenConfigured: model.is_active,
         websocketStatus: model.is_active ? "connected" : "disconnected",
       };
@@ -315,10 +317,11 @@ export const useSettingsStore = defineStore("settings", () => {
       parameters = {};
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: modelName || settings.value.aiAssistant.model,
       provider: modelProvider || modelName || settings.value.aiAssistant.model,
       api_endpoint: homeAssistant.serviceUrl,
+      api: homeAssistant.apiProtocol,
       ...(homeAssistant.accessToken
         ? { api_key: homeAssistant.accessToken }
         : {}),
@@ -332,6 +335,17 @@ export const useSettingsStore = defineStore("settings", () => {
       ),
       description: settings.value.aiAssistant.language,
     };
+
+    // compat 可选：仅在填写且为合法 JSON 时提交，空串/非法 JSON 不发送
+    try {
+      const compat = JSON.parse(homeAssistant.compat || "{}") as Record<
+        string,
+        unknown
+      >;
+      if (Object.keys(compat).length > 0) payload.compat = compat;
+    } catch {
+      // 非法 JSON 不阻塞保存，忽略 compat
+    }
     const models = await apiListAIModels();
     const response = models.length
       ? await apiUpdateAIModel(payload)
@@ -351,6 +365,8 @@ export const useSettingsStore = defineStore("settings", () => {
       serviceUrl: response.api_endpoint,
       accessToken: "",
       parameters: JSON.stringify(response.parameters ?? {}, null, 2),
+      apiProtocol: response.api ?? "openai-completions",
+      compat: JSON.stringify(response.compat ?? {}, null, 2),
       tokenConfigured: response.is_active,
       websocketStatus: response.is_active ? "connected" : "disconnected",
     };

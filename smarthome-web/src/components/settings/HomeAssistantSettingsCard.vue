@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
 import { ElInput, ElInputNumber, ElMessage } from "element-plus";
+import type { ApiProtocol } from "../../api/aiModel";
 import type {
     AiAssistantSettings,
     HomeAssistantSettings,
@@ -27,12 +28,22 @@ const emit = defineEmits<{
 const showApiKey = ref(false);
 const dialogVisible = ref(false);
 const saving = ref(false);
+const apiProtocolOptions = [
+    { value: "openai-completions", label: "OpenAI Completions" },
+    { value: "openai-responses", label: "OpenAI Responses" },
+    { value: "azure-openai-responses", label: "Azure OpenAI Responses" },
+    { value: "openai-codex-responses", label: "OpenAI Codex" },
+    { value: "anthropic-messages", label: "Anthropic Messages" },
+    { value: "bedrock-converse-stream", label: "AWS Bedrock" },
+] as const;
 const draft = reactive({
     name: "",
     provider: "",
     endpoint: "",
     apiKey: "",
+    apiProtocol: "openai-completions" as ApiProtocol,
     parameters: "{}",
+    compat: "",
     temperature: 0.7,
     maxTokens: 4096,
     active: true,
@@ -63,7 +74,9 @@ const openParametersDialog = () => {
         provider: provider.value,
         endpoint: props.homeAssistant.serviceUrl,
         apiKey: "",
+        apiProtocol: props.homeAssistant.apiProtocol ?? "openai-completions",
         parameters: props.homeAssistant.parameters || "{}",
+        compat: props.homeAssistant.compat || "",
         temperature: props.ai.temperature,
         maxTokens: props.ai.maxTokens,
         active: connected.value,
@@ -88,7 +101,9 @@ const applyParameters = async () => {
     provider.value = draft.provider;
     props.homeAssistant.serviceUrl = draft.endpoint;
     props.homeAssistant.accessToken = draft.apiKey;
+    props.homeAssistant.apiProtocol = draft.apiProtocol;
     props.homeAssistant.parameters = draft.parameters || "{}";
+    props.homeAssistant.compat = draft.compat || "";
     props.homeAssistant.websocketStatus = draft.active ? "connected" : "disconnected";
     props.ai.temperature = draft.temperature;
     props.ai.maxTokens = draft.maxTokens;
@@ -162,6 +177,18 @@ const applyParameters = async () => {
                 </div>
                 <label class="modal-field"><span>API 地址 *</span><input v-model="draft.endpoint" class="settings-input" placeholder="https://api.example.com/v1" /></label>
                 <label class="modal-field">
+                    <span>API 协议</span>
+                    <select v-model="draft.apiProtocol" class="settings-input">
+                        <option
+                            v-for="opt in apiProtocolOptions"
+                            :key="opt.value"
+                            :value="opt.value"
+                        >
+                            {{ opt.label }}
+                        </option>
+                    </select>
+                </label>
+                <label class="modal-field">
                     <span>API Key</span>
                     <div class="relative">
                         <input
@@ -193,6 +220,15 @@ const applyParameters = async () => {
                         v-model="draft.parameters"
                         :autosize="{ minRows: 5, maxRows: 10 }"
                         placeholder='{"deployment":"smart-home-chat","api_version":"2026-01-01"}'
+                        type="textarea"
+                    />
+                </label>
+                <label class="modal-field">
+                    <span>兼容配置 JSON（可选）</span>
+                    <ElInput
+                        v-model="draft.compat"
+                        :autosize="{ minRows: 4, maxRows: 8 }"
+                        placeholder='{"thinking_format":"deepseek","max_tokens_field":"max_tokens"}'
                         type="textarea"
                     />
                 </label>
