@@ -79,7 +79,7 @@ const alertCount = computed(() => store.alertCount);
         <section
             :inert="!authStore.isAuthenticated"
             :aria-disabled="!authStore.isAuthenticated"
-            class="page-enter chat-section flex min-h-0 flex-col rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] shadow-soft"
+            class="chat-section flex min-h-0 flex-col rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-workspace-background)] shadow-soft"
         >
             <Header :compact="store.messages.length > 0" />
             <ChatWindow />
@@ -143,12 +143,6 @@ const alertCount = computed(() => store.alertCount);
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .app-page-layout {
-        transition: none;
-    }
-}
-
 /* === 折叠状态栏指示器（来自 AssistantRail） === */
 .rail-task-dot {
     width: 9px;
@@ -163,17 +157,7 @@ const alertCount = computed(() => store.alertCount);
 .rail-task-dot.is-active {
     background: var(--color-primary-500);
     box-shadow: 0 0 0 4px var(--color-focus-ring);
-    animation: rail-dot-pulse 1800ms ease-in-out infinite;
-}
-
-@keyframes rail-dot-pulse {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.45;
-    }
+    /* 任务进行中时显示静态状态点，不无限脉冲 */
 }
 
 .rail-alert-badge {
@@ -208,11 +192,5 @@ const alertCount = computed(() => store.alertCount);
 .rail-card-list > :deep(section) {
     border-color: var(--color-border-subtle);
     box-shadow: 0 3px 12px rgb(15 23 42 / 5%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .rail-task-dot.is-active {
-        animation: none;
-    }
 }
 </style>

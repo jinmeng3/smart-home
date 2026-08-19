@@ -219,11 +219,4 @@ const addOptions = computed(() => {
     opacity: 0;
     transform: translateY(-4px);
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .platform-menu-enter-active,
-    .platform-menu-leave-active {
-        transition-duration: 1ms;
-    }
-}
 </style>

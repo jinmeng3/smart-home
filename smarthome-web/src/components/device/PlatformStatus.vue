@@ -140,10 +140,6 @@ strong {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    article {
-        transition-duration: 1ms;
-    }
-
     article:hover {
         transform: none;
     }

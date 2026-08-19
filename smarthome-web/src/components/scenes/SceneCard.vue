@@ -79,6 +79,13 @@ const closeMoreMenu = () => {
                         {{ triggerText[scene.triggerType] }}
                     </span>
                     <span v-if="scene.recommended" class="scene-tag is-recommended">推荐</span>
+                    <span
+                        v-if="scene.sourceTemplateId"
+                        class="scene-tag is-source-template"
+                        title="来自场景模板"
+                    >
+                        模板
+                    </span>
                 </div>
             </div>
         </div>
@@ -316,6 +323,19 @@ h3 {
     color: var(--color-warning);
 }
 
+/* 模板来源标签：卡片入场时一次性突出显示 */
+.scene-tag.is-source-template {
+    background: var(--color-primary-100);
+    color: var(--color-primary-700);
+    animation: source-tag-pop 700ms var(--motion-ease) 1 both;
+}
+
+@keyframes source-tag-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    30% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 /* === 底部状态与操作 === */
 .scene-bottom-actions {
     display: flex;
@@ -523,21 +543,9 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .scene-card,
-    button {
-        animation-duration: 1ms;
-        animation-delay: 0ms !important;
-        transition-duration: 1ms;
-    }
-
     .scene-card:hover,
     .scene-run-button:not(:disabled):hover {
         transform: none;
-    }
-
-    .more-menu-enter-active,
-    .more-menu-leave-active {
-        transition-duration: 1ms;
     }
 }
 </style>

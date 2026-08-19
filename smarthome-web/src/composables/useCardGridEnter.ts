@@ -20,6 +20,7 @@ export interface CardGridEnterOptions {
  * - 减少动态效果（reduced / off）时跳过动画，元素直接呈现终态。
  * - 已入场元素通过 `WeakSet` 记忆，重复触发（如数据加载完成、展开/收起）
  *   时只对新出现的子元素播放动画。
+ * - 卡片 stagger 只在首次加载成功时执行，刷新和返回页面不重播。
  * - 作用域 context 在组件销毁时统一 `revert()`，无残留 Tween 或内联样式。
  *
  * @example
@@ -36,6 +37,8 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
     const animated = new WeakSet<Element>();
     /** 管理中的 gsap context，销毁时统一 revert */
     const contexts: gsap.Context[] = [];
+    /** 是否首次加载已执行过，刷新和返回页面不重播 */
+    let playedOnce = false;
 
     const findItems = (): Element[] => {
         const el = root.value;
@@ -56,9 +59,13 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
     /** 播放卡片网格 stagger 入场（需在数据渲染后调用） */
     const play = async () => {
         if (isReduced.value || !root.value) return;
+        if (playedOnce) return; // 刷新和返回页面不重播
         await nextTick();
         const items = findItems();
         if (!items.length) return;
+
+        // 控制整体 stagger 总时长不超过 420ms
+        const staggerDuration = Math.min(0.08, 0.42 / Math.max(items.length, 1));
 
         const ctx = gsap.context(() => {
             gsap.from(items, {
@@ -66,9 +73,10 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
                 y: 14,
                 duration: seconds.pageEnter,
                 ease: motionEase.ease,
-                stagger: 0.08,
+                stagger: staggerDuration,
                 overwrite: "auto",
                 onComplete: () => {
+                    playedOnce = true;
                     // 交还 CSS 控制：清除内联 transform/opacity，避免覆盖 hover 过渡
                     gsap.set(items, {
                         clearProps: "transform,opacity,visibility",
@@ -85,6 +93,11 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
         contexts.length = 0;
     };
 
+    /** 重置 playedOnce 状态，允许再次播放入场动画 */
+    const reset = () => {
+        playedOnce = false;
+    };
+
     onScopeDispose(() => {
         revert();
     });
@@ -96,9 +109,12 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
         play,
         /** 手动清理入场动画 */
         revert,
+        /** 重置已播放状态，允许再次播放 */
+        reset,
     } as {
         root: Ref<HTMLElement | null>;
         play: () => Promise<void>;
         revert: () => void;
+        reset: () => void;
     };
 };

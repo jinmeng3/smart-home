@@ -139,12 +139,6 @@ defineProps<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .device-stats-card {
-        animation-duration: 1ms;
-        animation-delay: 0ms !important;
-        transition-duration: 1ms;
-    }
-
     .device-stats-card:hover {
         transform: none;
     }

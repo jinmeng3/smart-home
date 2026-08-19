@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
@@ -17,6 +17,8 @@ const props = defineProps<{
     loading: boolean;
     dirty: boolean;
     switching: boolean;
+    /** 保存结果反馈：success / error / null，短暂显示后由父级清除 */
+    saveFeedback?: "success" | "error" | null;
 }>();
 
 const emit = defineEmits<{
@@ -55,6 +57,23 @@ const householdSummary = computed(
         [props.form.householdName, props.form.address]
             .filter(Boolean)
             .join(" · ") || "尚未设置家庭信息",
+);
+
+const dialogRef = ref<HTMLElement | null>(null);
+
+/* 字段错误出现时，自动定位首个错误字段（仅一次） */
+watch(
+    () => Object.keys(props.fieldErrors),
+    (keys) => {
+        if (!keys.length) return;
+        const field = keys[0];
+        void nextTick(() => {
+            const input = dialogRef.value?.querySelector<HTMLElement>(
+                `[data-field="${field}"]`,
+            );
+            input?.focus();
+        });
+    },
 );
 
 // 显示完整 householdSummary 文本，用于 title 属性
@@ -213,7 +232,7 @@ const submitCreate = () => {
         body-tone="neutral"
         :close-button-disabled="loading"
     >
-        <div class="account-dialog-layout">
+        <div ref="dialogRef" class="account-dialog-layout">
             <aside class="account-dialog-sidebar">
                 <section class="current-account">
                     <img v-if="visibleAvatarUrl" :src="visibleAvatarUrl" :alt="form.name" @error="avatarLoadError = true" />
@@ -241,6 +260,7 @@ const submitCreate = () => {
             <label class="account-field"
                 ><span>姓名</span
                 ><input
+                    data-field="name"
                     class="settings-input"
                     :class="{ 'has-error': props.fieldErrors.name }"
                     :value="form.name"
@@ -259,6 +279,7 @@ const submitCreate = () => {
             <label class="account-field"
                 ><span>邮箱</span
                 ><input
+                    data-field="email"
                     class="settings-input"
                     :class="{ 'has-error': props.fieldErrors.email }"
                     :value="form.email"
@@ -277,8 +298,9 @@ const submitCreate = () => {
             <label class="account-field"
                 ><span>家庭名称</span
                 ><input
+                    data-field="householdName"
                     class="settings-input"
-                    :class="{ 'has-error': props.fieldErrors.name }"
+                    :class="{ 'has-error': props.fieldErrors.householdName }"
                     :value="form.householdName"
                     @input="
                         updateField(
@@ -335,8 +357,9 @@ const submitCreate = () => {
                         关闭
                     </BaseButton>
                     <BaseButton
-                        :disabled="!dirty"
+                        :disabled="!dirty && !props.saveFeedback"
                         :loading="loading"
+                        :feedback="loading ? null : (props.saveFeedback ?? null)"
                         variant="primary"
                         @click="emit('save')"
                     >
@@ -588,12 +611,26 @@ const submitCreate = () => {
 
 .account-field .settings-input.has-error {
     border-color: var(--color-danger);
+    /* 错误提示只做一次短暂强调，不持续 shake */
+    animation: field-error-emphasis 140ms var(--motion-ease-out) 1;
 }
 
 .account-field .field-error {
     color: var(--color-danger);
     font-size: 12px;
     font-weight: 500;
+    /* 辅助文字一次淡入 */
+    animation: field-error-fade-in 200ms var(--motion-ease-out) 1 both;
+}
+
+@keyframes field-error-emphasis {
+    0% { box-shadow: 0 0 0 0 transparent; }
+    100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 12%, transparent); }
+}
+
+@keyframes field-error-fade-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* === 家庭切换器 === */

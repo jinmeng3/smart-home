@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useCardGridEnter } from "../composables/useCardGridEnter";
+import { useGsapFlip } from "../composables/useGsapFlip";
 import { ElMessage } from "element-plus";
 import { ApiError } from "../api/client";
 import { getErrorMessage } from "../utils/error";
@@ -94,6 +95,14 @@ watch(
         void playRoomGrid();
     },
 );
+
+/* === GSAP Flip 房间卡片增删重排 === */
+const roomGridRef = ref<HTMLElement | null>(null);
+const { capture: captureRoomGrid, flip: flipRoomGrid } = useGsapFlip({
+    container: roomGridRef,
+    itemSelector: ".room-grid > *",
+    duration: 240,
+});
 const online = computed(() =>
     rooms.value.reduce((sum, room) => sum + room.onlineCount, 0),
 );
@@ -285,7 +294,10 @@ const handleRoomCreated = async (
       themeColor: payload.themeColor,
       deviceIds: payload.deviceIds,
     });
+    // Flip：在数据变更前捕获当前布局
+    captureRoomGrid();
     rooms.value = [...rooms.value, room];
+    await flipRoomGrid();
     await selectRoom(room);
     activeDialog.value = null;
     ElMessage.success("房间已创建");
@@ -310,7 +322,10 @@ const { pending: roomDeleting, execute: confirmDeleteRoom } = useAsyncAction(
         if (!deletingRoom.value) return;
 
         await deleteRoom(deletingRoom.value.id);
+        // Flip：在数据变更前捕获当前布局
+        captureRoomGrid();
         rooms.value = rooms.value.filter((r) => r.id !== deletingRoom.value!.id);
+        await flipRoomGrid();
 
         if (selectedId.value === deletingRoom.value.id) {
             selectedId.value = rooms.value[0]?.id;
@@ -342,7 +357,7 @@ useAuthenticatedLoader(load);
 
 <template>
     <div class="app-page-layout">
-        <main ref="root" class="workspace page-shell page-enter">
+        <main ref="root" class="workspace page-shell">
             <PageHeader
                 title="房间控制"
                 description="房间设备与环境控制"
@@ -387,6 +402,7 @@ useAuthenticatedLoader(load);
 
             <TransitionGroup
                 v-if="rooms.length > 0"
+                ref="roomGridRef"
                 tag="section"
                 :class="['room-grid', { 'room-grid-expanded': roomGridExpanded }]"
                 name="room-grid"
@@ -412,21 +428,25 @@ useAuthenticatedLoader(load);
             </button>
 
             <div class="room-panel-wrapper">
-                <RoomControlPanel
-                    :rooms="rooms"
-                    :selected="selected"
-                    :loading="pageLoading || roomsLoading"
-                    :devices="selectedDevices"
-                    :environment="environment"
-                    :temperature="temperature"
-                    :active-category="activeCategory"
-                    :current-scene="selectedDetail?.currentScene ?? undefined"
-                    @select="selectRoom"
-                    @toggle="toggleDevice"
-                    @update:temperature="temperature = $event"
-                    @update:active-category="activeCategory = $event"
-                    @open="activeDialog = $event"
-                />
+                <!-- 切换房间时控制面板交叉切换：autoAlpha + x: 8；appear 只在首次展示时播放 -->
+                <Transition name="panel-switch" mode="out-in" appear>
+                    <RoomControlPanel
+                        :key="selected?.id ?? 'none'"
+                        :rooms="rooms"
+                        :selected="selected"
+                        :loading="pageLoading || roomsLoading"
+                        :devices="selectedDevices"
+                        :environment="environment"
+                        :temperature="temperature"
+                        :active-category="activeCategory"
+                        :current-scene="selectedDetail?.currentScene ?? undefined"
+                        @select="selectRoom"
+                        @toggle="toggleDevice"
+                        @update:temperature="temperature = $event"
+                        @update:active-category="activeCategory = $event"
+                        @open="activeDialog = $event"
+                    />
+                </Transition>
             </div>
         </main>
 
@@ -548,12 +568,10 @@ useAuthenticatedLoader(load);
 }
 
 /* TransitionGroup room-grid animations */
-/* 入场由 GSAP stagger 接管（useCardGridEnter），CSS 不再维护 nth-child 延迟表 */
+/* 入场由 GSAP stagger 接管（useCardGridEnter）；
+   位置变化由 GSAP Flip 接管（useGsapFlip），不再定义 .room-grid-move 过渡，避免双重动画 */
 .room-grid-leave-active {
     animation: room-grid-leave 180ms var(--motion-ease-in) both;
-}
-.room-grid-move {
-    transition: transform 280ms var(--motion-ease-out);
 }
 
 @keyframes room-grid-leave {
@@ -599,15 +617,11 @@ useAuthenticatedLoader(load);
     flex-direction: column;
 }
 
+/* Cross-fade for room panel switch（panel-enter 已由 appear 接管，只用于首次展示） */
 .room-panel-wrapper:deep(.quick-control) {
     flex: 0 0 auto;
     min-height: max-content;
     overflow: visible;
-}
-
-/* Cross-fade for room panel switch */
-.room-panel-wrapper:deep(.control-content) {
-    animation: panel-enter 240ms var(--motion-ease) both;
 }
 
 .room-empty-state {
@@ -737,12 +751,6 @@ useAuthenticatedLoader(load);
     .room-grid-leave-active {
         animation: none;
     }
-    .room-grid-move {
-        transition: none;
-    }
-    .room-panel-wrapper:deep(.control-content) {
-        animation: none;
-    }
     .room-panel-wrapper:deep(.quick-control) {
         transition: none;
     }
@@ -766,9 +774,27 @@ useAuthenticatedLoader(load);
     transform: translateY(6px);
 }
 
+/* === 切换房间时控制面板交叉切换（autoAlpha + x: 8） === */
+.panel-switch-leave-active {
+    transition: opacity 140ms var(--motion-ease-in), transform 140ms var(--motion-ease-in);
+}
+.panel-switch-enter-active {
+    transition: opacity 220ms var(--motion-ease-out), transform 220ms var(--motion-ease-out);
+}
+.panel-switch-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
+}
+.panel-switch-enter-from {
+    opacity: 0;
+    transform: translateX(-8px);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .stats-fade-leave-active,
-    .stats-fade-enter-active {
+    .stats-fade-enter-active,
+    .panel-switch-leave-active,
+    .panel-switch-enter-active {
         transition: none;
     }
 }
@@ -806,7 +832,7 @@ useAuthenticatedLoader(load);
     height: 7px;
     border-radius: 50%;
     background: var(--color-success);
-    animation: pulse-dot 2s var(--motion-ease) infinite;
+    /* 静态状态点，不无限脉冲 — 状态变化时通过颜色过渡表达反馈 */
 }
 
 .rail-mini-value {
@@ -839,11 +865,6 @@ useAuthenticatedLoader(load);
     color: #fff;
     font-size: 10px;
     font-weight: 900;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
 }
 
 @media (prefers-reduced-motion: reduce) {

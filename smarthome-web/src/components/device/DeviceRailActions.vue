@@ -150,9 +150,5 @@ svg.is-spinning {
     .rail-actions-grid button:active {
         transform: none;
     }
-
-    svg.is-spinning {
-        animation-duration: 1.5s;
-    }
 }
 </style>

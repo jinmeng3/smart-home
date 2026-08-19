@@ -306,22 +306,10 @@ onUnmounted(() => {
     opacity: 0;
 }
 
+/* 移动端侧栏抽屉：xPercent 滑入，从完全移出视口到原位 */
 .nav-slide-enter-from,
 .nav-slide-leave-to {
     opacity: 0;
-    transform: translateX(-24px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .app-shell {
-        transition-duration: 1ms;
-    }
-
-    .nav-fade-enter-active,
-    .nav-fade-leave-active,
-    .nav-slide-enter-active,
-    .nav-slide-leave-active {
-        transition-duration: 1ms;
-    }
+    transform: translateX(-100%);
 }
 </style>

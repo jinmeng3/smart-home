@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useHomeStore } from "../../stores/home";
+import { useColorEmphasis } from "../../composables/useColorEmphasis";
 import type { DashboardDevice } from "../../types/device";
 import SvgIcon from "../common/SvgIcon.vue";
 import {
@@ -17,10 +18,29 @@ const visibleDevices = computed(() => store.devices.slice(0, 6));
 
 const statusLabel = (device: DashboardDevice) =>
     getDeviceStatusLabel(device.status);
+
+/* === 设备字段变化：仅对变化字段做一次颜色强调 === */
+const deviceCardRef = ref<HTMLElement | null>(null);
+const deviceEmphasis = useColorEmphasis({ highlightColor: "var(--color-primary)" });
+watch(
+    () => store.devices.map((d) => `${d.id}:${d.value ?? d.status}`).join("|"),
+    () => {
+        void nextTick(() => {
+            const els = deviceCardRef.value?.querySelectorAll<HTMLElement>(
+                ".device-status",
+            );
+            if (els?.length) {
+                deviceEmphasis.registerElements(Array.from(els));
+                deviceEmphasis.emphasize();
+            }
+        });
+    },
+);
 </script>
 
 <template>
     <section
+        ref="deviceCardRef"
         class="motion-card rounded-lg border border-[var(--color-border-default)] bg-[var(--color-panel-background)] p-4"
     >
         <div class="mb-3 flex items-center justify-between gap-3">

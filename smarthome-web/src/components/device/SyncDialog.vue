@@ -6,6 +6,15 @@ import SvgIcon from "../common/SvgIcon.vue";
 
 type SyncPhase = "select" | "syncing" | "result";
 
+/** 同步 Timeline 步骤：连接平台 → 读取设备 → 更新状态 → 完成 */
+const syncSteps = [
+    { key: "connect", label: "连接平台" },
+    { key: "read", label: "读取设备" },
+    { key: "update", label: "更新状态" },
+    { key: "done", label: "完成" },
+] as const;
+type SyncStepKey = (typeof syncSteps)[number]["key"];
+
 const props = defineProps<{
     modelValue: boolean;
     platforms: {
@@ -26,15 +35,33 @@ const phase = ref<SyncPhase>("select");
 const selectedPlatform = ref("");
 const progress = ref(0);
 const syncResult = ref<{ updated: number; failed: number } | null>(null);
+/** 当前推进到的步骤下标 */
+const activeStepIndex = ref(0);
+let stepTimer: ReturnType<typeof setTimeout> | undefined;
 const connectedPlatforms = computed(() =>
     props.platforms.filter((platform) => platform.connected),
 );
+
+const stepState = (index: number) => {
+    if (index < activeStepIndex.value) return "completed";
+    if (index === activeStepIndex.value) return "running";
+    return "pending";
+};
 
 const startSync = async () => {
     if (!selectedPlatform.value || !props.syncHandler) return;
     phase.value = "syncing";
     progress.value = 0;
     syncResult.value = null;
+    activeStepIndex.value = 0;
+
+    // 视觉步骤推进（业务结果仍由真实 Promise 驱动，不阻塞操作）
+    stepTimer = setInterval(() => {
+        if (activeStepIndex.value < syncSteps.length - 1) {
+            activeStepIndex.value += 1;
+        }
+    }, 600);
+
     try {
         const result = await props.syncHandler(selectedPlatform.value);
         syncResult.value = {
@@ -44,6 +71,9 @@ const startSync = async () => {
     } catch {
         syncResult.value = { updated: 0, failed: 1 };
     }
+    clearInterval(stepTimer);
+    stepTimer = undefined;
+    activeStepIndex.value = syncSteps.length - 1;
     phase.value = "result";
 };
 
@@ -57,6 +87,11 @@ const reset = () => {
     selectedPlatform.value = "";
     progress.value = 0;
     syncResult.value = null;
+    activeStepIndex.value = 0;
+    if (stepTimer) {
+        clearInterval(stepTimer);
+        stepTimer = undefined;
+    }
 };
 
 const close = () => {
@@ -138,13 +173,32 @@ const close = () => {
             </button>
         </div>
 
-        <!-- 阶段 2：同步中 -->
+        <!-- 阶段 2：同步中（步骤 Timeline） -->
         <div v-if="phase === 'syncing'" class="sync-progress">
             <div class="sync-progress-spinner" aria-hidden="true"></div>
+            <ol class="sync-steps">
+                <li
+                    v-for="(step, index) in syncSteps"
+                    :key="step.key"
+                    class="sync-step"
+                    :class="`is-${stepState(index)}`"
+                >
+                    <span class="sync-step-icon">
+                        <SvgIcon
+                            v-if="stepState(index) === 'completed'"
+                            name="check"
+                            size="sm"
+                        /><SvgIcon
+                            v-else-if="stepState(index) === 'running'"
+                            name="refresh"
+                            size="sm"
+                            class="is-spinning"
+                        /><i v-else></i>
+                    </span>
+                    <span class="sync-step-label">{{ step.label }}</span>
+                </li>
+            </ol>
             <span class="sync-progress-label">正在同步设备数据和状态…</span>
-            <div class="sync-progress-bar">
-                <div class="sync-progress-fill"></div>
-            </div>
         </div>
 
         <!-- 阶段 3：完成 -->
@@ -457,29 +511,82 @@ const close = () => {
     color: var(--color-text-secondary);
 }
 
-.sync-progress-bar {
-    width: 60%;
-    height: 4px;
-    overflow: hidden;
+/* === 同步步骤 Timeline === */
+.sync-steps {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sync-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 68px;
+}
+
+/* 步骤间连接线 */
+.sync-step:not(:last-child)::after {
+    position: absolute;
+    top: 9px;
+    left: calc(50% + 13px);
+    width: 40px;
+    height: 1px;
+    background: var(--color-border);
+    content: "";
+    transition: background-color 200ms var(--motion-ease);
+}
+
+.sync-step.is-completed:not(:last-child)::after,
+.sync-step.is-running:not(:last-child)::after {
+    background: var(--color-primary-400);
+}
+
+.sync-step-icon {
+    display: grid;
+    width: 19px;
+    height: 19px;
+    place-items: center;
     border-radius: 999px;
     background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+    font-style: normal;
+    font-weight: 900;
+    font-size: 10px;
+    z-index: 1;
+    transition:
+        background-color 200ms var(--motion-ease),
+        color 200ms var(--motion-ease);
 }
 
-.sync-progress-fill {
-    width: 40%;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--color-primary-500);
-    animation: sync-progress-indeterminate 1.2s ease-in-out infinite;
+.sync-step.is-running .sync-step-icon {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
 }
 
-@keyframes sync-progress-indeterminate {
-    from {
-        transform: translateX(-100%);
-    }
-    to {
-        transform: translateX(350%);
-    }
+.sync-step.is-completed .sync-step-icon {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.sync-step-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-tertiary);
+    transition: color 200ms var(--motion-ease);
+}
+
+.sync-step.is-running .sync-step-label {
+    color: var(--color-primary-700);
+}
+
+.sync-step.is-completed .sync-step-label {
+    color: var(--color-text-secondary);
 }
 
 /* === 同步结果 === */
@@ -568,13 +675,6 @@ const close = () => {
     .sync-platform-card,
     .sync-platform-check {
         animation: none;
-        transition-duration: 1ms;
-    }
-    .sync-progress-spinner {
-        animation-duration: 1.5s;
-    }
-    .sync-progress-fill {
-        animation-duration: 2s;
     }
 }
 </style>

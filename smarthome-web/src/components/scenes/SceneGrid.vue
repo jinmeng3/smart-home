@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import SceneCard from "./SceneCard.vue";
+import { useGsapFlip } from "../../composables/useGsapFlip";
 import type { Scene } from "../../types/scene";
 
 const props = defineProps<{
@@ -82,6 +83,22 @@ const selectSort = (value: "frequent" | "recent" | "name" | "custom") => {
 const currentSortLabel = computed(
     () => sortOptions.find((o) => o.value === sortBy.value)?.label ?? "",
 );
+
+/* === GSAP Flip 场景卡片增删重排 === */
+const sceneGridRef = ref<HTMLElement | null>(null);
+const { captureAndFlip: flipSceneGrid } = useGsapFlip({
+    container: sceneGridRef,
+    itemSelector: ".scene-grid > *",
+    duration: 240,
+});
+
+// 场景增删/排序变化时播放 Flip，保持位置连续
+watch(
+    () => visibleScenes.value.length,
+    () => {
+        void flipSceneGrid();
+    },
+);
 </script>
 
 <template>
@@ -158,6 +175,7 @@ const currentSortLabel = computed(
         <!-- 卡片列表 -->
         <div
             v-else
+            ref="sceneGridRef"
             :class="['scene-grid', { 'scene-grid-expanded': showAll }]"
         >
             <SceneCard

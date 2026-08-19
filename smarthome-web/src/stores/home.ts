@@ -18,6 +18,7 @@ export type ChatPhase =
     | "waiting"
     | "executing"
     | "streaming"
+    | "awaiting_approval"
     | "completed"
     | "failed";
 
@@ -206,6 +207,7 @@ export const useHomeStore = defineStore("home", () => {
       if (chat.executionSteps.value.length > 0) return "executing";
       return "waiting";
     }
+    if (status === "awaiting_approval") return "awaiting_approval";
     if (status === "success") return "completed";
     if (status === "error") return "failed";
     return "idle";

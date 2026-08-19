@@ -29,6 +29,7 @@ defineEmits<{
 <template>
     <tr
         class="device-row"
+        :data-flip-id="`dev-${device.id}`"
         :class="{ 'is-selected': selected }"
         @click="$emit('select', device)"
     >
@@ -205,10 +206,6 @@ defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .device-row-actions button {
-        transition-duration: 1ms;
-    }
-
     .device-row:hover,
     .device-row.is-selected {
         transform: none;

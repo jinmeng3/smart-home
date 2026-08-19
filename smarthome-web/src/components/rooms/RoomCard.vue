@@ -384,10 +384,6 @@ const roomTypeIcon = (room: Room) =>
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .room-card,
-    .room-menu-btn {
-        transition-duration: 1ms;
-    }
     .room-card:hover {
         transform: none;
     }

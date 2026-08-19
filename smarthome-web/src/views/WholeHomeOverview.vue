@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import SvgIcon from "../components/common/SvgIcon.vue";
 import PageHeader from "../components/common/PageHeader.vue";
@@ -14,6 +14,9 @@ import { useSettingsStore } from "../stores/settings";
 import { useHouseholdStore } from "../stores/households";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useCardGridEnter } from "../composables/useCardGridEnter";
+import { useColorEmphasis } from "../composables/useColorEmphasis";
+import { useGsapFlip } from "../composables/useGsapFlip";
+import { gsap, motionEase } from "../motion";
 import type {
   OverviewSummary,
   OverviewRoom,
@@ -95,7 +98,46 @@ const summary = ref<OverviewSummary>({
   monthly_energy_kwh: 0,
   energy_saving_rate: 0,
 });
+
+/* === 统计值颜色强调（局部反馈，不缩放整张卡） === */
+const averageEmphasis = useColorEmphasis({ highlightColor: "var(--color-primary)" });
+// 监听统计值变化，对对应字段做一次 160ms 颜色强调
+watch(
+    () => summary.value.device_online,
+    () => averageEmphasis.emphasize(),
+);
+watch(
+    () => summary.value.alert_count,
+    () => averageEmphasis.emphasize(),
+);
+
+/* === GSAP Flip 房间卡新增（从网格末尾进入） === */
+const overviewRoomGridRef = ref<HTMLElement | null>(null);
+const { capture: captureOverviewRooms, flip: flipOverviewRooms } = useGsapFlip({
+    container: overviewRoomGridRef,
+    itemSelector: ".room-grid > article",
+    duration: 240,
+});
 const rooms = ref<OverviewRoomDisplay[]>([]);
+
+/* === 房间在线数/设备数变化：仅对变化字段做一次 160ms 强调 === */
+const roomCountEmphasis = useColorEmphasis({ highlightColor: "var(--color-success)" });
+watch(
+    () => rooms.value.map((room) => room.count).join(","),
+    (next, prev) => {
+        if (next === prev) return;
+        // 渲染后注册所有房间计数元素并触发强调
+        void nextTick(() => {
+            const els = overviewRoomGridRef.value?.querySelectorAll<HTMLElement>(
+                ".room-count-value",
+            );
+            if (els?.length) {
+                roomCountEmphasis.registerElements(Array.from(els));
+                roomCountEmphasis.emphasize();
+            }
+        });
+    },
+);
 const devices = ref<OverviewDeviceDisplay[]>([]);
 const activities = ref<{ time: string; icon: string; title: string; description: string; tone: string }[]>([]);
 const scheduleItems = ref<ScheduleItem[]>([]);
@@ -154,11 +196,23 @@ const openDialog = (dialog: Exclude<OverviewDialog, null>) => {
     activeDialog.value = dialog;
 };
 
+const syncIcon = ref("refresh");
+let syncResetTimer: ReturnType<typeof setTimeout> | undefined;
+
 const handleSynced = () => {
     refreshed.value = "刚刚";
+    // 图标 Morph 到 check，1.2s 后恢复
+    syncIcon.value = "check";
+    if (syncResetTimer) clearTimeout(syncResetTimer);
+    syncResetTimer = setTimeout(() => {
+        syncIcon.value = "refresh";
+        syncResetTimer = undefined;
+    }, 1200);
 };
 
 const handleRoomCreated = (name: string) => {
+    // Flip：在数据变更前捕获当前布局
+    captureOverviewRooms();
     rooms.value = [
         ...rooms.value,
         {
@@ -171,6 +225,29 @@ const handleRoomCreated = (name: string) => {
             tone: "blue",
         },
     ];
+    void flipOverviewRooms().then(() => {
+        // Flip 完成后：短暂显示新卡主色边框一次
+        void nextTick(() => {
+            const card = Array.from(
+                overviewRoomGridRef.value?.querySelectorAll<HTMLElement>(
+                    ".room-grid > article",
+                ) ?? [],
+            ).find((el) => el.textContent?.includes(name));
+            if (!card) return;
+            gsap.fromTo(
+                card,
+                { borderColor: "var(--color-primary-400)", boxShadow: "0 0 0 3px var(--color-focus-ring)" },
+                {
+                    borderColor: "var(--color-border-default)",
+                    boxShadow: "0 0 0 0 transparent",
+                    duration: 1.2,
+                    delay: 0.3,
+                    ease: motionEase.ease,
+                    clearProps: "borderColor,boxShadow",
+                },
+            );
+        });
+    });
 };
 
 const handleScheduleSaved = (schedule: HouseholdSchedule) => {
@@ -281,7 +358,7 @@ watch(
 
 <template>
     <div class="app-page-layout">
-        <main ref="root" class="overview page-shell page-enter">
+        <main ref="root" class="overview page-shell">
             <PageHeader
                 title="全屋总览"
                 description="查看家庭运行状态、房间分布与设备总览"
@@ -335,14 +412,14 @@ watch(
                     <h2>房间概览</h2>
                     <a role="button" tabindex="0" @click="openDialog('distribution')">查看房间分布 ›</a>
                 </header>
-                <div class="room-grid card-grid-enter">
+                <div class="room-grid card-grid-enter" ref="overviewRoomGridRef">
                     <article v-for="room in rooms.slice(0, 3)" :key="room.name">
                         <div class="room-title">
                             <i :class="room.tone"
                                 ><SvgIcon :name="room.icon" /></i
                             ><span
                                 ><b>{{ room.name }}</b
-                                ><small>{{ room.count }} 个设备</small></span
+                                ><small class="room-count-value">{{ room.count }} 个设备</small></span
                             >
                         </div>
                         <div class="room-devices">
@@ -507,7 +584,7 @@ watch(
                         class="tone-green"
                         @click="openDialog('sync')"
                     >
-                        <SvgIcon name="refresh" />同步设备<small
+                        <SvgIcon :name="syncIcon" :class="{ 'icon-pop': syncIcon === 'check' }" />同步设备<small
                             >刷新设备状态</small
                         ></button
                     ><button
@@ -1129,6 +1206,17 @@ watch(
 }
 .quick button.tone-green svg {
     color: var(--color-success);
+}
+
+/* 刷新成功后图标轻量弹出 */
+.quick button .icon-pop {
+    animation: quick-icon-pop 400ms var(--motion-ease-out) 1 both;
+}
+
+@keyframes quick-icon-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }
 .quick button.tone-orange svg {
     color: var(--tone-orange);

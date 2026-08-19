@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { nextTick, onMounted, onScopeDispose, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import BaseCollapsibleRail from "../components/common/BaseCollapsibleRail.vue";
 import BaseSmartModal from "../components/common/BaseSmartModal.vue";
@@ -20,6 +20,7 @@ import {
 } from "../components/device/deviceMeta";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useDeviceManagementController } from "../composables/useDeviceManagementController";
+import { gsap, registerScrollTrigger } from "../motion";
 import type { DeviceQuickActionKey } from "../composables/useDeviceManagementController";
 import type { DeviceStatus } from "../types/device";
 import { defineAsyncDialog } from "../utils/asyncDialog";
@@ -121,6 +122,47 @@ const handleRailAction = (key: string) => {
 const handleRailSync = () => {
     handleSync();
 };
+
+/* === 日志弹窗滚动进度（ScrollTrigger，长列表表达空间关系） === */
+const logScrollProgress = ref(0);
+let logScrollTrigger: gsap.plugins.ScrollTrigger | null = null;
+const setupLogScrollProgress = async () => {
+    await registerScrollTrigger();
+    await nextTick();
+    const scroller = document.querySelector(".device-management-page .log-dialog-body");
+    if (!scroller) return;
+    logScrollTrigger?.kill();
+
+    gsap.to(".device-management-page .log-scroll-progress", {
+        scaleX: 1,
+        ease: "none",
+        scrollTrigger: {
+            trigger: scroller,
+            scroller,
+            start: "top top",
+            end: "bottom bottom",
+            onUpdate: (self) => {
+                logScrollProgress.value = self.progress;
+            },
+        },
+    });
+};
+watch(
+    () => logDialogOpen.value,
+    (open) => {
+        if (open) {
+            void setupLogScrollProgress();
+        } else {
+            logScrollTrigger?.kill();
+            logScrollTrigger = null;
+            logScrollProgress.value = 0;
+        }
+    },
+);
+onScopeDispose(() => {
+    logScrollTrigger?.kill();
+    logScrollTrigger = null;
+});
 </script>
 
 <template>
@@ -128,7 +170,7 @@ const handleRailSync = () => {
         class="app-page-layout"
         :class="{ 'rail-collapsed-layout': railCollapsed }"
     >
-        <section class="device-management-page page-shell page-enter">
+        <section class="device-management-page page-shell">
             <PageHeader
                 title="设备管理"
                 description="家庭设备与接入管理"
@@ -403,6 +445,7 @@ const handleRailSync = () => {
             </template>
 
             <section class="log-dialog-body">
+                <div class="log-scroll-progress" :style="{ transform: `scaleX(${logScrollProgress})` }"></div>
                 <div v-if="!deviceLogs.length" class="log-empty">
                     <SvgIcon name="log" size="lg" />
                     <span>该设备暂无操作日志</span>
@@ -550,7 +593,7 @@ const handleRailSync = () => {
 @keyframes batch-bar-enter {
     from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -587,12 +630,6 @@ const handleRailSync = () => {
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .app-page-layout {
-        transition: none;
-    }
-}
-
 /* === 侧栏概览 ↔ 详情模式切换（out-in 交叉淡入） === */
 .rail-mode-enter-active,
 .rail-mode-leave-active {
@@ -608,13 +645,6 @@ const handleRailSync = () => {
 
 .rail-mode-leave-to {
     opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .rail-mode-enter-active,
-    .rail-mode-leave-active {
-        transition-duration: 1ms;
-    }
 }
 
 .delete-dialog-header {
@@ -818,7 +848,6 @@ button:disabled {
     .log-item,
     .batch-action-bar {
         animation: none !important;
-        transition-duration: 1ms !important;
     }
 }
 
@@ -1054,12 +1083,6 @@ button:disabled {
     color: var(--color-text-secondary);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .batch-delete-progress-fill {
-        animation-duration: 2s;
-    }
-}
-
 .batch-delete-footer {
     display: flex;
     align-items: center;
@@ -1198,9 +1221,24 @@ button:disabled {
 }
 
 .log-dialog-body {
+    position: relative;
     max-height: 480px;
     overflow-y: auto;
     padding: 20px 24px 16px;
+}
+
+/* 滚动进度条：表达长列表滚动位置，transform 驱动 */
+.log-scroll-progress {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    width: 100%;
+    height: 2px;
+    margin: -20px -24px 0;
+    width: calc(100% + 48px);
+    transform-origin: left center;
+    background: linear-gradient(90deg, var(--color-primary-400), var(--color-primary-600));
+    pointer-events: none;
 }
 
 .log-empty {

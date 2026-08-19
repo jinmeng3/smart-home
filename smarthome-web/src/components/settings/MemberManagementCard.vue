@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import BaseButton from "../common/BaseButton.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { useGsapFlip } from "../../composables/useGsapFlip";
 import type { FamilyMember, HouseholdRole } from "../../types/settings";
 import SettingsSectionCard from "./SettingsSectionCard.vue";
 import MemberListItem from "./MemberListItem.vue";
@@ -35,6 +36,20 @@ const readonlyMessage = computed(() =>
 );
 const currentMember = computed(() =>
     props.members.find((member) => member.id === props.currentMemberId),
+);
+
+/* === GSAP Flip 成员增删重排 === */
+const memberListRef = ref<HTMLElement | null>(null);
+const { captureAndFlip: flipMemberList } = useGsapFlip({
+    container: memberListRef,
+    itemSelector: ".member-list > *",
+    duration: 240,
+});
+watch(
+    () => props.members.length,
+    () => {
+        void flipMemberList();
+    },
 );
 
 const addMember = () => {
@@ -143,7 +158,7 @@ const updateMemberRole = (member: FamilyMember, role: HouseholdRole) => {
 
             <section class="member-list-card">
                 <header><div><strong>家庭成员</strong><small>管理成员角色与访问权限</small></div><span>{{ members.length }} 人</span></header>
-                <div class="member-list">
+                <div ref="memberListRef" class="member-list">
                     <MemberListItem v-for="member in members" :key="member.id" :can-edit="canManage" :can-remove="canRemove(member)" :member="member" :remove-loading="loadingMemberId === member.id" :role-loading="loadingMemberId === member.id" @remove="emit('removeMember', member.id)" @update-role="(_, role) => updateMemberRole(member, role)" />
                     <div v-if="!members.length" class="rounded-lg border border-dashed border-[var(--color-border-default)] py-10 text-center text-sm text-[var(--color-text-tertiary)]">暂无成员</div>
                 </div>

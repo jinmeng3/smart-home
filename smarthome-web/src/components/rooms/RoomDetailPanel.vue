@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { useColorEmphasis } from "../../composables/useColorEmphasis";
 import type { Room } from "../../types/room";
 
 export interface RoomEnvironmentItem {
@@ -65,6 +66,24 @@ const autoResize = () => {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
 };
+
+/* === 环境指标值变化时做一次 160ms 颜色强调 === */
+const envMetricRef = ref<HTMLElement | null>(null);
+const envEmphasis = useColorEmphasis({ highlightColor: "var(--color-primary)" });
+watch(
+    () => props.environment.map((item) => `${item.name}:${item.value}`).join("|"),
+    () => {
+        void nextTick(() => {
+            const els = envMetricRef.value?.querySelectorAll<HTMLElement>(
+                ".ac-metric-value",
+            );
+            if (els?.length) {
+                envEmphasis.registerElements(Array.from(els));
+                envEmphasis.emphasize();
+            }
+        });
+    },
+);
 
 /* === 房间摘要文本 === */
 const roomSummary = computed(() => {
@@ -179,7 +198,7 @@ const alertCount = computed(() => {
             <section class="assistant-card" :key="'card-' + room.id">
                 <p class="ac-summary">{{ roomSummary }}</p>
                 <p v-if="envSummary" class="ac-env">{{ envSummary }}</p>
-                <div class="ac-metrics">
+                <div ref="envMetricRef" class="ac-metrics">
                     <article
                         v-for="item in environment"
                         :key="item.name"
@@ -783,13 +802,6 @@ const alertCount = computed(() => {
     .recent-section,
     .sug-actions {
         animation: none;
-    }
-    .action-btn,
-    .qs-btn,
-    .composer-send,
-    .composer-form,
-    .ac-metric {
-        transition-duration: 1ms;
     }
     .action-btn:hover,
     .qs-btn:hover,

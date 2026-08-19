@@ -105,10 +105,6 @@ button:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    button {
-        transition-duration: 1ms;
-    }
-
     button:hover,
     button:active {
         transform: none;

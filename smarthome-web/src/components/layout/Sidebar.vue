@@ -13,6 +13,7 @@ import {
 } from "../../router/navigation";
 import type { RecentConversation } from "../../types/chat";
 import SvgIcon from "../common/SvgIcon.vue";
+import { useGsapFlip } from "../../composables/useGsapFlip";
 
 const props = withDefaults(
     defineProps<{
@@ -116,6 +117,26 @@ watch(
     () => void nextTick(updateScrollState),
 );
 
+/* === GSAP Flip 最近会话增删重排 === */
+const conversationListRef = ref<HTMLElement | null>(null);
+const { captureAndFlip: flipConversations } = useGsapFlip({
+    container: conversationListRef,
+    itemSelector: ".conversation-item",
+    duration: 240,
+});
+watch(
+    () => [store.recentConversations.length, conversationGroups.value.map((g) => g.key).join(",")],
+    () => {
+        void flipConversations();
+    },
+);
+
+/** 会话列表与滚动容器共用同一滚动区域元素 */
+const bindScrollGroupRef = (el: unknown) => {
+    scrollGroupRef.value = el as HTMLElement | null;
+    conversationListRef.value = el as HTMLElement | null;
+};
+
 /* === 紧凑模式会话浮层 === */
 const compactPanelOpen = ref(false);
 const toggleChatFromCompact = async () => {
@@ -197,7 +218,7 @@ const isGroupActive = (group: NavigationGroup) =>
             { 'is-collapsed': isCollapsed },
             isCollapsed ? 'px-2 py-4' : 'px-3 py-4',
         ]"
-        class="page-enter-stagger relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] shadow-soft transition-[width] duration-300 ease-out"
+        class="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-sidebar-bg)] shadow-soft transition-[width] duration-300 ease-out"
         :style="{ width: isCollapsed ? '72px' : '240px' }"
     >
         <button
@@ -257,7 +278,7 @@ const isGroupActive = (group: NavigationGroup) =>
         <div class="sidebar-content flex min-h-0 flex-1 flex-col overflow-hidden">
             <div class="scroll-region">
                 <div
-                    ref="scrollGroupRef"
+                    :ref="bindScrollGroupRef"
                     class="sidebar-scroll-group min-h-0 flex-1 overflow-y-auto"
                     @scroll.passive="updateScrollState"
                 >
@@ -608,16 +629,6 @@ aside {
         var(--shadow-soft);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    aside,
-    .brand-logo,
-    .menu-icon,
-    .nav-item,
-    aside > button:last-of-type {
-        transition-duration: 1ms;
-    }
-}
-
 .brand-logo,
 .menu-icon,
 .nav-item,
@@ -694,13 +705,13 @@ aside > button:last-of-type {
     transform: scale(1.05);
 }
 
-/* 已激活项指示条 */
+/* 已激活项指示条：160–220ms 过渡 */
 .active-indicator {
     left: 3px;
     width: 3px;
     height: 22px;
     box-shadow: 0 0 8px color-mix(in srgb, currentColor 26%, transparent);
-    animation: active-stripe 260ms var(--motion-ease) both;
+    animation: active-stripe 200ms var(--motion-ease) both;
     transform-origin: left center;
 }
 

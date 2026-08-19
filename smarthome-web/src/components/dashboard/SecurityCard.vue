@@ -1,13 +1,31 @@
 <script setup lang="ts">
+import { ref, watch, nextTick } from "vue";
 import { useHomeStore } from "../../stores/home";
 import SvgIcon from "../common/SvgIcon.vue";
 
 const store = useHomeStore();
+
+/** 安防状态变化时，对徽章与数量做一次短暂强调 */
+const badgeEmphasis = ref(false);
+let emphasisTimer: ReturnType<typeof setTimeout> | undefined;
+watch(
+    () => store.securityAlertHandled,
+    () => {
+        void nextTick(() => {
+            badgeEmphasis.value = true;
+            if (emphasisTimer) clearTimeout(emphasisTimer);
+            emphasisTimer = setTimeout(() => {
+                badgeEmphasis.value = false;
+                emphasisTimer = undefined;
+            }, 900);
+        });
+    },
+);
 </script>
 
 <template>
     <section
-        class="security-card motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
+        class="security-card motion-card min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
         style="animation-delay: 420ms"
     >
         <div class="mb-2 flex items-center justify-between gap-2">
@@ -19,14 +37,20 @@ const store = useHomeStore();
             </h2>
             <span
                 class="security-badge"
-                :class="store.securityAlertHandled ? 'is-ok' : 'is-warn'"
+                :class="[
+                    store.securityAlertHandled ? 'is-ok' : 'is-warn',
+                    { 'is-emphasis': badgeEmphasis },
+                ]"
             >
                 {{ store.securityAlertHandled ? "正常" : "异常" }}
             </span>
         </div>
 
         <!-- 主信息：告警数量 -->
-        <p class="security-count text-lg font-extrabold leading-snug">
+        <p
+            class="security-count text-lg font-extrabold leading-snug"
+            :class="{ 'is-emphasis': badgeEmphasis }"
+        >
             {{ store.alertCount }} 处告警
         </p>
         <!-- 次信息：状态描述 -->
@@ -69,6 +93,18 @@ const store = useHomeStore();
 
 .security-count {
     color: var(--color-text-primary);
+}
+
+/* 状态变化时的一次性强调：不持续闪烁 */
+.security-badge.is-emphasis,
+.security-count.is-emphasis {
+    animation: security-change-emphasis 500ms var(--motion-ease) 1 both;
+}
+
+@keyframes security-change-emphasis {
+    0% { opacity: 0.55; transform: scale(0.96); }
+    45% { opacity: 1; transform: scale(1.06); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 .security-summary {

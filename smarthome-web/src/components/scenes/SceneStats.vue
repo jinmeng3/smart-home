@@ -176,12 +176,6 @@ strong {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .scene-stat-card {
-        animation-duration: 1ms;
-        animation-delay: 0ms !important;
-        transition-duration: 1ms;
-    }
-
     .scene-stat-card:hover {
         transform: none;
     }

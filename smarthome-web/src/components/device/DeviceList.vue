@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { gsap, registerFlip, useMotionMode } from "../../motion";
+import { motionEase } from "../../motion/tokens";
+import { useSkeletonTransition } from "../../composables/useSkeletonTransition";
 import { formatDeviceTimestamp } from "../../utils/device";
 import type { Device, DeviceType } from "../../types/device";
 import DeviceRow from "./DeviceRow.vue";
@@ -14,7 +17,7 @@ import {
     getStatusClasses,
 } from "./deviceMeta";
 
-defineProps<{
+const props = defineProps<{
     devices: Device[];
     total: number;
     page: number;
@@ -43,8 +46,49 @@ defineEmits<{
     "clear-filters": [];
 }>();
 
+/* === 骨架 → 真实内容短交叉淡入 === */
+const skeletonHostRef = ref<HTMLElement | null>(null);
+const { play: playSkeletonTransition } = useSkeletonTransition(
+    skeletonHostRef,
+    computed(() => props.loading),
+);
+
 const pageSizeOptions = [10, 20, 50];
 const viewMode = ref<"list" | "grid">("list");
+
+/* === 列表/网格切换 Flip：保持设备项位置连续 === */
+const { isReduced } = useMotionMode();
+let flipReady = false;
+void registerFlip().then(() => {
+    flipReady = true;
+});
+
+/** 切换视图：先捕获旧布局，切换后再 Flip 到新布局 */
+const switchView = async (next: "list" | "grid") => {
+    if (next === viewMode.value) return;
+    if (!flipReady || isReduced.value) {
+        viewMode.value = next;
+        return;
+    }
+
+    // 捕获当前可见的设备项布局
+    const state = (gsap as any)?.Flip?.getState?.(
+        ".device-table-wrap [data-flip-id], .device-grid-wrap [data-flip-id]",
+    );
+
+    viewMode.value = next;
+    await nextTick();
+
+    // 新视图渲染完成后，从旧位置过渡到新位置
+    if (state) {
+        (gsap as any).Flip?.from?.(state, {
+            targets: ".device-table-wrap [data-flip-id], .device-grid-wrap [data-flip-id]",
+            duration: 0.28,
+            ease: motionEase.ease,
+            absolute: true,
+        });
+    }
+};
 </script>
 
 <template>
@@ -87,7 +131,7 @@ const viewMode = ref<"list" | "grid">("list");
                     :class="{ 'is-active': viewMode === 'list' }"
                     type="button"
                     title="列表视图"
-                    @click="viewMode = 'list'"
+                    @click="switchView('list')"
                 >
                     <SvgIcon name="list" />
                 </button>
@@ -95,14 +139,15 @@ const viewMode = ref<"list" | "grid">("list");
                     :class="{ 'is-active': viewMode === 'grid' }"
                     type="button"
                     title="网格视图"
-                    @click="viewMode = 'grid'"
+                    @click="switchView('grid')"
                 >
                     <SvgIcon name="grid" />
                 </button>
             </div>
         </header>
 
-        <Transition name="view-switch" mode="out-in">
+        <!-- 列表/网格切换由 GSAP Flip 接管（保持设备项位置连续），不再使用 CSS out-in -->
+        <div ref="skeletonHostRef" class="device-view-host">
             <div v-if="viewMode === 'list'" key="list" class="device-table-wrap" :class="{ 'is-loading': loading && devices.length }">
                 <div v-if="loading && devices.length" class="device-refresh-overlay">
                     <div class="device-refresh-spinner" aria-hidden="true"></div>
@@ -211,6 +256,7 @@ const viewMode = ref<"list" | "grid">("list");
                     <article
                         v-for="device in devices"
                         :key="device.id"
+                        :data-flip-id="`dev-${device.id}`"
                         class="device-grid-card"
                         :class="{ 'is-selected': selectedId === device.id }"
                         @click="$emit('select', device)"
@@ -244,7 +290,7 @@ const viewMode = ref<"list" | "grid">("list");
                     </article>
                 </TransitionGroup>
             </div>
-        </Transition>
+        </div>
 
         <footer class="device-pagination">
             <span>共 {{ total }} 条</span>
@@ -731,18 +777,9 @@ button:disabled {
     to { background-position: -200% 0; }
 }
 
-/* === 列表/网格切换过渡 === */
-.view-switch-enter-active,
-.view-switch-leave-active {
-    transition: opacity 140ms var(--motion-ease), transform 140ms var(--motion-ease);
-}
-.view-switch-enter-from {
-    opacity: 0;
-    transform: scale(0.985);
-}
-.view-switch-leave-to {
-    opacity: 0;
-    transform: scale(0.985);
+/* === 列表/网格切换由 GSAP Flip 接管（device-view-host 包裹两个视图） === */
+.device-view-host {
+    min-width: 0;
 }
 
 /* === 加载中保留旧数据降透明度 === */
@@ -818,12 +855,6 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .device-list-panel,
-    button {
-        animation-duration: 1ms;
-        transition-duration: 1ms;
-    }
-
     button:not(:disabled):hover,
     button:not(:disabled):active {
         transform: none;
@@ -865,7 +896,7 @@ button:disabled {
     content: '';
     position: absolute;
     top: 0;
-    left: -40%;
+    left: 0;
     width: 40%;
     height: 2px;
     border-radius: 999px;
@@ -873,8 +904,10 @@ button:disabled {
     animation: device-loading-slide 900ms var(--motion-ease) infinite;
 }
 
+/* 使用 transform 平移，避免持续修改 left 造成布局抖动 */
 @keyframes device-loading-slide {
-    to { left: 100%; }
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
 }
 
 .device-refresh-spinner {
@@ -894,9 +927,6 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
     .device-refresh-overlay {
         animation: none;
-    }
-    .device-refresh-spinner {
-        animation-duration: 1.5s;
     }
 }
 
@@ -964,19 +994,5 @@ button:disabled {
 
 .device-card-move {
     transition: transform 220ms var(--motion-ease);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .device-row-enter-active,
-    .device-row-leave-active,
-    .device-row-move,
-    .device-card-enter-active,
-    .device-card-leave-active,
-    .device-card-move {
-        transition-duration: 1ms !important;
-    }
-    .device-list-sync svg.is-spinning {
-        animation-duration: 1.5s;
-    }
 }
 </style>

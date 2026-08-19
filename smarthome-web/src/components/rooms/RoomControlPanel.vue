@@ -920,11 +920,6 @@ transition: 160ms var(--motion-ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .quick-control *,
-    .quick-control *::before,
-    .quick-control *::after {
-        transition-duration: 1ms !important;
-    }
     .device-icon.is-on {
         transform: none;
     }

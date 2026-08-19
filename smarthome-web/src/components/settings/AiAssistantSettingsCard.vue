@@ -627,10 +627,6 @@ const applySettings = async () => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dialog-footer :deep(.el-button--primary) {
-        transition-duration: 1ms;
-    }
-
     .dialog-footer :deep(.el-button--primary:hover) {
         transform: none;
     }

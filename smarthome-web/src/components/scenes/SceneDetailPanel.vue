@@ -639,12 +639,6 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    button,
-    .scene-detail-crossfade-enter-active,
-    .scene-detail-crossfade-leave-active {
-        transition-duration: 1ms;
-    }
-
     button:hover {
         transform: none;
     }

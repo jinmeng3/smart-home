@@ -98,7 +98,7 @@ const handleViewAllTemplates = () => {
 
 <template>
     <div class="app-page-layout">
-        <section class="scene-mode-page page-enter">
+        <section class="scene-mode-page">
             <!-- 头部：渐变背景 + 动态摘要 -->
             <header class="scene-page-header">
                 <div class="scene-page-title-area">
@@ -375,12 +375,6 @@ const handleViewAllTemplates = () => {
         padding: 8px 10px;
         margin: -8px -8px 0;
         border-radius: 10px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .scene-mode-page {
-        animation-duration: 1ms;
     }
 }
 

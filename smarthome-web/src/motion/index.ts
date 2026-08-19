@@ -7,6 +7,8 @@ export {
     gsap,
     registerFlip,
     registerScrollTrigger,
+    registerScrollTo,
+    registerDraggable,
     getDevicePixelRatio,
     isLowPerformanceDevice,
 } from "./gsap";

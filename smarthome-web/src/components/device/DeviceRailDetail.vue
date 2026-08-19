@@ -366,11 +366,4 @@ const handleAction = (key: string) => {
 .detail-crossfade-leave-to {
     opacity: 0;
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .detail-crossfade-enter-active,
-    .detail-crossfade-leave-active {
-        transition-duration: 1ms;
-    }
-}
 </style>

@@ -41,7 +41,7 @@ let scrollTriggerLoaded = false;
 
 /**
  * 按需加载 ScrollTrigger 插件。
- * 用于视口触发或滚动联动动画。
+ * 用于视口触发或滚动联动动画（如日志弹窗滚动进度条）。
  *
  * 仅在对应路由/组件中调用，不进入首屏主包。
  * 动态内容改变布局后，在 `nextTick` 后按需调用一次 `ScrollTrigger.refresh()`。
@@ -53,9 +53,31 @@ export const registerScrollTrigger = async (): Promise<void> => {
     scrollTriggerLoaded = true;
 };
 
-/* ------------------------------------------------------------------ */
-/*  工具函数                                                            */
-/* ------------------------------------------------------------------ */
+let scrollToLoaded = false;
+
+/**
+ * 按需加载 ScrollToPlugin 插件。
+ * 用于可取消的程序化滚动（如设置页目录跳转，`autoKill` 在用户手动滚动时自动取消）。
+ */
+export const registerScrollTo = async (): Promise<void> => {
+    if (scrollToLoaded) return;
+    const { ScrollToPlugin } = await import("gsap/ScrollToPlugin");
+    gsap.registerPlugin(ScrollToPlugin);
+    scrollToLoaded = true;
+};
+
+let draggableLoaded = false;
+
+/**
+ * 按需加载 Draggable 插件。
+ * 用于真正的拖拽排序（如场景排序对话框）。
+ */
+export const registerDraggable = async (): Promise<void> => {
+    if (draggableLoaded) return;
+    const { Draggable } = await import("gsap/Draggable");
+    gsap.registerPlugin(Draggable);
+    draggableLoaded = true;
+};
 
 /**
  * 获取当前设备像素比，用于判断是否需要高精度动画。

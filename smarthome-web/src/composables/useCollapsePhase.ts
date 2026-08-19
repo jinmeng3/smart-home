@@ -9,8 +9,8 @@ import { gsap, motionEase, seconds, useMotionMode } from "../motion";
  *
  * `collapsed` 控制实际布局，`phase` 描述当前动画阶段，供外部类名/状态消费。
  *
- * - 提供 `options.targets` 时使用可逆 GSAP 时间轴编排动画，连续点击会
- *   从当前进度反向或继续，不再依赖固定 `setTimeout`。
+ * - 提供 `options.targets` 时使用单条 paused GSAP 时间轴编排动画，连续点击
+ *   通过 play/reverse 响应，从当前进度反向播放，不再 kill 重建。
  * - 未提供 targets（如在 Pinia store 中使用）或无 DOM 目标时，直接切换
  *   终态，不创建定时器。
  * - 减少动态效果模式下始终直接切换终态。
@@ -49,7 +49,12 @@ export const useCollapsePhase = (
     const collapsed = ref(initialCollapsed);
     const phase = ref<CollapsePhase>(initialCollapsed ? "collapsed" : "expanded");
     const animating = ref(false);
+    /** 单条 paused Timeline，通过 play/reverse 响应连续点击 */
     let timeline: gsap.core.Timeline | null = null;
+    /** 当前 Timeline 关联的容器元素，用于判断是否需要重建 */
+    let timelineContainer: HTMLElement | null = null;
+    /** 上次创建时间线时的 detail 元素快照，用于检测 DOM 结构变化 */
+    let lastDetailEls: HTMLElement[] = [];
 
     const setCollapsed = (value: boolean) => {
         if (collapsed.value === value) return;
@@ -62,6 +67,8 @@ export const useCollapsePhase = (
             timeline.kill();
             timeline = null;
         }
+        timelineContainer = null;
+        lastDetailEls = [];
     };
 
     const resolveWidths = (targets: CollapseTargets) => {
@@ -90,83 +97,80 @@ export const useCollapsePhase = (
     };
 
     /**
-     * 播放折叠/展开时间轴。
-     * 使用带标签的 Timeline 编排：内容淡出、容器折叠、内容淡入。
+     * 创建或更新单条 paused Timeline。
+     * 收起方向：内容淡出(0s) → 容器折叠(0.14s)
+     * 展开方向：容器展开(0s) → 内容淡入(0.3s)
      */
-    const play = (targets: CollapseTargets, targetCollapsed: boolean) => {
+    const ensureTimeline = (targets: CollapseTargets) => {
         const container = targets.container;
-        if (!container) return;
+        if (!container) return null;
+
         const detail = toArray(targets.detail).filter(
             (el): el is HTMLElement => Boolean(el),
         );
+
+        // 时间线存在、容器相同、且 detail 元素未变化时复用，
+        // 保留快速连点时的中断反向播放能力。
+        if (timeline && timelineContainer === container) {
+            const detailChanged =
+                lastDetailEls.length !== detail.length ||
+                lastDetailEls.some((el, i) => el !== detail[i]);
+            if (!detailChanged) {
+                return timeline;
+            }
+        }
+
+        // 清理旧 Timeline，重新创建以确保 detail 元素引用最新 DOM
+        kill();
+
+        lastDetailEls = detail;
         const { collapsedWidth, expandedWidth } = resolveWidths(targets);
 
-        animating.value = true;
-        phase.value = targetCollapsed ? "collapsing" : "expanding";
+        // 设置初始状态：展开态
+        gsap.set(container, { width: expandedWidth });
+        if (detail.length) {
+            gsap.set(detail, { autoAlpha: 1, x: 0 });
+        }
 
         const tl = gsap.timeline({
+            paused: true,
             defaults: { ease: motionEase.ease },
             onComplete: () => {
-                // 动画结束后交还 CSS 控制宽度
+                // 正向完成=完全收起
                 gsap.set(container, { clearProps: "width" });
-                timeline = null;
+                setCollapsed(true);
+                phase.value = "collapsed";
+                animating.value = false;
+            },
+            onReverseComplete: () => {
+                // 反向完成=完全展开
+                gsap.set(container, { clearProps: "width" });
+                setCollapsed(false);
+                phase.value = "expanded";
                 animating.value = false;
             },
         });
-        timeline = tl;
 
-        if (targetCollapsed) {
-            // 收起：内容淡出 → 容器折叠
-            if (detail.length) {
-                tl.to(
-                    detail,
-                    { autoAlpha: 0, x: 8, duration: seconds.fast },
-                    "fade-out",
-                );
-            }
-            tl.call(() => setCollapsed(true), [], "fade-out+=0.02");
-            tl.to(
-                container,
-                { width: collapsedWidth, duration: seconds.collapse },
-                "fade-out+=0.06",
-            );
-            tl.call(
-                () => {
-                    phase.value = "collapsed";
-                },
-                [],
-                "fade-out+=0.42",
-            );
-        } else {
-            // 展开：先恢复内容到 DOM，容器展开 → 内容淡入
-            setCollapsed(false);
-            tl.to(
-                container,
-                { width: expandedWidth, duration: seconds.collapse },
-                "collapse",
-            );
-            if (detail.length) {
-                tl.from(
-                    detail,
-                    { autoAlpha: 0, x: 8, duration: seconds.base },
-                    "collapse+=0.12",
-                );
-            }
-            tl.call(
-                () => {
-                    phase.value = "expanded";
-                },
-                [],
-                "collapse+=0.36",
-            );
+        // 收起方向（正向）：内容淡出 → 容器折叠
+        if (detail.length) {
+            tl.to(detail, { autoAlpha: 0, x: 8, duration: seconds.fast }, 0);
         }
+        tl.to(container, { width: collapsedWidth, duration: seconds.collapse }, "+=0.06");
+
+        // 如果当前处于折叠态，将时间线跳到末尾，使后续 reverse() 正确执行展开
+        if (collapsed.value) {
+            tl.progress(1);
+        }
+
+        timeline = tl;
+        timelineContainer = container;
+        return tl;
     };
 
     const toggle = () => {
-        kill();
-
         // 减少动态效果或没有 DOM 目标时直接切换终态
         if (isReduced.value) {
+            kill();
             const next = !collapsed.value;
             phase.value = next ? "collapsed" : "expanded";
             setCollapsed(next);
@@ -175,13 +179,35 @@ export const useCollapsePhase = (
 
         const targets = options.targets?.();
         if (!targets?.container) {
+            kill();
             const next = !collapsed.value;
             phase.value = next ? "collapsed" : "expanded";
             setCollapsed(next);
             return;
         }
 
-        play(targets, !collapsed.value);
+        const tl = ensureTimeline(targets);
+        if (!tl) return;
+
+        animating.value = true;
+
+        // 连续点击：从当前进度反向
+        if (tl.isActive()) {
+            tl.reverse();
+            phase.value = collapsed.value ? "expanding" : "collapsing";
+            return;
+        }
+
+        // 当前处于展开态（进度 0 或反向完成），正向播放收起
+        if (!collapsed.value) {
+            tl.play();
+            phase.value = "collapsing";
+            return;
+        }
+
+        // 当前处于收起态（进度 1 或正向完成），反向播放展开
+        tl.reverse();
+        phase.value = "expanding";
     };
 
     /** 首次加载不播放动画，直接设置最终状态 */

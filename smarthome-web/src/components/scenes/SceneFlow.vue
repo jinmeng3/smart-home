@@ -450,7 +450,11 @@ li {
     width: 16px;
     height: 1px;
     background: var(--color-primary-200);
-    transition: background-color 200ms var(--motion-ease);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition:
+        background-color 200ms var(--motion-ease),
+        transform 240ms var(--motion-ease);
 }
 
 .step-connector::after {
@@ -495,6 +499,7 @@ li {
 
 .is-running .step-connector {
     background: var(--color-info);
+    transform: scaleX(1);
 }
 
 .is-running .step-connector::after {
@@ -513,6 +518,7 @@ li {
 
 .is-completed .step-connector {
     background: var(--color-success);
+    transform: scaleX(1);
 }
 
 .is-completed .step-connector::after {
@@ -696,13 +702,6 @@ animation: spin 900ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    button,
-    li,
-    .scene-crossfade-enter-active,
-    .scene-crossfade-leave-active {
-        transition-duration: 1ms;
-    }
-
     button:hover,
     .is-running {
         transform: none;

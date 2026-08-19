@@ -61,15 +61,29 @@ export const getDeviceStatusLabel = (status: string) =>
 
 export const deviceTypeIconMap: Record<string, string> = {
   light: "light",
+  lightbulb: "lightbulb",
+  lamp: "lamp",
+  "led-strip": "led-strip",
   air_conditioner: "air-conditioner",
   airConditioner: "air-conditioner",
   airPurifier: "sensor",
-  television: "device-management",
+  television: "tv",
+  tv: "tv",
   lock: "lock",
   camera: "camera",
   sensor: "sensor",
   socket: "plug",
   curtain: "curtain",
+  curtains: "curtains",
+  fan: "fan",
+  speaker: "speaker",
+  fridge: "fridge",
+  "gas-meter": "gas-meter",
+  heat: "heat",
+  water: "water",
+  "washing-machine": "washing-machine",
+  thermometer: "thermometer",
+  comfort: "comfort",
 };
 
 /** 获取设备类型中文标签，未知类型回退为原始值。 */

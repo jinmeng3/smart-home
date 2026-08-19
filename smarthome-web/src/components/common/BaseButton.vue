@@ -1,5 +1,8 @@
 <script setup lang="ts">
-withDefaults(
+import { computed } from "vue";
+import SvgIcon from "./SvgIcon.vue";
+
+const props = withDefaults(
     defineProps<{
         variant?: "default" | "primary" | "danger" | "warning" | "text";
         size?: "sm" | "md";
@@ -7,6 +10,8 @@ withDefaults(
         loading?: boolean;
         disabled?: boolean;
         nativeType?: "button" | "submit" | "reset";
+        /** 操作结果反馈：成功后短暂显示 check / 失败显示 warning（替换 spinner） */
+        feedback?: "success" | "error" | null;
     }>(),
     {
         variant: "default",
@@ -15,7 +20,12 @@ withDefaults(
         loading: false,
         disabled: false,
         nativeType: "button",
+        feedback: null,
     },
+);
+
+const feedbackIcon = computed(() =>
+    props.feedback === "success" ? "check" : "warning",
 );
 </script>
 
@@ -27,8 +37,9 @@ withDefaults(
             `is-${variant}`,
             `is-${size}`,
             { 'is-plain': plain },
+            { 'has-feedback': feedback },
         ]"
-        :disabled="disabled || loading"
+        :disabled="disabled || loading || !!feedback"
         v-bind="$attrs"
     >
         <span
@@ -36,6 +47,14 @@ withDefaults(
             class="base-button-spinner"
             aria-hidden="true"
         ></span>
+        <span
+            v-else-if="feedback"
+            class="base-button-feedback"
+            :class="`is-${feedback}`"
+            aria-hidden="true"
+        >
+            <SvgIcon :name="feedbackIcon" size="sm" />
+        </span>
         <span class="base-button-label"><slot /></span>
     </button>
 </template>
@@ -169,5 +188,30 @@ withDefaults(
     border-right-color: transparent;
     border-radius: 50%;
     animation: spin 600ms linear infinite;
+}
+
+/* 操作结果反馈：check/warning 一次性弹出 */
+.base-button-feedback {
+    display: grid;
+    place-items: center;
+    animation: button-feedback-in 260ms var(--motion-ease-out) 1 both;
+}
+
+.base-button-feedback.is-success {
+    color: var(--color-success);
+}
+
+.base-button-feedback.is-error {
+    color: var(--color-danger);
+}
+
+.base-button.has-feedback {
+    pointer-events: none;
+}
+
+@keyframes button-feedback-in {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
 </style>

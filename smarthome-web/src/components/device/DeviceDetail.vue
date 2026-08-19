@@ -354,14 +354,4 @@ dd .platform {
         transform: translateY(0);
     }
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .device-side-card {
-        animation-duration: 1ms;
-        animation-iteration-count: 1;
-    }
-    dl div {
-        transition-duration: 1ms;
-    }
-}
 </style>

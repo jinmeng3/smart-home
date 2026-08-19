@@ -30,7 +30,7 @@ const automationTone = (id: string): string => {
 
 <template>
     <section
-        class="motion-card page-enter-stagger shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-3 py-2 shadow-soft"
+        class="motion-card shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-3 py-2 shadow-soft"
         style="animation-delay: 180ms"
     >
         <!-- 标题行：标题 + 更多（同一行，标题占视觉重点） -->

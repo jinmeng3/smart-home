@@ -53,15 +53,11 @@ withDefaults(
     to {
         opacity: 1;
     }
-animation: spin 600ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .cro {
         animation: none;
-    }
-    .cro-spinner {
-        animation-duration: 1.5s;
     }
 }
 </style>

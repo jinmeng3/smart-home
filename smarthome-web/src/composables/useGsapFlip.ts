@@ -18,35 +18,55 @@ export interface UseGsapFlipOptions {
  * 在 Vue 完成数据更新前捕获列表项布局状态，DOM 更新后执行 `Flip.from()`
  * 过渡到新位置，消除 `max-height: 1000px` 等固定上限动画。
  *
+ * 时序修正：
+ * - capture 必须在任何 await 之前同步执行，此时 DOM 仍是旧状态；
+ *   Vue 的 DOM 更新被批量调度为微任务，若在 capture 前 await，
+ *   会捕获到新状态导致 Flip 变成空操作。
+ * - Flip 插件在 composable 创建时即开始预加载，保证 watcher 触发时
+ *   已可同步捕获。
+ * - 若捕获时插件尚未就绪（极端首次情况），放弃本次动画而不是从
+ *   新 DOM 重新捕获（那会得到错误的首帧）。
+ *
  * @example
  * ```ts
- * const { flip } = useGsapFlip({
+ * const { capture, flip } = useGsapFlip({
  *   container: listRef,
  *   itemSelector: ".message-item",
  * });
  *
- * // 在数据更新后（DOM 已更新）调用
+ * // 在数据变更前调用 capture
+ * capture();
+ * // 数据变更后，DOM 更新前调用
  * await flip();
  * ```
  */
 export const useGsapFlip = (options: UseGsapFlipOptions) => {
     const { isReduced } = useMotionMode();
     let flipLoaded = false;
+    let flipInitPromise: Promise<void> | null = null;
     let flipState: gsap.FlipState | null = null;
 
-    /** 在数据变更前捕获当前列表布局 */
-    const capture = () => {
-        if (isReduced.value) return;
-        const el = options.container.value;
-        if (!el) return;
-
-        // 延迟加载 Flip 插件（首次调用时）
-        if (!flipLoaded) {
-            // 异步加载，但捕获需要同步——先记录状态，加载后执行
-            void registerFlip().then(() => {
+    /** 确保 Flip 插件已加载（首次异步加载，后续同步） */
+    const ensureFlipLoaded = async (): Promise<void> => {
+        if (flipLoaded) return;
+        if (!flipInitPromise) {
+            flipInitPromise = registerFlip().then(() => {
                 flipLoaded = true;
             });
         }
+        await flipInitPromise;
+    };
+
+    /** 在数据变更前同步捕获当前列表布局（不得在 await 之后调用） */
+    const capture = () => {
+        if (isReduced.value) return;
+        // 插件未就绪时无法捕获——放弃本次动画，等待下次
+        if (!flipLoaded) {
+            flipState = null;
+            return;
+        }
+        const el = options.container.value;
+        if (!el) return;
 
         const items = el.querySelectorAll(options.itemSelector);
         if (items.length) {
@@ -66,11 +86,8 @@ export const useGsapFlip = (options: UseGsapFlipOptions) => {
 
         await nextTick();
 
-        // 确保插件已加载
-        if (!flipLoaded) {
-            await registerFlip();
-            flipLoaded = true;
-        }
+        // 确保插件已加载（捕获时已就绪，此处应为同步返回）
+        await ensureFlipLoaded();
 
         const el = options.container.value;
         if (!el) return;
@@ -95,9 +112,13 @@ export const useGsapFlip = (options: UseGsapFlipOptions) => {
     /** 捕获 + 执行一步完成 */
     const captureAndFlip = async () => {
         if (options.deactivated?.value) return;
+        // 同步捕获旧状态——必须在任何 await 之前，确保捕获到变更前的 DOM
         capture();
         await flip();
     };
+
+    // composable 创建时即开始预加载插件，保证后续 watcher 同步捕获可用
+    void ensureFlipLoaded();
 
     // 组件销毁时清理
     if (getCurrentScope()) {

@@ -118,10 +118,6 @@ defineProps<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .stats-card {
-        transition-duration: 1ms;
-    }
-
     .stats-card:hover {
         transform: none;
     }

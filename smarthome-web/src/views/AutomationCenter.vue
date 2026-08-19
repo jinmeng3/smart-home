@@ -5,6 +5,7 @@ import { useAutomationsStore, buildAutomationSteps } from "../stores/automations
 import { useAutomationModeController } from "../composables/useAutomationModeController";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
 import { useCardGridEnter } from "../composables/useCardGridEnter";
+import { useGsapFlip } from "../composables/useGsapFlip";
 import AutomationDialogs from "../components/automation/AutomationDialogs.vue";
 import ConfirmActionDialog from "../components/common/ConfirmActionDialog.vue";
 import ConfirmEntitySummary from "../components/common/ConfirmEntitySummary.vue";
@@ -51,6 +52,76 @@ const visibleCards = computed(() =>
     cardsExpanded.value ? visible.value : visible.value.slice(0, 3),
 );
 
+/** 最近一次运行的反馈：success / error，短暂显示后清除 */
+const runFeedbacks = ref<Record<number, "success" | "error">>({});
+const runFeedbackTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const showRunFeedback = (id: number, result: "success" | "error") => {
+    runFeedbacks.value = { ...runFeedbacks.value, [id]: result };
+    const prev = runFeedbackTimers.get(id);
+    if (prev) clearTimeout(prev);
+    runFeedbackTimers.set(
+        id,
+        setTimeout(() => {
+            const next = { ...runFeedbacks.value };
+            delete next[id];
+            runFeedbacks.value = next;
+            runFeedbackTimers.delete(id);
+        }, 1200),
+    );
+};
+const handleRunRule = async (item: any) => {
+    try {
+        await controller.runRule(item);
+        showRunFeedback(item.id, "success");
+    } catch {
+        showRunFeedback(item.id, "error");
+    }
+};
+
+/** 复制规则后高亮新副本名称一次 */
+const highlightedRuleId = ref<number | null>(null);
+let highlightTimer: ReturnType<typeof setTimeout> | undefined;
+const handleCopyRule = async (item: any) => {
+    try {
+        await controller.copyRule(item);
+        // 复制完成后高亮新副本（通常排在原规则之后）
+        const newRule = store.automations.find(
+            (rule) => rule.id !== item.id && rule.name.includes(`${item.name} 副本`),
+        );
+        highlightedRuleId.value = newRule?.id ?? null;
+        if (highlightedRuleId.value !== null) {
+            if (highlightTimer) clearTimeout(highlightTimer);
+            highlightTimer = setTimeout(() => {
+                highlightedRuleId.value = null;
+                highlightTimer = undefined;
+            }, 1600);
+        }
+    } catch {
+        // 错误提示由 controller 内部处理
+    }
+};
+
+/** 批量启用：只对实际变化的可见卡片播放一次高亮 */
+const batchChangedIds = ref<Set<number>>(new Set());
+let batchHighlightTimer: ReturnType<typeof setTimeout> | undefined;
+const handleBatchEnable = async (ruleIds: number[]) => {
+    const before = new Map(automations.value.map((r) => [r.id, r.enabled]));
+    try {
+        await controller.batchEnable(ruleIds);
+        const changed = automations.value
+            .filter((r) => before.get(r.id) !== r.enabled)
+            .map((r) => r.id);
+        batchChangedIds.value = new Set(changed);
+        if (batchHighlightTimer) clearTimeout(batchHighlightTimer);
+        batchHighlightTimer = setTimeout(() => {
+            batchChangedIds.value = new Set();
+            batchHighlightTimer = undefined;
+        }, 1400);
+    } catch {
+        // 错误提示由 controller 内部处理
+    }
+};
+
 const loadAutomations = async () => {
     await store.loadAutomations();
 };
@@ -59,15 +130,31 @@ useAuthenticatedLoader(loadAutomations);
 
 const { root, play: playCardGrid } = useCardGridEnter();
 
+/* === GSAP Flip 自动化卡片增删重排 === */
+const cardsGridRef = ref<HTMLElement | null>(null);
+const { captureAndFlip: flipCards } = useGsapFlip({
+    container: cardsGridRef,
+    itemSelector: ".cards > article",
+    duration: 240,
+});
+
 // 卡片入场 stagger：数据加载完成后 + 展开/收起状态变更时
 onMounted(() => void playCardGrid());
 watch(() => visibleCards.value.length, (n) => { if (n > 0) void playCardGrid(); });
 watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
+
+// 卡片增删/筛选变化时播放 Flip，保持位置连续
+watch(
+    () => visible.value.length,
+    () => {
+        void flipCards();
+    },
+);
 </script>
 
 <template>
     <div class="app-page-layout">
-        <main ref="root" class="automation page-shell page-enter">
+        <main ref="root" class="automation page-shell">
             <header class="automation-page-header">
                 <div class="automation-page-title">
                     <span
@@ -137,6 +224,7 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
                 </section>
             </Transition>
             <section
+                ref="cardsGridRef"
                 class="cards card-grid-enter"
                 :class="{ 'is-expanded': cardsExpanded }"
             >
@@ -149,13 +237,15 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
                     :class="{
                         selected: item.id === selectedId,
                         disabled: !item.enabled,
+                        'is-copy-highlight': item.id === highlightedRuleId,
+                        'is-batch-changed': batchChangedIds.has(item.id),
                     }"
                     @click="store.selectAutomation(item.id)"
                 >
                     <header>
                         <i :class="item.tone"><SvgIcon :name="item.icon" /></i
                         ><span
-                            ><b>{{ item.name }}</b
+                            ><b :class="{ 'name-highlight': item.id === highlightedRuleId }">{{ item.name }}</b
                             ><em>{{ item.enabled ? "已启用" : "已停用" }}</em
                             ><small>{{ item.description }}</small></span
                         ><button
@@ -176,12 +266,35 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
                     </div>
                     <footer>
                         <button
+                            class="run-rule-btn"
                             :disabled="runningId === item.id"
-                            @click.stop="controller.runRule(item)"
+                            @click.stop="handleRunRule(item)"
                         >
-                            {{ runningId === item.id ? "执行中…" : "执行" }}</button
+                            <SvgIcon
+                                v-if="runFeedbacks[item.id] === 'success'"
+                                name="check"
+                                size="sm"
+                            /><SvgIcon
+                                v-else-if="runFeedbacks[item.id] === 'error'"
+                                name="warning"
+                                size="sm"
+                            /><SvgIcon
+                                v-else-if="runningId === item.id"
+                                name="refresh"
+                                size="sm"
+                                class="is-spinning"
+                            /><SvgIcon v-else name="power" size="sm"
+                            />{{ runningId === item.id ? "执行中" : "执行" }}</button
                         ><button @click.stop="controller.openEditDialog(item)">
                             <SvgIcon name="edit" size="sm" />编辑</button
+                        ><button
+                            class="card-copy"
+                            type="button"
+                            title="复制规则"
+                            @click.stop="handleCopyRule(item)"
+                        >
+                            <SvgIcon name="layers" size="sm" />复制
+                        </button
                         ><label class="switch"
                             ><input
                                 :checked="item.enabled"
@@ -231,34 +344,41 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
                     <a @click="controller.openLogsDialog()">查看更多 ›</a>
                 </header>
                 <div class="flow-body">
-                    <div v-if="flowSteps.length" class="steps">
+                    <!-- 切换规则时标题与步骤列表 180–220ms 交叉淡入 -->
+                    <Transition name="step-crossfade" mode="out-in">
                         <div
-                            v-for="(step, index) in flowSteps"
-                            :key="step.id"
-                            :class="`is-${stepStatuses[step.id] ?? 'pending'}`"
+                            v-if="flowSteps.length"
+                            :key="selected?.id ?? 'none'"
+                            class="steps"
                         >
-                            <div class="step-card">
-                                <span class="step-index">{{ String(index + 1).padStart(2, "0") }}</span>
-                                <i :class="`is-${step.tone}`">
-                                    <SvgIcon :name="step.icon" />
-                                    <span v-if="index === 0" class="step-trigger-badge">触发</span>
-                                </i>
-                                <b>{{ step.name }}</b>
-                                <small>{{ step.description }}</small>
-                                <span class="step-status">
-                                    {{ (stepStatuses[step.id] ?? "pending") === "completed" ? "已完成" : (stepStatuses[step.id] ?? "pending") === "running" ? "执行中" : "等待执行" }}
-                                </span>
-                            </div>
-                            <div v-if="index < flowSteps.length - 1" class="step-connector">
-                                <SvgIcon name="chevron-right" size="sm" />
+                            <div
+                                v-for="(step, index) in flowSteps"
+                                :key="step.id"
+                                :class="`is-${stepStatuses[step.id] ?? 'pending'}`"
+                            >
+                                <div class="step-card">
+                                    <span class="step-index">{{ String(index + 1).padStart(2, "0") }}</span>
+                                    <i :class="`is-${step.tone}`">
+                                        <SvgIcon :name="step.icon" />
+                                        <span v-if="index === 0" class="step-trigger-badge">触发</span>
+                                    </i>
+                                    <b>{{ step.name }}</b>
+                                    <small>{{ step.description }}</small>
+                                    <span class="step-status">
+                                        {{ (stepStatuses[step.id] ?? "pending") === "completed" ? "已完成" : (stepStatuses[step.id] ?? "pending") === "running" ? "执行中" : "等待执行" }}
+                                    </span>
+                                </div>
+                                <div v-if="index < flowSteps.length - 1" class="step-connector">
+                                    <SvgIcon name="chevron-right" size="sm" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div v-else class="flow-empty">
-                        <span><SvgIcon name="automation" /></span>
-                        <strong>暂无可展示的自动化流程</strong>
-                        <small>请选择一条规则，或创建包含执行动作的自动化</small>
-                    </div>
+                        <div v-else key="empty" class="flow-empty">
+                            <span><SvgIcon name="automation" /></span>
+                            <strong>暂无可展示的自动化流程</strong>
+                            <small>请选择一条规则，或创建包含执行动作的自动化</small>
+                        </div>
+                    </Transition>
                     <div class="records">
                         <h3>最近执行</h3>
                         <div class="records-list">
@@ -414,7 +534,7 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
             :executions="executions"
             :selected-rule-name="selected?.name"
             @save="controller.saveRule"
-            @batch="controller.batchEnable"
+            @batch="handleBatchEnable"
             @imported="controller.importRules"
             @scheduled="controller.scheduleRules"
         />
@@ -739,6 +859,36 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
     font-size: 13px;
     font-weight: 900;
 }
+
+/* 运行按钮：图标 + 文案横向对齐 */
+.cards footer .run-rule-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 复制规则后新副本卡片与名称一次性高亮 */
+.cards article.is-copy-highlight,
+.cards article.is-batch-changed {
+    border-color: var(--color-primary-400);
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+    animation: copy-card-highlight 1600ms var(--motion-ease) 1 both;
+}
+
+.cards article .name-highlight {
+    color: var(--color-primary-700);
+    animation: copy-name-highlight 1600ms var(--motion-ease) 1 both;
+}
+
+@keyframes copy-card-highlight {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; border-color: var(--color-border-default); }
+    20%, 70% { box-shadow: 0 0 0 3px var(--color-focus-ring); border-color: var(--color-primary-400); }
+}
+
+@keyframes copy-name-highlight {
+    0%, 100% { color: var(--color-text-primary); }
+    20%, 70% { color: var(--color-primary-700); }
+}
 .cards footer .card-delete {
     display: grid;
     width: 34px;
@@ -881,6 +1031,22 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
     grid-template-columns: 1fr 1fr;
     margin-top: 12px;
     gap: 0;
+}
+
+/* 切换规则时流程区交叉淡入：180–220ms */
+.step-crossfade-leave-active {
+    transition: opacity 140ms var(--motion-ease-in), transform 140ms var(--motion-ease-in);
+}
+.step-crossfade-enter-active {
+    transition: opacity 220ms var(--motion-ease-out), transform 220ms var(--motion-ease-out);
+}
+.step-crossfade-leave-to {
+    opacity: 0;
+    transform: translateX(6px);
+}
+.step-crossfade-enter-from {
+    opacity: 0;
+    transform: translateX(-6px);
 }
 .steps {
     display: flex;
@@ -1499,19 +1665,8 @@ watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
         animation: none;
     }
 
-    .rule-delete-cancel-button,
-    .rule-delete-confirm-button,
-    .steps > div {
-        transition-duration: 1ms;
-    }
-
     .cards-footer .chevron-icon {
         transition: none;
-    }
-
-    .stats-fade-enter-active,
-    .stats-fade-leave-active {
-        transition-duration: 1ms;
     }
 }
 @media (max-width: 1200px) {

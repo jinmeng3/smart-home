@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { nextTick, onScopeDispose, ref, watch } from "vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
+import { gsap, registerScrollTrigger } from "../../motion";
 import type { SceneLog } from "../../types/scene";
 
-defineProps<{
+const props = defineProps<{
     modelValue: boolean;
     sceneName: string;
     logs: SceneLog[];
@@ -34,12 +36,53 @@ const formatDuration = (log: SceneLog) => {
     const duration = new Date(log.finishedAt).getTime() - new Date(log.startedAt).getTime();
     return Number.isFinite(duration) ? `${Math.max(duration, 0)} ms` : "--";
 };
+
+/* === 滚动进度条（ScrollTrigger，长列表表达滚动位置） === */
+const logScrollProgress = ref(0);
+let scrollTrigger: gsap.plugins.ScrollTrigger | null = null;
+const setupProgress = async () => {
+    await registerScrollTrigger();
+    await nextTick();
+    const scroller = document.querySelector(".scene-log-dialog .log-dialog-body");
+    if (!scroller) return;
+    scrollTrigger?.kill();
+    gsap.to(".scene-log-dialog .log-scroll-progress", {
+        scaleX: 1,
+        ease: "none",
+        scrollTrigger: {
+            trigger: scroller,
+            scroller,
+            start: "top top",
+            end: "bottom bottom",
+            onUpdate: (self) => {
+                logScrollProgress.value = self.progress;
+            },
+        },
+    });
+};
+watch(
+    () => props.modelValue,
+    (open) => {
+        if (open) {
+            void setupProgress();
+        } else {
+            scrollTrigger?.kill();
+            scrollTrigger = null;
+            logScrollProgress.value = 0;
+        }
+    },
+);
+onScopeDispose(() => {
+    scrollTrigger?.kill();
+    scrollTrigger = null;
+});
 </script>
 
 <template>
     <BaseSmartModal
         :model-value="modelValue"
         width="640px"
+        class="scene-log-dialog"
         @update:model-value="emit('update:modelValue', $event)"
     >
         <template #header>
@@ -56,12 +99,13 @@ const formatDuration = (log: SceneLog) => {
         </template>
 
         <section class="log-dialog-body">
+            <div class="log-scroll-progress" :style="{ transform: `scaleX(${logScrollProgress})` }"></div>
             <div v-if="!logs.length" class="log-empty">
                 <SvgIcon name="log" size="lg" />
                 <span>该场景暂无执行日志</span>
             </div>
             <div v-else class="log-timeline">
-                <article v-for="(log, index) in logs" :key="log.id" class="log-item" :style="{ '--i': index }">
+                <article v-for="(log, index) in logs" :key="log.id" class="log-item">
                     <div class="log-timeline-node">
                         <span class="log-dot" :class="`is-${log.status}`" />
                         <span v-if="index < logs.length - 1" class="log-line" />
@@ -92,10 +136,13 @@ const formatDuration = (log: SceneLog) => {
 .log-dialog-header p b { border-radius:999px; background:var(--color-primary-100); padding:3px 8px; color:var(--color-primary-700); font-size:12px; }
 .log-dialog-header button { display:grid; width:36px; height:36px; margin-left:auto; place-items:center; border-radius:10px; color:var(--color-text-tertiary); }
 .log-dialog-header button:hover { background:var(--color-surface-hover); color:var(--color-text-primary); }
-.log-dialog-body { max-height:480px; overflow-y:auto; padding:20px 24px 16px; }
+.log-dialog-body { position:relative; max-height:480px; overflow-y:auto; padding:20px 24px 16px; }
+.log-scroll-progress { position:sticky; top:0; z-index:2; width:calc(100% + 48px); height:2px; margin:-20px -24px 0; transform-origin:left center; background:linear-gradient(90deg,var(--color-primary-400),var(--color-primary-600)); pointer-events:none; }
 .log-empty { display:flex; min-height:140px; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--color-text-tertiary); font-size:15px; font-weight:700; }
 .log-timeline { display:grid; }
-.log-item { display:grid; grid-template-columns:20px minmax(0,1fr); gap:14px; animation:log-enter 300ms ease both; animation-delay:calc(var(--i) * 40ms); }
+/* 长列表不逐行 stagger，统一轻进入；失败日志一次性边框强调 */
+.log-item { display:grid; grid-template-columns:20px minmax(0,1fr); gap:14px; animation:log-enter 300ms ease both; }
+.log-item:has(.log-card.is-failed) { animation:log-fail-emphasis 500ms var(--motion-ease) 300ms 1 both; }
 .log-timeline-node { display:flex; flex-direction:column; align-items:center; }
 .log-dot { z-index:1; width:12px; height:12px; flex:0 0 12px; border-radius:50%; background:var(--color-primary-500); box-shadow:0 0 0 3px var(--color-card-bg); }
 .log-dot.is-failed { background:var(--color-danger); }
@@ -111,4 +158,9 @@ const formatDuration = (log: SceneLog) => {
 .log-card footer .is-success { background:var(--color-success-soft); color:var(--color-success); }
 .log-card footer .is-failed { background:var(--color-danger-soft); color:var(--color-danger); }
 @keyframes log-enter { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+/* 失败日志一次性边框强调：不持续 */
+@keyframes log-fail-emphasis {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    35% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 22%, transparent); }
+}
 </style>

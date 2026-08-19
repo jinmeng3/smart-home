@@ -1251,13 +1251,6 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    button,
-    .device-upload-button,
-    .device-form-grid input,
-    .device-form-grid select {
-        transition-duration: 1ms;
-    }
-
     button:not(:disabled):hover,
     .device-upload-button:hover {
         transform: none;

@@ -330,14 +330,4 @@ svg.is-spinning {
     opacity: 0;
     transform: translateY(-4px);
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .platform-detail-enter-active,
-    .platform-detail-leave-active {
-        transition-duration: 1ms;
-    }
-    svg.is-spinning {
-        animation-duration: 1.5s;
-    }
-}
 </style>

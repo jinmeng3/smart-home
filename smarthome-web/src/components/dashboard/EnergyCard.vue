@@ -8,7 +8,7 @@ const store = useHomeStore();
 
 <template>
     <section
-        class="energy-card motion-card page-enter-stagger min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
+        class="energy-card motion-card min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] px-4 py-2.5 shadow-soft"
         style="animation-delay: 340ms"
     >
         <!-- 标题 + 主数值 同行 -->

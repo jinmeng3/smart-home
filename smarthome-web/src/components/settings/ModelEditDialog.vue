@@ -217,7 +217,9 @@ const submit = async () => {
                 </div>
             </section>
 
-            <div v-if="testResult" class="test-result" :class="testResult.ok ? 'is-ok' : 'is-fail'"><i></i>{{ testResult.text }}</div>
+            <div v-if="testing" class="test-result is-testing"><i class="is-testing"></i>正在检测连接…</div>
+
+            <div v-if="testResult" class="test-result" :class="testResult.ok ? 'is-ok' : 'is-fail'" :key="testResult.text"><i></i>{{ testResult.text }}</div>
         </div>
 
         <template #footer>
@@ -257,6 +259,11 @@ const submit = async () => {
 .test-result i { width: 7px; height: 7px; border-radius: 999px; }
 .test-result.is-ok { background: var(--color-success-soft); color: var(--color-success); }.test-result.is-ok i { background: var(--color-success); }
 .test-result.is-fail { background: var(--color-danger-soft); color: var(--color-danger); }.test-result.is-fail i { background: var(--color-danger); }
+/* 检测中：仅脉冲一次淡入，不持续闪烁 */
+.test-result.is-testing { background: var(--color-primary-50); color: var(--color-primary-700); animation: test-result-in 200ms var(--motion-ease) 1 both; }
+.test-result.is-testing i { background: var(--color-primary-500); animation: test-result-pulse 800ms var(--motion-ease) infinite; }
+@keyframes test-result-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes test-result-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .dialog-actions { display: flex; width: 100%; align-items: center; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--color-border); background: var(--color-card-bg); padding: 14px 24px; }
 .edit-layout .settings-input:focus { border-color: var(--tone-orange); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone-orange) 16%, transparent); }
 .dialog-actions :deep(.model-submit) { border-color: var(--tone-orange); background: var(--tone-orange); }

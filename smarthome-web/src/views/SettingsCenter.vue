@@ -30,6 +30,7 @@ import { useSettingsStore } from "../stores/settings";
 import { useHouseholdStore } from "../stores/households";
 import { useAuthStore } from "../stores/auth";
 import { useAuthenticatedLoader } from "../composables/useAuthenticatedLoader";
+import { gsap, motionEase, registerScrollTo } from "../motion";
 import { getErrorMessage } from "../utils/error";
 import { ApiError } from "../api/client";
 import { settingsSections, sectionIds } from "../constants/settingsSections";
@@ -42,6 +43,9 @@ const authStore = useAuthStore();
 
 const activeSection = ref<SettingsSectionId>("account");
 const savingAccount = ref(false);
+/** 保存按钮结果反馈：成功/失败，短暂显示后清除 */
+const accountSaveFeedback = ref<"success" | "error" | null>(null);
+let saveFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
 const addingMember = ref(false);
 const loadingMemberId = ref<number | null>(null);
 const switchingHousehold = ref(false);
@@ -148,7 +152,7 @@ const setupScrollObserver = () => {
                     if (sectionIds.includes(id)) {
                         activeSection.value = id;
                     }
-                    break;
+                    // 不 break，继续遍历所有条目，取最后跨越中线的分区（最接近当前视口中心）
                 }
             }
         },
@@ -293,13 +297,30 @@ const syncPreferencesSnapshot = () => {
     initialPreferencesSnapshot.value = preferencesSnapshot.value;
 };
 
-const selectSection = (section: SettingsSectionId) => {
+const selectSection = async (section: SettingsSectionId) => {
     activeSection.value = section;
-    // 锁定 800ms，避免平滑滚动过程中 observer 反复切换
-    scrollLockUntil = Date.now() + 800;
-    document
-        .getElementById(section)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // 锁定一小段时间，避免平滑滚动过程中 observer 反复切换高亮
+    scrollLockUntil = Date.now() + 420;
+    const target = document.getElementById(section);
+    if (!target) return;
+
+    // 可取消程序化滚动（ScrollToPlugin autoKill）：用户手动滚动时自动取消
+    await registerScrollTo();
+    const scrollEl = document.querySelector(".settings-scroll-area") as HTMLElement | null;
+    if (!scrollEl) return;
+
+    // 计算居中偏移：将目标分区置于滚动容器中心位置，与 IntersectionObserver 的
+    // rootMargin: "-50% 0px -50% 0px" 检测区域保持一致，避免滚动后高亮跳错。
+    const containerHeight = scrollEl.clientHeight;
+    const targetHeight = target.offsetHeight;
+    const centeredOffset = -(containerHeight / 2 - targetHeight / 2);
+
+    gsap.to(scrollEl as any, {
+        scrollTo: { y: target, autoKill: true, offsetY: centeredOffset },
+        duration: 0.4,
+        ease: motionEase.ease,
+        overwrite: "auto",
+    });
 };
 
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -409,6 +430,7 @@ const saveAccountFamily = async () => {
         syncAccountForm();
         syncPreferencesSnapshot();
         ElMessage.success("账户与家庭已保存");
+        showAccountSaveFeedback("success");
     } catch (error) {
         // 将 422 字段校验错误定位到具体字段
         if (error instanceof ApiError && error.fieldErrors) {
@@ -418,9 +440,20 @@ const saveAccountFamily = async () => {
         } else {
             ElMessage.error(getErrorMessage(error, "保存失败"));
         }
+        showAccountSaveFeedback("error");
     } finally {
         savingAccount.value = false;
     }
+};
+
+/** 保存成功/失败反馈只播放一次，1.4s 后清除 */
+const showAccountSaveFeedback = (result: "success" | "error") => {
+    accountSaveFeedback.value = result;
+    if (saveFeedbackTimer) clearTimeout(saveFeedbackTimer);
+    saveFeedbackTimer = setTimeout(() => {
+        accountSaveFeedback.value = null;
+        saveFeedbackTimer = undefined;
+    }, 1400);
 };
 
 const performSwitchHousehold = async (householdId: number) => {
@@ -739,6 +772,7 @@ const removeMember = (membershipId: number) => {
                             :form="accountForm"
                             :households="householdStore.households"
                             :loading="savingAccount"
+                            :save-feedback="accountSaveFeedback"
                             :switching="switchingHousehold"
                             @create-household="createHousehold"
                             @delete-avatar="deleteAvatar"
@@ -1305,10 +1339,6 @@ const removeMember = (membershipId: number) => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .settings-save-button {
-        transition-duration: 1ms;
-    }
-
     .settings-save-button:hover:not(:disabled) {
         transform: none;
     }

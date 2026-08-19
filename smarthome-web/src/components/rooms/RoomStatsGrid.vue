@@ -110,10 +110,4 @@ defineProps<{
 .stats-grid strong.tone-muted {
     color: var(--color-text-secondary);
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .stats-grid * {
-        transition-duration: 1ms !important;
-    }
-}
 </style>

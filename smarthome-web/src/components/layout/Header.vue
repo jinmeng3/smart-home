@@ -37,7 +37,7 @@ const greeting = computed(() => {
 
 <template>
     <header
-        class="home-header page-enter-stagger flex shrink-0 items-center justify-between px-6 transition-[height,box-shadow] duration-200"
+        class="home-header flex shrink-0 items-center justify-between px-6 transition-[height,box-shadow] duration-200"
         :class="compact ? 'home-header-compact' : 'h-[88px]'"
         style="animation-delay: 80ms"
     >

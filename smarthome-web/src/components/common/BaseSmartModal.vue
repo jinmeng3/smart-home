@@ -220,20 +220,40 @@ onBeforeUnmount(() => {
 
 /* === GSAP 统一时间轴：遮罩 + 面板入场/退场 === */
 let activeTimeline: gsap.core.Timeline | null = null;
+/** 标记 done() 是否已被调用，防止快速切换时重复调用 */
+let doneCalled = false;
+
+const safeDone = (done: () => void) => {
+    if (doneCalled) return;
+    doneCalled = true;
+    done();
+};
 
 const onBeforeEnter = (el: Element) => {
     if (isReduced.value) return;
+    // 快速关闭时先 kill 旧 Timeline
+    if (activeTimeline) {
+        activeTimeline.kill();
+        activeTimeline = null;
+    }
+    doneCalled = false;
     const overlay = el as HTMLElement;
     const panel = overlay.querySelector<HTMLElement>(".smart-modal");
     gsap.set(overlay, { autoAlpha: 0 });
-    if (panel) gsap.set(panel, { autoAlpha: 0, y: 20, scale: 0.96 });
+    if (panel) gsap.set(panel, { autoAlpha: 0, y: 12, scale: 0.98 });
 };
 
 const onEnter = (el: Element, done: () => void) => {
     if (isReduced.value) {
-        done();
+        safeDone(done);
         return;
     }
+    // 快速关闭时先 kill 旧 Timeline
+    if (activeTimeline) {
+        activeTimeline.kill();
+        activeTimeline = null;
+    }
+    doneCalled = false;
     const overlay = el as HTMLElement;
     const panel = overlay.querySelector<HTMLElement>(".smart-modal");
     const staggerEls = overlay.querySelectorAll<HTMLElement>("[data-modal-stagger]");
@@ -241,7 +261,7 @@ const onEnter = (el: Element, done: () => void) => {
         defaults: { ease: motionEase.ease },
         onComplete: () => {
             activeTimeline = null;
-            done();
+            safeDone(done);
         },
     });
     activeTimeline = tl;
@@ -280,6 +300,12 @@ const onAfterEnter = (el: Element) => {
 
 const onBeforeLeave = (el: Element) => {
     if (isReduced.value) return;
+    // 快速关闭时先 kill 旧 Timeline
+    if (activeTimeline) {
+        activeTimeline.kill();
+        activeTimeline = null;
+    }
+    doneCalled = false;
     const overlay = el as HTMLElement;
     const panel = overlay.querySelector<HTMLElement>(".smart-modal");
     gsap.set(overlay, { autoAlpha: 1 });
@@ -288,16 +314,22 @@ const onBeforeLeave = (el: Element) => {
 
 const onLeave = (el: Element, done: () => void) => {
     if (isReduced.value) {
-        done();
+        safeDone(done);
         return;
     }
+    // 快速关闭时先 kill 旧 Timeline
+    if (activeTimeline) {
+        activeTimeline.kill();
+        activeTimeline = null;
+    }
+    doneCalled = false;
     const overlay = el as HTMLElement;
     const panel = overlay.querySelector<HTMLElement>(".smart-modal");
     const tl = gsap.timeline({
         defaults: { ease: motionEase.easeIn },
         onComplete: () => {
             activeTimeline = null;
-            done();
+            safeDone(done);
         },
     });
     activeTimeline = tl;

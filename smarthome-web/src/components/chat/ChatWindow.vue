@@ -81,6 +81,18 @@ const handleStop = () => {
     store.stopGenerating();
 };
 
+/** 批量加载历史消息：不逐条入场，保持滚动锚点 */
+const batchLoadingEarlier = ref(false);
+const handleLoadEarlier = async () => {
+    if (batchLoadingEarlier.value) return;
+    batchLoadingEarlier.value = true;
+    try {
+        await store.loadEarlierMessages();
+    } finally {
+        batchLoadingEarlier.value = false;
+    }
+};
+
 const handleApprove = () => {
     store.handleDecision("approve");
 };
@@ -153,7 +165,7 @@ const starterPrompts = [
             ref="chatScrollRef"
             :inert="!authStore.isAuthenticated"
             :aria-disabled="!authStore.isAuthenticated"
-            class="page-enter-stagger chat-scroll-area min-h-0 flex-1 overflow-y-auto pr-2"
+            class="chat-scroll-area min-h-0 flex-1 overflow-y-auto pr-2"
             :class="{ 'has-messages': hasMessages }"
             style="animation-delay: 220ms"
             @scroll.passive="updateStickiness"
@@ -236,12 +248,18 @@ const starterPrompts = [
                     <button
                         class="load-earlier-btn"
                         type="button"
-                        @click="store.loadEarlierMessages"
+                        :disabled="batchLoadingEarlier"
+                        @click="handleLoadEarlier"
                     >
-                        加载更早消息
+                        {{ batchLoadingEarlier ? "加载中…" : "加载更早消息" }}
                     </button>
                 </div>
-                <AnimatedList ref="msgListRef" tag="div" name="message-list">
+                <AnimatedList
+                    ref="msgListRef"
+                    tag="div"
+                    name="message-list"
+                    :class="{ 'is-batch-loading': batchLoadingEarlier }"
+                >
                     <ChatMessage
                         v-for="message in visibleMessages"
                         :key="message.id"
@@ -629,6 +647,13 @@ const starterPrompts = [
 .load-earlier-btn:hover {
     background: var(--color-surface-hover);
     border-color: var(--color-primary-400);
+}
+
+/* 批量加载历史消息：不逐条入场 */
+.is-batch-loading :deep(.ai-message-enter),
+.is-batch-loading :deep(.user-message-enter),
+.is-batch-loading :deep(.message-list-enter-active) {
+    animation: none !important;
 }
 
 /* === 模式切换按钮 === */
