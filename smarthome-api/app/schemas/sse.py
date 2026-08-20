@@ -45,6 +45,7 @@ class ApprovalRequired(AgentEvent):
     session_id: int
     approval_id: str
     operator: str
+    call_id: str = ""
     risk_level: str = ""
     reasons: list[str] = Field(default_factory=list)
     preview: dict = Field(default_factory=dict)
@@ -55,6 +56,7 @@ class ExecutionStatus(AgentEvent):
     session_id: int
     operator: str
     status: str
+    call_id: str = ""
     execution_id: str | None = None
     message: str = ""
 

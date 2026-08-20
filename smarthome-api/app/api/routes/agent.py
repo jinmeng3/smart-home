@@ -110,6 +110,28 @@ async def decide_agent_operation(
     )
     model_config = _get_agent_model(db, current_user.id)
 
+    # 校验家庭与会话的组合上确实存在待确认操作，避免因家庭 ID 错误
+    # 而在错误上下文中恢复执行
+    saver = await get_checkpointer()
+    checkpoint = await saver.aget_tuple(
+        {"configurable": {"thread_id": agent_thread_id(ctx)}}
+    )
+    pending = (
+        checkpoint.checkpoint.get("channel_values", {}).get("pending_approval")
+        if checkpoint is not None
+        else None
+    )
+    if pending is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="当前会话在该家庭下没有待确认操作",
+        )
+    if pending["approval_id"] != payload.approval_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="确认请求已失效或不属于当前操作",
+        )
+
     return StreamingResponse(
         resume_agent(
             context=ctx,

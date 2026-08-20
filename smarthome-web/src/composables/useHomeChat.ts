@@ -112,6 +112,53 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     streamDrainResolver = null;
   };
 
+  // 创建内容流式输出器：将 message_delta 逐步渲染到指定消息
+  const createContentStreamer = (assistantMessageIndex: number) => {
+    const flushContent = () => {
+      streamFrameId = 0;
+      const currentMessage = messages.value[assistantMessageIndex];
+      if (!currentMessage || !pendingContent) {
+        streamDrainResolver?.();
+        streamDrainResolver = null;
+        return;
+      }
+
+      const chunkSize = Math.min(18, Math.max(4, Math.ceil(pendingContent.length / 24)));
+      const visibleChunk = pendingContent.slice(0, chunkSize);
+      pendingContent = pendingContent.slice(chunkSize);
+      messages.value[assistantMessageIndex] = {
+        ...currentMessage,
+        content: currentMessage.content + visibleChunk,
+      };
+
+      if (pendingContent) {
+        streamFrameId = window.requestAnimationFrame(flushContent);
+      } else {
+        streamDrainResolver?.();
+        streamDrainResolver = null;
+      }
+    };
+
+    const waitForContentDrain = () => {
+      if (!pendingContent && !streamFrameId) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        streamDrainResolver = resolve;
+        if (!streamFrameId) {
+          streamFrameId = window.requestAnimationFrame(flushContent);
+        }
+      });
+    };
+
+    const queueContent = (delta: string) => {
+      pendingContent += delta;
+      if (!streamFrameId) {
+        streamFrameId = window.requestAnimationFrame(flushContent);
+      }
+    };
+
+    return { queueContent, waitForContentDrain };
+  };
+
   const stopGenerating = () => {
     chatController?.abort();
     chatController = null;
@@ -134,6 +181,155 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       status: "completed" as const,
     }));
     agentStatus.value = "success";
+  };
+
+  // 创建统一的 SSE 事件处理器：首次运行与审批恢复共用
+  interface EventProcessorOptions {
+    assistantMessageIndex: number;
+    queueContent: (delta: string) => void;
+    onRunCompleted?: (status: string) => void;
+    onApprovalReceived?: () => void;
+  }
+
+  const createEventProcessor = (options: EventProcessorOptions) => {
+    let streamStarted = false;
+
+    const updateStep = (
+      id: string,
+      label: string,
+      status: "executing" | "completed" | "failed",
+      message?: string,
+    ) => {
+      const idx = executionSteps.value.findIndex((s) => s.id === id);
+      if (idx !== -1) {
+        const updated = [...executionSteps.value];
+        const prev = updated[idx]!;
+        updated[idx] = {
+          id: prev.id,
+          label: prev.label,
+          status,
+          ...(message ? { message } : {}),
+        };
+        executionSteps.value = updated;
+      } else {
+        executionSteps.value = [
+          ...executionSteps.value,
+          { id, label, status, ...(message ? { message } : {}) },
+        ];
+      }
+    };
+
+    return (event: AgentEvent) => {
+      // 使用事件 ID 去重：忽略已处理过的重复事件
+      if (event.event_id && seenEventIds.has(event.event_id)) {
+        return;
+      }
+      if (event.event_id) {
+        seenEventIds.add(event.event_id);
+      }
+
+      if (!streamStarted) {
+        streamStarted = true;
+      }
+
+      switch (event.event) {
+        case "run_started": {
+          pendingStatus.value = "已开始运行";
+          break;
+        }
+        case "message_delta": {
+          eventReceived.value = true;
+          const ev = event as MessageDeltaEvent;
+          options.queueContent(ev.content);
+          break;
+        }
+        case "tool_started": {
+          eventReceived.value = true;
+          const ev = event as ToolStartedEvent;
+          stepIdCounter++;
+          const stepId = ev.call_id || `tool-${stepIdCounter}`;
+          activeToolCallId = stepId;
+          updateStep(stepId, ev.summary || `正在调用 ${ev.tool}`, "executing");
+          break;
+        }
+        case "tool_completed": {
+          const ev = event as ToolCompletedEvent;
+          updateStep(ev.call_id || activeToolCallId, `已完成 ${ev.tool}`, "completed");
+          break;
+        }
+        case "tool_failed": {
+          const ev = event as ToolFailedEvent;
+          updateStep(ev.call_id || activeToolCallId, `${ev.tool} 执行失败`, "failed", ev.error);
+          break;
+        }
+        case "approval_required": {
+          eventReceived.value = true;
+          const ev = event as ApprovalRequiredEvent;
+          pendingApproval.value = {
+            approval_id: ev.approval_id,
+            run_id: event.run_id,
+            session_id: ev.session_id,
+            call_id: ev.call_id || "",
+            tool: ev.operator || "",
+            args: {},
+            risk_level: ev.risk_level,
+            reasons: ev.reasons,
+            preview: ev.preview,
+            resource_version: "",
+          };
+          agentStatus.value = "awaiting_approval";
+          pendingStatus.value = "需要确认操作";
+          options.onApprovalReceived?.();
+          break;
+        }
+        case "execution_status": {
+          const ev = event as ExecutionStatusEvent;
+          pendingStatus.value = ev.message || `执行状态：${ev.status}`;
+          // 通过 call_id 关联执行步骤（初始化：执行中；失败：标记为失败）
+          if (ev.call_id) {
+            if (ev.status === "failed") {
+              updateStep(ev.call_id, ev.operator, "failed", ev.message);
+            } else if (
+              ev.status === "verified" ||
+              ev.status === "submitted" ||
+              ev.status === "running"
+            ) {
+              updateStep(ev.call_id, ev.operator, "completed");
+            }
+          }
+          break;
+        }
+        case "run_completed": {
+          eventReceived.value = true;
+          const ev = event as RunCompletedEvent;
+          options.onRunCompleted?.(ev.status);
+          break;
+        }
+        case "error": {
+          eventReceived.value = true;
+          const ev = event as AgentErrorEvent;
+          const friendlyMsg = ev.code
+            ? getFriendlyError(ev.code, ev.message || "智能体执行出错")
+            : ev.message || "智能体执行出错";
+          const currentMessage = messages.value[options.assistantMessageIndex];
+          if (currentMessage) {
+            messages.value[options.assistantMessageIndex] = {
+              ...currentMessage,
+              content: friendlyMsg,
+            };
+          }
+          agentStatus.value = "error";
+          pendingStatus.value = friendlyMsg;
+          updateStep(
+            `error-${executionSteps.value.length + 1}`,
+            getFriendlyError(ev.code, "智能体执行失败"),
+            "failed",
+            friendlyMsg,
+          );
+          break;
+        }
+      }
+    };
   };
 
   const fetchHousehold = async () => {
@@ -296,25 +492,77 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
   const handleDecision = async (decision: "approve" | "reject") => {
     if (decisionSubmitting.value || !pendingApproval.value || !activeSessionId.value) return;
+    if (!household.value) {
+      pendingStatus.value = "未找到家庭信息，请刷新页面后重试";
+      return;
+    }
     decisionSubmitting.value = true;
+
+    // 创建助手消息用于消费审批恢复返回的 SSE 流式内容
+    const assistantMessage: ChatMessage = {
+      id: createMessageId(),
+      role: "assistant",
+      content: "",
+      timestamp: currentTime(),
+    };
+    messages.value.push(assistantMessage);
+    trimMessages();
+    const assistantMessageIndex = messages.value.length - 1;
+    const controller = new AbortController();
+    chatController = controller;
+    let runCompleted = false;
+    let runFailed = false;
+
+    agentStatus.value = "executing";
+    eventReceived.value = false;
+    pendingStatus.value =
+      decision === "approve" ? "正在执行操作" : "正在处理拒绝";
+    resetExecutionSteps();
+
+    const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
+
+    const handleEvent = createEventProcessor({
+      assistantMessageIndex,
+      queueContent,
+      onRunCompleted: (status) => {
+        if (status === "completed") {
+          runCompleted = true;
+        } else if (status === "failed") {
+          runFailed = true;
+        }
+      },
+    });
+
     try {
       await apiDecideAgentOperation(
         Number(activeSessionId.value),
         {
-          household_id: pendingApproval.value.session_id,
+          household_id: household.value.id,
           approval_id: pendingApproval.value.approval_id,
           decision,
         },
-        () => {
-          // 决策提交后，等待后续 SSE 事件驱动状态更新
-        },
+        handleEvent,
+        controller.signal,
       );
-      if (decision === "reject") {
-        pendingApproval.value = null;
-        agentStatus.value = "idle";
-        pendingStatus.value = "已拒绝操作";
+
+      await waitForContentDrain();
+
+      if (runFailed) {
+        agentStatus.value = "error";
+        pendingStatus.value = "操作执行失败";
+      } else if (runCompleted) {
+        finishAiReply();
       }
+
+      // 消费完 SSE 后清理 pending，并同步最新执行状态
+      pendingApproval.value = null;
+      pendingStatus.value =
+        decision === "reject" ? "已拒绝操作" : pendingStatus.value;
+      void refreshRecentConversations();
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
       const errMsg = error instanceof Error ? error.message : "决策提交失败";
       // 映射 409/404/410 等错误码
       if (error instanceof Error) {
@@ -323,14 +571,40 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         } else if (errMsg.includes("consumed") || errMsg.includes("已处理")) {
           pendingStatus.value = getFriendlyError("approval_consumed", "该确认请求已被处理");
           pendingApproval.value = null;
+        } else if (errMsg.includes("没有待确认操作")) {
+          pendingStatus.value = "确认请求已失效，请重新发起";
         } else {
           pendingStatus.value = errMsg;
         }
       } else {
         pendingStatus.value = errMsg;
       }
+      // 断线后重新查询 pending；若写操作已完成则同步最终状态
+      if (activeSessionId.value && household.value) {
+        try {
+          const pending = await apiGetPendingAgentOperation(
+            Number(activeSessionId.value),
+            household.value.id,
+          );
+          if (pending) {
+            pendingApproval.value = pending as PendingApproval;
+            agentStatus.value = "awaiting_approval";
+            pendingStatus.value = "连接已恢复，等待确认操作";
+          } else {
+            pendingApproval.value = null;
+            agentStatus.value = "success";
+            pendingStatus.value = "操作已执行完成";
+          }
+        } catch {
+          // 静默忽略查询失败
+        }
+      }
     } finally {
       decisionSubmitting.value = false;
+      if (chatController === controller) {
+        chatController = null;
+        cancelStreamFrame();
+      }
     }
   };
 
@@ -383,165 +657,19 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     const assistantMessageIndex = messages.value.length - 1;
     const controller = new AbortController();
     chatController = controller;
-    let streamStarted = false;
     let runCompleted = false;
 
-    const flushContent = () => {
-      streamFrameId = 0;
-      const currentMessage = messages.value[assistantMessageIndex];
-      if (!currentMessage || !pendingContent) {
-        streamDrainResolver?.();
-        streamDrainResolver = null;
-        return;
-      }
+    const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
 
-      const chunkSize = Math.min(18, Math.max(4, Math.ceil(pendingContent.length / 24)));
-      const visibleChunk = pendingContent.slice(0, chunkSize);
-      pendingContent = pendingContent.slice(chunkSize);
-      messages.value[assistantMessageIndex] = {
-        ...currentMessage,
-        content: currentMessage.content + visibleChunk,
-      };
-
-      if (pendingContent) {
-        streamFrameId = window.requestAnimationFrame(flushContent);
-      } else {
-        streamDrainResolver?.();
-        streamDrainResolver = null;
-      }
-    };
-
-    const queueContent = (delta: string) => {
-      pendingContent += delta;
-      if (!streamFrameId) {
-        streamFrameId = window.requestAnimationFrame(flushContent);
-      }
-    };
-
-    const waitForContentDrain = () => {
-      if (!pendingContent && !streamFrameId) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        streamDrainResolver = resolve;
-        if (!streamFrameId) {
-          streamFrameId = window.requestAnimationFrame(flushContent);
+    const handleEvent = createEventProcessor({
+      assistantMessageIndex,
+      queueContent,
+      onRunCompleted: (status) => {
+        if (status === "completed") {
+          runCompleted = true;
         }
-      });
-    };
-
-    // 更新或添加执行步骤（带事件 ID 去重）
-    const updateStep = (id: string, label: string, status: "executing" | "completed" | "failed", message?: string) => {
-      const idx = executionSteps.value.findIndex((s) => s.id === id);
-      if (idx !== -1) {
-        const updated = [...executionSteps.value];
-        const prev = updated[idx]!;
-        updated[idx] = { id: prev.id, label: prev.label, status, ...(message ? { message } : {}) };
-        executionSteps.value = updated;
-      } else {
-        executionSteps.value = [...executionSteps.value, { id, label, status, message }];
-      }
-    };
-
-    // 处理 SSE 事件（带事件 ID 去重）
-    const handleEvent = (event: AgentEvent) => {
-      // 使用事件 ID 去重：忽略已处理过的重复事件
-      if (event.event_id && seenEventIds.has(event.event_id)) {
-        return;
-      }
-      if (event.event_id) {
-        seenEventIds.add(event.event_id);
-      }
-
-      if (!streamStarted) {
-        streamStarted = true;
-      }
-
-      switch (event.event) {
-        case "run_started": {
-          pendingStatus.value = "已开始运行";
-          break;
-        }
-        case "message_delta": {
-          eventReceived.value = true;
-          const ev = event as MessageDeltaEvent;
-          queueContent(ev.content);
-          break;
-        }
-        case "tool_started": {
-          eventReceived.value = true;
-          const ev = event as ToolStartedEvent;
-          stepIdCounter++;
-          const stepId = ev.call_id || `tool-${stepIdCounter}`;
-          activeToolCallId = stepId;
-          updateStep(stepId, ev.summary || `正在调用 ${ev.tool}`, "executing");
-          break;
-        }
-        case "tool_completed": {
-          const ev = event as ToolCompletedEvent;
-          updateStep(ev.call_id || activeToolCallId, `已完成 ${ev.tool}`, "completed");
-          break;
-        }
-        case "tool_failed": {
-          const ev = event as ToolFailedEvent;
-          updateStep(ev.call_id || activeToolCallId, `${ev.tool} 执行失败`, "failed", ev.error);
-          break;
-        }
-        case "approval_required": {
-          eventReceived.value = true;
-          const ev = event as ApprovalRequiredEvent;
-          pendingApproval.value = {
-            approval_id: ev.approval_id,
-            run_id: event.run_id,
-            session_id: ev.session_id,
-            call_id: "",
-            tool: "",
-            args: {},
-            risk_level: ev.risk_level,
-            reasons: ev.reasons,
-            preview: ev.preview,
-            resource_version: "",
-          };
-          agentStatus.value = "awaiting_approval";
-          pendingStatus.value = "需要确认场景执行";
-          break;
-        }
-        case "execution_status": {
-          const ev = event as ExecutionStatusEvent;
-          pendingStatus.value = ev.message || `执行状态：${ev.status}`;
-          break;
-        }
-        case "run_completed": {
-          eventReceived.value = true;
-          const ev = event as RunCompletedEvent;
-          if (ev.status === "completed") {
-            runCompleted = true;
-          }
-          break;
-        }
-        case "error": {
-          eventReceived.value = true;
-          const ev = event as AgentErrorEvent;
-          const friendlyMsg = ev.code
-            ? getFriendlyError(ev.code, ev.message || "智能体执行出错")
-            : ev.message || "智能体执行出错";
-          const currentMessage = messages.value[assistantMessageIndex];
-          if (currentMessage) {
-            messages.value[assistantMessageIndex] = {
-              ...currentMessage,
-              content: friendlyMsg,
-            };
-          }
-          agentStatus.value = "error";
-          pendingStatus.value = friendlyMsg;
-          updateStep(
-            `error-${executionSteps.value.length + 1}`,
-            getFriendlyError(ev.code, "智能体执行失败"),
-            "failed",
-            friendlyMsg,
-          );
-          break;
-        }
-      }
-    };
+      },
+    });
 
     try {
       const sessionId = activeSessionId.value ? Number(activeSessionId.value) : 0;
@@ -592,12 +720,15 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       }
       agentStatus.value = "error";
       pendingStatus.value = errMsg;
-      updateStep(
-        `error-${executionSteps.value.length + 1}`,
-        "请求执行失败",
-        "failed",
-        errMsg,
-      );
+      executionSteps.value = [
+        ...executionSteps.value,
+        {
+          id: `error-${executionSteps.value.length + 1}`,
+          label: "请求执行失败",
+          status: "failed",
+          message: errMsg,
+        },
+      ];
       // 断线后查询待确认操作，若存在则恢复确认卡片
       if (activeSessionId.value && household.value) {
         try {

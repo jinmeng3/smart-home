@@ -234,6 +234,7 @@ async def run_agent(
                 session_id=context.session_id,
                 approval_id=pending["approval_id"],
                 operator=pending["tool"],
+                call_id=pending.get("call_id", ""),
                 risk_level=pending["risk_level"],
                 reasons=pending["reasons"],
                 preview=pending["preview"],

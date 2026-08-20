@@ -1,6 +1,7 @@
 from app.agents.context import AgentContext
 from app.agents.risk.policy import RiskDecision, RiskLevel
 from app.models.device import Device
+from app.services.automation import get_automation as get_automation_svc
 from app.services.scene import get_scene_or_404
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,6 +42,7 @@ def classify_automation_operation(
     operation: str,
     automation_id: int | None = None,
     actions: list[dict] | None = None,
+    args: dict | None = None,
 ) -> RiskDecision:
     """分类自动化操作的风险等级。
 
@@ -48,14 +50,13 @@ def classify_automation_operation(
         operation: 操作类型 (create_automation / update_automation / set_automation_enabled / delete_automation)
         automation_id: 自动化规则 ID（创建时可为 None）
         actions: 动作列表（仅创建/更新时需要）
+        args: 完整参数字典（用于构建丰富的预览信息）
     """
     reasons: list[str] = []
     resource_version = ""
 
     # 对已有资源的所有配置操作保存版本快照，批准后必须再次校验。
     if automation_id is not None:
-        from app.services.automation import get_automation as get_automation_svc
-
         automation = get_automation_svc(db, automation_id, context.household_id)
         resource_version = str(automation.version)
 
@@ -102,17 +103,58 @@ def classify_automation_operation(
         level = RiskLevel.UNKNOWN
         reasons.append(f"未知的自动化操作类型：{operation}")
 
+    # 构建预览信息
+    preview: dict = {
+        "kind": operation,
+        "operation": operation,
+        "automation_id": automation_id,
+        "risk_level": level.value,
+    }
+
+    if operation == "create_automation" and args:
+        preview["automation_name"] = args.get("name", "")
+        preview["trigger_count"] = len(args.get("triggers", []))
+        preview["condition_count"] = len(args.get("conditions", []))
+        preview["action_count"] = len(args.get("actions", []))
+        preview["summary"] = f"创建自动化规则：{args.get('name', '（未命名）')}"
+        if action_devices:
+            preview["affected_device_names"] = [d.name for d in action_devices]
+
+    elif operation == "update_automation" and automation_id is not None and args:
+        preview["automation_name"] = automation.name
+        changed_fields = []
+        field_map = {
+            "name": "名称",
+            "triggers": "触发器",
+            "conditions": "条件",
+            "actions": "动作",
+            "priority": "优先级",
+            "cooldown_seconds": "冷却时间",
+            "delay_seconds": "延迟时间",
+        }
+        for field, label in field_map.items():
+            if field in args and args[field] is not None:
+                changed_fields.append(label)
+        preview["changed_fields"] = changed_fields
+        preview["summary"] = f"修改自动化规则：{automation.name}"
+
+    elif operation == "set_automation_enabled" and automation_id is not None:
+        preview["automation_name"] = automation.name
+        enabled = bool(args.get("enabled", True)) if args else True
+        preview["target_enabled"] = enabled
+        preview["summary"] = f"{'启用' if enabled else '停用'}自动化规则：{automation.name}"
+
+    elif operation == "delete_automation" and automation_id is not None:
+        preview["automation_name"] = automation.name
+        preview["summary"] = f"删除自动化规则：{automation.name}"
+
     # 自动化创建、修改、启停和删除均属于配置变更，必须人工确认。
     return RiskDecision(
         level=level,
         requires_approval=True,
         reasons=reasons,
         resource_version=resource_version,
-        preview={
-            "operation": operation,
-            "automation_id": automation_id,
-            "risk_level": level,
-        },
+        preview=preview,
     )
 
 
@@ -166,11 +208,13 @@ def classify_scene_execution(
         reasons=reasons,
         resource_version=scene.updated_at.isoformat(),
         preview={
+            "kind": "scene_execution",
             "scene_id": scene.id,
             "scene_name": scene.name,
             "enabled": scene.enabled,
-            "risk_level": level,
+            "risk_level": level.value,
             "device_count": len(device_ids),
+            "summary": f"执行场景：{scene.name}",
             "steps": [
                 {
                     "step_id": step.id,

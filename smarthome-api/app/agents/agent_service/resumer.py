@@ -10,6 +10,9 @@ from app.agents.events.models import (
     Error,
     ExecutionStatus,
     RunCompleted,
+    ToolCompleted,
+    ToolFailed,
+    ToolStarted,
 )
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
@@ -97,6 +100,7 @@ async def resume_agent(
     input_tokens = 0
     output_tokens = 0
     tool_call_count = 0
+    run_errored = False
 
     # 记录用户的确认决策
     audit.record_approval_decision(
@@ -128,16 +132,61 @@ async def resume_agent(
 
             if node == "write_tool" and content:
                 payload = json.loads(content)
+                status = payload.get("status", "unknown")
+                call_id = pending.get("call_id", "")
+                tool_name = str(pending.get("tool", "write_tool"))
+                error_msg = payload.get("error", "")
+                message = payload.get("message", error_msg)
+
+                # 发送工具标准事件：与首次运行路径一致
+                yield encode_sse_event(
+                    ToolStarted(
+                        event_id=f"{run_id}-resume-start",
+                        run_id=run_id,
+                        call_id=call_id or f"resume-{run_id}",
+                        tool=tool_name,
+                        summary=f"正在执行 {tool_name}",
+                    )
+                )
+                if status == "failed" or error_msg:
+                    run_errored = True
+                    yield encode_sse_event(
+                        ToolFailed(
+                            event_id=f"{run_id}-resume-fail",
+                            run_id=run_id,
+                            call_id=call_id or f"resume-{run_id}",
+                            tool=tool_name,
+                            code="AGENT_TOOL_EXECUTION_ERROR",
+                            error=redact_text(message)[:500],
+                        )
+                    )
+                else:
+                    yield encode_sse_event(
+                        ToolCompleted(
+                            event_id=f"{run_id}-resume-result",
+                            run_id=run_id,
+                            call_id=call_id or f"resume-{run_id}",
+                            tool=tool_name,
+                            result=redact_text(
+                                json.dumps(
+                                    payload.get("data", payload.get("message", "")),
+                                    ensure_ascii=False,
+                                    default=str,
+                                )
+                            )[:500],
+                        )
+                    )
 
                 yield encode_sse_event(
                     ExecutionStatus(
                         event_id=f"{run_id}-execution",
                         run_id=run_id,
                         session_id=context.session_id,
-                        operator=pending["tool"],
-                        status=payload.get("status", "unknown"),
+                        operator=tool_name,
+                        status=status,
+                        call_id=call_id or f"resume-{run_id}",
                         execution_id=payload.get("execution_id"),
-                        message=payload.get("message", payload.get("error", "")),
+                        message=message,
                     )
                 )
 
@@ -202,14 +251,15 @@ async def resume_agent(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         tool_call_count=tool_call_count,
-        status="completed",
+        status=("failed" if run_errored else "completed"),
     )
-    audit.record_run_end(run_id, status="completed")
+    audit.record_run_end(run_id, status=("failed" if run_errored else "completed"))
 
     yield encode_sse_event(
         RunCompleted(
             event_id=f"{run_id}-done",
             run_id=run_id,
             session_id=context.session_id,
+            status=("failed" if run_errored else "completed"),
         )
     )

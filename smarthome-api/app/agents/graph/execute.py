@@ -27,7 +27,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
         args = call.get("args") or {}
         tool = tools_by_name.get(name)
         started = time.perf_counter()
-
+        # 多次检验，保证不是执行写操作
         if name in WRITE_TOOL_NAMES:
             content = f"{error_prefix}工具 {name} 是写操作工具，需经过风险评估和用户确认后才能执行"
             ok = False

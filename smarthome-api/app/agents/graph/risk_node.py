@@ -106,6 +106,7 @@ def _classify_operation(
             context=context,
             operation="create_automation",
             actions=actions,
+            args=args,
         )
 
     if tool_name == "update_automation":
@@ -119,6 +120,7 @@ def _classify_operation(
             operation="update_automation",
             automation_id=automation_id,
             actions=actions,
+            args=args,
         )
 
     if tool_name == "set_automation_enabled":
@@ -130,6 +132,7 @@ def _classify_operation(
             context=context,
             operation="set_automation_enabled",
             automation_id=automation_id,
+            args=args,
         )
 
     if tool_name == "delete_automation":

@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { PendingApproval } from "../../types/chat";
 
-defineProps<{
+const props = defineProps<{
   approval: PendingApproval;
   submitting?: boolean;
 }>();
@@ -10,14 +11,63 @@ defineEmits<{
   approve: [];
   reject: [];
 }>();
+
+// 从预览中安全提取字段
+const preview = computed(() => props.approval.preview);
+const kind = computed(() => String(preview.value.kind || ""));
+const isSceneExecution = computed(() => kind.value === "scene_execution");
+const isAutomationCreate = computed(() => kind.value === "create_automation");
+const isAutomationUpdate = computed(() => kind.value === "update_automation");
+const isAutomationToggle = computed(() => kind.value === "set_automation_enabled");
+const isAutomationDelete = computed(() => kind.value === "delete_automation");
+
+const title = computed(() => {
+  if (isSceneExecution.value) return "需要确认场景执行";
+  if (isAutomationCreate.value) return "需要确认创建自动化";
+  if (isAutomationUpdate.value) return "需要确认修改自动化";
+  if (isAutomationToggle.value) return "需要确认启停自动化";
+  if (isAutomationDelete.value) return "需要确认删除自动化";
+  return "需要确认操作";
+});
+
+const summary = computed(() => String(preview.value.summary || ""));
+const automationName = computed(() => String(preview.value.automation_name || ""));
+const canApprove = computed(() => {
+  // 场景执行需要检查是否启用；其他操作始终可执行
+  if (isSceneExecution.value) {
+    return Boolean(preview.value.enabled);
+  }
+  return true;
+});
+
+const disabledTip = computed(() => {
+  if (isSceneExecution.value && !preview.value.enabled) {
+    return "当前场景已停用，无法执行。";
+  }
+  return "";
+});
+
+// 自动化预览详细信息
+const changedFields = computed(() => (preview.value.changed_fields as string[]) || []);
+const affectedDeviceNames = computed(() => (preview.value.affected_device_names as string[]) || []);
+const triggerCount = computed(() => Number(preview.value.trigger_count ?? 0));
+const conditionCount = computed(() => Number(preview.value.condition_count ?? 0));
+const actionCount = computed(() => Number(preview.value.action_count ?? 0));
+const targetEnabled = computed(() => Boolean(preview.value.target_enabled));
+
+// 场景执行预览
+const sceneSteps = computed(() => (preview.value.steps as any[]) || []);
+const sceneName = computed(() => String(preview.value.scene_name || ""));
 </script>
 
 <template>
   <article class="approval-card">
     <header class="approval-header">
       <div>
-        <strong>需要确认场景执行</strong>
-        <p>{{ approval.preview.scene_name }}</p>
+        <strong>{{ title }}</strong>
+        <p v-if="summary">{{ summary }}</p>
+        <p v-else-if="automationName">{{ automationName }}</p>
+        <p v-else-if="sceneName">{{ sceneName }}</p>
       </div>
 
       <span
@@ -40,9 +90,10 @@ defineEmits<{
       </li>
     </ul>
 
-    <div class="step-list">
+    <!-- 场景执行步骤 -->
+    <div v-if="isSceneExecution && sceneSteps.length" class="step-list">
       <div
-        v-for="step in approval.preview.steps"
+        v-for="step in sceneSteps"
         :key="step.step_id"
         class="scene-step"
       >
@@ -56,6 +107,42 @@ defineEmits<{
             </template>
           </p>
         </div>
+      </div>
+    </div>
+
+    <!-- 自动化创建预览 -->
+    <div v-if="isAutomationCreate" class="auto-detail">
+      <div v-if="triggerCount > 0" class="detail-row">
+        <span class="detail-label">触发器</span>
+        <span class="detail-value">{{ triggerCount }} 个</span>
+      </div>
+      <div v-if="conditionCount > 0" class="detail-row">
+        <span class="detail-label">条件</span>
+        <span class="detail-value">{{ conditionCount }} 个</span>
+      </div>
+      <div v-if="actionCount > 0" class="detail-row">
+        <span class="detail-label">动作</span>
+        <span class="detail-value">{{ actionCount }} 个</span>
+      </div>
+      <div v-if="affectedDeviceNames.length" class="detail-row">
+        <span class="detail-label">影响设备</span>
+        <span class="detail-value">{{ affectedDeviceNames.join("、") }}</span>
+      </div>
+    </div>
+
+    <!-- 自动化修改预览 -->
+    <div v-if="isAutomationUpdate && changedFields.length" class="auto-detail">
+      <div class="detail-row">
+        <span class="detail-label">修改字段</span>
+        <span class="detail-value">{{ changedFields.join("、") }}</span>
+      </div>
+    </div>
+
+    <!-- 自动化启停预览 -->
+    <div v-if="isAutomationToggle" class="auto-detail">
+      <div class="detail-row">
+        <span class="detail-label">目标状态</span>
+        <span class="detail-value">{{ targetEnabled ? "启用" : "停用" }}</span>
       </div>
     </div>
 
@@ -83,15 +170,15 @@ defineEmits<{
       <button
         type="button"
         class="approve-button"
-        :disabled="submitting || !approval.preview.enabled"
+        :disabled="submitting || !canApprove"
         @click="$emit('approve')"
       >
         {{ submitting ? "处理中…" : "确认执行" }}
       </button>
     </footer>
 
-    <p v-if="!approval.preview.enabled" class="disabled-tip">
-      当前场景已停用，无法执行。
+    <p v-if="disabledTip" class="disabled-tip">
+      {{ disabledTip }}
     </p>
   </article>
 </template>
@@ -209,6 +296,34 @@ defineEmits<{
   margin: 0;
   font-size: 12px;
   color: var(--color-text-secondary);
+}
+
+.auto-detail {
+  margin: 12px 16px 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.detail-label {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: var(--color-text-primary);
+  text-align: right;
 }
 
 .approval-meta {

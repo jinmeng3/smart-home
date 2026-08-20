@@ -89,14 +89,37 @@ export interface ScenePreviewStep {
   order: number;
 }
 
+// === 审批预览判别联合类型 ===
+
+/** 场景执行预览 */
 export interface SceneApprovalPreview {
+  kind: "scene_execution";
   scene_id: string;
   scene_name: string;
   enabled: boolean;
-  risk_level: "low" | "high" | "unknown";
+  risk_level: string;
   device_count: number;
+  summary?: string;
   steps: ScenePreviewStep[];
 }
+
+/** 自动化操作预览 */
+export interface AutomationApprovalPreview {
+  kind: "create_automation" | "update_automation" | "set_automation_enabled" | "delete_automation";
+  operation: string;
+  automation_id: number | null;
+  automation_name?: string;
+  risk_level: string;
+  summary?: string;
+  trigger_count?: number;
+  condition_count?: number;
+  action_count?: number;
+  changed_fields?: string[];
+  affected_device_names?: string[];
+  target_enabled?: boolean;
+}
+
+export type ApprovalPreview = SceneApprovalPreview | AutomationApprovalPreview;
 
 export interface PendingApproval {
   approval_id: string;
@@ -107,7 +130,7 @@ export interface PendingApproval {
   args: Record<string, unknown>;
   risk_level: "low" | "high" | "unknown";
   reasons: string[];
-  preview: SceneApprovalPreview;
+  preview: Record<string, unknown>;
   resource_version: string;
 }
 
@@ -116,9 +139,10 @@ export interface ApprovalRequiredEvent extends AgentEventBase {
   session_id: number;
   approval_id: string;
   operator: string;
+  call_id: string;
   risk_level: "low" | "high" | "unknown";
   reasons: string[];
-  preview: SceneApprovalPreview;
+  preview: Record<string, unknown>;
 }
 
 export interface ExecutionStatusEvent extends AgentEventBase {
@@ -126,6 +150,7 @@ export interface ExecutionStatusEvent extends AgentEventBase {
   session_id: number;
   operator: string;
   status: "submitted" | "running" | "verified" | "failed" | "unknown";
+  call_id: string;
   execution_id: string | null;
   message: string;
 }
