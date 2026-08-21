@@ -10,6 +10,13 @@ from sqlalchemy.orm import Session
 def system_prompt(
     context: AgentContext, household_name: str | None, db: Session = DB_DEPENDENCY
 ):
+    if not context.tools_enabled:
+        return (
+            "你是智能家居助手，工作在家庭“"
+            + (household_name or "当前家庭")
+            + "”。请以自然对话方式回答用户问题，"
+            "不要调用任何工具，也不得编造家庭数据。"
+        )
     household = db.scalar(select(Household).where(Household.id == context.household_id))
     name = household.name if household else (household_name or "当前家庭")
     device_count = (

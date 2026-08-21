@@ -29,9 +29,13 @@ def build_graph(
     *,
     audit: AuditRecorder | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
+    tools_enabled: bool = True,
 ):
-    tools_by_name = {tool.name: tool for tool in tools}
-    bound_model = model.bind_tools(tools)
+    # 对话模式（tools_enabled=False）不绑定工具，模型只做纯文本补全，
+    # should_continue 因无 tool_calls 直接走 finalize，不会触发审批链
+    active_tools = tools if tools_enabled else []
+    tools_by_name = {tool.name: tool for tool in active_tools}
+    bound_model = model.bind_tools(active_tools)
 
     graph = StateGraph(AgentState)  # type: ignore
 

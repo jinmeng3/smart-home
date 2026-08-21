@@ -13,6 +13,11 @@ class ChatSession(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), comment="用户主键"
     )
+    household_id: Mapped[int | None] = mapped_column(
+        ForeignKey("households.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="所属家庭",  # 为空表示历史数据，首次绑定后不再变更
+    )
     title: Mapped[str] = mapped_column(
         String(120), default="新对话", comment="会话标题"
     )

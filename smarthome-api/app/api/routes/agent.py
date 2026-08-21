@@ -59,9 +59,15 @@ async def agent_run(
         session_id=payload.session_id,
         db=db,
         current_user=current_user,
+        tools_enabled=payload.tools_enabled,
     )
+    # 通过 household_id 进一步绑定/校验会话归属，错误家庭直接 409
     get_chat_session(
-        db=db, current_user=current_user, session_id=payload.session_id, messages=[]
+        db=db,
+        current_user=current_user,
+        session_id=payload.session_id,
+        messages=[],
+        household_id=payload.household_id,
     )
     saver = await get_checkpointer()
     checkpoint = await saver.aget_tuple(

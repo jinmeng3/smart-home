@@ -18,6 +18,7 @@ class AgentContext:
     session_id: int
     auto_execute_low_risk: bool
     confirm_high_risk: bool
+    tools_enabled: bool = True
 
 
 def agent_context(
@@ -25,6 +26,8 @@ def agent_context(
     session_id: int,
     db: Session = DB_DEPENDENCY,
     current_user: User = CURRENT_USER_DEPENDENCY,
+    *,
+    tools_enabled: bool = True,
 ) -> AgentContext:
     membership = db.scalar(
         select(HouseholdMembership).where(
@@ -43,6 +46,9 @@ def agent_context(
     )
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
+    # 家庭与会话强绑定：已绑定家庭的会话不得跨家庭使用
+    if session.household_id is not None and session.household_id != household_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="会话不属于该家庭")
     user_preferences = db.scalar(
         select(UserPreferences).where(UserPreferences.user_id == current_user.id)
     )
@@ -69,4 +75,5 @@ def agent_context(
         session_id=session_id,
         auto_execute_low_risk=auto_execute_low_risk,
         confirm_high_risk=confirm_high_risk,
+        tools_enabled=tools_enabled,
     )

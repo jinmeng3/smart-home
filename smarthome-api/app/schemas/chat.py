@@ -33,5 +33,6 @@ class ChatMessageRead(ChatSchema):
 class ChatSessionRead(ChatSchema):
     id: int
     title: str
+    household_id: int | None = None
     created_at: datetime
     updated_at: datetime

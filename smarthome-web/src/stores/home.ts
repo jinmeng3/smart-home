@@ -257,6 +257,7 @@ export const useHomeStore = defineStore("home", () => {
     selectDevice,
     sendMessage: chat.sendMessage,
     selectModel: chat.selectModel,
+    setAgentMode: chat.setAgentMode,
     setActiveMenu,
     sidebarCollapsed,
     sidebarPhase,

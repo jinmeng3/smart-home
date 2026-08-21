@@ -10,6 +10,16 @@ const emit = defineEmits<{
 }>();
 
 const store = useHomeStore();
+
+// 对话模式：agent（Agent 执行，默认）| chat（普通对话补全，不绑定工具）
+const agentMode = ref<'agent' | 'chat'>('agent');
+const toggleMode = (mode: 'agent' | 'chat') => {
+    if (agentMode.value === mode) return;
+    agentMode.value = mode;
+    store.setAgentMode(mode);
+};
+const currentMode = computed(() => agentMode.value);
+defineExpose({ agentMode, currentMode, toggleMode });
 const authStore = useAuthStore();
 const inputValue = ref("");
 const inputRef = ref<HTMLTextAreaElement | null>(null);
@@ -109,6 +119,25 @@ onUnmounted(() => {
             @keydown="onInputKeydown"
         ></textarea>
 
+        <div class="mode-switch" role="tablist" aria-label="对话模式">
+            <button
+                type="button"
+                role="tab"
+                :aria-selected="agentMode === 'agent'"
+                class="mode-btn"
+                :class="{ 'mode-btn-active': agentMode === 'agent' }"
+                @click="toggleMode('agent')"
+            >Agent</button>
+            <button
+                type="button"
+                role="tab"
+                :aria-selected="agentMode === 'chat'"
+                class="mode-btn"
+                :class="{ 'mode-btn-active': agentMode === 'chat' }"
+                @click="toggleMode('chat')"
+            >对话</button>
+        </div>
+
         <div class="model-menu relative min-w-0" ref="modelMenuRef">
             <button
                 :disabled="!authStore.isAuthenticated"
@@ -190,6 +219,44 @@ onUnmounted(() => {
 
 .composer-icon-button:hover {
     background: var(--color-surface-hover);
+}
+
+/* 模式切换 */
+.mode-switch {
+    display: flex;
+    height: 32px;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    padding: 2px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.mode-btn {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 0 10px;
+    line-height: 26px;
+    transition: color .15s, background .15s;
+}
+
+.mode-btn:hover {
+    color: var(--color-text-secondary);
+}
+
+.mode-btn-active {
+    background: var(--color-primary-500);
+    color: #fff;
+}
+
+.mode-btn-active:hover {
+    color: #fff;
 }
 
 /* 模型下拉箭头旋转 */

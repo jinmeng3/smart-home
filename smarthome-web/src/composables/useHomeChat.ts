@@ -343,6 +343,9 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     () => {
       if (!householdStore.loadedOnce) return;
       stopGenerating();
+      // 切换家庭时丢弃旧审批卡片，避免跨家庭误用
+      pendingApproval.value = null;
+      pendingStatus.value = "";
       void fetchHousehold();
       void refreshRecentConversations();
     },
@@ -492,8 +495,11 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
   const handleDecision = async (decision: "approve" | "reject") => {
     if (decisionSubmitting.value || !pendingApproval.value || !activeSessionId.value) return;
-    if (!household.value) {
-      pendingStatus.value = "未找到家庭信息，请刷新页面后重试";
+    // 前置校验：会话、家庭、pending 三者齐全且为合法正整数，避免用 session_id 误当 household_id
+    const hh = household.value;
+    const sid = Number(activeSessionId.value);
+    if (!hh || !Number.isFinite(sid) || sid <= 0 || !Number.isFinite(hh.id) || hh.id <= 0 || !pendingApproval.value.approval_id) {
+      pendingStatus.value = "提交失败：家庭或会话信息不完整，请刷新后重试";
       return;
     }
     decisionSubmitting.value = true;
@@ -521,23 +527,28 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
     const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
 
+    let ended = false;
     const handleEvent = createEventProcessor({
       assistantMessageIndex,
       queueContent,
       onRunCompleted: (status) => {
+        ended = true;
         if (status === "completed") {
           runCompleted = true;
         } else if (status === "failed") {
           runFailed = true;
+        } else if (status === "pending_confirmation") {
+          // 恢复后再次出现待确认（如审批期间又产生新写操作），放弃本地执行态
+          runCompleted = true;
         }
       },
     });
 
     try {
       await apiDecideAgentOperation(
-        Number(activeSessionId.value),
+        sid,
         {
-          household_id: household.value.id,
+          household_id: hh!.id,
           approval_id: pendingApproval.value.approval_id,
           decision,
         },
@@ -551,6 +562,23 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         agentStatus.value = "error";
         pendingStatus.value = "操作执行失败";
       } else if (runCompleted) {
+        finishAiReply();
+      } else if (!ended) {
+        // 流提前结束：回查后端 pending，避免卡在 executing
+        try {
+          const pending = await apiGetPendingAgentOperation(
+            sid,
+            hh!.id,
+          );
+          if (pending) {
+            pendingApproval.value = pending as PendingApproval;
+            agentStatus.value = "awaiting_approval";
+            pendingStatus.value = "已恢复，等待确认操作";
+            return;
+          }
+        } catch {
+          // 回查失败时按成功处理
+        }
         finishAiReply();
       }
 
@@ -672,14 +700,19 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     });
 
     try {
-      const sessionId = activeSessionId.value ? Number(activeSessionId.value) : 0;
+      const sidNum = Number(activeSessionId.value);
+      if (!Number.isFinite(sidNum) || sidNum <= 0) {
+        throw new Error("会话不存在或尚未创建，请先创建会话后重试");
+      }
       await apiRunAgent(
         {
-          session_id: sessionId,
+          session_id: sidNum,
           household_id: hh.id,
           household_name: hh.name,
           model: activeModel.value,
           message: messages.value[assistantMessageIndex - 1]?.content || "",
+          // 对话模式不绑定工具，只做纯文本补全；Agent 模式保持现有工具能力
+          tools_enabled: agentMode.value === "agent",
         },
         handleEvent,
         controller.signal,
@@ -802,6 +835,10 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     void runAgentFlow();
   };
 
+  const setAgentMode = (mode: "agent" | "chat") => {
+    agentMode.value = mode;
+  };
+
   onScopeDispose(stopGenerating);
 
   return {
@@ -825,6 +862,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     sendMessage,
     selectModel,
     agentMode,
+    setAgentMode,
     loadEarlierMessages,
     hasMoreMessages,
     startNewConversation,

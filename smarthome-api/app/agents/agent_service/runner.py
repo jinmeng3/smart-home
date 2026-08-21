@@ -42,6 +42,7 @@ async def _create_graph_runner(
         db=db,
         audit=audit,
         checkpointer=await get_checkpointer(),
+        tools_enabled=context.tools_enabled,
     )
     return graph, audit
 

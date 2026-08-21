@@ -20,9 +20,14 @@ from app.schemas.chat import ChatCompletionRequest
 
 
 def get_chat_session(
-    db: Session, current_user: User, session_id: int | None, messages: list
+    db: Session,
+    current_user: User,
+    session_id: int | None,
+    messages: list,
+    *,
+    household_id: int | None = None,
 ) -> ChatSession:
-    """获取或创建聊天会话。"""
+    """获取或创建聊天会话，必要时绑定/校验家庭归属。"""
     if session_id is not None:
         session = db.scalar(
             select(ChatSession).where(
@@ -34,6 +39,16 @@ def get_chat_session(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
+        # 强校验：会话已绑定家庭时必须与传入家庭一致
+        if household_id is not None:
+            if session.household_id is not None and session.household_id != household_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="会话不属于该家庭",
+                )
+            if session.household_id is None:
+                session.household_id = household_id
+                db.flush()
         return session
 
     title = next(
@@ -44,7 +59,11 @@ def get_chat_session(
         ),
         "新对话",
     )
-    session = ChatSession(user_id=current_user.id, title=title or "新对话")
+    session = ChatSession(
+        user_id=current_user.id,
+        title=title or "新对话",
+        household_id=household_id,
+    )
     db.add(session)
     db.flush()
     return session

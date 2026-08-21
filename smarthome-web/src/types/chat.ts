@@ -182,6 +182,7 @@ export interface AgentRunRequest {
   household_name?: string;
   model?: string | null;
   message: string;
+  tools_enabled?: boolean;
 }
 
 export interface HouseholdInfo {
