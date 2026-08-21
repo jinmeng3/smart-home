@@ -53,7 +53,7 @@ def list_households(
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[list[HouseholdListItem]]:
     """列出当前用户加入的家庭及成员统计。"""
-    # 预聚合成员数，避免按家庭逐条查询造成 N+1 问题。
+                                
     member_counts = (
         select(
             HouseholdMembership.household_id,
@@ -159,7 +159,7 @@ def update_household(
     if payload.name is not None and payload.name.strip():
         household.name = payload.name.strip()
 
-    # model_fields_set 用于区分“未传 address”和“显式传 null 清空地址”。
+                                                        
     if "address" in payload.model_fields_set:
         household.address = payload.address
 

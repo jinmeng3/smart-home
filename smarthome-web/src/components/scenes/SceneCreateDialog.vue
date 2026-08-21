@@ -146,7 +146,6 @@ const colorOptions = [
     { value: "var(--color-gray-600)", label: "灰色" },
 ];
 
-// 根据步骤名称推断一个已存在图标名，保证编辑时动作列表可视化一致。
 const deriveActionIcon = (name: string): string => {
     const map: Array<[RegExp, string]> = [
         [/灯|照明|亮度|光/i, "light"],
@@ -178,7 +177,6 @@ const populateScene = (scene: Scene) => {
     form.icon = scene.icon;
     form.color = scene.color;
     form.triggerType = scene.triggerType;
-    // 存储的 triggerLabel 已带触发方式前缀，编辑时还原为纯详情。
     form.triggerLabel =
         scene.triggerType === "location"
             ? scene.triggerLabel.replace(/^位置触发（/, "").replace(/）$/, "")
@@ -193,7 +191,6 @@ const populateScene = (scene: Scene) => {
     }));
 };
 
-// 弹窗打开时按当前模式（创建 / 编辑）初始化表单。
 watch(
     () => model.value,
     (open) => {

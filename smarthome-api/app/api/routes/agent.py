@@ -61,7 +61,7 @@ async def agent_run(
         current_user=current_user,
         tools_enabled=payload.tools_enabled,
     )
-    # 通过 household_id 进一步绑定/校验会话归属，错误家庭直接 409
+                                             
     get_chat_session(
         db=db,
         current_user=current_user,
@@ -116,8 +116,8 @@ async def decide_agent_operation(
     )
     model_config = _get_agent_model(db, current_user.id)
 
-    # 校验家庭与会话的组合上确实存在待确认操作，避免因家庭 ID 错误
-    # 而在错误上下文中恢复执行
+                                      
+                  
     saver = await get_checkpointer()
     checkpoint = await saver.aget_tuple(
         {"configurable": {"thread_id": agent_thread_id(ctx)}}

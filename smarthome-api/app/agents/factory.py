@@ -98,7 +98,7 @@ class ModelCache:
                 self._items.move_to_end(key)
                 return cached
 
-            # 配置更新后立即移除旧实例，避免旧密钥长期留在内存中。
+                                        
             stale_keys = [
                 item_key for item_key in self._items if item_key[0] == config.id
             ]

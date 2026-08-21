@@ -80,7 +80,6 @@ const runConfirm = async () => {
         await request.onConfirm();
         confirmRequest.value = null;
     } catch {
-        // 业务异常已由调用方处理，保持弹窗关闭
         confirmRequest.value = null;
     } finally {
         confirmLoading.value = false;
@@ -133,7 +132,6 @@ const confirmReset = () => {
     };
 };
 
-// 滚动监听（单 IntersectionObserver 实例）
 const scrollContainer = ref<HTMLElement | null>(null);
 let sectionObserver: IntersectionObserver | null = null;
 /** 点击目录后短时间锁定，避免平滑滚动过程中高亮跳动 */
@@ -152,7 +150,6 @@ const setupScrollObserver = () => {
                     if (sectionIds.includes(id)) {
                         activeSection.value = id;
                     }
-                    // 不 break，继续遍历所有条目，取最后跨越中线的分区（最接近当前视口中心）
                 }
             }
         },
@@ -231,10 +228,10 @@ const householdMembers = computed(() => settings.value.account.members ?? []);
 
 /** 已完成的配置项数量（用于目录进度条） */
 const completedConfigCount = computed(() => {
-    let count = 2; // 账户 + 界面 默认已完成
+    let count = 2;
     if (settings.value.aiAssistant.model) count++;
     if (settings.value.homeAssistant.tokenConfigured) count++;
-    count++; // 通知 默认已完成
+    count++;
     if (settings.value.security.twoFactorEnabled) count++;
     if (settings.value.backup.autoBackup) count++;
     if (householdMembers.value.length > 0) count++;
@@ -299,18 +296,14 @@ const syncPreferencesSnapshot = () => {
 
 const selectSection = async (section: SettingsSectionId) => {
     activeSection.value = section;
-    // 锁定一小段时间，避免平滑滚动过程中 observer 反复切换高亮
     scrollLockUntil = Date.now() + 420;
     const target = document.getElementById(section);
     if (!target) return;
 
-    // 可取消程序化滚动（ScrollToPlugin autoKill）：用户手动滚动时自动取消
     await registerScrollTo();
     const scrollEl = document.querySelector(".settings-scroll-area") as HTMLElement | null;
     if (!scrollEl) return;
 
-    // 计算居中偏移：将目标分区置于滚动容器中心位置，与 IntersectionObserver 的
-    // rootMargin: "-50% 0px -50% 0px" 检测区域保持一致，避免滚动后高亮跳错。
     const containerHeight = scrollEl.clientHeight;
     const targetHeight = target.offsetHeight;
     const centeredOffset = -(containerHeight / 2 - targetHeight / 2);
@@ -386,7 +379,6 @@ watch(
     { deep: true, immediate: true },
 );
 
-// 表单内容变化时清除字段级校验错误
 watch(
     accountForm,
     () => {
@@ -432,7 +424,6 @@ const saveAccountFamily = async () => {
         ElMessage.success("账户与家庭已保存");
         showAccountSaveFeedback("success");
     } catch (error) {
-        // 将 422 字段校验错误定位到具体字段
         if (error instanceof ApiError && error.fieldErrors) {
             accountFieldErrors.value = error.fieldErrors;
             const firstMessage = Object.values(error.fieldErrors)[0];
@@ -475,7 +466,6 @@ const performSwitchHousehold = async (householdId: number) => {
 };
 
 const switchHousehold = (householdId: number) => {
-    // 有未保存的账户/家庭修改时先确认，避免切换家庭丢编辑
     if (accountDirty.value) {
         confirmRequest.value = {
             tone: "warning",
@@ -635,7 +625,6 @@ const updateMemberRole = (membershipId: number, role: HouseholdRole) => {
         return;
     }
 
-    // 高影响操作（管理员降级）二次确认
     if (member.role === "admin" && role === "member") {
         confirmRequest.value = {
             tone: "warning",

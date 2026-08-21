@@ -62,10 +62,9 @@ const hasStreamingContent = computed(() => {
 /* === 重新生成状态：点击按钮后立即执行 splice，退场动画由 TransitionGroup 负责 === */
 const regeneratingMessageId = ref<string | null>(null);
 const handleRegenerate = (messageId: string) => {
-    if (regeneratingMessageId.value) return; // 正在处理中
+    if (regeneratingMessageId.value) return;
     regeneratingMessageId.value = messageId;
     store.regenerateMessage(messageId);
-    // 退场动画开始后清除 regenerating 标记
     void nextTick(() => {
         regeneratingMessageId.value = null;
     });
@@ -114,7 +113,6 @@ const { isReduced } = useMotionMode();
 const emptyChatRef = ref<HTMLElement | null>(null);
 let staggerCtx: gsap.Context | null = null;
 watch(emptyChatRef, (el) => {
-    // 清除之前的 context
     staggerCtx?.revert();
     staggerCtx = null;
     if (!el || isReduced.value) return;

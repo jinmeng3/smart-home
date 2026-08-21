@@ -37,7 +37,6 @@ const nameError = ref("");
 const hoveredIcon = ref("");
 const hoveredColor = ref("");
 
-// 设备列表（从后端加载）
 const deviceList = ref<Device[]>([]);
 const loadingDevices = ref(false);
 
@@ -153,7 +152,6 @@ watch(
     () => [props.modelValue, props.room, props.mode] as const,
     async () => {
         if (props.modelValue) {
-            // 从后端加载设备列表
             loadingDevices.value = true;
             try {
                 const response = await listDevices({

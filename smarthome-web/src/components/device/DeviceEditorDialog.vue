@@ -116,7 +116,6 @@ const handleImageChange = (event: Event) => {
         return;
     }
 
-    // 文件大小校验：设备图片限制 10MB
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
         ElMessage.warning("设备图片文件大小不能超过 10MB");
@@ -124,7 +123,6 @@ const handleImageChange = (event: Event) => {
         return;
     }
 
-    // 文件类型校验
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
     if (!allowedTypes.includes(file.type)) {
         ElMessage.warning("仅支持 JPEG、PNG、WebP、GIF 或 SVG 格式的设备图片");
@@ -191,7 +189,6 @@ watch(
     { immediate: true },
 );
 
-// 当用户选择预设类型时，自动更新图标为对应类型的默认图标
 watch(
     () => form.type,
     (newType) => {

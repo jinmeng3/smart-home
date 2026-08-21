@@ -72,7 +72,6 @@ const loadDevices = useAuthenticatedLoader(controller.loadDevices, {
 });
 
 onMounted(() => {
-    // Read view parameter from URL
     const view = route.query.view as "all" | "frequent" | "favorite" | undefined;
     if (view === "frequent" || view === "favorite") {
         controller.setViewMode(view);

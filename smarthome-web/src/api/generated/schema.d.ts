@@ -1,6 +1,3 @@
-// 自动生成，禁止手工编辑。
-// 来源：后端 openapi.json（npm run api:generate）。
-// 前端组件不应直接引用此文件，应通过 api/ 模块导出。
 
 // === 通用响应包装 ===
 export type ApiResponse<T = unknown> = { code: number; message: string; data: T | null };
@@ -1201,177 +1198,90 @@ export interface ValidationError {
 }
 
 // === 操作路径与方法 ===
-// Read Me
 export type read_me_api_account_me_get = { path: "/api/account/me"; method: "GET" };
-// Update Me
 export type update_me_api_account_me_patch = { path: "/api/account/me"; method: "PATCH" };
-// Upload Avatar
 export type upload_avatar_api_account_me_avatar_post = { path: "/api/account/me/avatar"; method: "POST" };
-// Delete Avatar
 export type delete_avatar_api_account_me_avatar_delete = { path: "/api/account/me/avatar"; method: "DELETE" };
-// Get Automations
 export type get_automations_api_households__household_id__automations_get = { path: "/api/households/{household_id}/automations"; method: "GET" };
-// Add Automation
 export type add_automation_api_households__household_id__automations_post = { path: "/api/households/{household_id}/automations"; method: "POST" };
-// Read Automation
 export type read_automation_api_automations__automation_id__get = { path: "/api/automations/{automation_id}"; method: "GET" };
-// Edit Automation
 export type edit_automation_api_automations__automation_id__patch = { path: "/api/automations/{automation_id}"; method: "PATCH" };
-// Change Automation Enabled
 export type change_automation_enabled_api_automations__automation_id__enabled_patch = { path: "/api/automations/{automation_id}/enabled"; method: "PATCH" };
-// Run Automation
 export type run_automation_api_automations__automation_id__execute_post = { path: "/api/automations/{automation_id}/execute"; method: "POST" };
-// Get Automation Executions
 export type get_automation_executions_api_automations__automation_id__executions_get = { path: "/api/automations/{automation_id}/executions"; method: "GET" };
-// Batch Enable Automations
 export type batch_enable_automations_api_automations_batch_enable_post = { path: "/api/automations/batch-enable"; method: "POST" };
-// Batch Set Schedule
 export type batch_set_schedule_api_automations_schedules_batch_put = { path: "/api/automations/schedules/batch"; method: "PUT" };
-// Get Ai Models
 export type get_ai_models_api_ai_model_models_get = { path: "/api/ai_model/models"; method: "GET" };
-// Read Ai Model
 export type read_ai_model_api_ai_model_model_get = { path: "/api/ai_model/model"; method: "GET" };
-// Add Ai Model
 export type add_ai_model_api_ai_model_model_post = { path: "/api/ai_model/model"; method: "POST" };
-// Delete Ai Model
 export type delete_ai_model_api_ai_model_model_delete = { path: "/api/ai_model/model"; method: "DELETE" };
-// Update Ai Model
 export type update_ai_model_api_ai_model_model_patch = { path: "/api/ai_model/model"; method: "PATCH" };
-// Activate Model
 export type activate_model_api_ai_model_models__model_id__activate_post = { path: "/api/ai_model/models/{model_id}/activate"; method: "POST" };
-// List Chat Sessions
 export type list_chat_sessions_api_chat_sessions_get = { path: "/api/chat/sessions"; method: "GET" };
-// Create Session
 export type create_session_api_chat_sessions_post = { path: "/api/chat/sessions"; method: "POST" };
-// List Chat Messages
 export type list_chat_messages_api_chat_sessions__session_id__messages_get = { path: "/api/chat/sessions/{session_id}/messages"; method: "GET" };
-// Create Chat
 export type create_chat_api_chat_completions_post = { path: "/api/chat/completions"; method: "POST" };
-// Create Chat
 export type create_chat_api_v1_chat_completions_post = { path: "/api/v1/chat/completions"; method: "POST" };
-// List Devices
 export type list_devices_api_devices_get = { path: "/api/devices"; method: "GET" };
-// Add Device
 export type add_device_api_devices_post = { path: "/api/devices"; method: "POST" };
-// Get Device
 export type get_device_api_devices__device_id__get = { path: "/api/devices/{device_id}"; method: "GET" };
-// Update Device
 export type update_device_api_devices__device_id__patch = { path: "/api/devices/{device_id}"; method: "PATCH" };
-// Remove Device
 export type remove_device_api_devices__device_id__delete = { path: "/api/devices/{device_id}"; method: "DELETE" };
-// Sync Devices
 export type sync_devices_api_devices_sync_post = { path: "/api/devices/sync"; method: "POST" };
-// List Device Logs
 export type list_device_logs_api_devices__device_id__logs_get = { path: "/api/devices/{device_id}/logs"; method: "GET" };
-// Upload Image
 export type upload_image_api_devices_images_post = { path: "/api/devices/images"; method: "POST" };
-// Batch Assign Group
 export type batch_assign_group_api_devices_groups_assign_post = { path: "/api/devices/groups/assign"; method: "POST" };
-// List Households
 export type list_households_api_households_get = { path: "/api/households"; method: "GET" };
-// Create Household
 export type create_household_api_households_post = { path: "/api/households"; method: "POST" };
-// Read Household
 export type read_household_api_households__household_id__get = { path: "/api/households/{household_id}"; method: "GET" };
-// Update Household
 export type update_household_api_households__household_id__patch = { path: "/api/households/{household_id}"; method: "PATCH" };
-// List Members
 export type list_members_api_households__household_id__members_get = { path: "/api/households/{household_id}/members"; method: "GET" };
-// Add Member
 export type add_member_api_households__household_id__members_post = { path: "/api/households/{household_id}/members"; method: "POST" };
-// Update Member Role
 export type update_member_role_api_households__household_id__members__membership_id__patch = { path: "/api/households/{household_id}/members/{membership_id}"; method: "PATCH" };
-// Delete Member
 export type delete_member_api_households__household_id__members__membership_id__delete = { path: "/api/households/{household_id}/members/{membership_id}"; method: "DELETE" };
-// Get Overview
 export type get_overview_api_households__household_id__overview_get = { path: "/api/households/{household_id}/overview"; method: "GET" };
-// Get Household Devices
 export type get_household_devices_api_households__household_id__devices_get = { path: "/api/households/{household_id}/devices"; method: "GET" };
-// Sync Household Devices
 export type sync_household_devices_api_households__household_id__devices_sync_post = { path: "/api/households/{household_id}/devices/sync"; method: "POST" };
-// Execute Mode
 export type execute_mode_api_overview_modes_execute_post = { path: "/api/overview/modes/execute"; method: "POST" };
-// Create Inspection
 export type create_inspection_api_inspections_post = { path: "/api/inspections"; method: "POST" };
-// Get Inspection
 export type get_inspection_api_inspections__inspection_id__get = { path: "/api/inspections/{inspection_id}"; method: "GET" };
-// Save Schedule
 export type save_schedule_api_schedules__schedule_date__put = { path: "/api/schedules/{schedule_date}"; method: "PUT" };
-// Read Schedule
 export type read_schedule_api_schedules__schedule_date__get = { path: "/api/schedules/{schedule_date}"; method: "GET" };
-// Create Sync Job
 export type create_sync_job_api_device_sync_jobs_post = { path: "/api/device-sync-jobs"; method: "POST" };
-// Get Sync Job
 export type get_sync_job_api_device_sync_jobs__job_id__get = { path: "/api/device-sync-jobs/{job_id}"; method: "GET" };
-// List Rooms
 export type list_rooms_api_rooms_get = { path: "/api/rooms"; method: "GET" };
-// Add Room
 export type add_room_api_rooms_post = { path: "/api/rooms"; method: "POST" };
-// List Room Stats
 export type list_room_stats_api_rooms_stats_get = { path: "/api/rooms/stats"; method: "GET" };
-// Get Room Detail
 export type get_room_detail_api_rooms__room_id__get = { path: "/api/rooms/{room_id}"; method: "GET" };
-// Edit Room
 export type edit_room_api_rooms__room_id__patch = { path: "/api/rooms/{room_id}"; method: "PATCH" };
-// Delete Room
 export type delete_room_api_rooms__room_id__delete = { path: "/api/rooms/{room_id}"; method: "DELETE" };
-// Get Room Logs
 export type get_room_logs_api_rooms__room_id__logs_get = { path: "/api/rooms/{room_id}/logs"; method: "GET" };
-// Get Room Devices
 export type get_room_devices_api_rooms__room_id__devices_get = { path: "/api/rooms/{room_id}/devices"; method: "GET" };
-// Set Room Devices
 export type set_room_devices_api_rooms__room_id__devices_put = { path: "/api/rooms/{room_id}/devices"; method: "PUT" };
-// Edit Room Device
 export type edit_room_device_api_rooms__room_id__devices__device_id__patch = { path: "/api/rooms/{room_id}/devices/{device_id}"; method: "PATCH" };
-// Update Device
 export type update_device_api_rooms__room_id__device_patch = { path: "/api/rooms/{room_id}/device"; method: "PATCH" };
-// Quick Action
 export type quick_action_api_rooms__room_id__quick_action_post = { path: "/api/rooms/{room_id}/quick-action"; method: "POST" };
-// Get Room Scenes
 export type get_room_scenes_api_rooms__room_id__scenes_get = { path: "/api/rooms/{room_id}/scenes"; method: "GET" };
-// Preview Room Scene
 export type preview_room_scene_api_rooms__room_id__scenes__scene_id__preview_post = { path: "/api/rooms/{room_id}/scenes/{scene_id}/preview"; method: "POST" };
-// Execute Room Scene
 export type execute_room_scene_api_rooms__room_id__scenes__scene_id__execute_post = { path: "/api/rooms/{room_id}/scenes/{scene_id}/execute"; method: "POST" };
-// Get Scenes
 export type get_scenes_api_scenes_get = { path: "/api/scenes"; method: "GET" };
-// Add Scene
 export type add_scene_api_scenes_post = { path: "/api/scenes"; method: "POST" };
-// Get Summary
 export type get_summary_api_scenes_summary_get = { path: "/api/scenes/summary"; method: "GET" };
-// Reorder Scenes
 export type reorder_scenes_api_scenes_order_patch = { path: "/api/scenes/order"; method: "PATCH" };
-// Add Draft
 export type add_draft_api_scenes_drafts_post = { path: "/api/scenes/drafts"; method: "POST" };
-// Get Templates
 export type get_templates_api_scenes_templates_get = { path: "/api/scenes/templates"; method: "GET" };
-// Get Template Preview
 export type get_template_preview_api_scenes_templates__template_id__preview_get = { path: "/api/scenes/templates/{template_id}/preview"; method: "GET" };
-// Import Template
 export type import_template_api_scenes_templates__template_id__use_post = { path: "/api/scenes/templates/{template_id}/use"; method: "POST" };
-// Get Execution
 export type get_execution_api_scenes_executions__execution_id__get = { path: "/api/scenes/executions/{execution_id}"; method: "GET" };
-// Edit Scene
 export type edit_scene_api_scenes__scene_id__put = { path: "/api/scenes/{scene_id}"; method: "PUT" };
-// Remove Scene
 export type remove_scene_api_scenes__scene_id__delete = { path: "/api/scenes/{scene_id}"; method: "DELETE" };
-// Change Enabled
 export type change_enabled_api_scenes__scene_id__enabled_patch = { path: "/api/scenes/{scene_id}/enabled"; method: "PATCH" };
-// Run Scene
 export type run_scene_api_scenes__scene_id__execute_post = { path: "/api/scenes/{scene_id}/execute"; method: "POST" };
-// Duplicate Scene
 export type duplicate_scene_api_scenes__scene_id__copy_post = { path: "/api/scenes/{scene_id}/copy"; method: "POST" };
-// Get Logs
 export type get_logs_api_scenes__scene_id__logs_get = { path: "/api/scenes/{scene_id}/logs"; method: "GET" };
-// Get Scene Preview
 export type get_scene_preview_api_scenes__scene_id__preview_post = { path: "/api/scenes/{scene_id}/preview"; method: "POST" };
-// Batch Change Enabled
 export type batch_change_enabled_api_scenes_batch_enabled_post = { path: "/api/scenes/batch/enabled"; method: "POST" };
-// Batch Set Schedule
 export type batch_set_schedule_api_scenes_batch_schedule_post = { path: "/api/scenes/batch/schedule"; method: "POST" };
-// Login
 export type login_api_auth_login_post = { path: "/api/auth/login"; method: "POST" };
-// Register
 export type register_api_auth_register_post = { path: "/api/auth/register"; method: "POST" };
-// Logout
 export type logout_api_auth_logout_post = { path: "/api/auth/logout"; method: "POST" };

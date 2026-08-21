@@ -651,7 +651,7 @@ def get_room_environment_latest_service(
 ) -> RoomEnvironmentLatestRead:
     """获取房间最新环境数据。"""
     get_room_or_404(db, user, room_id)
-    # 返回模拟环境数据，后续可接入真实传感器
+                         
     return RoomEnvironmentLatestRead(
         sampled_at=datetime.now(timezone.utc),
         values={

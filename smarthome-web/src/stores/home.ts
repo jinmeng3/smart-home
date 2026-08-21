@@ -55,7 +55,6 @@ export const useHomeStore = defineStore("home", () => {
     },
   );
 
-  // 首次加载不播放动画
   skipSidebarAnimation();
 
   const chat = useHomeChat([]);
@@ -135,7 +134,6 @@ export const useHomeStore = defineStore("home", () => {
       devicesById.value = nextById;
       devicesLoading.value = "success";
     } catch {
-      // API 加载失败时使用空数据
       deviceIds.value = [];
       devicesById.value = {};
       devicesLoading.value = "error";

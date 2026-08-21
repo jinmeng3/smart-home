@@ -294,7 +294,6 @@ const handleRoomCreated = async (
       themeColor: payload.themeColor,
       deviceIds: payload.deviceIds,
     });
-    // Flip：在数据变更前捕获当前布局
     captureRoomGrid();
     rooms.value = [...rooms.value, room];
     await flipRoomGrid();
@@ -322,7 +321,6 @@ const { pending: roomDeleting, execute: confirmDeleteRoom } = useAsyncAction(
         if (!deletingRoom.value) return;
 
         await deleteRoom(deletingRoom.value.id);
-        // Flip：在数据变更前捕获当前布局
         captureRoomGrid();
         rooms.value = rooms.value.filter((r) => r.id !== deletingRoom.value!.id);
         await flipRoomGrid();

@@ -76,7 +76,6 @@ watch(
     },
 );
 
-// 动态摘要
 const headerSummary = computed(() => {
     const total = scenes.value.length;
     const enabled = scenes.value.filter((s) => s.enabled).length;

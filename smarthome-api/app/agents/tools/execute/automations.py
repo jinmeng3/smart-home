@@ -109,7 +109,7 @@ def create_automation_operation(db, context, args) -> dict:
             "version": result.version,
             "message": f"自动化规则「{result.name}」已创建",
         }
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # 写操作失败返回友好错误而非中断 agent 流程
         db.rollback()
         return {
             "ok": False,
@@ -174,7 +174,7 @@ def update_automation_operation(db, context, args) -> dict:
             "version": result.version,
             "message": f"自动化规则「{result.name}」已更新",
         }
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # 写操作失败返回友好错误而非中断 agent 流程
         db.rollback()
         return {
             "ok": False,
@@ -203,7 +203,7 @@ def set_automation_enabled_operation(db, context, args) -> dict:
             "enabled": enabled,
             "message": f"自动化规则「{automation.name}」已{'启用' if enabled else '停用'}",
         }
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # 写操作失败返回友好错误而非中断 agent 流程
         db.rollback()
         return {
             "ok": False,
@@ -228,7 +228,7 @@ def delete_automation_operation(db, context, args) -> dict:
             "automation_name": name,
             "message": f"自动化规则「{name}」已删除",
         }
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # 写操作失败返回友好错误而非中断 agent 流程
         db.rollback()
         return {
             "ok": False,

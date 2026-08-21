@@ -102,7 +102,6 @@ export const useDeviceManagementController = () => {
     viewMode.value = mode;
   };
 
-  // Favorite device IDs stored in localStorage
   const favoriteDeviceIds = ref<number[]>([]);
 
   const loadFavorites = () => {
@@ -133,7 +132,6 @@ export const useDeviceManagementController = () => {
   const isFavorite = (deviceId: number) =>
     favoriteDeviceIds.value.includes(deviceId);
 
-  // Load favorites on initialization
   loadFavorites();
 
   const filteredDevices = computed(() => {
@@ -184,7 +182,6 @@ export const useDeviceManagementController = () => {
     async (payload: DeviceCreatePayload) => {
       if (editingDevice.value) {
         await apiUpdateDevice(editingDevice.value.id, payload);
-        // 局部更新——先更新本地设备，再后台刷新保持一致性
         const idx = devices.value.findIndex(
           (d) => d.id === editingDevice.value!.id,
         );
@@ -258,7 +255,6 @@ export const useDeviceManagementController = () => {
       if (!deletingDevice.value) return;
       const device = deletingDevice.value;
       await apiDeleteDevice(device.id);
-      // 局部更新——先移除本地设备
       const idx = devices.value.findIndex((d) => d.id === device.id);
       if (idx >= 0) {
         devices.value.splice(idx, 1);
@@ -349,7 +345,6 @@ export const useDeviceManagementController = () => {
         }
       }
 
-      // 局部更新——批量移除本地设备
       devices.value = devices.value.filter((d) => !removedIds.has(d.id));
       total.value = Math.max(0, total.value - successCount);
 

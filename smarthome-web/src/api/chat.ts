@@ -77,8 +77,6 @@ const parseContentDelta = (line: string) => {
 };
 
 // === 统一流式请求（SSE 读取 + 分片缓冲 + 取消 + 错误解析） ===
-// 后端 `/api/chat/completions` 与 `/api/v1/chat/completions` 复用同一处理器，
-// 仅路径参数不同，通过 url 参数区分。
 
 const streamCompletions = async (
   url: string,
@@ -175,7 +173,6 @@ export const streamOpenAICompletions = (
   );
 
 // === Agent SSE 运行 ===
-// 解析一行 SSE 数据，返回 { event, data } 或 null
 function parseSseLine(line: string): { event: string; data: string } | null {
   if (line.startsWith("event: ")) {
     return { event: line.slice(7).trim(), data: "" };
@@ -263,7 +260,6 @@ async function streamAgentEvents(
             ) as AgentEvent["event"];
             onEvent(parsed);
           } catch {
-            // 忽略解析失败的行
           }
         }
         buffer = { event: "", data: "" };

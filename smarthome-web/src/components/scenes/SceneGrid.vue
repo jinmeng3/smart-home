@@ -41,7 +41,6 @@ const sortedScenes = computed(() => {
     const list = [...props.scenes];
     switch (sortBy.value) {
         case "frequent":
-            // 已启用优先，然后按默认顺序
             return list.sort((a, b) => {
                 if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
                 return (a.sortOrder ?? 999) - (b.sortOrder ?? 999);
@@ -92,7 +91,6 @@ const { captureAndFlip: flipSceneGrid } = useGsapFlip({
     duration: 240,
 });
 
-// 场景增删/排序变化时播放 Flip，保持位置连续
 watch(
     () => visibleScenes.value.length,
     () => {

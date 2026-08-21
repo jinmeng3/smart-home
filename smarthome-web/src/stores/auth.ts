@@ -40,7 +40,6 @@ export const useAuthStore = defineStore("auth", () => {
   const clearSession = () => {
     accessToken.value = null;
     window.sessionStorage.removeItem(tokenKey);
-    // 清理全部用户级状态：家庭上下文 + 账户资料镜像
     useHouseholdStore().clear();
     useSettingsStore().resetAccountState();
   };

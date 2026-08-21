@@ -343,7 +343,6 @@ export function getIcon(name: string): IconNode {
         return direct;
     }
 
-    // 尝试别名映射
     const alias = aliasMap[name];
     if (alias) {
         const resolved = iconRegistry.get(alias);

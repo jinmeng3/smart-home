@@ -27,7 +27,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
         args = call.get("args") or {}
         tool = tools_by_name.get(name)
         started = time.perf_counter()
-        # 多次检验，保证不是执行写操作
+                        
         if name in WRITE_TOOL_NAMES:
             content = f"{error_prefix}工具 {name} 是写操作工具，需经过风险评估和用户确认后才能执行"
             ok = False
@@ -44,7 +44,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
                 ok = False
             except asyncio.CancelledError:
                 raise
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # 工具执行失败不应中断整个 agent 运行，转为失败消息返回
                 content = f"{error_prefix}工具 {name} 执行失败"
                 ok = False
 
@@ -90,7 +90,7 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
     tool_name = pending["tool"]
     args = pending["args"]
 
-    # 用户等待确认期间资源可能变化；所有已有自动化必须重新校验版本。
+                                     
     if tool_name in {
         "update_automation",
         "set_automation_enabled",

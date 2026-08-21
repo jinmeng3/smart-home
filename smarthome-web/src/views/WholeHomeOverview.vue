@@ -101,7 +101,6 @@ const summary = ref<OverviewSummary>({
 
 /* === 统计值颜色强调（局部反馈，不缩放整张卡） === */
 const averageEmphasis = useColorEmphasis({ highlightColor: "var(--color-primary)" });
-// 监听统计值变化，对对应字段做一次 160ms 颜色强调
 watch(
     () => summary.value.device_online,
     () => averageEmphasis.emphasize(),
@@ -126,7 +125,6 @@ watch(
     () => rooms.value.map((room) => room.count).join(","),
     (next, prev) => {
         if (next === prev) return;
-        // 渲染后注册所有房间计数元素并触发强调
         void nextTick(() => {
             const els = overviewRoomGridRef.value?.querySelectorAll<HTMLElement>(
                 ".room-count-value",
@@ -201,7 +199,6 @@ let syncResetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const handleSynced = () => {
     refreshed.value = "刚刚";
-    // 图标 Morph 到 check，1.2s 后恢复
     syncIcon.value = "check";
     if (syncResetTimer) clearTimeout(syncResetTimer);
     syncResetTimer = setTimeout(() => {
@@ -211,7 +208,6 @@ const handleSynced = () => {
 };
 
 const handleRoomCreated = (name: string) => {
-    // Flip：在数据变更前捕获当前布局
     captureOverviewRooms();
     rooms.value = [
         ...rooms.value,
@@ -226,7 +222,6 @@ const handleRoomCreated = (name: string) => {
         },
     ];
     void flipOverviewRooms().then(() => {
-        // Flip 完成后：短暂显示新卡主色边框一次
         void nextTick(() => {
             const card = Array.from(
                 overviewRoomGridRef.value?.querySelectorAll<HTMLElement>(
@@ -259,7 +254,6 @@ const handleScheduleSaved = (schedule: HouseholdSchedule) => {
 const loadOverviewData = async () => {
     loading.value = true;
     try {
-        // 活动家庭来自全局上下文，切换家庭后自动重新拉取本家庭数据。
         await householdStore.load();
         const householdId = householdStore.activeHouseholdId;
         if (!householdId) return;
@@ -268,10 +262,8 @@ const loadOverviewData = async () => {
             getHouseholdDevices(householdId),
         ]);
 
-        // 概览摘要
         summary.value = overview.summary;
 
-        // 房间卡片
         const formatDeviceSummary = (value: string) => value
             .replace(/DeviceStatus\.ONLINE|\bonline\b/gi, "在线")
             .replace(/DeviceStatus\.OFFLINE|\boffline\b/gi, "离线")
@@ -287,7 +279,6 @@ const loadOverviewData = async () => {
             tone: "blue",
         }));
 
-        // 设备列表
         devices.value = deviceList.items.map((device) => ({
             id: device.id,
             name: device.name,
@@ -301,7 +292,6 @@ const loadOverviewData = async () => {
             favorite: false,
         }));
 
-        // 从后端获取活动数据
         if (overview.activities && overview.activities.length > 0) {
             activities.value = (overview.activities as any[]).map((act: Record<string, unknown>) => ({
                 time: (act.time || act.created_at || "") as string,
@@ -314,14 +304,12 @@ const loadOverviewData = async () => {
             activities.value = [];
         }
 
-        // 从后端获取日程数据
         if (overview.schedule && overview.schedule.length > 0) {
             scheduleItems.value = overview.schedule as any;
         } else {
             scheduleItems.value = [];
         }
 
-        // 从后端获取告警数据
         if (overview.alerts && overview.alerts.length > 0) {
             alerts.value = (overview.alerts as any[]).map((alert: Record<string, unknown>) => ({
                 level: (alert.level || alert.severity || "warning") as string,
@@ -343,10 +331,8 @@ const loadOverviewData = async () => {
 
 useAuthenticatedLoader(loadOverviewData);
 
-// 加载完成后播放卡片 stagger 入场
 watch(loading, (l) => { if (!l) void playCardGrid(); });
 
-// 切换活动家庭后，总览数据随之刷新，避免展示上一家庭缓存的设备/房间。
 watch(
     () => householdStore.activeHouseholdId,
     (next, previous) => {

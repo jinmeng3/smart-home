@@ -63,20 +63,18 @@ export const useAnimatedStatus = (options: AnimatedStatusOptions) => {
     /** 当前状态对应的视觉配置 */
     const visuals = computed<StatusVisuals>(() => options.visuals[phase.value] ?? options.visuals.idle);
 
-    /**
+/**
      * 设置状态并触发视觉反馈。
      * - pending：持续显示，直到手动切换为 success/error
      * - success/error：保持 holdDuration 后自动恢复到 idle
      * - idle：直接显示
      */
     const setPhase = async (newPhase: StatusPhase) => {
-        // 清除旧的自动重置定时器
         if (autoResetTimer) {
             clearTimeout(autoResetTimer);
             autoResetTimer = undefined;
         }
 
-        // 减少动态效果模式：直接切换状态，不播放动画
         if (isReduced.value) {
             phase.value = newPhase;
             return;
@@ -84,7 +82,6 @@ export const useAnimatedStatus = (options: AnimatedStatusOptions) => {
 
         phase.value = newPhase;
 
-        // success/error 在保持后自动恢复到 idle
         if (newPhase === "success" || newPhase === "error") {
             autoResetTimer = setTimeout(() => {
                 phase.value = "idle";
@@ -93,7 +90,7 @@ export const useAnimatedStatus = (options: AnimatedStatusOptions) => {
         }
     };
 
-    /**
+/**
      * 执行一个异步操作并自动管理状态反馈。
      *
      * @param action 异步操作函数
@@ -120,7 +117,6 @@ export const useAnimatedStatus = (options: AnimatedStatusOptions) => {
         phase.value = "idle";
     };
 
-    // 组件销毁时清理
     if (getCurrentScope()) {
         onScopeDispose(() => {
             if (autoResetTimer) clearTimeout(autoResetTimer);

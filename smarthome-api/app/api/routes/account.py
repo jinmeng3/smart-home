@@ -124,7 +124,7 @@ async def upload_avatar(
         delete_avatar_file(settings, avatar_url)
         raise
 
-    # 数据库成功指向新文件后再清理旧文件，避免提交失败造成头像丢失。
+                                     
     delete_avatar_file(settings, old_avatar_url)
     return ApiResponse(data=AvatarResponse(avatar_url=avatar_url), message="created")
 

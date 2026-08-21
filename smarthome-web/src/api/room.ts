@@ -18,7 +18,6 @@ import type {
 } from "../types/room";
 
 // === DTO 类型（后端 snake_case）与映射函数 ===
-// 后端响应使用 Pydantic camelCase alias；组件/store 只消费领域模型。
 
 interface ApiRoom {
   id: number;
@@ -93,7 +92,6 @@ const mapRoomStats = (data: ApiRoomStats): RoomStats => ({
 
 // === API 导出函数 ===
 
-// fetchRooms 通过 mapper 统一 API DTO 与前端领域模型。
 export const fetchRooms = async (floor = "", roomType = "") => {
   const params = new URLSearchParams();
   if (floor) params.set("floor", floor);
@@ -102,7 +100,6 @@ export const fetchRooms = async (floor = "", roomType = "") => {
   return { items: data.items.map(mapRoom), total: data.total };
 };
 
-// 修正：使用 POST /api/rooms，而非已废弃的 /api/rooms/add
 export const createRoom = async (payload: RoomInput) => {
   const data = await apiRequest<ApiRoom>("/api/rooms", {
     method: "POST",
@@ -119,7 +116,6 @@ export const createRoom = async (payload: RoomInput) => {
   return mapRoom(data);
 };
 
-// 修正：使用 PATCH /api/rooms/{id}，而非已废弃的 PUT /api/rooms/{id}
 export const updateRoom = async (roomId: number, payload: RoomInput) => {
   const data = await apiRequest<ApiRoom>(`/api/rooms/${roomId}`, {
     method: "PATCH",
@@ -265,7 +261,6 @@ export const executeRoomScene = (
 
 // === 房间详情 ===
 
-// 使用 GET /api/rooms/{id}，并通过 mapper 统一领域模型。
 export const fetchRoomDetail = async (roomId: number) => {
   const data = await apiRequest<ApiRoomDetailResponse>(`/api/rooms/${roomId}`);
   return mapRoomDetail(data);

@@ -49,7 +49,6 @@ const parseFieldErrors = (data: unknown): Record<string, string> => {
   const d = data as Record<string, unknown>;
   const fields: Record<string, string> = {};
 
-  // ApiResponse 包装的错误：{ errors: [{ field, message }] }
   if (Array.isArray(d.errors)) {
     for (const err of d.errors) {
       if (err && typeof err === "object") {
@@ -63,7 +62,6 @@ const parseFieldErrors = (data: unknown): Record<string, string> => {
     }
   }
 
-  // FastAPI 原生 422：{ detail: [{ loc: [...], msg, type }] }
   if (Array.isArray(d.detail)) {
     for (const err of d.detail) {
       if (err && typeof err === "object") {
@@ -141,7 +139,6 @@ export const parseResponse = async <T>(
       return apiResp.data as T;
     }
 
-    // 非包装响应（如 SSE 之外的 OpenAI 响应）
     return parsed as T;
   }
 

@@ -39,7 +39,7 @@ def get_chat_session(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
-        # 强校验：会话已绑定家庭时必须与传入家庭一致
+                               
         if household_id is not None:
             if session.household_id is not None and session.household_id != household_id:
                 raise HTTPException(
@@ -140,7 +140,7 @@ def create_chat_service(
         raise HTTPException(status_code=404, detail="Model not found")
     session = get_chat_session(db, current_user, payload.session_id, payload.messages)
 
-    # 用户消息
+          
     user_message = ChatMessage(
         session_id=session.id,
         content=payload.messages[-1].content,
@@ -176,7 +176,7 @@ def create_chat_service_stream(
         return
     session = get_chat_session(db, current_user, payload.session_id, payload.messages)
 
-    # 先提交用户消息，避免异常时丢失
+                     
     db.add(
         ChatMessage(
             session_id=session.id,
@@ -204,7 +204,7 @@ def create_chat_service_stream(
                 collected += chunk_text
                 yield format_stream_content(chunk_text)
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # 将任意流式异常转为 SSE 错误响应，避免连接中断
         yield format_stream_error(str(e))
         return
 

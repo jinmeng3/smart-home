@@ -14,7 +14,7 @@ import {
 export interface UseGsapScopeResult {
     /** 根元素 ref，用于限定选择器作用域 */
     root: Ref<HTMLElement | null>;
-    /**
+/**
      * 创建 GSAP 作用域。
      *
      * 可安全地在 setup 或 onMounted 前调用——尚未挂载时会排队，
@@ -68,7 +68,6 @@ export const useGsapScope = (): UseGsapScopeResult => {
     };
 
     const create = (setup: GsapSetup) => {
-        // onMounted 已过且 root 可用时立即执行；否则排队等待挂载
         if (root.value) {
             runSetup(setup);
         } else {
@@ -85,7 +84,6 @@ export const useGsapScope = (): UseGsapScopeResult => {
     };
 
     onMounted(() => {
-        // root 挂载后执行排队中的 setup
         queuedSetups.splice(0).forEach(runSetup);
     });
 

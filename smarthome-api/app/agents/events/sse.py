@@ -1,6 +1,6 @@
 import json
 
-from app.agents.events.models import AgentEvent
+from app.schemas.sse import AgentEvent
 
 
 def encode_sse_event(event: AgentEvent) -> str:

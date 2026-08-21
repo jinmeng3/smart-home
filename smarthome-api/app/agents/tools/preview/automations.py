@@ -71,7 +71,7 @@ def preview_automation_change(
     if proposed_actions is not None:
         proposed["actions"] = proposed_actions
 
-    # 计算变更摘要
+            
     changed_fields = []
     if current and proposed:
         for key, value in proposed.items():
@@ -118,15 +118,15 @@ def detect_automation_conflicts(
     """检测自动化规则之间是否存在时间重叠、设备冲突或循环触发风险。"""
     conflicts = []
 
-    # 获取当前家庭的所有自动化
+                  
     automations = db.scalars(
         select(Automation).where(Automation.household_id == context.household_id)
     ).all()
 
-    # 排除自身
+          
     others = [a for a in automations if a.id != automation_id]
 
-    # 解析待检测的触发器
+               
     triggers_to_check = proposed_triggers or []
     actions_to_check = proposed_actions or []
     if automation_id is not None:
@@ -149,7 +149,7 @@ def detect_automation_conflicts(
         except HTTPException:
             pass
 
-    # 检查时间重叠（schedule 类型）
+                         
     schedule_triggers = [
         t for t in triggers_to_check if t.get("type") == "schedule"
     ]
@@ -188,8 +188,8 @@ def detect_automation_conflicts(
                             }
                         )
 
-    # 检查同一设备动作冲突与设备触发回路。
-    trigger_device_ids = set()
+                        
+    trigger_device_ids: set[int] = set()
     for t in triggers_to_check:
         config = t.get("config", {})
         if isinstance(config, str):
@@ -200,10 +200,10 @@ def detect_automation_conflicts(
             except (json.JSONDecodeError, TypeError):
                 continue
         device_id = config.get("device_id")
-        if device_id is not None:
+        if isinstance(device_id, int):
             trigger_device_ids.add(device_id)
 
-    # 检查动作设备冲突
+              
     all_actions = list(
         db.scalars(
             select(AutomationAction).where(
@@ -222,10 +222,10 @@ def detect_automation_conflicts(
                 action.device_id
             )
 
-    proposed_action_device_ids = {
-        action.get("device_id")
+    proposed_action_device_ids: set[int] = {
+        device_id
         for action in actions_to_check
-        if action.get("device_id") is not None
+        if isinstance(device_id := action.get("device_id"), int)
     }
     for other in others:
         shared_ids = proposed_action_device_ids & action_device_map.get(other.id, set())

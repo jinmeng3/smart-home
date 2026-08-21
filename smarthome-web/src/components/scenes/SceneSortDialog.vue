@@ -62,14 +62,12 @@ const setupDraggable = () => {
     if (!items.length) return;
 
     items.forEach((item, index) => {
-        // Draggable 通过动态 import 注册，类型上以 any 访问
         const draggable = (gsap as any).Draggable;
         const drag = draggable.create(item, {
             type: "y",
             trigger: item,
             cursor: "grab",
             activeCursor: "grabbing",
-            // 垂直方向对齐相邻项间隔
             snap: {
                 y: (value: number) =>
                     Math.round(value / item.offsetHeight) * item.offsetHeight,
@@ -82,7 +80,6 @@ const setupDraggable = () => {
             },
             onDragEnd: () => {
                 gsap.set(item, { zIndex: "", opacity: "" });
-                // 根据位移换算新索引
                 const offset = Math.round(
                     (gsap.getProperty(item, "y") as number) / item.offsetHeight,
                 );

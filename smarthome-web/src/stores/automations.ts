@@ -258,7 +258,6 @@ export const useAutomationsStore = defineStore("automations", () => {
         }
     };
 
-    // 切换活动家庭后，自动化列表随全局上下文同步刷新。
     watch(
         () => householdStore.activeHouseholdId,
         () => {
@@ -283,7 +282,6 @@ export const useAutomationsStore = defineStore("automations", () => {
             await apiToggleEnabled(ruleId, enabled);
             if (backendSummary.value) backendSummary.value.enabled += enabled ? 1 : -1;
         } catch (error) {
-            // 乐观更新失败时回滚本地状态，避免 UI 与后端不一致
             if (rule) rule.enabled = !enabled;
             throw error;
         }

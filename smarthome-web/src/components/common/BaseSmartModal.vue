@@ -231,7 +231,6 @@ const safeDone = (done: () => void) => {
 
 const onBeforeEnter = (el: Element) => {
     if (isReduced.value) return;
-    // 快速关闭时先 kill 旧 Timeline
     if (activeTimeline) {
         activeTimeline.kill();
         activeTimeline = null;
@@ -248,7 +247,6 @@ const onEnter = (el: Element, done: () => void) => {
         safeDone(done);
         return;
     }
-    // 快速关闭时先 kill 旧 Timeline
     if (activeTimeline) {
         activeTimeline.kill();
         activeTimeline = null;
@@ -278,7 +276,6 @@ const onEnter = (el: Element, done: () => void) => {
             0.04,
         );
     }
-    // 内容分段入场：GSAP stagger 替代硬编码 CSS 延迟
     if (staggerEls.length) {
         tl.from(
             staggerEls,
@@ -294,13 +291,11 @@ const onEnter = (el: Element, done: () => void) => {
 };
 
 const onAfterEnter = (el: Element) => {
-    // 交还 CSS 控制，避免 GSAP 内联样式残留
     gsap.set(el as HTMLElement, { clearProps: "all" });
 };
 
 const onBeforeLeave = (el: Element) => {
     if (isReduced.value) return;
-    // 快速关闭时先 kill 旧 Timeline
     if (activeTimeline) {
         activeTimeline.kill();
         activeTimeline = null;
@@ -317,7 +312,6 @@ const onLeave = (el: Element, done: () => void) => {
         safeDone(done);
         return;
     }
-    // 快速关闭时先 kill 旧 Timeline
     if (activeTimeline) {
         activeTimeline.kill();
         activeTimeline = null;
@@ -349,7 +343,6 @@ const onLeave = (el: Element, done: () => void) => {
 };
 
 const onAfterLeave = () => {
-    // 无需额外清理
 };
 </script>
 

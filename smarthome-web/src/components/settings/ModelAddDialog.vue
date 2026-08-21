@@ -43,7 +43,6 @@ const loadProviders = async () => {
     try {
         const providers = await getSupportedProviders();
         providerOptions.value = providers.map((item) => item.id);
-        // 当前值不在列表中时保留，避免编辑历史模型时丢失供应商
         if (form.provider && !providerOptions.value.includes(form.provider)) {
             providerOptions.value = [
                 form.provider,
@@ -66,7 +65,6 @@ watch(
     },
 );
 
-// 弹窗打开时加载供应商选项（组件为 v-if 条件渲染，初始 modelValue 即为 true，需 immediate）
 watch(
     () => props.modelValue,
     (open) => {

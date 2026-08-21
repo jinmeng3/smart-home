@@ -12,7 +12,6 @@ const refreshing = ref(false);
 
 const handleRefresh = () => {
     refreshing.value = true;
-    // 触发外部刷新
     setTimeout(() => {
         refreshing.value = false;
     }, 800);

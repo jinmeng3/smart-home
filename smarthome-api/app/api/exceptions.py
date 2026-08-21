@@ -78,7 +78,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def unhandled_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:
-        # 对客户端隐藏内部错误细节，但在服务端保留完整堆栈便于排查。
+                                       
         logger.exception(
             "Unhandled error while processing %s %s",
             request.method,

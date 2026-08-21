@@ -11,7 +11,6 @@ const emit = defineEmits<{
 
 const store = useHomeStore();
 
-// 对话模式：agent（Agent 执行，默认）| chat（普通对话补全，不绑定工具）
 const agentMode = ref<'agent' | 'chat'>('agent');
 const toggleMode = (mode: 'agent' | 'chat') => {
     if (agentMode.value === mode) return;

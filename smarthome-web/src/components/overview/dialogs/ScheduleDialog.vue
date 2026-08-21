@@ -115,7 +115,6 @@ const confirm = async () => {
         ElMessage.success("家庭日程已保存并同步到后端");
         emit("update:modelValue", false);
     } catch (error) {
-        // 409 版本冲突：重新拉取最新日程并提示用户对比，避免覆盖他人修改
         if (error instanceof ApiError && error.status === 409) {
             ElMessage.warning("日程已被其他会话修改，已为你加载最新版本");
             void load();

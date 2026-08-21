@@ -17,7 +17,7 @@ def execute_scene_operation(db, context, args, pending) -> dict:
     scene_id = args.get("scene_id", "")
     idempotency_key = pending.get("approval_id")
 
-    # 执行前重新读取资源并重新分类
+                    
     current = classify_scene_execution(
         db=db,
         context=context,
@@ -50,7 +50,7 @@ def execute_scene_operation(db, context, args, pending) -> dict:
         idempotency_key=idempotency_key,
     )
 
-    # 执行后读取设备状态，验证变更
+                    
     readback = _verify_device_readback(db, context.household_id, before_devices)
 
     return {
@@ -100,7 +100,7 @@ def _verify_device_readback(
                     "status_after": status_after,
                 }
             )
-        # 避免循环引用
+                
 
     return {
         "changed": len(changed_devices) > 0,

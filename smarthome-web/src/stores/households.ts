@@ -73,7 +73,6 @@ export const useHouseholdStore = defineStore("households", () => {
       return;
     }
     const nextMembers = await apiListMembers(id);
-    // 仅当仍指向同一家庭时提交，避免切换竞态覆盖错误数据
     if (activeHouseholdId.value === id) {
       members.value = nextMembers;
     }

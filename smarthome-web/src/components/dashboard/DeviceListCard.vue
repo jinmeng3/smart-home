@@ -53,8 +53,6 @@ const displayDevices = computed(() => store.devices.slice(0, MAX_DISPLAY_DEVICES
 /* === GSAP Flip 设备列表重排 === */
 const deviceListRef = ref<InstanceType<typeof AnimatedList> | null>(null);
 const deviceListContainer = computed<HTMLElement | null>(() => {
-    // 使用 $el 直接获取根 DOM 元素，避免 defineExpose 对 TransitionGroup
-    // ref 的 unwrap 行为在不同 Vue 版本中的不一致问题
     const el = (deviceListRef.value as any)?.root?.$el;
     return el instanceof HTMLElement ? el : null;
 });

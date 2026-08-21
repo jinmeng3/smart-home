@@ -73,7 +73,6 @@ const loadProviders = async () => {
     try {
         const providers = await getSupportedProviders();
         providerOptions.value = providers.map((item) => item.id);
-        // 当前值不在列表（如历史自定义供应商）时保留为首项，避免编辑丢失
         if (
             form.provider &&
             !providerOptions.value.includes(form.provider)

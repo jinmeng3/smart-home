@@ -139,10 +139,8 @@ export const useScenesStore = defineStore("scenes", () => {
             !["queued", "pending", "running", "processing"].includes(next.status);
 
         try {
-            // 先提交执行，再由后端返回的 step 状态驱动 UI（不再在前端模拟耗时）。
             const execution = await apiExecuteScene(scene.id, confirmHighRisk);
 
-            // 轮询执行详情直到终态；刷新后仍可通过 executionId 恢复。
             let current = await apiGetSceneExecution(execution.executionId);
             applyExecution(current);
 

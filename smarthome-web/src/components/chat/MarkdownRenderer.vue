@@ -25,7 +25,6 @@ const tokenAttr = (tokens: import("markdown-it").Token[], idx: number, name: str
 
 // === 自定义 renderer 规则 ===
 
-// 代码块
 md.renderer.rules.fence = (tokens, idx) => {
     const lang = tokenStr(tokens, idx, "info").trim();
     const code = escapeHtml(tokenStr(tokens, idx, "content"));
@@ -33,23 +32,19 @@ md.renderer.rules.fence = (tokens, idx) => {
     return `<pre class="md-pre"${langAttr}><code class="md-code">${code}</code><button class="md-copy-btn" onclick="(function(btn){var code=btn.parentElement.querySelector('code').textContent;navigator.clipboard.writeText(code);btn.textContent='\u2713';btn.classList.add('copied');setTimeout(function(){btn.textContent='\u2398';btn.classList.remove('copied')},1500)})(this)" title="\u590d\u5236\u4ee3\u7801">\u2398</button></pre>\n`;
 };
 
-// 行内代码
 md.renderer.rules.code_inline = (tokens, idx) => {
     const code = escapeHtml(tokenStr(tokens, idx, "content"));
     return `<code class="md-code-inline">${code}</code>`;
 };
 
-// 标题
 md.renderer.rules.heading_open = (tokens, idx) => {
     const level = tokenStr(tokens, idx, "tag");
     return `<${level} class="md-h md-h-${level}">`;
 };
 
-// 段落
 md.renderer.rules.paragraph_open = () => '<p class="md-p">\n';
 md.renderer.rules.paragraph_close = () => "</p>\n";
 
-// 列表
 md.renderer.rules.bullet_list_open = () => '<ul class="md-ul">\n';
 md.renderer.rules.bullet_list_close = () => "</ul>\n";
 md.renderer.rules.ordered_list_open = () => '<ol class="md-ol">\n';
@@ -57,21 +52,17 @@ md.renderer.rules.ordered_list_close = () => "</ol>\n";
 md.renderer.rules.list_item_open = () => '<li class="md-li">\n';
 md.renderer.rules.list_item_close = () => "</li>\n";
 
-// 引用
 md.renderer.rules.blockquote_open = () => '<blockquote class="md-blockquote">\n';
 md.renderer.rules.blockquote_close = () => "</blockquote>\n";
 
-// 链接
 md.renderer.rules.link_open = (tokens, idx) => {
     const href = escapeHtml(tokenAttr(tokens, idx, "href"));
     return `<a class="md-link" href="${href}" target="_blank" rel="noopener noreferrer">`;
 };
 md.renderer.rules.link_close = () => "</a>";
 
-// 分割线
 md.renderer.rules.hr = () => '<hr class="md-hr">\n';
 
-// 表格
 md.renderer.rules.table_open = () => '<div class="md-table-wrap"><table class="md-table">\n';
 md.renderer.rules.table_close = () => "</table></div>\n";
 md.renderer.rules.thead_open = () => '<thead class="md-thead">\n';
@@ -85,18 +76,15 @@ md.renderer.rules.th_close = () => "</th>\n";
 md.renderer.rules.td_open = () => '<td class="md-td">\n';
 md.renderer.rules.td_close = () => "</td>\n";
 
-// 图片
 md.renderer.rules.image = (tokens, idx) => {
     const src = escapeHtml(tokenAttr(tokens, idx, "src"));
     const alt = escapeHtml(tokenStr(tokens, idx, "content"));
     return `<img class="md-img" src="${src}" alt="${alt}" loading="lazy">`;
 };
 
-// 粗体
 md.renderer.rules.strong_open = () => '<strong class="md-strong">';
 md.renderer.rules.strong_close = () => "</strong>";
 
-// 斜体
 md.renderer.rules.em_open = () => '<em class="md-em">';
 md.renderer.rules.em_close = () => "</em>";
 
@@ -108,7 +96,6 @@ const props = defineProps<{
 const html = computed(() => {
     if (!props.content) return "";
 
-    // 流式阶段：仅转义 HTML + 换行转 <br>，不解析完整 Markdown
     if (props.streaming) {
         const escaped = escapeHtml(props.content);
         return escaped.replace(/\n/g, "<br>");

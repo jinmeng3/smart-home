@@ -67,10 +67,10 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
         raise ApiKeyCryptoError("API Key 内容过长")
 
     if value.startswith(_ENVELOPE_PREFIX):
-        decrypt_api_key(value)  # 验证完整性，防止损坏密文继续入库
+        decrypt_api_key(value)                    
         return value
     if is_encrypted(value):
-        # 保存配置时顺带把历史裸 Fernet 密文迁移到当前版本和密钥。
+                                          
         value = decrypt_api_key(value) or ""
         if not value:
             return None

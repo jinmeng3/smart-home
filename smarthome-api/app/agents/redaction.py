@@ -3,11 +3,10 @@
 import logging
 import re
 
-# 常见敏感字段名：KEY / SECRET / TOKEN / PASSWORD / AUTHORIZATION
 _SENSITIVE_PATTERNS = [
-    re.compile(r"(sk-[A-Za-z0-9_\-]{6,})"),  # OpenAI 风格
+    re.compile(r"(sk-[A-Za-z0-9_\-]{6,})"),
     re.compile(r"(Bearer\s+[A-Za-z0-9_\-\.=]{8,})", re.IGNORECASE),
-    re.compile(r"(\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-\.]{8,})"),  # JWT
+    re.compile(r"(\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-\.]{8,})"),
 ]
 _MASK = "<redacted>"
 

@@ -20,7 +20,7 @@ class OpenAICompatibleProvider(Provider):
 
     def build(self, cfg: AIModel, client: dict) -> BaseChatModel:
         extra_body: dict = dict(client.get("extra_body") or {})
-        # 兼容配置里允许按协议透传自定义参数（如 thinking、reasoning_effort 等）
+                                                          
         if cfg.compat and isinstance(cfg.compat, dict):
             for key in (
                 "thinking",

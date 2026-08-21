@@ -11,9 +11,6 @@ export const router = createRouter({
   })),
 });
 
-// 路由层认证守卫：
-// - 未登录访问受保护业务页时，只弹一次登录引导并回到 “/”；
-// - 已登录时放行，并把“已引导”标记复位，下次失效重新引导。
 let loginPromptShown = false;
 
 router.beforeEach((to) => {

@@ -38,7 +38,6 @@ watch(
                 (result) => { env.value = result; },
                 () => { env.value = undefined; },
             );
-            // 加载趋势数据，无采样时后端返回空数组，展示"暂无数据"
             void getRoomEnvironmentTrends(id, "temperature,humidity,pm25,illuminance,noise")
                 .then((result) => { trend.value = result; })
                 .catch(() => { trend.value = undefined; });
@@ -53,7 +52,6 @@ const hasTrends = computed(() => (trend.value?.items?.length ?? 0) > 0);
 const metricValue = (name: string, fallback: number): number =>
     env.value?.values?.[name] ?? fallback;
 
-// 从趋势数据中提取指定指标的数值序列
 const trendValues = (metric: string): number[] => {
     if (!trend.value?.items?.length) return [];
     return trend.value.items

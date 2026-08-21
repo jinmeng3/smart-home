@@ -60,7 +60,6 @@ export const useGsapFlip = (options: UseGsapFlipOptions) => {
     /** 在数据变更前同步捕获当前列表布局（不得在 await 之后调用） */
     const capture = () => {
         if (isReduced.value) return;
-        // 插件未就绪时无法捕获——放弃本次动画，等待下次
         if (!flipLoaded) {
             flipState = null;
             return;
@@ -86,7 +85,6 @@ export const useGsapFlip = (options: UseGsapFlipOptions) => {
 
         await nextTick();
 
-        // 确保插件已加载（捕获时已就绪，此处应为同步返回）
         await ensureFlipLoaded();
 
         const el = options.container.value;
@@ -112,15 +110,12 @@ export const useGsapFlip = (options: UseGsapFlipOptions) => {
     /** 捕获 + 执行一步完成 */
     const captureAndFlip = async () => {
         if (options.deactivated?.value) return;
-        // 同步捕获旧状态——必须在任何 await 之前，确保捕获到变更前的 DOM
         capture();
         await flip();
     };
 
-    // composable 创建时即开始预加载插件，保证后续 watcher 同步捕获可用
     void ensureFlipLoaded();
 
-    // 组件销毁时清理
     if (getCurrentScope()) {
         onScopeDispose(() => {
             flipState = null;

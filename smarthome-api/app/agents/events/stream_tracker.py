@@ -1,13 +1,13 @@
 import json
 
-from app.agents.events.models import (
+from app.agents.events.sse import encode_sse_event
+from app.agents.redaction import redact_text
+from app.schemas.sse import (
     MessageDelta,
     ToolCompleted,
     ToolFailed,
     ToolStarted,
 )
-from app.agents.events.sse import encode_sse_event
-from app.agents.redaction import redact_text
 
 
 class StreamTracker:

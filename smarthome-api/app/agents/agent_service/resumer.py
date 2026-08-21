@@ -6,14 +6,6 @@ from typing import Any, cast
 from app.agents.agent_service.runner import _create_graph_runner
 from app.agents.context import AgentContext
 from app.agents.errors import AgentError
-from app.agents.events.models import (
-    Error,
-    ExecutionStatus,
-    RunCompleted,
-    ToolCompleted,
-    ToolFailed,
-    ToolStarted,
-)
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
 from app.agents.rate_limiter import store_usage
@@ -21,6 +13,10 @@ from app.agents.redaction import redact_text
 from app.core.config import get_settings
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage
+from app.schemas.sse import (
+    Error,
+    RunCompleted,
+)
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from sqlalchemy.orm import Session
@@ -57,9 +53,7 @@ async def resume_agent(
             )
         )
         return
-    except Exception:  # noqa: BLE001
-        # 兜底保护：捕获 _create_graph_runner 或 aget_state 中
-        # 出现的非 AgentError 意外异常（如数据库连接失败、超时等）
+    except Exception:  # noqa: BLE001  # 初始化解析失败归为一类错误事件返回
         yield encode_sse_event(
             Error(
                 event_id=f"decision-{context.session_id}-setup-error",
@@ -102,7 +96,6 @@ async def resume_agent(
     tool_call_count = 0
     run_errored = False
 
-    # 记录用户的确认决策
     audit.record_approval_decision(
         run_id=run_id,
         approval_id=decision["approval_id"],
@@ -130,70 +123,19 @@ async def resume_agent(
                     yield event
                     tool_call_count += 1
 
-            if node == "write_tool" and content:
-                payload = json.loads(content)
-                status = payload.get("status", "unknown")
-                call_id = pending.get("call_id", "")
-                tool_name = str(pending.get("tool", "write_tool"))
-                error_msg = payload.get("error", "")
-                message = payload.get("message", error_msg)
-
-                # 发送工具标准事件：与首次运行路径一致
-                yield encode_sse_event(
-                    ToolStarted(
-                        event_id=f"{run_id}-resume-start",
-                        run_id=run_id,
-                        call_id=call_id or f"resume-{run_id}",
-                        tool=tool_name,
-                        summary=f"正在执行 {tool_name}",
-                    )
-                )
-                if status == "failed" or error_msg:
-                    run_errored = True
-                    yield encode_sse_event(
-                        ToolFailed(
-                            event_id=f"{run_id}-resume-fail",
-                            run_id=run_id,
-                            call_id=call_id or f"resume-{run_id}",
-                            tool=tool_name,
-                            code="AGENT_TOOL_EXECUTION_ERROR",
-                            error=redact_text(message)[:500],
-                        )
-                    )
-                else:
-                    yield encode_sse_event(
-                        ToolCompleted(
-                            event_id=f"{run_id}-resume-result",
-                            run_id=run_id,
-                            call_id=call_id or f"resume-{run_id}",
-                            tool=tool_name,
-                            result=redact_text(
-                                json.dumps(
-                                    payload.get("data", payload.get("message", "")),
-                                    ensure_ascii=False,
-                                    default=str,
-                                )
-                            )[:500],
-                        )
-                    )
-
-                yield encode_sse_event(
-                    ExecutionStatus(
-                        event_id=f"{run_id}-execution",
-                        run_id=run_id,
-                        session_id=context.session_id,
-                        operator=tool_name,
-                        status=status,
-                        call_id=call_id or f"resume-{run_id}",
-                        execution_id=payload.get("execution_id"),
-                        message=message,
-                    )
-                )
-
-            elif node == "read_tool" and content:
+            if node in {"read_tool", "write_tool"} and content:
                 call_id = str(getattr(message, "tool_call_id", ""))
                 name = str(getattr(message, "name", ""))
-                yield tracker.emit_tool_result(call_id, name, content)
+                sse = tracker.emit_tool_result(call_id, name, content)
+                yield sse
+                if node == "write_tool":
+                    try:
+                        payload = json.loads(str(content))
+                    except (json.JSONDecodeError, TypeError):
+                        payload = {"ok": True}
+                    if payload.get("ok") is False or payload.get("status") == "failed":
+                        run_errored = True
+
             elif node == "model" and content:
                 yield tracker.emit_model_text(content)
 
@@ -204,7 +146,7 @@ async def resume_agent(
             message="客户端在确认恢复后断开连接",
         )
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # 执行异常统一落库统计并向客户端发出错误事件
         store_usage(
             db,
             context,

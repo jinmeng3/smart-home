@@ -3,7 +3,7 @@ import { gsap, motionEase, seconds, useMotionMode } from "../motion";
 
 /** `useCardGridEnter` 选项 */
 export interface CardGridEnterOptions {
-    /**
+/**
      * 容器选择器（默认 `.card-grid-enter`）。
      *
      * 可传入其他同类网格容器（如 `.room-grid`）复用同一套 stagger 入场逻辑。
@@ -59,12 +59,11 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
     /** 播放卡片网格 stagger 入场（需在数据渲染后调用） */
     const play = async () => {
         if (isReduced.value || !root.value) return;
-        if (playedOnce) return; // 刷新和返回页面不重播
+        if (playedOnce) return;
         await nextTick();
         const items = findItems();
         if (!items.length) return;
 
-        // 控制整体 stagger 总时长不超过 420ms
         const staggerDuration = Math.min(0.08, 0.42 / Math.max(items.length, 1));
 
         const ctx = gsap.context(() => {
@@ -77,7 +76,6 @@ export const useCardGridEnter = (options?: CardGridEnterOptions) => {
                 overwrite: "auto",
                 onComplete: () => {
                     playedOnce = true;
-                    // 交还 CSS 控制：清除内联 transform/opacity，避免覆盖 hover 过渡
                     gsap.set(items, {
                         clearProps: "transform,opacity,visibility",
                     });

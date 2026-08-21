@@ -12,7 +12,6 @@ defineEmits<{
   reject: [];
 }>();
 
-// 从预览中安全提取字段
 const preview = computed(() => props.approval.preview);
 const kind = computed(() => String(preview.value.kind || ""));
 const isSceneExecution = computed(() => kind.value === "scene_execution");
@@ -33,7 +32,6 @@ const title = computed(() => {
 const summary = computed(() => String(preview.value.summary || ""));
 const automationName = computed(() => String(preview.value.automation_name || ""));
 const canApprove = computed(() => {
-  // 场景执行需要检查是否启用；其他操作始终可执行
   if (isSceneExecution.value) {
     return Boolean(preview.value.enabled);
   }
@@ -47,7 +45,6 @@ const disabledTip = computed(() => {
   return "";
 });
 
-// 自动化预览详细信息
 const changedFields = computed(() => (preview.value.changed_fields as string[]) || []);
 const affectedDeviceNames = computed(() => (preview.value.affected_device_names as string[]) || []);
 const triggerCount = computed(() => Number(preview.value.trigger_count ?? 0));
@@ -55,7 +52,6 @@ const conditionCount = computed(() => Number(preview.value.condition_count ?? 0)
 const actionCount = computed(() => Number(preview.value.action_count ?? 0));
 const targetEnabled = computed(() => Boolean(preview.value.target_enabled));
 
-// 场景执行预览
 const sceneSteps = computed(() => (preview.value.steps as any[]) || []);
 const sceneName = computed(() => String(preview.value.scene_name || ""));
 </script>

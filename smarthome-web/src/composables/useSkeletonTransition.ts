@@ -39,14 +39,12 @@ export const useSkeletonTransition = (
         const el = container.value;
         if (!el) return;
 
-        // 对容器内所有直属子元素做淡入
         const children = Array.from(el.children).filter(
             (child) => child instanceof HTMLElement,
         ) as HTMLElement[];
 
         if (!children.length) return;
 
-        // 设置初始状态
         gsap.set(children, { autoAlpha: 0, y: 8 });
 
         activeTween = gsap.to(children, {
@@ -57,7 +55,6 @@ export const useSkeletonTransition = (
             stagger: 0.04,
             overwrite: "auto",
             onComplete: () => {
-                // 交还 CSS 控制
                 gsap.set(children, {
                     clearProps: "transform,opacity,visibility",
                 });
@@ -66,14 +63,12 @@ export const useSkeletonTransition = (
         });
     };
 
-    // 监听 loading 状态变化：true → false 时触发过渡
     watch(loading, (isLoading) => {
         if (!isLoading) {
             void play();
         }
     });
 
-    // 组件销毁时清理
     if (getCurrentScope()) {
         onScopeDispose(kill);
     }

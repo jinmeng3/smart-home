@@ -76,7 +76,6 @@ watch(
     },
 );
 
-// 显示完整 householdSummary 文本，用于 title 属性
 const fullAddress = computed(
     () => [props.form.householdName, props.form.address].filter(Boolean).join(" · ") || "",
 );
@@ -125,7 +124,6 @@ const uploadAvatar = (event: Event) => {
         return;
     }
 
-    // 文件类型校验（已有 accept 属性兜底，这里做二次校验）
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
         ElMessage.warning("仅支持 JPEG、PNG 或 WebP 格式的头像");
@@ -133,7 +131,6 @@ const uploadAvatar = (event: Event) => {
         return;
     }
 
-    // 文件大小校验：头像限制 5MB
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
         ElMessage.warning("头像文件大小不能超过 5MB");

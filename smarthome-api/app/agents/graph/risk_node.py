@@ -21,7 +21,7 @@ def risk_check(state: AgentState, db: Session) -> dict:
         if str(call.get("name", "")) in WRITE_TOOL_NAMES
     ]
 
-    # 每轮只允许一个写调用，且不能与只读调用混合，避免部分成功。
+                                   
     if len(write_calls) != 1 or len(last.tool_calls) != 1:
         return _tool_error(
             state,
@@ -33,7 +33,7 @@ def risk_check(state: AgentState, db: Session) -> dict:
     call_id = str(call.get("id", ""))
     tool_name = str(call.get("name", ""))
 
-    # 风险判定前先执行与真正工具相同的 Pydantic 校验，不能信任模型原始参数。
+                                              
     try:
         validated = WRITE_TOOL_SCHEMAS[tool_name].model_validate(call.get("args") or {})
         args = validated.model_dump(exclude_none=True)

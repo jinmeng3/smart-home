@@ -107,7 +107,7 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             executions.list_automation_executions,
         ),
-        # 只读预览工具
+                
         build_query_tool(
             "preview_scene",
             "预览指定场景的执行步骤、影响设备和风险等级，不会实际执行场景",
@@ -132,7 +132,7 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             preview_automations.detect_automation_conflicts,
         ),
-        # 写工具（注册但实际执行由受控写操作节点完成）
+                                
         build_query_tool(
             "execute_scene",
             (

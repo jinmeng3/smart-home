@@ -7,12 +7,6 @@ from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
 from app.agents.checkpointer import get_checkpointer
 from app.agents.context import AgentContext
 from app.agents.errors import AgentError
-from app.agents.events.models import (
-    ApprovalRequired,
-    Error,
-    RunCompleted,
-    RunStarted,
-)
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
 from app.agents.graph import build_graph
@@ -24,12 +18,17 @@ from app.api.deps import get_model_cache
 from app.core.config import get_settings
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage
+from app.schemas.sse import (
+    ApprovalRequired,
+    Error,
+    RunCompleted,
+    RunStarted,
+)
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.orm import Session
 
 
-# === Agent 装配 ===
 async def _create_graph_runner(
     context: AgentContext, db: Session, model_config: AIModel
 ) -> tuple[CompiledStateGraph, AuditRecorder]:
@@ -87,7 +86,7 @@ async def run_agent(
             )
         )
         return
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # 初始化失败归为一类错误事件返回
         yield encode_sse_event(
             Error(
                 event_id=f"{run_id}-setup-error",
@@ -170,7 +169,7 @@ async def run_agent(
     except GeneratorExit:
         audit.record_run_end(run_id, status="cancelled", message="客户端关闭连接")
         raise
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # 运行异常统一落库统计并向客户端发出错误事件
         error_message = redact_text(str(e))
         store_usage(
             db,
@@ -198,7 +197,6 @@ async def run_agent(
         )
         return
 
-    # 检查是否有待确认操作
     snapshot = await graph.aget_state(
         config={
             "configurable": {"thread_id": thread_id},

@@ -174,7 +174,7 @@ const { canScroll, atBottom, refresh, schedule } = useScrollFade(railScrollRef, 
 .base-collapsible-rail {
     position: relative;
     width: var(--rail-width-expanded, 330px);
-    /* 宽度过渡由 GSAP 时间轴驱动，移除 CSS 过渡避免冲突；
+/* 宽度过渡由 GSAP 时间轴驱动，移除 CSS 过渡避免冲突；
        收起/展开后的宽度由 .is-collapsed 类控制，GSAP clearProps 后交还 */
     transition:
         border-radius 300ms cubic-bezier(0.22, 1, 0.36, 1),

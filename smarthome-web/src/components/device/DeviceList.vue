@@ -71,7 +71,6 @@ const switchView = async (next: "list" | "grid") => {
         return;
     }
 
-    // 捕获当前可见的设备项布局
     const state = (gsap as any)?.Flip?.getState?.(
         ".device-table-wrap [data-flip-id], .device-grid-wrap [data-flip-id]",
     );
@@ -79,7 +78,6 @@ const switchView = async (next: "list" | "grid") => {
     viewMode.value = next;
     await nextTick();
 
-    // 新视图渲染完成后，从旧位置过渡到新位置
     if (state) {
         (gsap as any).Flip?.from?.(state, {
             targets: ".device-table-wrap [data-flip-id], .device-grid-wrap [data-flip-id]",

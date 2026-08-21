@@ -47,12 +47,10 @@ const getCategory = (icon: string): Category => {
 const filteredActivities = computed(() => {
     let items = props.activities;
 
-    // Category filter
     if (selectedCategory.value !== "all") {
         items = items.filter((a) => getCategory(a.icon) === selectedCategory.value);
     }
 
-    // Search filter
     const q = searchQuery.value.trim().toLocaleLowerCase();
     if (q) {
         items = items.filter(
@@ -65,7 +63,6 @@ const filteredActivities = computed(() => {
     return items;
 });
 
-// Group activities by time period
 const groupedActivities = computed(() => {
     const groups: { label: string; items: ActivityItem[] }[] = [];
     const morning: ActivityItem[] = [];

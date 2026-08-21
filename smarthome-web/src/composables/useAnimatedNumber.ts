@@ -27,7 +27,6 @@ export const useAnimatedNumber = (options: UseAnimatedNumberOptions) => {
   const duration = options.duration ?? 600;
 
   const animateTo = (nextValue: number) => {
-    // 减少动态效果：直接呈现终值
     if (isReduced.value) {
       activeTween?.kill();
       activeTween = null;
@@ -35,7 +34,6 @@ export const useAnimatedNumber = (options: UseAnimatedNumberOptions) => {
       return;
     }
 
-    // GSAP 对 ref 的 .value 属性补间，reactive 更新自动驱动 displayValue
     activeTween = gsap.to(value, {
       value: nextValue,
       duration: duration / 1000,
@@ -43,13 +41,11 @@ export const useAnimatedNumber = (options: UseAnimatedNumberOptions) => {
       overwrite: "auto",
       onComplete: () => {
         activeTween = null;
-        // 确保最终值精确（浮点误差修正）
         value.value = nextValue;
       },
     });
   };
 
-  // 监听动态模式变化：切换为减少时立即跳至终值
   watch(isReduced, (reduced) => {
     if (reduced && activeTween) {
       activeTween.kill();

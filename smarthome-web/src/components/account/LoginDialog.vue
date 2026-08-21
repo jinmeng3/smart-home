@@ -155,7 +155,6 @@ const submit = async () => {
             await sleep(1200);
             authStore.loginVisible = false;
         }
-        // 登录凭证已经由 Store 保存，异步刷新账户资料即可，无需整页重载。
         void settingsStore.loadAccountHome().catch(() => undefined);
     } catch (error) {
         const apiError =

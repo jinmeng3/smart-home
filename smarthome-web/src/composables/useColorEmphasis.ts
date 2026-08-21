@@ -44,7 +44,7 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
     const duration = (options.duration ?? 160) / 1000;
     const holdDuration = options.holdDuration ?? 800;
 
-    /**
+/**
      * 注册一个或多个需要强调的元素。
      */
     const registerElement = (el: HTMLElement | null) => {
@@ -54,7 +54,7 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         }
     };
 
-    /**
+/**
      * 批量注册多个元素。
      */
     const registerElements = (els: (HTMLElement | null)[]) => {
@@ -67,7 +67,7 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         elements.value = next;
     };
 
-    /**
+/**
      * 注册一个 ref 元素。
      */
     const registerRef = (elRef: Ref<HTMLElement | null>) => {
@@ -80,7 +80,7 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         );
     };
 
-    /**
+/**
      * 播放一次颜色强调动画。
      *
      * - 减少动态效果模式跳过动画。
@@ -89,7 +89,6 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
     const emphasize = () => {
         if (isReduced.value || !elements.value.length) return;
 
-        // 覆盖旧的 Tween
         if (activeTween) {
             activeTween.kill();
             activeTween = null;
@@ -98,12 +97,10 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         const targets = elements.value.filter((el) => el?.isConnected);
         if (!targets.length) return;
 
-        // 保存原始颜色
         const originalColors = targets.map((el) => ({
             color: getComputedStyle(el).color,
         }));
 
-        // 动画：变为主色 → 保持 → 恢复
         const tl = gsap.timeline({
             onComplete: () => {
                 activeTween = null;
@@ -120,7 +117,6 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
             0,
         );
 
-        // 恢复阶段：为每个元素单独创建 tween 以恢复原始颜色
         targets.forEach((el, i) => {
             const originalColor = originalColors[i]?.color ?? "";
             tl.to(
@@ -135,7 +131,7 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         });
     };
 
-    /**
+/**
      * 创建一个监听数值变化的强调效果。
      *
      * @param source 被监听的响应式数值
@@ -147,7 +143,6 @@ export const useColorEmphasis = (options: ColorEmphasisOptions = {}) => {
         });
     };
 
-    // 组件销毁时清理
     if (getCurrentScope()) {
         onScopeDispose(() => {
             if (activeTween) {

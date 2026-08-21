@@ -28,7 +28,6 @@ const description = computed(
     () => `统一管理${props.room?.name ?? "房间"}内的设备状态、分组与快捷控制`,
 );
 
-// 设备数据（从后端加载）
 const devices = ref<RoomDeviceListItem[]>([]);
 const togglingIds = ref<Set<number>>(new Set());
 const { invalidate, loading, run } = useLatestRequest();
@@ -39,7 +38,6 @@ const deviceStatusOptions = [
     { value: "warning", label: "告警" },
 ];
 
-// 从后端加载房间设备（仅发送 keyword 和 status，分组筛选由前端处理）
 const loadDevices = async () => {
     if (!props.room) return;
     const roomId = props.room.id;
@@ -58,7 +56,6 @@ const loadDevices = async () => {
     );
 };
 
-// 对话框打开时加载设备数据
 watch(
     () => props.modelValue,
     (open) => {
@@ -69,7 +66,6 @@ watch(
     { immediate: true },
 );
 
-// 搜索/筛选条件变化时重新从后端加载（防抖）
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 watch(
     () => [deviceKeyword.value, deviceTypeFilter.value, deviceStatusFilter.value],
@@ -94,7 +90,6 @@ const groupCount = computed(() => {
     return groups.size;
 });
 
-// 从设备数据中推导分组选项
 const deviceTypeOptions = computed(() => {
     const groups = new Set(devices.value.map((d) => d.group));
     return ["", ...groups].filter(Boolean);

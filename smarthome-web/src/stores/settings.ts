@@ -118,8 +118,6 @@ export const useSettingsStore = defineStore("settings", () => {
       ...settings.value.backup,
       ...preferences.backup,
     };
-    // 服务端是偏好唯一真相：不回写本地缓存，避免与服务端双真相。
-    // 无需跨端同步的 UI 偏好（如侧栏折叠）仍由各自模块本地保存。
   };
 
   const saveSettings = async () => {
@@ -174,7 +172,6 @@ export const useSettingsStore = defineStore("settings", () => {
     loading.value = true;
     accountHomePromise = (async () => {
       const account = await getAccount();
-      // 家庭列表 / 活动家庭 / 角色 / 成员以全局家庭上下文为唯一真相。
       const householdStore = useHouseholdStore();
       await householdStore.load(force);
       applyHouseholdContext(
@@ -256,7 +253,6 @@ export const useSettingsStore = defineStore("settings", () => {
       householdRequest,
     ]);
 
-    // 家庭数据以全局上下文为准：刷新列表并保持新/当前家庭为活动家庭。
     const householdStore = useHouseholdStore();
     await householdStore.load(true);
     if (household?.id) {
@@ -339,7 +335,6 @@ export const useSettingsStore = defineStore("settings", () => {
       description: settings.value.aiAssistant.language,
     };
 
-    // compat 可选：仅在填写且为合法 JSON 时提交，空串/非法 JSON 不发送
     try {
       const compat = JSON.parse(homeAssistant.compat || "{}") as Record<
         string,
@@ -347,7 +342,6 @@ export const useSettingsStore = defineStore("settings", () => {
       >;
       if (Object.keys(compat).length > 0) payload.compat = compat;
     } catch {
-      // 非法 JSON 不阻塞保存，忽略 compat
     }
     const models = await apiListAIModels();
     const response = models.length

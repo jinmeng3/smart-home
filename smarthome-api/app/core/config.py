@@ -7,20 +7,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # 应用
+        
     app_name: str = "Smart Home API"
     development_mode: bool = True
 
-    # 数据库
+         
     database_url: str = "sqlite:///./db/orion_home.db"
 
-    # 身份认证
+          
     jwt_secret_key: str = "dev-secret-key-change-in-production"
     access_token_expire_seconds: int = 3600
     max_failed_login_attempts: int = Field(default=5, ge=1, le=20)
     login_lock_seconds: int = Field(default=900, ge=60, le=86400)
 
-    # 跨域资源共享
+            
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://127.0.0.1:5173",
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
         ]
     )
 
-    # 模型
+        
     supported_ai_providers: list[str] = Field(
         default_factory=lambda: ["openai", "deepseek"]
     )
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
                 pass
         return [v.strip() for v in value.split(",") if v.strip()]
 
-    # 文件上传
+          
     upload_dir: str = "app/uploads"
     max_avatar_size: int = 2 * 1024 * 1024
     allowed_avatar_types: set[str] = Field(
@@ -68,10 +68,10 @@ class Settings(BaseSettings):
         default_factory=lambda: {"image/jpeg", "image/png", "image/webp"}
     )
 
-    # Agent 审计日志
+                
     audit_dir: str = "agent_audit"
 
-    # Agent 生产化配置
+                 
     agent_rate_limit_per_minute: int = Field(
         default=10, ge=1, le=120, description="每分钟每个用户最大 agent 请求数"
     )
@@ -98,7 +98,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Agent 工具
+              
     agent_max_rounds: int = Field(default=6, ge=1)
     tool_timeout_seconds: float = Field(default=15.0, gt=0)
     tool_result_max_length: int = Field(default=4000, ge=1)

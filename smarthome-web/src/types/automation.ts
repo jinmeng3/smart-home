@@ -1,6 +1,4 @@
 // === 流控件项目 ===
-// 触发器 / 条件 / 动作均以 { type, config } 作为基础；
-// 条件额外 carry position；动作额外 carry position 与 target。
 
 export interface FlowItem {
   type: string;

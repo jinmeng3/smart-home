@@ -46,7 +46,7 @@ def agent_context(
     )
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
-    # 家庭与会话强绑定：已绑定家庭的会话不得跨家庭使用
+                              
     if session.household_id is not None and session.household_id != household_id:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="会话不属于该家庭")
     user_preferences = db.scalar(

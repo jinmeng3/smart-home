@@ -22,7 +22,6 @@ const emit = defineEmits<{
     "update:modelValue": [value: boolean];
 }>();
 
-// Map room names to more specific icons
 const roomIconMap: Record<string, string> = {
     "客厅": "home",
     "主卧": "room",

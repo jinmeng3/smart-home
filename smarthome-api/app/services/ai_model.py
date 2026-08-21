@@ -179,7 +179,7 @@ def test_ai_model_service(
         provider=payload.provider,
         api=payload.api,
         api_endpoint=payload.api_endpoint,
-        api_key=api_key,  # ModelsRegistry.apply_auth 会原样使用
+        api_key=api_key,                                   
         parameters=payload.parameters or {},
         compat=payload.compat,
         temperature=payload.temperature,
@@ -193,7 +193,7 @@ def test_ai_model_service(
         model.invoke("ping")
         latency_ms = int((time.perf_counter() - started) * 1000)
         return AIModelTestResult(ok=True, latency_ms=latency_ms, message="连接成功")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # 连通性测试需将任意异常归一化为测试结果返回给前端
         detail = str(exc).strip() or exc.__class__.__name__
         return AIModelTestResult(ok=False, message=detail[:300])
 

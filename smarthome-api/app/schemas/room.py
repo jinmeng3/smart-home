@@ -52,10 +52,10 @@ class RoomStatsRead(RoomSchema):
     """房间统计概览"""
 
     room_count: int
-    room_count_change: int = 0  # 较上月变化
-    online_rate: float = 0.0  # 在线率百分比
-    alert_count: int = 0  # 报警次数
-    pending_alert_count: int = 0  # 待处理报警次数
+    room_count_change: int = 0         
+    online_rate: float = 0.0          
+    alert_count: int = 0        
+    pending_alert_count: int = 0           
 
 
 class RoomListRead(RoomSchema):

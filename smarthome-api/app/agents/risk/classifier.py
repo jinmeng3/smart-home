@@ -55,7 +55,7 @@ def classify_automation_operation(
     reasons: list[str] = []
     resource_version = ""
 
-    # 对已有资源的所有配置操作保存版本快照，批准后必须再次校验。
+                                   
     if automation_id is not None:
         automation = get_automation_svc(db, automation_id, context.household_id)
         resource_version = str(automation.version)
@@ -103,7 +103,7 @@ def classify_automation_operation(
         level = RiskLevel.UNKNOWN
         reasons.append(f"未知的自动化操作类型：{operation}")
 
-    # 构建预览信息
+            
     preview: dict = {
         "kind": operation,
         "operation": operation,
@@ -148,7 +148,7 @@ def classify_automation_operation(
         preview["automation_name"] = automation.name
         preview["summary"] = f"删除自动化规则：{automation.name}"
 
-    # 自动化创建、修改、启停和删除均属于配置变更，必须人工确认。
+                                   
     return RiskDecision(
         level=level,
         requires_approval=True,

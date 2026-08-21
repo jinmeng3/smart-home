@@ -84,7 +84,6 @@ let highlightTimer: ReturnType<typeof setTimeout> | undefined;
 const handleCopyRule = async (item: any) => {
     try {
         await controller.copyRule(item);
-        // 复制完成后高亮新副本（通常排在原规则之后）
         const newRule = store.automations.find(
             (rule) => rule.id !== item.id && rule.name.includes(`${item.name} 副本`),
         );
@@ -97,7 +96,6 @@ const handleCopyRule = async (item: any) => {
             }, 1600);
         }
     } catch {
-        // 错误提示由 controller 内部处理
     }
 };
 
@@ -118,7 +116,6 @@ const handleBatchEnable = async (ruleIds: number[]) => {
             batchHighlightTimer = undefined;
         }, 1400);
     } catch {
-        // 错误提示由 controller 内部处理
     }
 };
 
@@ -138,12 +135,10 @@ const { captureAndFlip: flipCards } = useGsapFlip({
     duration: 240,
 });
 
-// 卡片入场 stagger：数据加载完成后 + 展开/收起状态变更时
 onMounted(() => void playCardGrid());
 watch(() => visibleCards.value.length, (n) => { if (n > 0) void playCardGrid(); });
 watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
 
-// 卡片增删/筛选变化时播放 Flip，保持位置连续
 watch(
     () => visible.value.length,
     () => {

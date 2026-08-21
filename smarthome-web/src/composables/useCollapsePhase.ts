@@ -96,7 +96,7 @@ export const useCollapsePhase = (
         };
     };
 
-    /**
+/**
      * 创建或更新单条 paused Timeline。
      * 收起方向：内容淡出(0s) → 容器折叠(0.14s)
      * 展开方向：容器展开(0s) → 内容淡入(0.3s)
@@ -109,8 +109,6 @@ export const useCollapsePhase = (
             (el): el is HTMLElement => Boolean(el),
         );
 
-        // 时间线存在、容器相同、且 detail 元素未变化时复用，
-        // 保留快速连点时的中断反向播放能力。
         if (timeline && timelineContainer === container) {
             const detailChanged =
                 lastDetailEls.length !== detail.length ||
@@ -120,13 +118,11 @@ export const useCollapsePhase = (
             }
         }
 
-        // 清理旧 Timeline，重新创建以确保 detail 元素引用最新 DOM
         kill();
 
         lastDetailEls = detail;
         const { collapsedWidth, expandedWidth } = resolveWidths(targets);
 
-        // 设置初始状态：展开态
         gsap.set(container, { width: expandedWidth });
         if (detail.length) {
             gsap.set(detail, { autoAlpha: 1, x: 0 });
@@ -136,14 +132,12 @@ export const useCollapsePhase = (
             paused: true,
             defaults: { ease: motionEase.ease },
             onComplete: () => {
-                // 正向完成=完全收起
                 gsap.set(container, { clearProps: "width" });
                 setCollapsed(true);
                 phase.value = "collapsed";
                 animating.value = false;
             },
             onReverseComplete: () => {
-                // 反向完成=完全展开
                 gsap.set(container, { clearProps: "width" });
                 setCollapsed(false);
                 phase.value = "expanded";
@@ -151,13 +145,11 @@ export const useCollapsePhase = (
             },
         });
 
-        // 收起方向（正向）：内容淡出 → 容器折叠
         if (detail.length) {
             tl.to(detail, { autoAlpha: 0, x: 8, duration: seconds.fast }, 0);
         }
         tl.to(container, { width: collapsedWidth, duration: seconds.collapse }, "+=0.06");
 
-        // 如果当前处于折叠态，将时间线跳到末尾，使后续 reverse() 正确执行展开
         if (collapsed.value) {
             tl.progress(1);
         }
@@ -168,7 +160,6 @@ export const useCollapsePhase = (
     };
 
     const toggle = () => {
-        // 减少动态效果或没有 DOM 目标时直接切换终态
         if (isReduced.value) {
             kill();
             const next = !collapsed.value;
@@ -191,21 +182,18 @@ export const useCollapsePhase = (
 
         animating.value = true;
 
-        // 连续点击：从当前进度反向
         if (tl.isActive()) {
             tl.reverse();
             phase.value = collapsed.value ? "expanding" : "collapsing";
             return;
         }
 
-        // 当前处于展开态（进度 0 或反向完成），正向播放收起
         if (!collapsed.value) {
             tl.play();
             phase.value = "collapsing";
             return;
         }
 
-        // 当前处于收起态（进度 1 或正向完成），反向播放展开
         tl.reverse();
         phase.value = "expanding";
     };
@@ -217,7 +205,6 @@ export const useCollapsePhase = (
         animating.value = false;
     };
 
-    // 组件销毁时清理运行中的时间轴；Store 场景下无作用域则跳过
     if (getCurrentScope()) {
         onScopeDispose(kill);
     }

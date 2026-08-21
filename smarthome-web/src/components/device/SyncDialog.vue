@@ -55,7 +55,6 @@ const startSync = async () => {
     syncResult.value = null;
     activeStepIndex.value = 0;
 
-    // 视觉步骤推进（业务结果仍由真实 Promise 驱动，不阻塞操作）
     stepTimer = setInterval(() => {
         if (activeStepIndex.value < syncSteps.length - 1) {
             activeStepIndex.value += 1;

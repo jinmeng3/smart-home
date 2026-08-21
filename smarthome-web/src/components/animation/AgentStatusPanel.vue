@@ -10,7 +10,6 @@ const props = defineProps<{
     phase: "pending" | "working" | "done";
 }>();
 
-// 步骤状态统计
 const completedCount = computed(
     () =>
         props.steps.filter(
@@ -22,7 +21,6 @@ const allFinished = computed(() => {
     return completedCount.value === props.steps.length;
 });
 
-// 阶段文案：同一卡片内渐变切换，避免切换跳动
 const label = computed(() => {
     if (props.phase === "pending") return props.status || "正在理解";
     if (props.phase === "done") {
@@ -34,7 +32,6 @@ const label = computed(() => {
     return "正在调用设备";
 });
 
-// 折叠控制：完成后收起步骤列表
 const collapsed = ref(false);
 const { isReduced } = useMotionMode();
 let collapseTimer: gsap.core.Tween | null = null;
@@ -47,10 +44,8 @@ watch(
         }
         if (phase === "done") {
             if (isReduced.value) {
-                // 减少动态效果下直接折叠，无需等待
                 collapsed.value = true;
             } else {
-                // 等"正在整理结果"文案展示一小段时间后折叠
                 collapseTimer = gsap.delayedCall(0.42, () => {
                     collapsed.value = true;
                     collapseTimer = null;

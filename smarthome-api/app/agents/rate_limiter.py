@@ -10,7 +10,6 @@ from app.models.agent_usage import AgentUsage, AgentUsageDaily
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-# 内存限流器：{user_id: [timestamp, ...]}
 _rate_limit_buckets: dict[int, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
 
@@ -19,13 +18,13 @@ def check_rate_limit(user_id: int) -> None:
     """检查用户是否超过每分钟请求限制。"""
     settings = get_settings()
     if settings.development_mode and not settings.production_mode:
-        return  # 开发模式不限流
+        return
 
     now = time.monotonic()
-    window = 60.0  # 1 分钟窗口
-    with _rate_limit_lock:  # 滑动日志算法
+    window = 60.0
+    with _rate_limit_lock:
         bucket = _rate_limit_buckets[user_id]
-        # bucket[0] < now - windo 判断是否过了时间窗口，如果过了就重置起始点
+
         while bucket and bucket[0] < now - window:
             bucket.popleft()
 
@@ -41,7 +40,7 @@ def check_daily_budget(db: Session, user_id: int) -> None:
     """检查用户今日 token 预算是否已超限。"""
     settings = get_settings()
     if settings.agent_daily_budget_tokens <= 0:
-        return  # 无限制
+        return
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     result = db.scalar(
@@ -98,7 +97,6 @@ def store_usage(
         usage.status = status
         usage.error_message = error_message
 
-    # 使用数据库 upsert 原子更新日汇总，避免多 worker 首次写入时产生重复行。
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     dialect = db.get_bind().dialect.name
     values = {

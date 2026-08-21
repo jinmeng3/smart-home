@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from functools import partial
+from typing import Any, cast
 
 from app.agents.audit.recorder import AuditRecorder
 from app.agents.graph.approval import (
@@ -31,13 +32,13 @@ def build_graph(
     checkpointer: BaseCheckpointSaver | None = None,
     tools_enabled: bool = True,
 ):
-    # 对话模式（tools_enabled=False）不绑定工具，模型只做纯文本补全，
-    # should_continue 因无 tool_calls 直接走 finalize，不会触发审批链
+
+
     active_tools = tools if tools_enabled else []
     tools_by_name = {tool.name: tool for tool in active_tools}
     bound_model = model.bind_tools(active_tools)
 
-    graph = StateGraph(AgentState)  # type: ignore
+    graph = StateGraph(cast(Any, AgentState))
 
     graph.add_node("load_context", load_context)
     graph.add_node("model", partial(model_node, model=bound_model))

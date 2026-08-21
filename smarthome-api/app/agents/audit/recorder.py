@@ -29,11 +29,11 @@ class AuditRecorder:
         if bucket != self._current_bucket:
             if self._current_file is not None:
                 self._current_file.close()
-            self._current_file = open(  # noqa: SIM115  # 有意保持文件句柄打开跨多次写入
+            self._current_file = open(  # noqa: SIM115  # 故意长期持有句柄以复用小时桶文件，见方法 docstring
                 self.log_dir / f"audit_{bucket}.json", "a", encoding="utf-8"
             )
             self._current_bucket = bucket
-        # _current_file 在此处保证为 not None（刚打开或已有）
+                                               
         assert self._current_file is not None
         self._current_file.write(line + "\n")
         self._current_file.flush()
