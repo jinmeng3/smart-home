@@ -1,13 +1,12 @@
-import json
 import re
 from collections.abc import Generator
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_model_cache
@@ -15,6 +14,11 @@ from app.models.ai import AIModel
 from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest
+from app.services.chat_sse import (
+    format_stream_content,
+    format_stream_error,
+    format_stream_message_id,
+)
 
 # === 聊天会话 ===
 
@@ -26,6 +30,8 @@ def get_chat_session(
     messages: list,
     *,
     household_id: int | None = None,
+    mode: str = "agent",
+    model_name: str | None = None,
 ) -> ChatSession:
     """获取或创建聊天会话，必要时绑定/校验家庭归属。"""
     if session_id is not None:
@@ -63,6 +69,8 @@ def get_chat_session(
         user_id=current_user.id,
         title=title or "新对话",
         household_id=household_id,
+        mode=mode,
+        model_name=model_name,
     )
     db.add(session)
     db.flush()
@@ -111,20 +119,21 @@ def delete_chat_session_service(
     db.commit()
 
 
-# === SSE 格式化 ===
+# === 对话补全 ===
 
 
-def format_stream_error(error: str) -> bytes:
-    return f"data: {json.dumps({'error': error}, ensure_ascii=False)}\n\n".encode()
-
-
-def format_stream_content(content: str) -> bytes:
-    payload = {"choices": [{"delta": {"content": content}}]}
-    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode()
-
-
-def format_stream_done() -> bytes:
-    return b"data: [DONE]\n\n"
+def _to_langchain_messages(messages: list) -> list:
+    """把 ChatCompletionMessage 列表转换为 LangChain 消息列表（纯对话模式不涉及工具消息）。"""
+    result = []
+    for message in messages:
+        role = message.role
+        if role == "system":
+            result.append(SystemMessage(content=message.content))
+        elif role == "user":
+            result.append(HumanMessage(content=message.content))
+        elif role == "assistant":
+            result.append(AIMessage(content=message.content))
+    return result
 
 
 # === 对话补全 ===
@@ -154,7 +163,7 @@ def create_chat_service(
     config: RunnableConfig = {"configurable": {"thread_id": str(session.id)}}
 
     result = agent.invoke(
-        input={"messages": [HumanMessage(content=payload.messages[-1].content)]},
+        input={"messages": _to_langchain_messages(payload.messages)},
         config=config,
     )
     content = result["messages"][-1].content
@@ -169,6 +178,8 @@ def create_chat_service_stream(
     payload: ChatCompletionRequest,
     current_user: User,
     db: Session,
+    *,
+    persist_user_message: bool = True,
 ) -> Generator[bytes, None, None]:
     model_config = db.scalar(select(AIModel).where(AIModel.name == payload.model))
     if model_config is None:
@@ -176,16 +187,16 @@ def create_chat_service_stream(
         return
     session = get_chat_session(db, current_user, payload.session_id, payload.messages)
 
-                     
-    db.add(
-        ChatMessage(
-            session_id=session.id,
-            content=payload.messages[-1].content,
-            role=payload.messages[-1].role,
+    if persist_user_message:
+        db.add(
+            ChatMessage(
+                session_id=session.id,
+                content=payload.messages[-1].content,
+                role=payload.messages[-1].role,
+            )
         )
-    )
-    session.updated_at = datetime.now(timezone.utc)
-    db.commit()
+        session.updated_at = datetime.now(timezone.utc)
+        db.commit()
 
     model_cache = get_model_cache()
     model = model_cache.get(model_config)
@@ -195,7 +206,7 @@ def create_chat_service_stream(
     collected = ""
     try:
         for msg_chunk, _metadata in agent.stream(
-            input={"messages": [HumanMessage(content=payload.messages[-1].content)]},
+            input={"messages": _to_langchain_messages(payload.messages)},
             config=config,
             stream_mode="messages",
         ):
@@ -210,6 +221,67 @@ def create_chat_service_stream(
 
     content = re.sub(r"<think>.*?</think>", "", collected, flags=re.DOTALL).strip()
     if content.strip():
-        db.add(ChatMessage(session_id=session.id, content=content, role="assistant"))
+        assistant_message = ChatMessage(
+            session_id=session.id, content=content, role="assistant"
+        )
+        db.add(assistant_message)
         session.updated_at = datetime.now(timezone.utc)
         db.commit()
+        yield format_stream_message_id(assistant_message.id)
+
+
+def prepare_regenerate(
+    db: Session,
+    current_user: User,
+    session_id: int,
+    target_message_id: int,
+) -> tuple[ChatMessage, list[ChatMessage]]:
+    """准备重新生成：定位目标助手回复与其前最近的用户消息，删除旧回复并返回历史。
+
+    覆盖策略：删除目标助手消息及其之后的所有消息，用旧用户消息重新生成，
+    从而避免重复保存用户消息、也不会留下旧回答的多个版本。
+    """
+    session = get_chat_session(db, current_user, session_id, [])
+
+    target = db.get(ChatMessage, target_message_id)
+    if target is None or target.session_id != session.id or target.role != "assistant":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="目标消息不存在或不是助手回复",
+        )
+
+    user_message = db.scalar(
+        select(ChatMessage)
+        .where(
+            ChatMessage.session_id == session.id,
+            ChatMessage.id < target_message_id,
+            ChatMessage.role == "user",
+        )
+        .order_by(ChatMessage.id.desc())
+        .limit(1)
+    )
+    if user_message is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="找不到对应的用户消息，无法重新生成",
+        )
+
+    db.execute(
+        delete(ChatMessage).where(
+            ChatMessage.session_id == session.id,
+            ChatMessage.id >= target_message_id,
+        )
+    )
+
+    history_rows = list(
+        db.scalars(
+            select(ChatMessage)
+            .where(
+                ChatMessage.session_id == session.id,
+                ChatMessage.id < user_message.id,
+            )
+            .order_by(ChatMessage.id.asc())
+        ).all()
+    )
+
+    return user_message, history_rows

@@ -68,6 +68,7 @@ class AppearancePreferences(PreferencesSchema):
 
 
 class AIAssistantPreferences(PreferencesSchema):
+    language: Literal["zh-CN", "en-US", "auto"] = "zh-CN"
     detail_level: int = Field(default=70, ge=0, le=100)
     auto_execute_low_risk: bool = True
     confirm_high_risk: bool = True

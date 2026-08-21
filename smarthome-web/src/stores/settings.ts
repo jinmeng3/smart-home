@@ -33,7 +33,6 @@ import {
   loadSecurityMeta,
   loadSettings,
   mergeSettings,
-  normalizeModelLanguage,
   persistBackupHistory,
   persistSecurityMeta,
   persistSettings,
@@ -96,6 +95,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const getUserPreferencesPayload = () => ({
     appearance: { ...settings.value.appearance },
     aiAssistant: {
+      language: settings.value.aiAssistant.language,
       detailLevel: settings.value.aiAssistant.detailLevel,
       autoExecuteLowRisk: settings.value.aiAssistant.autoExecuteLowRisk,
       confirmHighRisk: settings.value.aiAssistant.confirmHighRisk,
@@ -205,7 +205,6 @@ export const useSettingsStore = defineStore("settings", () => {
       settings.value.aiAssistant = {
         ...settings.value.aiAssistant,
         model: model.name,
-        language: normalizeModelLanguage(model.description),
         temperature: model.temperature,
         maxTokens: model.max_tokens,
         autoExecuteLowRisk: model.is_active,
@@ -332,7 +331,6 @@ export const useSettingsStore = defineStore("settings", () => {
         homeAssistant.serviceUrl &&
         (homeAssistant.tokenConfigured || homeAssistant.accessToken),
       ),
-      description: settings.value.aiAssistant.language,
     };
 
     try {
@@ -351,7 +349,6 @@ export const useSettingsStore = defineStore("settings", () => {
     settings.value.aiAssistant = {
       ...settings.value.aiAssistant,
       model: response.name,
-      language: normalizeModelLanguage(response.description),
       temperature: response.temperature,
       maxTokens: response.max_tokens,
       autoExecuteLowRisk: response.is_active,
@@ -384,7 +381,6 @@ export const useSettingsStore = defineStore("settings", () => {
     settings.value.aiAssistant = {
       ...settings.value.aiAssistant,
       model: activeModel.name,
-      language: normalizeModelLanguage(activeModel.description),
       temperature: activeModel.temperature,
       maxTokens: activeModel.max_tokens,
     };

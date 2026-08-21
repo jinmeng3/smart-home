@@ -65,6 +65,7 @@ class RunCompleted(AgentEvent):
     event: str = "run_completed"
     session_id: int
     status: str = "completed"
+    message_id: int | None = None
 
 
 class Error(AgentEvent):

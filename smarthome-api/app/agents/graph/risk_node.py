@@ -56,6 +56,7 @@ def risk_check(state: AgentState, db: Session) -> dict:
         "reasons": decision.reasons,
         "preview": decision.preview,
         "resource_version": decision.resource_version,
+        "model_name": state.get("model_name", ""),
     }
 
     return {

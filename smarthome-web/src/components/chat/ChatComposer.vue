@@ -18,6 +18,14 @@ const toggleMode = (mode: 'agent' | 'chat') => {
     store.setAgentMode(mode);
 };
 const currentMode = computed(() => agentMode.value);
+watch(
+    () => store.agentMode,
+    (mode) => {
+        if (agentMode.value !== mode) {
+            agentMode.value = mode;
+        }
+    },
+);
 defineExpose({ agentMode, currentMode, toggleMode });
 const authStore = useAuthStore();
 const inputValue = ref("");

@@ -94,7 +94,7 @@ export interface SettingsState {
 
 export interface UserPreferences {
   appearance: AppearanceSettings
-  aiAssistant: Pick<AiAssistantSettings, 'detailLevel' | 'autoExecuteLowRisk' | 'confirmHighRisk'>
+  aiAssistant: Pick<AiAssistantSettings, 'language' | 'detailLevel' | 'autoExecuteLowRisk' | 'confirmHighRisk'>
   notifications: NotificationSettings
   security: SecuritySettings
   backup: Pick<BackupSettings, 'autoBackup'>

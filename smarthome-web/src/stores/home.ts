@@ -229,6 +229,7 @@ export const useHomeStore = defineStore("home", () => {
     deviceSummary,
     enabledAutomationCount,
     energyToday,
+    ensureSession: chat.ensureSession,
     eventReceived: chat.eventReceived,
     executionSteps: chat.executionSteps,
     fetchModels: chat.fetchModels,

@@ -9,6 +9,7 @@ class AgentState(TypedDict, total=False):
     messages: Annotated[list[BaseMessage], add_messages]
     context: AgentContext
     run_id: str
-    rounds: int                  
+    rounds: int
+    model_name: str
     pending_approval: dict[str, Any] | None
     approval_decision: dict[str, Any] | None

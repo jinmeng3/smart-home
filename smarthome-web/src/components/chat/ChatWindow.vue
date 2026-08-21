@@ -72,7 +72,7 @@ const handleRegenerate = (messageId: string) => {
 
 /* === 发送与停止 === */
 const handleSend = (content: string) => {
-    store.sendMessage(content);
+    void store.sendMessage(content);
     void scrollToBottom(true);
 };
 
@@ -308,7 +308,7 @@ const starterPrompts = [
                 class="mode-btn"
                 :class="{ active: store.agentMode === 'agent' }"
                 type="button"
-                @click="store.agentMode = 'agent'"
+                @click="store.setAgentMode('agent')"
             >
                 Agent
             </button>
@@ -316,7 +316,7 @@ const starterPrompts = [
                 class="mode-btn"
                 :class="{ active: store.agentMode === 'chat' }"
                 type="button"
-                @click="store.agentMode = 'chat'"
+                @click="store.setAgentMode('chat')"
             >
                 对话
             </button>

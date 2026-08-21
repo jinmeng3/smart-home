@@ -8,8 +8,8 @@ from app.agents.context import AgentContext
 from app.agents.errors import AgentError
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
-from app.agents.rate_limiter import store_usage
 from app.agents.redaction import redact_text
+from app.agents.usage import store_usage, update_run_phase
 from app.core.config import get_settings
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage
@@ -90,7 +90,7 @@ async def resume_agent(
         return
 
     run_id = pending["run_id"]
-    tracker = StreamTracker(run_id)
+    tracker = StreamTracker(run_id, context.session_id)
     input_tokens = 0
     output_tokens = 0
     tool_call_count = 0
@@ -101,6 +101,15 @@ async def resume_agent(
         approval_id=decision["approval_id"],
         decision=decision["decision"],
     )
+
+    if decision.get("decision") == "approve":
+        update_run_phase(db, run_id, "submitted")
+        yield tracker.emit_execution_status(
+            call_id=str(pending.get("call_id", "")),
+            operator=str(pending.get("tool", "")),
+            status="running",
+            message="操作已确认，开始执行",
+        )
 
     try:
         async for chunk, metadata in graph.astream(
@@ -135,6 +144,7 @@ async def resume_agent(
                         payload = {"ok": True}
                     if payload.get("ok") is False or payload.get("status") == "failed":
                         run_errored = True
+                    yield tracker.emit_execution_result(call_id, name, content)
 
             elif node == "model" and content:
                 yield tracker.emit_model_text(content)
@@ -175,15 +185,16 @@ async def resume_agent(
         )
         return
 
+    assistant_message_id: int | None = None
     if tracker.collected.strip():
-        db.add(
-            ChatMessage(
-                session_id=context.session_id,
-                role="assistant",
-                content=tracker.collected.strip(),
-            )
+        assistant_message = ChatMessage(
+            session_id=context.session_id,
+            role="assistant",
+            content=tracker.collected.strip(),
         )
+        db.add(assistant_message)
         db.commit()
+        assistant_message_id = assistant_message.id
 
     store_usage(
         db,
@@ -203,5 +214,6 @@ async def resume_agent(
             run_id=run_id,
             session_id=context.session_id,
             status=("failed" if run_errored else "completed"),
+            message_id=assistant_message_id,
         )
     )

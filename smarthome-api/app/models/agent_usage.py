@@ -33,6 +33,9 @@ class AgentUsage(Base):
     household_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("households.id", ondelete="CASCADE"), nullable=False
     )
+    session_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, index=True, comment="会话主键（用于按会话查询最新 run 状态）"
+    )
     run_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="运行 ID")
     model_name: Mapped[str] = mapped_column(
         String(100), nullable=False, comment="模型名称"
@@ -48,6 +51,9 @@ class AgentUsage(Base):
     )
     status: Mapped[str] = mapped_column(
         String(24), default="completed", comment="运行状态"
+    )
+    phase: Mapped[str] = mapped_column(
+        String(24), default="thinking", server_default="thinking", comment="运行阶段：thinking / executing / submitted"
     )
     error_message: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="错误信息"

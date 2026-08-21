@@ -8,6 +8,8 @@ import type { AgentEvent, AgentDecisionRequest, PendingApproval } from "../types
 interface ChatSessionRead {
   id: number;
   title: string;
+  mode: string;
+  model_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +24,7 @@ interface ChatMessageRead {
 
 interface StreamPayload {
   error?: unknown;
+  message_id?: number;
   choices?: Array<{
     delta?: { content?: string };
   }>;
@@ -63,6 +66,8 @@ const toRecentConversation = (session: ChatSessionRead): RecentConversation => (
   time: formatConversationTime(session.updated_at || session.created_at),
   icon: "MessageCircle",
   updatedAt: session.updated_at || session.created_at,
+  mode: session.mode === "chat" ? "chat" : "agent",
+  modelName: session.model_name ?? null,
 });
 
 // === SSE 流式解析 ===
@@ -76,6 +81,18 @@ const parseContentDelta = (line: string) => {
   return payload.choices?.[0]?.delta?.content ?? "";
 };
 
+const parseMessageId = (line: string): number | null => {
+  if (!line.startsWith("data: ")) return null;
+  const data = line.slice(6).trim();
+  if (!data || data === "[DONE]") return null;
+  try {
+    const payload = JSON.parse(data) as StreamPayload;
+    return typeof payload.message_id === "number" ? payload.message_id : null;
+  } catch {
+    return null;
+  }
+};
+
 // === 统一流式请求（SSE 读取 + 分片缓冲 + 取消 + 错误解析） ===
 
 const streamCompletions = async (
@@ -85,10 +102,16 @@ const streamCompletions = async (
   model: string | null,
   onDelta: (content: string) => void,
   signal: AbortSignal,
+  onMessageId?: (messageId: number) => void,
 ) => {
   await streamRequest(
     url,
     (line) => {
+      const messageId = parseMessageId(line);
+      if (messageId !== null) {
+        onMessageId?.(messageId);
+        return;
+      }
       const delta = parseContentDelta(line);
       if (delta) onDelta(delta);
     },
@@ -107,10 +130,49 @@ export const listChatSessions = async () => {
   return sessions.map(toRecentConversation);
 };
 
-export const createChatSession = async () => {
-  const session = await apiRequest<ChatSessionRead>("/api/chat/sessions", {
-    method: "POST",
-  });
+export const createChatSession = async (
+  mode: "agent" | "chat" = "agent",
+  modelName: string | null = null,
+) => {
+  const params = new URLSearchParams();
+  params.set("mode", mode);
+  if (modelName) params.set("model_name", modelName);
+  const session = await apiRequest<ChatSessionRead>(
+    `/api/chat/sessions?${params.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+  return toRecentConversation(session);
+};
+
+/** 更新指定会话的模式（agent / chat）。 */
+export const updateChatSessionMode = async (
+  sessionId: string,
+  mode: "agent" | "chat",
+) => {
+  const session = await apiRequest<ChatSessionRead>(
+    `/api/chat/sessions/${sessionId}/mode`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ mode }),
+    },
+  );
+  return toRecentConversation(session);
+};
+
+/** 更新指定会话使用的模型名。 */
+export const updateChatSessionModel = async (
+  sessionId: string,
+  modelName: string,
+) => {
+  const session = await apiRequest<ChatSessionRead>(
+    `/api/chat/sessions/${sessionId}/model`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ model_name: modelName }),
+    },
+  );
   return toRecentConversation(session);
 };
 
@@ -141,8 +203,48 @@ export const streamChatCompletion = (
   model: string | null,
   onDelta: (content: string) => void,
   signal: AbortSignal,
+  onMessageId?: (messageId: number) => void,
 ) =>
-  streamCompletions("/api/chat/completions", messages, sessionId, model, onDelta, signal);
+  streamCompletions(
+    "/api/chat/completions",
+    messages,
+    sessionId,
+    model,
+    onDelta,
+    signal,
+    onMessageId,
+  );
+
+/** 重新生成对话模式的指定助手回复（/api/chat/sessions/{id}/regenerate）。 */
+export const regenerateChatCompletion = (
+  sessionId: string,
+  targetMessageId: number,
+  model: string | null,
+  onDelta: (content: string) => void,
+  signal: AbortSignal,
+  onMessageId?: (messageId: number) => void,
+): Promise<void> =>
+  streamRequest(
+    `/api/chat/sessions/${sessionId}/regenerate`,
+    (line) => {
+      const messageId = parseMessageId(line);
+      if (messageId !== null) {
+        onMessageId?.(messageId);
+        return;
+      }
+      const delta = parseContentDelta(line);
+      if (delta) onDelta(delta);
+    },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        target_message_id: targetMessageId,
+        model,
+        stream: true,
+      }),
+    },
+    signal,
+  );
 
 // === OpenAI 兼容接口 ===
 
@@ -236,6 +338,41 @@ export const getPendingAgentOperation = (
 ): Promise<PendingApproval | null> =>
   apiRequest<PendingApproval | null>(
     `/api/agent/sessions/${sessionId}/pending?household_id=${householdId}`,
+  );
+
+/** 会话最近一次 run 的状态与阶段。 */
+export interface AgentRunStatus {
+  status: string | null;
+  phase: string | null;
+}
+
+/**
+ * 查询会话最近一次 run 的状态与阶段（/api/agent/sessions/{id}/run-status）。
+ */
+export const getAgentRunStatus = (sessionId: number): Promise<AgentRunStatus> =>
+  apiRequest<AgentRunStatus>(`/api/agent/sessions/${sessionId}/run-status`);
+
+/**
+ * 重新生成 Agent 模式的指定助手回复（/api/agent/sessions/{id}/regenerate）。
+ */
+export const regenerateAgentMessage = (
+  sessionId: number,
+  payload: {
+    target_message_id: number;
+    model: string | null;
+    household_id: number;
+  },
+  onEvent: (event: AgentEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> =>
+  streamAgentEvents(
+    `/api/agent/sessions/${sessionId}/regenerate`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    onEvent,
+    signal,
   );
 
 // === 内部工具函数 ===

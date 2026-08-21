@@ -1,12 +1,13 @@
+"""Agent 请求限流与每日 token 预算检查。"""
+
 import time
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from threading import Lock
 
-from app.agents.context import AgentContext
 from app.agents.errors import AgentBudgetExceededError, AgentRateLimitError
 from app.core.config import get_settings
-from app.models.agent_usage import AgentUsage, AgentUsageDaily
+from app.models.agent_usage import AgentUsageDaily
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -61,78 +62,3 @@ def check_daily_budget(db: Session, user_id: int) -> None:
         raise AgentBudgetExceededError(
             f"今日 token 预算已超限（{result}/{settings.agent_daily_budget_tokens}）"
         )
-
-
-def store_usage(
-    db: Session,
-    context: AgentContext,
-    run_id: str,
-    model_name: str,
-    input_tokens: int,
-    output_tokens: int,
-    tool_call_count: int,
-    status: str,
-    error_message: str | None = None,
-) -> None:
-    """存储 agent 使用统计到数据库。"""
-    usage = db.scalar(select(AgentUsage).where(AgentUsage.run_id == run_id))
-    is_new_run = usage is None
-    if usage is None:
-        usage = AgentUsage(
-            user_id=context.user_id,
-            household_id=context.household_id,
-            run_id=run_id,
-            model_name=model_name,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            tool_call_count=tool_call_count,
-            status=status,
-            error_message=error_message,
-        )
-        db.add(usage)
-    else:
-        usage.input_tokens += input_tokens
-        usage.output_tokens += output_tokens
-        usage.tool_call_count += tool_call_count
-        usage.status = status
-        usage.error_message = error_message
-
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    dialect = db.get_bind().dialect.name
-    values = {
-        "user_id": context.user_id,
-        "date": today,
-        "total_input_tokens": input_tokens,
-        "total_output_tokens": output_tokens,
-        "run_count": 1 if is_new_run else 0,
-    }
-    if dialect == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert
-
-        statement = insert(AgentUsageDaily).values(**values)
-        statement = statement.on_conflict_do_update(
-            constraint="uq_agent_usage_daily_user_date",
-            set_={
-                "total_input_tokens": AgentUsageDaily.total_input_tokens + input_tokens,
-                "total_output_tokens": AgentUsageDaily.total_output_tokens
-                + output_tokens,
-                "run_count": AgentUsageDaily.run_count + (1 if is_new_run else 0),
-                "updated_at": func.now(),
-            },
-        )
-        db.execute(statement)
-    else:
-        daily = db.scalar(
-            select(AgentUsageDaily).where(
-                AgentUsageDaily.user_id == context.user_id,
-                AgentUsageDaily.date == today,
-            )
-        )
-        if daily is None:
-            db.add(AgentUsageDaily(**values))
-        else:
-            daily.total_input_tokens += input_tokens
-            daily.total_output_tokens += output_tokens
-            daily.run_count += 1 if is_new_run else 0
-
-    db.commit()

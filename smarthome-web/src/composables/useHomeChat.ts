@@ -7,8 +7,15 @@ import {
   runAgent as apiRunAgent,
   decideAgentOperation as apiDecideAgentOperation,
   getPendingAgentOperation as apiGetPendingAgentOperation,
+  getAgentRunStatus,
+  regenerateAgentMessage,
+  regenerateChatCompletion,
+  streamChatCompletion,
+  updateChatSessionMode,
+  updateChatSessionModel,
+  type ChatCompletionMessage,
 } from "../api/chat";
-import { listAIModels, getAIModel, activateAIModel, type AIModelRead } from "../api/aiModel";
+import { listAIModels, getAIModel, type AIModelRead } from "../api/aiModel";
 import { useHouseholdStore } from "../stores/households";
 import type {
   AgentExecutionStep,
@@ -97,6 +104,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   let streamFrameId = 0;
   let pendingContent = "";
   let streamDrainResolver: (() => void) | null = null;
+  let streamingMessageIndex: number | null = null;
   let stepIdCounter = 0;
   let activeToolCallId = "";
   let seenEventIds = new Set<string>();
@@ -117,11 +125,29 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       streamFrameId = 0;
     }
     pendingContent = "";
+    streamingMessageIndex = null;
+    streamDrainResolver?.();
+    streamDrainResolver = null;
+  };
+
+  /** 停止时把尚未逐字显示的缓冲内容立即写回当前流式消息，避免丢弃部分回答。 */
+  const flushPendingContent = () => {
+    if (streamingMessageIndex === null || !pendingContent) return;
+    const currentMessage = messages.value[streamingMessageIndex];
+    if (currentMessage) {
+      messages.value[streamingMessageIndex] = {
+        ...currentMessage,
+        content: currentMessage.content + pendingContent,
+      };
+    }
+    pendingContent = "";
+    streamingMessageIndex = null;
     streamDrainResolver?.();
     streamDrainResolver = null;
   };
 
   const createContentStreamer = (assistantMessageIndex: number) => {
+    streamingMessageIndex = assistantMessageIndex;
     const flushContent = () => {
       streamFrameId = 0;
       const currentMessage = messages.value[assistantMessageIndex];
@@ -168,12 +194,35 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   };
 
   const stopGenerating = () => {
-    chatController?.abort();
-    chatController = null;
+    if (chatController) {
+      flushPendingContent();
+      chatController.abort();
+      chatController = null;
+    }
     cancelStreamFrame();
     clearReplyTimers();
+
+    const hadRunningStep = executionSteps.value.some(
+      (step) => step.status === "executing" || step.status === "pending",
+    );
+    executionSteps.value = executionSteps.value.map((step) => {
+      if (step.status === "executing") {
+        return {
+          ...step,
+          status: "failed" as const,
+          message: "已停止，已提交的操作无法撤销",
+        };
+      }
+      if (step.status === "pending") {
+        return { ...step, status: "failed" as const, message: "已取消" };
+      }
+      return step;
+    });
+
     agentStatus.value = "idle";
-    resetExecutionSteps();
+    pendingStatus.value = hadRunningStep
+      ? "已停止生成，已提交的操作可能已执行，请刷新查看"
+      : "已停止生成";
   };
 
   const trimMessages = () => {
@@ -191,10 +240,18 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     agentStatus.value = "success";
   };
 
+  /** 将后端回传的真实消息 ID 写回指定索引的 assistant 消息，替换临时 ID。 */
+  const applyAssistantMessageId = (index: number, messageId: number) => {
+    const current = messages.value[index];
+    if (current && current.role === "assistant") {
+      messages.value[index] = { ...current, id: String(messageId) };
+    }
+  };
+
   interface EventProcessorOptions {
     assistantMessageIndex: number;
     queueContent: (delta: string) => void;
-    onRunCompleted?: (status: string) => void;
+    onRunCompleted?: (status: string, messageId?: number | null) => void;
     onApprovalReceived?: () => void;
   }
 
@@ -307,7 +364,16 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         case "run_completed": {
           eventReceived.value = true;
           const ev = event as RunCompletedEvent;
-          options.onRunCompleted?.(ev.status);
+          if (ev.message_id) {
+            const current = messages.value[options.assistantMessageIndex];
+            if (current && current.role === "assistant") {
+              messages.value[options.assistantMessageIndex] = {
+                ...current,
+                id: String(ev.message_id),
+              };
+            }
+          }
+          options.onRunCompleted?.(ev.status, ev.message_id);
           break;
         }
         case "error": {
@@ -383,13 +449,40 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     }
   };
 
-  const selectModel = async (name: string) => {
+  const selectModel = (name: string) => {
     const model = availableModels.value.find((m) => m.name === name);
     if (!model) return;
+    // 只修改当前会话/当前 run 使用的模型，不修改全局激活模型
     activeModel.value = name;
+    if (activeSessionId.value) {
+      void updateChatSessionModel(activeSessionId.value, name)
+        .then((updated) => {
+          recentConversations.value = recentConversations.value.map((item) =>
+            item.id === updated.id ? updated : item,
+          );
+        })
+        .catch(() => {});
+    }
+  };
+
+  /** 确保存在可用的会话 ID，首次发送时自动创建；创建失败返回 false。 */
+  const ensureSession = async (): Promise<boolean> => {
+    if (activeSessionId.value) return true;
     try {
-      await activateAIModel(model.id);
+      const conversation = await apiCreateChatSession(
+        agentMode.value,
+        activeModel.value,
+      );
+      activeSessionId.value = conversation.id;
+      recentConversations.value = [
+        conversation,
+        ...recentConversations.value.filter(
+          (item) => item.id !== conversation.id,
+        ),
+      ];
+      return true;
     } catch {
+      return false;
     }
   };
 
@@ -398,19 +491,16 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     messages.value = [];
     activeSessionId.value = null;
     pendingApproval.value = null;
+    pendingStatus.value = "";
     await fetchHousehold();
-
-    try {
-      const conversation = await apiCreateChatSession();
-      activeSessionId.value = conversation.id;
-      recentConversations.value = [
-        conversation,
-        ...recentConversations.value.filter(
-          (item) => item.id !== conversation.id,
-        ),
-      ];
-    } catch {
-      void refreshRecentConversations();
+    const ok = await ensureSession();
+    if (!ok) {
+      messages.value.push({
+        id: createMessageId(),
+        role: "assistant",
+        content: "创建会话失败，请稍后重试。",
+        timestamp: currentTime(),
+      });
     }
   };
 
@@ -420,6 +510,17 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     pendingApproval.value = null;
     loadedMessagePage.value = 1;
     hasMoreMessages.value = false;
+
+    const conversation = recentConversations.value.find(
+      (item) => item.id === sessionId,
+    );
+    if (conversation) {
+      agentMode.value = conversation.mode;
+      if (conversation.modelName) {
+        activeModel.value = conversation.modelName;
+      }
+    }
+
     await fetchHousehold();
 
     try {
@@ -441,6 +542,16 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
             pendingApproval.value = pending as PendingApproval;
             agentStatus.value = "awaiting_approval";
             pendingStatus.value = pendingApprovalLabel(pending as PendingApproval);
+          }
+        } catch {
+        }
+
+        try {
+          const runStatus = await getAgentRunStatus(Number(sessionId));
+          if (runStatus.status === "running") {
+            pendingStatus.value = "上一次运行仍在进行中，可稍后刷新查看结果";
+          } else if (runStatus.status === "cancelled") {
+            pendingStatus.value = "上一次运行已取消";
           }
         } catch {
         }
@@ -470,6 +581,21 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       if (messages.value.length > maxMessages) {
         messages.value = messages.value.slice(messages.value.length - maxMessages);
       }
+    } catch {
+    }
+  };
+
+  /** 从后端重新加载当前会话消息，用于在生成完成后同步真实消息 ID。 */
+  const reloadMessages = async () => {
+    if (!activeSessionId.value) return;
+    try {
+      const msgs = await apiListChatMessages(activeSessionId.value, {
+        page: 1,
+        page_size: Math.max(pageSize, messages.value.length),
+      });
+      messages.value = msgs;
+      loadedMessagePage.value = 1;
+      hasMoreMessages.value = msgs.length >= pageSize;
     } catch {
     }
   };
@@ -573,6 +699,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       pendingApproval.value = null;
       pendingStatus.value =
         decision === "reject" ? "已拒绝操作" : pendingStatus.value;
+      void reloadMessages();
       void refreshRecentConversations();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -636,24 +763,29 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       return;
     }
 
-    if (!household.value) {
-      await fetchHousehold();
-    }
-    const hh = household.value;
-    if (!hh) {
-      const lastMsg = messages.value[messages.value.length - 1];
-      if (lastMsg && lastMsg.role === "user") {
-        messages.value[messages.value.length - 1] = {
-          ...lastMsg,
-          content: lastMsg.content + "\n\n（错误：未找到家庭信息，请先创建家庭）",
-        };
+    const isChatMode = agentMode.value === "chat";
+    let hh: HouseholdInfo | null = null;
+
+    if (!isChatMode) {
+      if (!household.value) {
+        await fetchHousehold();
       }
-      return;
+      hh = household.value;
+      if (!hh) {
+        const lastMsg = messages.value[messages.value.length - 1];
+        if (lastMsg && lastMsg.role === "user") {
+          messages.value[messages.value.length - 1] = {
+            ...lastMsg,
+            content: lastMsg.content + "\n\n（错误：未找到家庭信息，请先创建家庭）",
+          };
+        }
+        return;
+      }
     }
 
     agentStatus.value = "executing";
     eventReceived.value = false;
-    pendingStatus.value = "正在等待智能体响应";
+    pendingStatus.value = isChatMode ? "正在生成回复" : "正在等待智能体响应";
     resetExecutionSteps();
 
     const assistantMessage: ChatMessage = {
@@ -670,6 +802,62 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     let runCompleted = false;
 
     const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
+
+    if (isChatMode) {
+      try {
+        const sidNum = Number(activeSessionId.value);
+        if (!Number.isFinite(sidNum) || sidNum <= 0) {
+          throw new Error("会话不存在或尚未创建，请先创建会话后重试");
+        }
+
+        const history: ChatCompletionMessage[] = messages.value
+          .slice(0, assistantMessageIndex)
+          .filter((m) => m.role === "user" || m.role === "assistant")
+          .map((m) => ({ role: m.role, content: m.content }));
+
+        await streamChatCompletion(
+          history,
+          activeSessionId.value,
+          activeModel.value,
+          queueContent,
+          controller.signal,
+          (messageId) => applyAssistantMessageId(assistantMessageIndex, messageId),
+        );
+
+        await waitForContentDrain();
+
+        const currentMessage = messages.value[assistantMessageIndex];
+        if (!currentMessage?.content.trim()) {
+          messages.value[assistantMessageIndex] = {
+            ...assistantMessage,
+            content: "模型没有返回内容。",
+          };
+        }
+        finishAiReply();
+        void reloadMessages();
+        void refreshRecentConversations();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        const errMsg = error instanceof Error ? error.message : "请求大模型失败";
+        const currentMessage = messages.value[assistantMessageIndex];
+        if (currentMessage) {
+          messages.value[assistantMessageIndex] = {
+            ...currentMessage,
+            content: errMsg,
+          };
+        }
+        agentStatus.value = "error";
+        pendingStatus.value = errMsg;
+      } finally {
+        if (chatController === controller) {
+          chatController = null;
+          cancelStreamFrame();
+        }
+      }
+      return;
+    }
 
     const handleEvent = createEventProcessor({
       assistantMessageIndex,
@@ -689,8 +877,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       await apiRunAgent(
         {
           session_id: sidNum,
-          household_id: hh.id,
-          household_name: hh.name,
+          household_id: hh!.id,
+          household_name: hh!.name,
           model: activeModel.value,
           message: messages.value[assistantMessageIndex - 1]?.content || "",
           tools_enabled: agentMode.value === "agent",
@@ -717,6 +905,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         finishAiReply();
       }
 
+      void reloadMessages();
       void refreshRecentConversations();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -763,7 +952,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     }
   };
 
-  const sendMessage = (content: string) => {
+  const sendMessage = async (content: string) => {
     const trimmedContent = content.trim();
     if (!trimmedContent) return;
 
@@ -780,6 +969,21 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       return;
     }
 
+    // 首次发送时自动创建会话；创建失败则禁止发送并显示可重试错误
+    if (!activeSessionId.value) {
+      const ok = await ensureSession();
+      if (!ok) {
+        messages.value.push({
+          id: createMessageId(),
+          role: "assistant",
+          content: "创建会话失败，请稍后重试。",
+          timestamp: currentTime(),
+        });
+        pendingStatus.value = "创建会话失败，请重试";
+        return;
+      }
+    }
+
     messages.value.push({
       id: createMessageId(),
       role: "user",
@@ -790,8 +994,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     void runAgentFlow();
   };
 
-  const regenerateMessage = (assistantMessageId: string) => {
-    if (agentStatus.value === "executing") return;
+  const regenerateMessage = async (assistantMessageId: string) => {
+    if (agentStatus.value === "executing" || agentStatus.value === "awaiting_approval") return;
 
     const assistantIndex = messages.value.findIndex(
       (message) => message.id === assistantMessageId,
@@ -806,13 +1010,173 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     }
     if (userIndex < 0) return;
 
+    const targetMessageId = Number(assistantMessageId);
+    if (!Number.isFinite(targetMessageId) || targetMessageId <= 0) {
+      pendingStatus.value = "该回复尚未持久化，请刷新页面后重试";
+      return;
+    }
+
+    const sid = activeSessionId.value;
+    if (!sid) {
+      pendingStatus.value = "会话不存在，无法重新生成";
+      return;
+    }
+
     stopGenerating();
+    pendingApproval.value = null;
+    seenEventIds = new Set<string>();
+
+    agentStatus.value = "executing";
+    eventReceived.value = false;
+    pendingStatus.value = "正在重新生成";
+    resetExecutionSteps();
+
+    const assistantMessage: ChatMessage = {
+      id: createMessageId(),
+      role: "assistant",
+      content: "",
+      timestamp: currentTime(),
+    };
+    // 删除目标助手消息及其之后的消息（与后端覆盖策略一致），再追加占位回复
     messages.value.splice(assistantIndex);
-    void runAgentFlow();
+    messages.value.push(assistantMessage);
+
+    const controller = new AbortController();
+    chatController = controller;
+    const { queueContent, waitForContentDrain } = createContentStreamer(assistantIndex);
+
+    if (agentMode.value === "chat") {
+      try {
+        await regenerateChatCompletion(
+          sid,
+          targetMessageId,
+          activeModel.value,
+          queueContent,
+          controller.signal,
+          (messageId) => applyAssistantMessageId(assistantIndex, messageId),
+        );
+        await waitForContentDrain();
+
+        const currentMessage = messages.value[assistantIndex];
+        if (!currentMessage?.content.trim()) {
+          messages.value[assistantIndex] = {
+            ...assistantMessage,
+            content: "模型没有返回内容。",
+          };
+        }
+        finishAiReply();
+        void reloadMessages();
+        void refreshRecentConversations();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        const errMsg = error instanceof Error ? error.message : "重新生成失败";
+        const currentMessage = messages.value[assistantIndex];
+        if (currentMessage) {
+          messages.value[assistantIndex] = {
+            ...currentMessage,
+            content: errMsg,
+          };
+        }
+        agentStatus.value = "error";
+        pendingStatus.value = errMsg;
+      } finally {
+        if (chatController === controller) {
+          chatController = null;
+          cancelStreamFrame();
+        }
+      }
+      return;
+    }
+
+    if (!household.value) {
+      await fetchHousehold();
+    }
+    const hh = household.value;
+    if (!hh) {
+      messages.value[assistantIndex] = {
+        ...assistantMessage,
+        content: "未找到家庭信息，无法重新生成",
+      };
+      agentStatus.value = "error";
+      pendingStatus.value = "未找到家庭信息";
+      return;
+    }
+
+    let runCompleted = false;
+    const handleEvent = createEventProcessor({
+      assistantMessageIndex: assistantIndex,
+      queueContent,
+      onRunCompleted: (status) => {
+        if (status === "completed") {
+          runCompleted = true;
+        }
+      },
+    });
+
+    try {
+      await regenerateAgentMessage(
+        Number(sid),
+        {
+          target_message_id: targetMessageId,
+          model: activeModel.value,
+          household_id: hh.id,
+        },
+        handleEvent,
+        controller.signal,
+      );
+
+      await waitForContentDrain();
+
+      if (runCompleted && agentStatus.value === "executing") {
+        finishAiReply();
+      }
+      if (agentStatus.value === "executing") {
+        const currentMessage = messages.value[assistantIndex];
+        if (!currentMessage?.content.trim()) {
+          messages.value[assistantIndex] = {
+            ...assistantMessage,
+            content: "模型没有返回内容。",
+          };
+        }
+        finishAiReply();
+      }
+      void reloadMessages();
+      void refreshRecentConversations();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      const errMsg = error instanceof Error ? error.message : "重新生成失败";
+      const currentMessage = messages.value[assistantIndex];
+      if (currentMessage) {
+        messages.value[assistantIndex] = {
+          ...currentMessage,
+          content: errMsg,
+        };
+      }
+      agentStatus.value = "error";
+      pendingStatus.value = errMsg;
+    } finally {
+      if (chatController === controller) {
+        chatController = null;
+        cancelStreamFrame();
+      }
+    }
   };
 
   const setAgentMode = (mode: "agent" | "chat") => {
     agentMode.value = mode;
+    if (activeSessionId.value) {
+      void updateChatSessionMode(activeSessionId.value, mode)
+        .then((updated) => {
+          recentConversations.value = recentConversations.value.map((item) =>
+            item.id === updated.id ? updated : item,
+          );
+        })
+        .catch(() => {});
+    }
   };
 
   onScopeDispose(stopGenerating);
@@ -823,6 +1187,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     agentStatus,
     availableModels,
     decisionSubmitting,
+    ensureSession,
     eventReceived,
     executionSteps,
     fetchModels,

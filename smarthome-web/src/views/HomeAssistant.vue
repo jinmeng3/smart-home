@@ -20,7 +20,12 @@ const refreshHomeData = () => {
     return Promise.all([
         store.loadDevices(),
         store.refreshRecentConversations(),
-    ]).then(() => undefined);
+    ]).then(async () => {
+        // 首次使用（无历史会话）时预创建会话，避免首次发送的额外往返
+        if (store.recentConversations.length === 0) {
+            await store.ensureSession();
+        }
+    });
 };
 
 useAuthenticatedLoader(refreshHomeData);

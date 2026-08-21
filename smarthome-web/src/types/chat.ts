@@ -12,6 +12,10 @@ export interface RecentConversation {
   icon: string;
   /** 原始更新时间（ISO），用于按 今天/昨天/更早 分组 */
   updatedAt: string;
+  /** 会话模式：agent / chat */
+  mode: "agent" | "chat";
+  /** 会话使用的模型名 */
+  modelName?: string | null;
 }
 
 export type AgentStatus =
@@ -71,6 +75,7 @@ export interface RunCompletedEvent extends AgentEventBase {
   event: "run_completed";
   session_id: number;
   status: string;
+  message_id?: number | null;
 }
 
 export interface AgentErrorEvent extends AgentEventBase {

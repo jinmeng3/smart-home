@@ -21,6 +21,12 @@ class ChatSession(Base):
     title: Mapped[str] = mapped_column(
         String(120), default="新对话", comment="会话标题"
     )
+    mode: Mapped[str] = mapped_column(
+        String(20), default="agent", server_default="agent", comment="会话模式：agent / chat"
+    )
+    model_name: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="会话使用的模型名"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), comment="创建时间"
     )

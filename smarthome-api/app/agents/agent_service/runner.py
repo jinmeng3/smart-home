@@ -11,9 +11,10 @@ from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
 from app.agents.graph import build_graph
 from app.agents.prompts import system_prompt
-from app.agents.rate_limiter import check_daily_budget, check_rate_limit, store_usage
+from app.agents.rate_limiter import check_daily_budget, check_rate_limit
 from app.agents.redaction import redact_text
-from app.agents.tools import get_household_tools
+from app.agents.tools import WRITE_TOOL_NAMES, get_household_tools
+from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
 from app.core.config import get_settings
 from app.models.ai import AIModel
@@ -52,13 +53,20 @@ def _init_state(
     message: str,
     run_id: str,
     db: Session,
+    history_messages: list | None = None,
+    model_name: str = "",
 ) -> dict[str, Any]:
-    sys_prompt = system_prompt(context, household_name, db)
+    sys_prompt = system_prompt(context, household_name, db, message)
+    messages: list = [SystemMessage(content=sys_prompt)]
+    if history_messages:
+        messages.extend(history_messages)
+    messages.append(HumanMessage(content=message))
     return {
-        "messages": [SystemMessage(content=sys_prompt), HumanMessage(content=message)],
+        "messages": messages,
         "context": context,
         "run_id": run_id,
         "rounds": 0,
+        "model_name": model_name,
     }
 
 
@@ -68,6 +76,9 @@ async def run_agent(
     message: str,
     model_config: AIModel,
     db: Session,
+    *,
+    history_messages: list | None = None,
+    persist_user_message: bool = True,
 ) -> AsyncGenerator[str, None]:
     run_id = f"run-{uuid4().hex}"
 
@@ -97,7 +108,7 @@ async def run_agent(
         )
         return
 
-    track = StreamTracker(run_id)
+    track = StreamTracker(run_id, context.session_id)
     yield encode_sse_event(
         RunStarted(
             event_id=f"{run_id}-start",
@@ -107,12 +118,22 @@ async def run_agent(
         )
     )
 
-    db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
-    db.commit()
+    if persist_user_message:
+        db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
+        db.commit()
 
     audit.record_run_start(context, run_id)
+    start_run(db, context, run_id, model_config.name)
 
-    initial = _init_state(context, household_name, message, run_id, db)
+    initial = _init_state(
+        context,
+        household_name,
+        message,
+        run_id,
+        db,
+        history_messages,
+        model_config.name,
+    )
     thread_id = (
         f"user:{context.user_id}:household:{context.household_id}:"
         f"session:{context.session_id}"
@@ -144,12 +165,28 @@ async def run_agent(
                 if sse:
                     yield sse
                     tool_call_count += 1
+                tc = (
+                    tool_call if isinstance(tool_call, dict) else tool_call.model_dump()
+                )
+                tc_name = str(tc.get("name", ""))
+                if tc_name in WRITE_TOOL_NAMES:
+                    update_run_phase(db, run_id, "submitted")
+                    yield track.emit_execution_status(
+                        call_id=str(tc.get("id", "")),
+                        operator=tc_name,
+                        status="submitted",
+                        message="写操作已提交，等待风险评估",
+                    )
+                else:
+                    update_run_phase(db, run_id, "executing")
 
             name = getattr(msg, "name", None)
             content = getattr(msg, "content", None)
             if node in {"read_tool", "write_tool"} and name and content:
                 call_id = str(getattr(msg, "tool_call_id", ""))
                 yield track.emit_tool_result(call_id, name, content)
+                if node == "write_tool":
+                    yield track.emit_execution_result(call_id, name, content)
             elif content and node == "model":
                 yield track.emit_model_text(content)
 
@@ -250,15 +287,16 @@ async def run_agent(
         return
 
     collected = track.collected
+    assistant_message_id: int | None = None
     if collected.strip():
-        db.add(
-            ChatMessage(
-                session_id=context.session_id,
-                role="assistant",
-                content=collected.strip(),
-            )
+        assistant_message = ChatMessage(
+            session_id=context.session_id,
+            role="assistant",
+            content=collected.strip(),
         )
+        db.add(assistant_message)
         db.commit()
+        assistant_message_id = assistant_message.id
 
     store_usage(
         db,
@@ -273,6 +311,9 @@ async def run_agent(
     audit.record_run_end(run_id, status="completed")
     yield encode_sse_event(
         RunCompleted(
-            event_id=f"{run_id}-done", run_id=run_id, session_id=context.session_id
+            event_id=f"{run_id}-done",
+            run_id=run_id,
+            session_id=context.session_id,
+            message_id=assistant_message_id,
         )
     )
