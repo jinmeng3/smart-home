@@ -284,16 +284,7 @@ Agent 使用 LangGraph 状态机编排，支持：
 - SSE 流式推送：工具状态、模型文本、执行结果实时推送
 - 会话树 + 压缩：每轮消息镜像为树节点，上下文超限时自动摘要并回注
 
----
 
-## 文档
-
-| 文档 | 说明 |
-| ---- | ---- |
-| [`docs/session-tree-storage.md`](docs/session-tree-storage.md) | 会话树形存储模块详解 |
-| [`docs/session-tree-compaction-review.md`](docs/session-tree-compaction-review.md) | 会话树与压缩实现评价 |
-| [`docs/backend-agent-gap-analysis.md`](docs/backend-agent-gap-analysis.md) | 后端 Agent 差距分析 |
-| [`docs/frontend-driven-agent-gap-analysis.md`](docs/frontend-driven-agent-gap-analysis.md) | 前端驱动 Agent 差距分析 |
 
 ---
 
