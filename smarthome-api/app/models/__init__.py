@@ -31,6 +31,7 @@ from app.models.scene import (
     SceneStep,
     SceneTemplate,
 )
+from app.models.session_tree import SessionTreeMutation, SessionTreeSession
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
 
@@ -65,6 +66,8 @@ __all__ = [
     "SceneRoom",
     "SceneStep",
     "SceneTemplate",
+    "SessionTreeMutation",
+    "SessionTreeSession",
     "User",
     "UserPreferences",
 ]

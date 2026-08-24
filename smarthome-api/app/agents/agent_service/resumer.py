@@ -3,7 +3,11 @@ import json
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 
-from app.agents.agent_service.runner import _create_graph_runner
+from app.agents.agent_service.runner import (
+    _create_graph_runner,
+    _maybe_compact_tree,
+    _sync_session_tree,
+)
 from app.agents.context import AgentContext
 from app.agents.errors import AgentError
 from app.agents.events.sse import encode_sse_event
@@ -17,6 +21,7 @@ from app.schemas.sse import (
     Error,
     RunCompleted,
 )
+from app.services.session_tree import mirror_assistant_message
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from sqlalchemy.orm import Session
@@ -93,6 +98,8 @@ async def resume_agent(
     tracker = StreamTracker(run_id, context.session_id)
     input_tokens = 0
     output_tokens = 0
+    last_input_tokens = 0
+    last_output_tokens = 0
     tool_call_count = 0
     run_errored = False
 
@@ -125,6 +132,8 @@ async def resume_agent(
             if isinstance(usage, dict):
                 input_tokens += int(usage.get("input_tokens", 0) or 0)
                 output_tokens += int(usage.get("output_tokens", 0) or 0)
+                last_input_tokens = int(usage.get("input_tokens", 0) or 0)
+                last_output_tokens = int(usage.get("output_tokens", 0) or 0)
 
             for tool_call in getattr(message, "tool_calls", None) or []:
                 event = tracker.emit_tool_start(tool_call)
@@ -195,6 +204,19 @@ async def resume_agent(
         db.add(assistant_message)
         db.commit()
         assistant_message_id = assistant_message.id
+        _sync_session_tree(
+            context.session_id,
+            lambda: mirror_assistant_message(
+                context.session_id,
+                tracker.collected.strip(),
+                usage={
+                    "input": last_input_tokens,
+                    "output": last_output_tokens,
+                    "totalTokens": last_input_tokens + last_output_tokens,
+                },
+            ),
+        )
+        await asyncio.to_thread(_maybe_compact_tree, context, model_config)
 
     store_usage(
         db,

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
@@ -16,6 +17,7 @@ from app.agents.redaction import redact_text
 from app.agents.tools import WRITE_TOOL_NAMES, get_household_tools
 from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
+from app.compaction.summarize import langchain_summarizer
 from app.core.config import get_settings
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage
@@ -25,9 +27,16 @@ from app.schemas.sse import (
     RunCompleted,
     RunStarted,
 )
+from app.services.session_tree import (
+    compact_if_needed,
+    mirror_assistant_message,
+    mirror_user_message,
+)
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 
 async def _create_graph_runner(
@@ -68,6 +77,35 @@ def _init_state(
         "rounds": 0,
         "model_name": model_name,
     }
+
+
+def _sync_session_tree(session_id: int, action) -> None:
+    """会话树镜像接入；任何失败仅记录日志，不影响 Agent 主流程。"""
+    try:
+        action()
+    except Exception:  # 接入层失败不应中断主流程
+        logger.warning("会话树接入失败，已忽略", exc_info=True)
+
+
+def _maybe_compact_tree(context: AgentContext, model_config: AIModel) -> None:
+    """上下文超限时压缩会话树（需 ``COMPACTION_ENABLED=true``）。
+
+    在独立线程执行，避免同步 LLM 调用阻塞事件循环；任何失败仅记录日志。
+    """
+    try:
+        settings = get_settings()
+        if not settings.compaction_enabled:
+            return
+        context_window = model_config.context_window or settings.session_tree_context_window
+        model = get_model_cache().get(model_config)
+        summarizer = langchain_summarizer(model)
+        compact_if_needed(
+            context.session_id,
+            summarizer=summarizer,
+            context_window=context_window,
+        )
+    except Exception:  # 压缩失败不应中断主流程
+        logger.warning("上下文压缩失败，已忽略", exc_info=True)
 
 
 async def run_agent(
@@ -121,6 +159,9 @@ async def run_agent(
     if persist_user_message:
         db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
         db.commit()
+        _sync_session_tree(
+            context.session_id, lambda: mirror_user_message(context.session_id, message)
+        )
 
     audit.record_run_start(context, run_id)
     start_run(db, context, run_id, model_config.name)
@@ -142,6 +183,8 @@ async def run_agent(
     tool_call_count = 0
     input_tokens = 0
     output_tokens = 0
+    last_input_tokens = 0
+    last_output_tokens = 0
 
     try:
         async for chunk, metadata in graph.astream(
@@ -159,6 +202,9 @@ async def run_agent(
             if isinstance(usage, dict):
                 input_tokens += int(usage.get("input_tokens", 0) or 0)
                 output_tokens += int(usage.get("output_tokens", 0) or 0)
+                # 记录最后一次调用的上下文规模，用于会话树 token 估算
+                last_input_tokens = int(usage.get("input_tokens", 0) or 0)
+                last_output_tokens = int(usage.get("output_tokens", 0) or 0)
 
             for tool_call in getattr(msg, "tool_calls", None) or []:
                 sse = track.emit_tool_start(tool_call)
@@ -297,6 +343,19 @@ async def run_agent(
         db.add(assistant_message)
         db.commit()
         assistant_message_id = assistant_message.id
+        _sync_session_tree(
+            context.session_id,
+            lambda: mirror_assistant_message(
+                context.session_id,
+                collected.strip(),
+                usage={
+                    "input": last_input_tokens,
+                    "output": last_output_tokens,
+                    "totalTokens": last_input_tokens + last_output_tokens,
+                },
+            ),
+        )
+        await asyncio.to_thread(_maybe_compact_tree, context, model_config)
 
     store_usage(
         db,

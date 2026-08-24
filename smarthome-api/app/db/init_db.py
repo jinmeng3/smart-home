@@ -1,5 +1,6 @@
 from sqlalchemy import inspect, text
 
+import app.models  # noqa: F401  # 注册全部 ORM 模型，确保 create_all 能创建会话树等表
 from app.db.base import Base
 from app.db.session import engine
 

@@ -7,20 +7,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-        
     app_name: str = "Smart Home API"
     development_mode: bool = True
 
-         
     database_url: str = "sqlite:///./db/orion_home.db"
 
-          
     jwt_secret_key: str = "dev-secret-key-change-in-production"
     access_token_expire_seconds: int = 3600
     max_failed_login_attempts: int = Field(default=5, ge=1, le=20)
     login_lock_seconds: int = Field(default=900, ge=60, le=86400)
 
-            
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://127.0.0.1:5173",
@@ -28,7 +24,6 @@ class Settings(BaseSettings):
         ]
     )
 
-        
     supported_ai_providers: list[str] = Field(
         default_factory=lambda: ["openai", "deepseek"]
     )
@@ -57,7 +52,6 @@ class Settings(BaseSettings):
                 pass
         return [v.strip() for v in value.split(",") if v.strip()]
 
-          
     upload_dir: str = "app/uploads"
     max_avatar_size: int = 2 * 1024 * 1024
     allowed_avatar_types: set[str] = Field(
@@ -68,10 +62,8 @@ class Settings(BaseSettings):
         default_factory=lambda: {"image/jpeg", "image/png", "image/webp"}
     )
 
-                
     audit_dir: str = "agent_audit"
 
-                 
     agent_rate_limit_per_minute: int = Field(
         default=10, ge=1, le=120, description="每分钟每个用户最大 agent 请求数"
     )
@@ -98,7 +90,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-              
     agent_max_rounds: int = Field(default=6, ge=1)
     tool_timeout_seconds: float = Field(default=15.0, gt=0)
     tool_result_max_length: int = Field(default=4000, ge=1)
@@ -107,6 +98,26 @@ class Settings(BaseSettings):
     graph_recursion_limit: int = Field(default=10, ge=1)
 
     agent_tool_result_max_length: int = Field(default=100, ge=1)
+
+    # ── 上下文压缩 / 会话树 ──
+    compaction_enabled: bool = True
+    compaction_reserve_tokens: int = Field(default=16384, ge=1)
+    compaction_keep_recent_tokens: int = Field(default=20000, ge=1)
+    compaction_branch_summary_max_tokens: int = Field(default=2048, ge=1)
+    compaction_tool_result_max_chars: int = Field(default=2000, ge=1)
+    compaction_retry_attempts: int = Field(default=0, ge=0)
+    compaction_max_tokens: int | None = Field(default=None, gt=0)
+    session_tree_context_window: int = Field(default=200000, gt=0)
+
+    def compaction_settings(self):
+        """把 ``.env`` 中的压缩配置构建为 ``session_tree`` 的 ``CompactionSettings``。"""
+        from app.session_tree.session.types import CompactionSettings
+
+        return CompactionSettings(
+            enabled=self.compaction_enabled,
+            reserve_tokens=self.compaction_reserve_tokens,
+            keep_recent_tokens=self.compaction_keep_recent_tokens,
+        )
 
     @property
     def avatar_dir(self) -> Path:
