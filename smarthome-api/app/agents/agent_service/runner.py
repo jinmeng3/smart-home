@@ -28,6 +28,7 @@ from app.schemas.sse import (
     RunStarted,
 )
 from app.services.session_tree import (
+    build_context_messages,
     compact_if_needed,
     mirror_assistant_message,
     mirror_user_message,
@@ -108,6 +109,22 @@ def _maybe_compact_tree(context: AgentContext, model_config: AIModel) -> None:
         logger.warning("上下文压缩失败，已忽略", exc_info=True)
 
 
+async def _load_tree_history(session_id: int, thread_id: str) -> list | None:
+    """从会话树加载（压缩后）历史，并清除 checkpointer 旧历史。
+
+    任何失败（树读取或 checkpointer 清除）都回退为 None，沿用 checkpointer 历史，
+    不中断主流程。
+    """
+    try:
+        history = build_context_messages(session_id)
+        saver = await get_checkpointer()
+        await saver.adelete_thread(thread_id)
+    except Exception:  # 树历史加载失败回退到 checkpointer 历史
+        logger.warning("会话树历史加载失败，回退到 checkpointer 历史", exc_info=True)
+        return None
+    return history
+
+
 async def run_agent(
     context: AgentContext,
     household_name: str,
@@ -156,6 +173,16 @@ async def run_agent(
         )
     )
 
+    thread_id = (
+        f"user:{context.user_id}:household:{context.household_id}:"
+        f"session:{context.session_id}"
+    )
+
+    # 正常 run（非 regenerate）：从会话树加载（压缩后）历史作为 Agent 上下文，
+    # 并清除 checkpointer 旧历史，避免与树历史重复累积。
+    if history_messages is None:
+        history_messages = await _load_tree_history(context.session_id, thread_id)
+
     if persist_user_message:
         db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
         db.commit()
@@ -174,10 +201,6 @@ async def run_agent(
         db,
         history_messages,
         model_config.name,
-    )
-    thread_id = (
-        f"user:{context.user_id}:household:{context.household_id}:"
-        f"session:{context.session_id}"
     )
 
     tool_call_count = 0
