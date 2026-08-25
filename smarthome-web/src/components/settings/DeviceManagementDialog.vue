@@ -57,7 +57,6 @@ const confirmRevoke = () => {
         body-tone="neutral"
         @update:model-value="emit('update:modelValue', $event)"
     >
-
         <div class="device-dialog-body">
             <section class="device-list-card">
                 <div class="device-card-header">
@@ -143,7 +142,7 @@ const confirmRevoke = () => {
 
         <template #footer>
             <footer class="dialog-footer">
-                <span>设备信任状态只在本地更新</span>
+                <span>设备信任状态已同步到云端</span>
                 <div>
                     <BaseButton variant="primary" @click="closeDialog"
                         >关闭</BaseButton

@@ -233,13 +233,13 @@ const savePassword = async () => {
                     <span>可信设备</span>
                     <strong>{{ trustedDeviceCount }} 台</strong>
                 </div>
-                <p>修改后仅更新本地安全记录，不请求后端。</p>
+                <p>修改后安全记录将同步到后端。</p>
             </aside>
         </div>
 
         <template #footer>
             <footer class="dialog-footer">
-                <span>修改结果只会保存在本地</span>
+                <span>修改结果已同步到云端</span>
                 <div>
                     <BaseButton @click="requestClose">关闭</BaseButton>
                     <BaseButton
@@ -418,7 +418,11 @@ const savePassword = async () => {
     gap: 12px;
     align-content: start;
     padding: 16px;
-    border-color: color-mix(in srgb, var(--tone-purple) 28%, var(--color-border));
+    border-color: color-mix(
+        in srgb,
+        var(--tone-purple) 28%,
+        var(--color-border)
+    );
     background: linear-gradient(
         160deg,
         var(--color-card-bg),

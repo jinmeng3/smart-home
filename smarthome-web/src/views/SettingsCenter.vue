@@ -34,7 +34,11 @@ import { gsap, motionEase, registerScrollTo } from "../motion";
 import { getErrorMessage } from "../utils/error";
 import { ApiError } from "../api/client";
 import { settingsSections, sectionIds } from "../constants/settingsSections";
-import type { AccountForm, FamilyMember, HouseholdRole } from "../types/settings";
+import type {
+    AccountForm,
+    FamilyMember,
+    HouseholdRole,
+} from "../types/settings";
 import type { SettingsSectionId } from "../types/settings";
 
 const settingsStore = useSettingsStore();
@@ -67,7 +71,12 @@ interface ConfirmRequest {
     cancelText?: string;
     warning: string;
     footerHint?: string;
-    summary?: { icon: string; title: string; description?: string; color: string };
+    summary?: {
+        icon: string;
+        title: string;
+        description?: string;
+        color: string;
+    };
     onConfirm: () => void | Promise<void>;
 }
 const confirmRequest = ref<ConfirmRequest | null>(null);
@@ -111,7 +120,8 @@ const confirmReset = () => {
     confirmRequest.value = {
         tone: "danger",
         title: "恢复默认设置",
-        description: "以下配置将恢复为出厂默认值：界面外观、智能助手配置、Home Assistant 接入凭证、通知与安全偏好。",
+        description:
+            "以下配置将恢复为出厂默认值：界面外观、智能助手配置、Home Assistant 接入凭证、通知与安全偏好。",
         confirmText: "确认恢复",
         warning: "此操作不可撤销；账户与家庭信息不受影响。",
         footerHint: "确认后会立即执行重置",
@@ -184,7 +194,9 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const accountSnapshot = computed(() => JSON.stringify(accountForm));
 const accountDirty = computed(
-    () => initialAccountSnapshot.value !== undefined && accountSnapshot.value !== initialAccountSnapshot.value,
+    () =>
+        initialAccountSnapshot.value !== undefined &&
+        accountSnapshot.value !== initialAccountSnapshot.value,
 );
 const integrationSnapshot = computed(() =>
     JSON.stringify({
@@ -193,7 +205,9 @@ const integrationSnapshot = computed(() =>
     }),
 );
 const integrationDirty = computed(
-    () => initialIntegrationSnapshot.value !== undefined && integrationSnapshot.value !== initialIntegrationSnapshot.value,
+    () =>
+        initialIntegrationSnapshot.value !== undefined &&
+        integrationSnapshot.value !== initialIntegrationSnapshot.value,
 );
 const preferencesSnapshot = computed(() =>
     JSON.stringify({
@@ -209,10 +223,13 @@ const preferencesSnapshot = computed(() =>
     }),
 );
 const preferencesDirty = computed(
-    () => initialPreferencesSnapshot.value !== undefined && preferencesSnapshot.value !== initialPreferencesSnapshot.value,
+    () =>
+        initialPreferencesSnapshot.value !== undefined &&
+        preferencesSnapshot.value !== initialPreferencesSnapshot.value,
 );
 const settingsDirty = computed(
-    () => accountDirty.value || integrationDirty.value || preferencesDirty.value,
+    () =>
+        accountDirty.value || integrationDirty.value || preferencesDirty.value,
 );
 
 /** 具体修改项数 */
@@ -301,7 +318,9 @@ const selectSection = async (section: SettingsSectionId) => {
     if (!target) return;
 
     await registerScrollTo();
-    const scrollEl = document.querySelector(".settings-scroll-area") as HTMLElement | null;
+    const scrollEl = document.querySelector(
+        ".settings-scroll-area",
+    ) as HTMLElement | null;
     if (!scrollEl) return;
 
     const containerHeight = scrollEl.clientHeight;
@@ -327,26 +346,27 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 
 const loadSettings = async () => {
     await Promise.all([
-        settingsStore
-            .loadAccountHome()
-            .catch((error: unknown) => {
-                ElMessage.error(getErrorMessage(error, "账户与家庭信息加载失败"));
-            }),
-        settingsStore
-            .loadAIModel()
-            .catch((error: unknown) => {
-                ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
-            }),
-        settingsStore
-            .loadUserPreferences()
-            .catch((error: unknown) => {
-                ElMessage.error(getErrorMessage(error, "用户偏好加载失败"));
-            }),
+        settingsStore.loadAccountHome().catch((error: unknown) => {
+            ElMessage.error(getErrorMessage(error, "账户与家庭信息加载失败"));
+        }),
+        settingsStore.loadAIModel().catch((error: unknown) => {
+            ElMessage.error(getErrorMessage(error, "AI 模型配置加载失败"));
+        }),
+        settingsStore.loadUserPreferences().catch((error: unknown) => {
+            ElMessage.error(getErrorMessage(error, "用户偏好加载失败"));
+        }),
+        settingsStore.loadSecurityMeta().catch(() => undefined),
     ]);
 
     syncAccountForm();
     syncIntegrationSnapshot();
     syncPreferencesSnapshot();
+
+    // 后台预取 AI 建议：仅在本地建议非空、且未持有 AI 结果时触发。
+    // 延时是为了让主要数据先水合进 UI，不与关键加载流程抢资源。
+    window.setTimeout(() => {
+        settingsStore.prefetchAiSuggestionsIfNeeded();
+    }, 800);
 };
 
 useAuthenticatedLoader(loadSettings);
@@ -367,6 +387,8 @@ onBeforeUnmount(() => {
     window.removeEventListener("beforeunload", handleBeforeUnload);
     document.removeEventListener("click", closeMoreActions);
     cleanupScrollObserver();
+    // 取消任何进行中的 AI 建议请求，避免离开页面后还走回调
+    settingsStore.cancelAiSuggestions();
 });
 
 watch(
@@ -396,10 +418,6 @@ onBeforeRouteLeave(() => {
 
     return window.confirm("设置中心有未保存修改，确定离开吗？");
 });
-
-
-
-
 
 const saveAccountFamily = async () => {
     accountFieldErrors.value = {};
@@ -527,9 +545,7 @@ const saveAllSettings = async () => {
                     syncIntegrationSnapshot();
                     syncPreferencesSnapshot();
                 } catch (error) {
-                    ElMessage.error(
-                        getErrorMessage(error, "设置保存失败"),
-                    );
+                    ElMessage.error(getErrorMessage(error, "设置保存失败"));
                 }
             })(),
         );
@@ -547,9 +563,7 @@ const uploadAvatar = async (file: File) => {
         initialAccountSnapshot.value = accountSnapshot.value;
         ElMessage.success("头像已上传");
     } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "头像上传失败"),
-        );
+        ElMessage.error(getErrorMessage(error, "头像上传失败"));
     } finally {
         savingAccount.value = false;
     }
@@ -564,9 +578,7 @@ const deleteAvatar = async () => {
         initialAccountSnapshot.value = accountSnapshot.value;
         ElMessage.success("头像已删除");
     } catch (error) {
-        ElMessage.error(
-            getErrorMessage(error, "头像删除失败"),
-        );
+        ElMessage.error(getErrorMessage(error, "头像删除失败"));
     } finally {
         savingAccount.value = false;
     }
@@ -601,7 +613,10 @@ const clearMemberFieldErrors = () => {
     memberFieldErrors.value = {};
 };
 
-const performUpdateMemberRole = async (membershipId: number, role: HouseholdRole) => {
+const performUpdateMemberRole = async (
+    membershipId: number,
+    role: HouseholdRole,
+) => {
     loadingMemberId.value = membershipId;
     try {
         await settingsStore.updateMemberRole(membershipId, role);
@@ -755,7 +770,9 @@ const removeMember = (membershipId: number) => {
                     </header>
                     <div class="settings-group-grid">
                         <AccountFamilyCard
-                            :active-household-id="householdStore.activeHouseholdId"
+                            :active-household-id="
+                                householdStore.activeHouseholdId
+                            "
                             :dirty="accountDirty"
                             :field-errors="accountFieldErrors"
                             :form="accountForm"
@@ -793,7 +810,9 @@ const removeMember = (membershipId: number) => {
                         使用体验
                     </header>
                     <div class="settings-group-grid">
-                        <AppearanceSettingsCard :appearance="settings.appearance" />
+                        <AppearanceSettingsCard
+                            :appearance="settings.appearance"
+                        />
                         <NotificationSettingsCard
                             :notifications="settings.notifications"
                         />
@@ -823,9 +842,7 @@ const removeMember = (membershipId: number) => {
                     </header>
                     <div class="settings-group-grid">
                         <SecuritySettingsCard :security="settings.security" />
-                        <BackupSettingsCard
-                            :backup="settings.backup"
-                        />
+                        <BackupSettingsCard :backup="settings.backup" />
                     </div>
                 </section>
             </div>
@@ -839,8 +856,16 @@ const removeMember = (membershipId: number) => {
                         />
                     </span>
                     <span>
-                        <strong>{{ settingsDirty ? `${dirtyCount} 项更改尚未保存` : "所有设置均已保存" }}</strong>
-                        <small>{{ settingsDirty ? "请及时保存以避免丢失" : "设置将同步到当前家庭账户" }}</small>
+                        <strong>{{
+                            settingsDirty
+                                ? `${dirtyCount} 项更改尚未保存`
+                                : "所有设置均已保存"
+                        }}</strong>
+                        <small>{{
+                            settingsDirty
+                                ? "请及时保存以避免丢失"
+                                : "设置将同步到当前家庭账户"
+                        }}</small>
                     </span>
                 </div>
 
@@ -855,10 +880,7 @@ const removeMember = (membershipId: number) => {
                 </Transition>
 
                 <div class="settings-action-buttons">
-                    <div
-                        ref="moreActionsRef"
-                        class="settings-more-actions"
-                    >
+                    <div ref="moreActionsRef" class="settings-more-actions">
                         <button
                             class="more-actions-btn"
                             type="button"
@@ -896,7 +918,10 @@ const removeMember = (membershipId: number) => {
                         type="button"
                         @click="saveAllSettings"
                     >
-                        <SvgIcon :name="savingAccount ? 'refresh' : 'check-circle'" size="sm" />
+                        <SvgIcon
+                            :name="savingAccount ? 'refresh' : 'check-circle'"
+                            size="sm"
+                        />
                         {{ savingAccount ? "保存中" : "保存更改" }}
                     </button>
                 </div>
@@ -929,7 +954,9 @@ const removeMember = (membershipId: number) => {
                         :backup="settings.backup"
                         :notifications="settings.notifications"
                         :account-status="settings.summary.accountStatus"
-                        :home-assistant-connected="settings.summary.homeAssistantStatus === 'online'"
+                        :home-assistant-connected="
+                            settings.summary.homeAssistantStatus === 'online'
+                        "
                         @navigate="selectSection"
                     />
                     <SettingsSummaryPanel
@@ -937,7 +964,7 @@ const removeMember = (membershipId: number) => {
                         :member-count="householdMembers.length"
                     />
                     <SettingsSuggestionPanel
-                        :suggestions="settings.suggestions"
+                        :suggestions="settingsStore.suggestions"
                         @select="selectSection"
                     />
                 </div>

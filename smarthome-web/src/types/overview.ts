@@ -67,6 +67,12 @@ export interface OverviewRoom {
   device_summaries: string[];
 }
 
+export interface OverviewAlert {
+  level: string;
+  title: string;
+  location: string;
+}
+
 export interface OverviewRecentDevice {
   id: number;
   name: string;

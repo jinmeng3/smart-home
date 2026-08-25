@@ -11,10 +11,22 @@ from app.core.config import Settings
 from app.models.user import User
 from app.schemas.account import AccountRead
 from app.schemas.auth import AuthResponse
+from app.services.security import register_current_device
 
 DUMMY_PASSWORD_HASH = bcrypt.hashpw(b"invalid-password", bcrypt.gensalt()).decode(
     "utf-8"
 )
+
+
+# === 设备信息工具 ===
+
+
+def _device_info_from_ua(user_agent: str | None) -> tuple[str, str]:
+    """从 User-Agent 推导设备名称和登录位置/平台。"""
+    ua = (user_agent or "").lower()
+    if any(keyword in ua for keyword in ("mobile", "android", "iphone", "ipad")):
+        return "当前设备", "移动设备"
+    return "当前设备", "桌面浏览器"
 
 # === Token 工具 ===
 
@@ -64,6 +76,7 @@ def login_service(
     settings: Settings,
     account: str,
     password: str,
+    user_agent: str | None = None,
 ) -> AuthResponse:
     """校验邮箱和密码，并返回认证结果。"""
     normalized_account = account.casefold()
@@ -106,6 +119,10 @@ def login_service(
     user.last_login_at = now
     db.commit()
     db.refresh(user)
+
+    # 登录成功后自动注册当前设备
+    _device_info = _device_info_from_ua(user_agent)
+    register_current_device(db, user, _device_info[0], _device_info[1])
 
     return AuthResponse(
         access_token=generate_token(

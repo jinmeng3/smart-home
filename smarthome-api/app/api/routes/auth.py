@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY, SETTINGS_DEPENDENCY
@@ -17,11 +17,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=ApiResponse[AuthResponse])
 def login(
     payload: LoginRequest,
+    request: Request,
     db: Session = DB_DEPENDENCY,
     settings: Settings = SETTINGS_DEPENDENCY,
 ) -> ApiResponse[AuthResponse]:
     """验证账号密码并签发访问令牌。"""
-    auth_response = login_service(db, settings, payload.account, payload.password)
+    auth_response = login_service(
+        db, settings, payload.account, payload.password,
+        user_agent=request.headers.get("user-agent"),
+    )
     return ApiResponse(data=auth_response)
 
 

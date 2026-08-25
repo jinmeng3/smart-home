@@ -8,7 +8,7 @@ import type {
  */
 
 export const settingsStorageKey = "smart-home-settings";
-const securityStorageKey = "smart-home-security-meta";
+export const securityStorageKey = "smart-home-security-meta";
 const backupStorageKey = "smart-home-backup-history";
 
 const defaultSettings: SettingsState = {
@@ -67,26 +67,10 @@ const defaultSettings: SettingsState = {
     homeAssistantStatus: "online",
     lastSync: "",
   },
-  suggestions: [
-    {
-      id: "enable-2fa",
-      target: "security",
-      title: "建议开启双重认证",
-      description: "提升账户安全性，防止未授权访问",
-    },
-    {
-      id: "auto-backup",
-      target: "backup",
-      title: "建议启用自动备份",
-      description: "定期备份配置，防止数据丢失",
-    },
-    {
-      id: "sync-devices",
-      target: "homeAssistant",
-      title: "建议同步最新设备",
-      description: "保持设备数据最新，体验更稳定",
-    },
-  ],
+  // 注意：旧版本这里硬编码了 3 条建议。现在建议列表由
+  // utils/settingsSuggestions.ts 根据真实 settings + aiModels 实时派生，
+  // SettingsState.suggestions 仅作兼容字段保留（类型上仍存在但 store 不再写入）。
+  suggestions: [],
 };
 
 export const cloneSettings = (): SettingsState =>

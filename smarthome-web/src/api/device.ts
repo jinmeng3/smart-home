@@ -227,3 +227,14 @@ export const uploadDeviceImage = async (file: File): Promise<string> => {
   });
   return response.image_url;
 };
+
+// === 设备能耗 ===
+
+export interface TodayEnergy {
+  energy_kwh: number;
+  device_count: number;
+  recorded_at: string;
+}
+
+export const getTodayEnergy = (householdId: number) =>
+  apiRequest<TodayEnergy>(`/api/households/${householdId}/energy/today`);

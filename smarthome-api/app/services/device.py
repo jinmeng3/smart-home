@@ -7,7 +7,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.models.device import Device, DeviceGroup, DeviceLog, DeviceStatus
+from app.models.device import (
+    Device,
+    DeviceEnergyRecord,
+    DeviceGroup,
+    DeviceLog,
+    DeviceStatus,
+)
 from app.models.membership import HouseholdMembership
 from app.models.room import Room, RoomDevice
 from app.models.user import User
@@ -416,3 +422,40 @@ def batch_group_devices_service(
     return DeviceBatchGroupResult(
         group_id=group.id, group=group.name, assigned_count=assigned_count
     )
+
+
+# === 设备能耗 ===
+
+
+def get_today_energy_service(
+    db: Session, user: User, household_id: int | None = None
+) -> dict:
+    """统计指定家庭今天的设备能耗总量和设备数。"""
+    if household_id is None:
+        household_id = get_default_household_id(db, user)
+
+    today_start = datetime.combine(
+        datetime.now(timezone.utc).date(), datetime.min.time()
+    )
+    query = (
+        select(
+            func.coalesce(func.sum(DeviceEnergyRecord.energy_kwh), 0.0),
+            func.count(func.distinct(DeviceEnergyRecord.device_id)),
+            func.max(DeviceEnergyRecord.recorded_at),
+        )
+        .join(
+            HouseholdMembership,
+            HouseholdMembership.household_id == DeviceEnergyRecord.household_id,
+        )
+        .where(
+            HouseholdMembership.user_id == user.id,
+            DeviceEnergyRecord.household_id == household_id,
+            DeviceEnergyRecord.recorded_at >= today_start,
+        )
+    )
+    energy_kwh, device_count, last_recorded = db.execute(query).one()
+    return {
+        "energy_kwh": float(energy_kwh or 0),
+        "device_count": int(device_count or 0),
+        "recorded_at": last_recorded.isoformat() if last_recorded else "",
+    }

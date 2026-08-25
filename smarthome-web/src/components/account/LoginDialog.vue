@@ -156,6 +156,7 @@ const submit = async () => {
             authStore.loginVisible = false;
         }
         void settingsStore.loadAccountHome().catch(() => undefined);
+        void settingsStore.loadSecurityMeta().catch(() => undefined);
     } catch (error) {
         const apiError =
             error instanceof ApiError ? error : null;

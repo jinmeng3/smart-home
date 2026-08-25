@@ -1,4 +1,4 @@
-import { onScopeDispose, ref } from "vue";
+import { computed, onScopeDispose, ref } from "vue";
 import { defineStore } from "pinia";
 import {
   createHousehold as apiCreateHousehold,
@@ -24,19 +24,35 @@ import {
   type AIModelRead,
   type AIModelPayload,
 } from "../api/aiModel";
+import {
+  addSecurityLog as apiAddSecurityLog,
+  deleteSecurityDevice as apiDeleteSecurityDevice,
+  getSecurityMeta as apiGetSecurityMeta,
+  updateDeviceTrust as apiUpdateDeviceTrust,
+} from "../api/security";
 import { ApiError } from "../api/client";
+import { syncDevices as apiSyncDevices } from "../api/device";
+import { fetchAiSuggestions } from "../api/settingsAi";
 import { useHouseholdStore } from "./households";
 import {
   cloneSettings,
   formatLocalTime,
   loadBackupHistory,
-  loadSecurityMeta,
+  loadJson,
+  loadSecurityMeta as loadStoredSecurityMeta,
   loadSettings,
   mergeSettings,
   persistBackupHistory,
   persistSecurityMeta,
   persistSettings,
+  securityStorageKey,
 } from "../utils/settingsPersistence";
+import { deriveSuggestions } from "../utils/settingsSuggestions";
+import {
+  hashSnapshot,
+  readAiSuggestionsCache,
+  writeAiSuggestionsCache,
+} from "../utils/aiSuggestionsCache";
 import type {
   BackupRecord,
   HouseholdContext,
@@ -44,43 +60,29 @@ import type {
   HouseholdRole,
   SecurityMeta,
   SettingsState,
+  SettingsSuggestionItem,
 } from "../types/settings";
 
-const createDefaultSecurityMeta = (): SecurityMeta => ({
+const createEmptySecurityMeta = (): SecurityMeta => ({
   passwordUpdatedAt: null,
-  devices: [
-    {
-      id: 1,
-      name: "当前设备",
-      location: "上海 · 桌面浏览器",
-      lastActive: formatLocalTime(),
-      trusted: true,
-      current: true,
-    },
-    {
-      id: 2,
-      name: "移动设备",
-      location: "上海 · 手机",
-      lastActive: "07/30 21:18",
-      trusted: false,
-      current: false,
-    },
-  ],
-  logs: [
-    {
-      id: 1,
-      title: "已启用二次验证",
-      detail: "当前账户的本地安全开关已同步到设置中心",
-      at: "07/31 09:40",
-    },
-  ],
+  devices: [],
+  logs: [],
 });
 
 export const useSettingsStore = defineStore("settings", () => {
   const settings = ref<SettingsState>(loadSettings());
   const securityMeta = ref<SecurityMeta>(
-    loadSecurityMeta(createDefaultSecurityMeta()),
+    loadStoredSecurityMeta(createEmptySecurityMeta()),
   );
+  /** 基于真实 settings + aiModels 实时派生的设置建议（替换原硬编码） */
+  const suggestions = computed(() =>
+    deriveSuggestions(settings.value, { aiModels: aiModels.value }),
+  );
+  /** AI 生成的补充建议，默认未加载；调用 loadAiSuggestions 后填充 */
+  const aiSuggestions = ref<SettingsSuggestionItem[]>([]);
+  const aiSuggestionsLoading = ref(false);
+  const aiSuggestionsError = ref<string | null>(null);
+  let aiSuggestionsAbort: AbortController | null = null;
   const backupHistory = ref<BackupRecord[]>(
     loadBackupHistory([] as BackupRecord[]),
   );
@@ -91,6 +93,26 @@ export const useSettingsStore = defineStore("settings", () => {
   const accountHomeLoaded = ref(false);
   let accountHomePromise: Promise<void> | null = null;
   let saveStatusTimer = 0;
+
+  /**
+   * 写入一条备份记录到本地历史与 `lastBackupTime`。
+   * 提前到 store 顶部以避免被 `saveSettings()` 引用时处于 TDZ。
+   */
+  const recordBackup = (type: "manual" | "auto", note?: string) => {
+    const at = formatLocalTime();
+    backupHistory.value = [
+      {
+        id: Date.now(),
+        type,
+        at,
+        note: note ?? (type === "auto" ? "自动备份已完成" : "手动备份已生成"),
+      },
+      ...backupHistory.value,
+    ].slice(0, 6);
+    settings.value.backup.lastBackupTime = at;
+    persistBackupHistory(backupHistory.value);
+    persistSettings(settings.value);
+  };
 
   const getUserPreferencesPayload = () => ({
     appearance: { ...settings.value.appearance },
@@ -194,6 +216,55 @@ export const useSettingsStore = defineStore("settings", () => {
     return accountHomePromise;
   };
 
+  const securityMetaLoaded = ref(false);
+  let securityMetaPromise: Promise<void> | null = null;
+
+  const loadSecurityMeta = (force = false): Promise<void> => {
+    if (securityMetaLoaded.value && !force) {
+      return Promise.resolve();
+    }
+    if (securityMetaPromise && !force) {
+      return securityMetaPromise;
+    }
+
+    const promise = (async () => {
+      const meta = await apiGetSecurityMeta();
+
+      // 首次从后端同步成功后，将旧 localStorage 中的安全日志导入后端（仅一次）
+      if (meta.logs.length === 0) {
+        const localMeta = loadJson<SecurityMeta | null>(
+          securityStorageKey,
+          null,
+        );
+        if (localMeta && localMeta.logs.length > 0) {
+          void (async () => {
+            for (const log of localMeta.logs) {
+              try {
+                await apiAddSecurityLog(log.title, log.detail);
+              } catch {
+                break;
+              }
+            }
+            await loadSecurityMeta(true);
+          })();
+        }
+      }
+
+      securityMeta.value = meta;
+      securityMetaLoaded.value = true;
+      persistSecurityMeta(meta);
+    })()
+      .catch(() => {
+        // 后端不可用时保留 localStorage 兜底数据，降级为离线模式
+      })
+      .finally(() => {
+        securityMetaPromise = null;
+      });
+
+    securityMetaPromise = promise;
+    return promise;
+  };
+
   const loadAIModel = async () => {
     try {
       aiModels.value = await apiListAIModels();
@@ -230,6 +301,103 @@ export const useSettingsStore = defineStore("settings", () => {
     }
   };
 
+  /**
+   * 调用后端 LLM 生成补充建议。
+   * - 本地 cache（TTL 30 分钟）→ 后端 5 分钟缓存 → 实际 LLM 调用。
+   * - 失败（无模型/网络/LLM 错误）时保留本地建议列表，error 用于 UI 提示。
+   * - 重复调用会自动取消上一次未完成的请求。
+   * - force=true 绕过本地与后端缓存。
+   */
+  const loadAiSuggestions = async (force = false) => {
+    aiSuggestionsAbort?.abort();
+    const controller = new AbortController();
+    aiSuggestionsAbort = controller;
+    aiSuggestionsLoading.value = true;
+    aiSuggestionsError.value = null;
+    try {
+      // 快照中跳过大字段：accessToken / parameters / compat 这些与 LLM 提示无关
+      const snapshot = {
+        account: settings.value.account,
+        appearance: settings.value.appearance,
+        aiAssistant: {
+          model: settings.value.aiAssistant.model,
+          language: settings.value.aiAssistant.language,
+          detailLevel: settings.value.aiAssistant.detailLevel,
+          autoExecuteLowRisk: settings.value.aiAssistant.autoExecuteLowRisk,
+          confirmHighRisk: settings.value.aiAssistant.confirmHighRisk,
+        },
+        homeAssistant: {
+          serviceUrl: settings.value.homeAssistant.serviceUrl,
+          apiProtocol: settings.value.homeAssistant.apiProtocol,
+          tokenConfigured: settings.value.homeAssistant.tokenConfigured,
+        },
+        notifications: settings.value.notifications,
+        security: settings.value.security,
+        backup: settings.value.backup,
+        summary: settings.value.summary,
+        aiModels: aiModels.value.map((m) => ({
+          name: m.name,
+          provider: m.provider,
+          is_active: m.is_active,
+        })),
+      };
+      const hash = hashSnapshot(snapshot);
+
+      // 1) 本地缓存命中直接返回，不发请求
+      if (!force) {
+        const cached = readAiSuggestionsCache(hash);
+        if (cached.hit) {
+          aiSuggestions.value = cached.suggestions;
+          aiSuggestionsError.value = null;
+          return;
+        }
+      }
+
+      // 2) 调用后端（后端另有 5 分钟内存缓存）
+      const result = await fetchAiSuggestions(snapshot, {
+        force,
+        signal: controller.signal,
+      });
+      aiSuggestions.value = result;
+
+      // 3) 写入本地缓存
+      if (!force) {
+        writeAiSuggestionsCache(hash, result);
+      }
+    } catch (error) {
+      if ((error as { name?: string })?.name === "AbortError") return;
+      aiSuggestions.value = [];
+      aiSuggestionsError.value =
+        error instanceof Error ? error.message : "AI 建议生成失败";
+    } finally {
+      if (aiSuggestionsAbort === controller) {
+        aiSuggestionsAbort = null;
+        aiSuggestionsLoading.value = false;
+      }
+    }
+  };
+
+  /**
+   * 取消进行中的 AI 建议请求。用于页面卸载 / 手动重置场景，
+   * 避免 AbortController 跨越生命周期调用。
+   */
+  const cancelAiSuggestions = () => {
+    aiSuggestionsAbort?.abort();
+    aiSuggestionsAbort = null;
+    aiSuggestionsLoading.value = false;
+  };
+
+  /**
+   * 后台预取 AI 建议：仅在本地建议列表非空、且当前未在加载/未持有结果时触发。
+   * 设计为"fire-and-forget"，调用方不需 await。失败会被 loadAiSuggestions 静默吞掉。
+   */
+  const prefetchAiSuggestionsIfNeeded = () => {
+    if (aiSuggestionsLoading.value) return;
+    if (aiSuggestions.value.length > 0) return;
+    if (suggestions.value.length === 0) return;
+    void loadAiSuggestions(false);
+  };
+
   const saveAccountHome = async () => {
     const householdId = settings.value.account.householdId;
     const accountRequest = apiUpdateAccount({
@@ -257,7 +425,10 @@ export const useSettingsStore = defineStore("settings", () => {
     if (household?.id) {
       await householdStore.switchHousehold(household.id);
     }
-    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    applyHouseholdContext(
+      householdStore.activeHousehold,
+      householdStore.members,
+    );
 
     settings.value.account = {
       ...settings.value.account,
@@ -277,7 +448,10 @@ export const useSettingsStore = defineStore("settings", () => {
     const householdStore = useHouseholdStore();
     await householdStore.load(true);
     await householdStore.switchHousehold(created.id);
-    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    applyHouseholdContext(
+      householdStore.activeHousehold,
+      householdStore.members,
+    );
     return created;
   };
 
@@ -341,8 +515,7 @@ export const useSettingsStore = defineStore("settings", () => {
         unknown
       >;
       if (Object.keys(compat).length > 0) payload.compat = compat;
-    } catch {
-    }
+    } catch {}
     const models = await apiListAIModels();
     const response = models.length
       ? await apiUpdateAIModel(payload)
@@ -452,7 +625,10 @@ export const useSettingsStore = defineStore("settings", () => {
 
     const member = await apiAddMember(householdId, { email, role });
     await householdStore.refreshMembers();
-    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    applyHouseholdContext(
+      householdStore.activeHousehold,
+      householdStore.members,
+    );
     return member;
   };
 
@@ -472,7 +648,10 @@ export const useSettingsStore = defineStore("settings", () => {
       role,
     );
     await householdStore.refreshMembers();
-    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    applyHouseholdContext(
+      householdStore.activeHousehold,
+      householdStore.members,
+    );
     return updatedMember;
   };
 
@@ -485,7 +664,10 @@ export const useSettingsStore = defineStore("settings", () => {
 
     await apiDeleteMember(householdId, membershipId);
     await householdStore.refreshMembers();
-    applyHouseholdContext(householdStore.activeHousehold, householdStore.members);
+    applyHouseholdContext(
+      householdStore.activeHousehold,
+      householdStore.members,
+    );
   };
 
   const resetSettings = () => {
@@ -502,8 +684,31 @@ export const useSettingsStore = defineStore("settings", () => {
     saveStatus.value = "idle";
   };
 
-  const syncDevices = () => {
-    settings.value.summary.lastSync = "刚刚";
+  const syncDevices = async () => {
+    const platforms: Array<"Home Assistant" | "Matter" | "Zigbee" | "MQTT"> = [
+      "Home Assistant",
+      "Matter",
+      "Zigbee",
+      "MQTT",
+    ];
+
+    let syncedCount = 0;
+    let hasError = false;
+
+    for (const platform of platforms) {
+      try {
+        const result = await apiSyncDevices(platform);
+        syncedCount += result.synced_count;
+      } catch {
+        hasError = true;
+      }
+    }
+
+    settings.value.summary.lastSync = hasError
+      ? "同步完成（部分失败）"
+      : syncedCount > 0
+        ? `刚刚（${syncedCount} 台）`
+        : "刚刚";
   };
 
   const updateBackupTime = () => {
@@ -516,35 +721,49 @@ export const useSettingsStore = defineStore("settings", () => {
     }).format(new Date());
   };
 
-  const recordSecurityLog = (title: string, detail: string) => {
-    securityMeta.value.logs = [
-      {
-        id: Date.now(),
-        title,
-        detail,
-        at: formatLocalTime(),
-      },
-      ...securityMeta.value.logs,
-    ].slice(0, 8);
+  const recordSecurityLog = async (title: string, detail: string) => {
+    const localLog = {
+      id: Date.now(),
+      title,
+      detail,
+      at: formatLocalTime(),
+    };
+
+    try {
+      await apiAddSecurityLog(title, detail);
+    } catch {
+      // 后端不可用时仅保留本地记录
+    }
+
+    securityMeta.value.logs = [localLog, ...securityMeta.value.logs].slice(
+      0,
+      8,
+    );
     persistSecurityMeta(securityMeta.value);
   };
 
   const changeLocalPassword = () => {
     securityMeta.value.passwordUpdatedAt = formatLocalTime();
-    recordSecurityLog("已修改密码", "当前账户的本地安全记录已更新");
+    void recordSecurityLog("已修改密码", "当前账户的本地安全记录已更新");
   };
 
-  const updateDeviceTrust = (deviceId: number, trusted: boolean) => {
+  const updateDeviceTrust = async (deviceId: number, trusted: boolean) => {
+    try {
+      await apiUpdateDeviceTrust(deviceId, trusted);
+    } catch {
+      // 后端失败时保留本地状态
+    }
+
     securityMeta.value.devices = securityMeta.value.devices.map((device) =>
       device.id === deviceId ? { ...device, trusted } : device,
     );
-    recordSecurityLog(
+    void recordSecurityLog(
       trusted ? "已信任设备" : "已取消信任设备",
-      "设备信任状态已在本地更新",
+      "设备信任状态已更新",
     );
   };
 
-  const revokeSecurityDevice = (deviceId: number) => {
+  const revokeSecurityDevice = async (deviceId: number) => {
     const device = securityMeta.value.devices.find(
       (item) => item.id === deviceId,
     );
@@ -553,30 +772,16 @@ export const useSettingsStore = defineStore("settings", () => {
       return;
     }
 
+    try {
+      await apiDeleteSecurityDevice(deviceId);
+    } catch {
+      // 后端失败时保留本地状态
+    }
+
     securityMeta.value.devices = securityMeta.value.devices.filter(
       (item) => item.id !== deviceId,
     );
-    recordSecurityLog("已移除登录设备", device.name);
-  };
-
-  const recordBackup = (type: "manual" | "auto", note?: string) => {
-    const at = formatLocalTime();
-    backupHistory.value = [
-      {
-        id: Date.now(),
-        type,
-        at,
-        note:
-          note ??
-          (type === "auto"
-            ? "自动备份已完成"
-            : "手动备份已生成"),
-      },
-      ...backupHistory.value,
-    ].slice(0, 6);
-    settings.value.backup.lastBackupTime = at;
-    persistBackupHistory(backupHistory.value);
-    persistSettings(settings.value);
+    void recordSecurityLog("已移除登录设备", device.name);
   };
 
   const importSettings = (nextSettings: SettingsState) => {
@@ -596,7 +801,7 @@ export const useSettingsStore = defineStore("settings", () => {
   };
 
   const getExportSettings = (): SettingsState => ({
-    ...JSON.parse(JSON.stringify(settings.value)) as SettingsState,
+    ...(JSON.parse(JSON.stringify(settings.value)) as SettingsState),
     homeAssistant: {
       ...settings.value.homeAssistant,
       accessToken: "",
@@ -619,8 +824,15 @@ export const useSettingsStore = defineStore("settings", () => {
     importSettings,
     loadAIModel,
     refreshAIModels,
+    loadAiSuggestions,
+    cancelAiSuggestions,
+    prefetchAiSuggestionsIfNeeded,
+    aiSuggestions,
+    aiSuggestionsLoading,
+    aiSuggestionsError,
     loadUserPreferences,
     loadAccountHome,
+    loadSecurityMeta,
     loading,
     resetAccountState,
     resetSettings,
@@ -632,6 +844,7 @@ export const useSettingsStore = defineStore("settings", () => {
     saveStatus,
     savedAt,
     settings,
+    suggestions,
     backupHistory,
     changeLocalPassword,
     recordBackup,

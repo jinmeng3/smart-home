@@ -94,6 +94,7 @@ onMounted(() => {
         void Promise.all([
             settingsStore.loadAccountHome(),
             settingsStore.loadUserPreferences(),
+            settingsStore.loadSecurityMeta(),
         ]).catch(() => undefined);
     }
 });
@@ -105,6 +106,7 @@ watch(
             void Promise.all([
                 settingsStore.loadAccountHome(),
                 settingsStore.loadUserPreferences(),
+                settingsStore.loadSecurityMeta(),
             ]).catch(() => undefined);
             return;
         }

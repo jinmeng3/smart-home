@@ -124,7 +124,6 @@ async def upload_avatar(
         delete_avatar_file(settings, avatar_url)
         raise
 
-                                     
     delete_avatar_file(settings, old_avatar_url)
     return ApiResponse(data=AvatarResponse(avatar_url=avatar_url), message="created")
 

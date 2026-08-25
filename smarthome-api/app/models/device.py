@@ -154,3 +154,38 @@ class DeviceLog(Base):
     )
 
     device: Mapped[Device] = relationship(back_populates="logs")
+
+
+class DeviceEnergyRecord(Base):
+    __tablename__ = "device_energy_records"
+    __table_args__ = (
+        Index("ix_energy_recorded_at", "recorded_at"),
+        Index("ix_energy_device_recorded", "device_id", "recorded_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, comment="主键"
+    )
+    device_id: Mapped[int] = mapped_column(
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+        comment="设备主键",
+    )
+    household_id: Mapped[int] = mapped_column(
+        ForeignKey("households.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+        comment="所属家庭ID",
+    )
+    energy_kwh: Mapped[float] = mapped_column(
+        nullable=False, default=0, comment="能耗（千瓦时）"
+    )
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        comment="记录时间",
+    )
+
+    device: Mapped[Device] = relationship()

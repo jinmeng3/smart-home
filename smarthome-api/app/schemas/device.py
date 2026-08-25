@@ -173,3 +173,10 @@ class DeviceImageRead(DeviceSchema):
     original_name: str
     mime_type: str
     size_bytes: int
+
+
+class TodayEnergyRead(DeviceSchema):
+    """今日能耗汇总"""
+    energy_kwh: float = Field(default=0, description="今日总能耗（千瓦时）")
+    device_count: int = Field(default=0, description="有能耗记录的设备数")
+    recorded_at: str = Field(default="", description="最近记录时间")
