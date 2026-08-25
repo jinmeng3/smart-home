@@ -234,48 +234,76 @@ async def _resume_agent_body(
         )
         return
 
-    assistant_message_id: int | None = None
-    if tracker.collected.strip():
-        assistant_message = ChatMessage(
-            session_id=context.session_id,
-            role="assistant",
-            content=tracker.collected.strip(),
-        )
-        db.add(assistant_message)
-        db.commit()
-        assistant_message_id = assistant_message.id
-        _sync_session_tree(
-            context.session_id,
-            lambda: mirror_assistant_message(
+    try:
+        assistant_message_id: int | None = None
+        if tracker.collected.strip():
+            assistant_message = ChatMessage(
+                session_id=context.session_id,
+                role="assistant",
+                content=tracker.collected.strip(),
+            )
+            db.add(assistant_message)
+            db.commit()
+            assistant_message_id = assistant_message.id
+            _sync_session_tree(
                 context.session_id,
-                tracker.collected.strip(),
-                usage={
-                    "input": last_input_tokens,
-                    "output": last_output_tokens,
-                    "totalTokens": last_input_tokens + last_output_tokens,
-                },
-            ),
-        )
-        await asyncio.to_thread(_maybe_compact_tree, context, model_config)
+                lambda: mirror_assistant_message(
+                    context.session_id,
+                    tracker.collected.strip(),
+                    usage={
+                        "input": last_input_tokens,
+                        "output": last_output_tokens,
+                        "totalTokens": last_input_tokens + last_output_tokens,
+                    },
+                ),
+            )
+            await asyncio.to_thread(_maybe_compact_tree, context, model_config)
 
-    store_usage(
-        db,
-        context,
-        run_id,
-        model_config.name,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_call_count=tool_call_count,
-        status=("failed" if run_errored else "completed"),
-    )
-    audit.record_run_end(run_id, status=("failed" if run_errored else "completed"))
-
-    yield encode_sse_event(
-        RunCompleted(
-            event_id=f"{run_id}-done",
-            run_id=run_id,
-            session_id=context.session_id,
+        store_usage(
+            db,
+            context,
+            run_id,
+            model_config.name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tool_call_count=tool_call_count,
             status=("failed" if run_errored else "completed"),
-            message_id=assistant_message_id,
         )
-    )
+        audit.record_run_end(run_id, status=("failed" if run_errored else "completed"))
+
+        yield encode_sse_event(
+            RunCompleted(
+                event_id=f"{run_id}-done",
+                run_id=run_id,
+                session_id=context.session_id,
+                status=("failed" if run_errored else "completed"),
+                message_id=assistant_message_id,
+            )
+        )
+    except Exception as exc:  # noqa: BLE001  # 收尾异常同样以 SSE 错误事件返回，避免响应已开始后抛错
+        error_message = redact_text(str(exc))
+        store_usage(
+            db,
+            context,
+            run_id,
+            model_config.name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tool_call_count=tool_call_count,
+            status="failed",
+            error_message=error_message[:500],
+        )
+        audit.record_run_end(run_id, status="failed", message=str(exc))
+        is_agent_error = isinstance(exc, AgentError)
+        yield encode_sse_event(
+            Error(
+                event_id=f"{run_id}-finalize-error",
+                run_id=run_id,
+                code=exc.code if is_agent_error else "AGENT_FINALIZE_ERROR",
+                message=redact_text(str(exc))
+                if is_agent_error
+                else "Agent 结果处理失败，请稍后重试",
+                retryable=exc.retryable if is_agent_error else False,
+            )
+        )
+        return

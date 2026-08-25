@@ -408,15 +408,102 @@ async def _run_agent_body(
         )
         return
 
-    snapshot = await graph.aget_state(
-        config={
-            "configurable": {"thread_id": thread_id},
-            "recursion_limit": get_settings().graph_recursion_limit,
-        }
-    )
+    try:
+        snapshot = await graph.aget_state(
+            config={
+                "configurable": {"thread_id": thread_id},
+                "recursion_limit": get_settings().graph_recursion_limit,
+            }
+        )
 
-    pending = snapshot.values.get("pending_approval")
-    if snapshot.next and "approval_interrupt" in snapshot.next and pending:
+        pending = snapshot.values.get("pending_approval")
+        if snapshot.next and "approval_interrupt" in snapshot.next and pending:
+            store_usage(
+                db,
+                context,
+                run_id,
+                model_config.name,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                tool_call_count=tool_call_count,
+                status="pending_confirmation",
+            )
+            if domain is not None:
+                audit.record_subagent_end(
+                    run_id=run_id, domain=domain, status="pending_confirmation"
+                )
+            audit.record_run_end(
+                run_id, status="pending_confirmation", message="等待用户确认"
+            )
+            audit.record_approval_required(
+                run_id=run_id,
+                approval_id=pending["approval_id"],
+                tool=pending["tool"],
+                risk_level=pending["risk_level"],
+                reasons=pending["reasons"],
+            )
+            yield encode_sse_event(
+                ApprovalRequired(
+                    event_id=f"{run_id}-approval",
+                    run_id=run_id,
+                    session_id=context.session_id,
+                    approval_id=pending["approval_id"],
+                    operator=pending["tool"],
+                    call_id=pending.get("call_id", ""),
+                    risk_level=pending["risk_level"],
+                    reasons=pending["reasons"],
+                    preview=pending["preview"],
+                )
+            )
+            yield encode_sse_event(
+                RunCompleted(
+                    event_id=f"{run_id}-pending",
+                    run_id=run_id,
+                    session_id=context.session_id,
+                    status="pending_confirmation",
+                )
+            )
+            return
+
+        collected = track.collected
+        assistant_message_id: int | None = None
+        if collected.strip():
+            assistant_message = ChatMessage(
+                session_id=context.session_id,
+                role="assistant",
+                content=collected.strip(),
+            )
+            db.add(assistant_message)
+            db.commit()
+            assistant_message_id = assistant_message.id
+            _sync_session_tree(
+                context.session_id,
+                lambda: mirror_assistant_message(
+                    context.session_id,
+                    collected.strip(),
+                    usage={
+                        "input": last_input_tokens,
+                        "output": last_output_tokens,
+                        "totalTokens": last_input_tokens + last_output_tokens,
+                    },
+                ),
+            )
+            if domain is not None:
+                _sync_session_tree(
+                    context.session_id,
+                    lambda: mirror_subagent(
+                        context.session_id,
+                        domain,
+                        message,
+                        collected.strip(),
+                        usage={
+                            "input": last_input_tokens,
+                            "output": last_output_tokens,
+                        },
+                    ),
+                )
+            await asyncio.to_thread(_maybe_compact_tree, context, model_config)
+
         store_usage(
             db,
             context,
@@ -425,120 +512,61 @@ async def _run_agent_body(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             tool_call_count=tool_call_count,
-            status="pending_confirmation",
+            status="completed",
         )
         if domain is not None:
+            duration_ms = (
+                int((time.perf_counter() - subagent_started_at) * 1000)
+                if subagent_started_at is not None
+                else None
+            )
             audit.record_subagent_end(
-                run_id=run_id, domain=domain, status="pending_confirmation"
-            )
-        audit.record_run_end(
-            run_id, status="pending_confirmation", message="等待用户确认"
-        )
-        audit.record_approval_required(
-            run_id=run_id,
-            approval_id=pending["approval_id"],
-            tool=pending["tool"],
-            risk_level=pending["risk_level"],
-            reasons=pending["reasons"],
-        )
-        yield encode_sse_event(
-            ApprovalRequired(
-                event_id=f"{run_id}-approval",
                 run_id=run_id,
-                session_id=context.session_id,
-                approval_id=pending["approval_id"],
-                operator=pending["tool"],
-                call_id=pending.get("call_id", ""),
-                risk_level=pending["risk_level"],
-                reasons=pending["reasons"],
-                preview=pending["preview"],
+                domain=domain,
+                status="completed",
+                summary=collected.strip(),
+                duration_ms=duration_ms,
+                usage={"input": input_tokens, "output": output_tokens},
             )
-        )
+            logger.info(
+                "subagent_run_completed run_id=%s domain=%s duration_ms=%s",
+                run_id,
+                domain,
+                duration_ms,
+            )
+        audit.record_run_end(run_id, status="completed")
         yield encode_sse_event(
             RunCompleted(
-                event_id=f"{run_id}-pending",
+                event_id=f"{run_id}-done",
                 run_id=run_id,
                 session_id=context.session_id,
-                status="pending_confirmation",
+                message_id=assistant_message_id,
+            )
+        )
+    except Exception as e:  # noqa: BLE001  # 收尾异常同样以 SSE 错误事件返回，避免响应已开始后抛错
+        error_message = redact_text(str(e))
+        store_usage(
+            db,
+            context,
+            run_id,
+            model_config.name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            tool_call_count=tool_call_count,
+            status="failed",
+            error_message=error_message[:500],
+        )
+        audit.record_run_end(run_id, status="failed", message=str(e))
+        is_agent_error = isinstance(e, AgentError)
+        yield encode_sse_event(
+            Error(
+                event_id=f"{run_id}-finalize-error",
+                run_id=run_id,
+                code=e.code if is_agent_error else "AGENT_FINALIZE_ERROR",
+                message=redact_text(str(e))
+                if is_agent_error
+                else "Agent 结果处理失败，请稍后重试",
+                retryable=e.retryable if is_agent_error else False,
             )
         )
         return
-
-    collected = track.collected
-    assistant_message_id: int | None = None
-    if collected.strip():
-        assistant_message = ChatMessage(
-            session_id=context.session_id,
-            role="assistant",
-            content=collected.strip(),
-        )
-        db.add(assistant_message)
-        db.commit()
-        assistant_message_id = assistant_message.id
-        _sync_session_tree(
-            context.session_id,
-            lambda: mirror_assistant_message(
-                context.session_id,
-                collected.strip(),
-                usage={
-                    "input": last_input_tokens,
-                    "output": last_output_tokens,
-                    "totalTokens": last_input_tokens + last_output_tokens,
-                },
-            ),
-        )
-        if domain is not None:
-            _sync_session_tree(
-                context.session_id,
-                lambda: mirror_subagent(
-                    context.session_id,
-                    domain,
-                    message,
-                    collected.strip(),
-                    usage={
-                        "input": last_input_tokens,
-                        "output": last_output_tokens,
-                    },
-                ),
-            )
-        await asyncio.to_thread(_maybe_compact_tree, context, model_config)
-
-    store_usage(
-        db,
-        context,
-        run_id,
-        model_config.name,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        tool_call_count=tool_call_count,
-        status="completed",
-    )
-    if domain is not None:
-        duration_ms = (
-            int((time.perf_counter() - subagent_started_at) * 1000)
-            if subagent_started_at is not None
-            else None
-        )
-        audit.record_subagent_end(
-            run_id=run_id,
-            domain=domain,
-            status="completed",
-            summary=collected.strip(),
-            duration_ms=duration_ms,
-            usage={"input": input_tokens, "output": output_tokens},
-        )
-        logger.info(
-            "subagent_run_completed run_id=%s domain=%s duration_ms=%s",
-            run_id,
-            domain,
-            duration_ms,
-        )
-    audit.record_run_end(run_id, status="completed")
-    yield encode_sse_event(
-        RunCompleted(
-            event_id=f"{run_id}-done",
-            run_id=run_id,
-            session_id=context.session_id,
-            message_id=assistant_message_id,
-        )
-    )

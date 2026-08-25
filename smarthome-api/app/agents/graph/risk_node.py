@@ -3,7 +3,11 @@ from typing import Any
 
 from app.agents.agent_service.pending import make_pending
 from app.agents.graph.state import AgentState
-from app.agents.risk import classify_automation_operation, classify_scene_execution
+from app.agents.risk import (
+    classify_automation_operation,
+    classify_device_operation,
+    classify_scene_execution,
+)
 from app.agents.tools import WRITE_TOOL_NAMES, WRITE_TOOL_SCHEMAS
 from fastapi import HTTPException
 from langchain_core.messages import AIMessage, ToolMessage
@@ -148,6 +152,18 @@ def _classify_operation(
             context=context,
             operation="delete_automation",
             automation_id=automation_id,
+        )
+
+    if tool_name in {"set_device_power", "set_device_temperature", "set_curtain_position"}:
+        device_id = args.get("device_id")
+        if device_id is None:
+            return None
+        return classify_device_operation(
+            db=db,
+            context=context,
+            operation=tool_name,
+            device_id=device_id,
+            args=args,
         )
 
     raise ValueError(f"不支持的写工具：{tool_name}")

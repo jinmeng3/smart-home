@@ -11,6 +11,11 @@ from app.agents.tools.execute.automations import (
     set_automation_enabled_operation,
     update_automation_operation,
 )
+from app.agents.tools.execute.devices import (
+    set_curtain_position,
+    set_device_power,
+    set_device_temperature,
+)
 from app.agents.tools.execute.scenes import execute_scene_operation
 from app.core.config import get_settings
 from langchain_core.messages import ToolMessage
@@ -126,7 +131,9 @@ def execute_write_tool(
         # 显式类型标注，满足 type checker 对 Any→str|None 的收缩
         approval_id: str | None = pending.get("approval_id")
         error_code_val = result.get("code")
-        error_code: str | None = str(error_code_val) if error_code_val is not None and not ok else None
+        error_code: str | None = (
+            str(error_code_val) if error_code_val is not None and not ok else None
+        )
         audit.record_tool_call(
             run_id=pending.get("run_id", ""),
             tool=tool_name,
@@ -171,6 +178,15 @@ def _dispatch_operation(db, context, tool_name: str, args: dict, pending: dict) 
 
     if tool_name == "delete_automation":
         return delete_automation_operation(db, context, args)
+
+    if tool_name == "set_device_power":
+        return set_device_power(db, context, **args)
+
+    if tool_name == "set_device_temperature":
+        return set_device_temperature(db, context, **args)
+
+    if tool_name == "set_curtain_position":
+        return set_curtain_position(db, context, **args)
 
     return {
         "ok": False,

@@ -96,16 +96,6 @@ const roomSummary = computed(() => {
 });
 
 /* === 环境指标摘要 === */
-const envSummary = computed(() => {
-    const parts: string[] = [];
-    for (const item of props.environment) {
-        if (item.statusLabel) {
-            parts.push(`${item.name} ${item.statusLabel}`);
-        }
-    }
-    return parts.length > 0 ? parts.join("，") + "。" : "";
-});
-
 /* === 建议 === */
 interface Suggestion {
     text: string;
@@ -177,6 +167,16 @@ const getEnvStyle = (name: string) => {
     return colors ? { '--mc': colors[0], '--ms': colors[1] } : {};
 };
 
+/* 每个环境指标对应的图标 */
+const envIconMap: Record<string, string> = {
+    "温度": "thermometer",
+    "湿度": "humidity",
+    "PM2.5": "air-quality",
+    "光照": "illumination",
+    "噪音": "noise",
+};
+const envIcon = (name: string) => envIconMap[name] ?? "sensor";
+
 /* === 暴露给父组件用于 collapsed 状态 === */
 const envFirst = computed(() => props.environment[0]);
 const envSecond = computed(() => props.environment[1]);
@@ -196,21 +196,46 @@ const alertCount = computed(() => {
         <template v-if="room">
             <!-- 助手状态卡 -->
             <section class="assistant-card" :key="'card-' + room.id">
-                <p class="ac-summary">{{ roomSummary }}</p>
-                <p v-if="envSummary" class="ac-env">{{ envSummary }}</p>
+                <div class="ac-head">
+                    <div class="ac-head-main">
+                        <h4 class="ac-title">客厅助手</h4>
+                        <p class="ac-summary">{{ roomSummary }}</p>
+                    </div>
+                    <span
+                        class="ac-comfort-badge"
+                        :class="room.comfort >= 84 ? 'is-comfort' : 'is-good'"
+                    >
+                        <SvgIcon name="comfort" size="sm" />
+                        {{ room.comfort >= 84 ? "舒适" : "良好" }}
+                    </span>
+                </div>
+                <div class="ac-online-row">
+                    <span class="ac-online-dot" aria-hidden="true"></span>
+                    {{ room.onlineCount }}/{{ room.deviceCount }} 台设备在线
+                    <template v-if="currentScene">
+                        <span class="ac-sep" aria-hidden="true"></span>
+                        {{ currentScene }}
+                    </template>
+                </div>
+
                 <div ref="envMetricRef" class="ac-metrics">
                     <article
                         v-for="item in environment"
                         :key="item.name"
                         class="ac-metric"
+                        :class="{ 'has-status': item.statusLabel }"
                         :style="getEnvStyle(item.name)"
                         role="button"
                         tabindex="0"
                         @click="$emit('open', 'environment')"
                         @keydown.enter="$emit('open', 'environment')"
                     >
+                        <span class="ac-metric-icon" aria-hidden="true">
+                            <SvgIcon :name="envIcon(item.name)" size="sm" />
+                        </span>
+                        <strong class="ac-metric-name">{{ item.name }}</strong>
                         <span class="ac-metric-value">{{ item.value }}</span>
-                        <span v-if="item.statusLabel" class="ac-metric-label">{{ item.statusLabel }}</span>
+                        <span class="ac-metric-label" v-if="item.statusLabel">{{ item.statusLabel }}</span>
                     </article>
                 </div>
             </section>
@@ -335,48 +360,112 @@ const alertCount = computed(() => {
     to { opacity: 1; transform: translateY(0); }
 }
 
+.ac-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ac-head-main {
+    min-width: 0;
+}
+
+.ac-title {
+    margin: 0 0 2px;
+    color: var(--color-text-primary);
+    font-size: 16px;
+    font-weight: 900;
+}
+
 .ac-summary {
     margin: 0;
-    color: var(--color-text-primary);
-    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
     font-weight: 700;
     line-height: 1.6;
 }
 
-.ac-env {
-    margin: 6px 0 0;
-    color: var(--color-text-secondary);
+.ac-comfort-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 5px 12px;
     font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.ac-comfort-badge.is-comfort {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.ac-comfort-badge.is-good {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+}
+
+.ac-online-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    color: var(--color-text-tertiary);
+    font-size: 12px;
     font-weight: 700;
-    line-height: 1.5;
+}
+
+.ac-online-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 999px;
+    background: var(--color-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.ac-sep {
+    width: 1px;
+    height: 12px;
+    background: var(--color-border);
 }
 
 .ac-metrics {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-top: 12px;
-    padding-top: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
     border-top: 1px solid var(--color-border-subtle);
 }
 
 .ac-metric {
+    position: relative;
     display: flex;
+    min-width: 0;
+    min-height: 96px;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    min-height: 88px;
-    border: 1px solid color-mix(in srgb, var(--mc, var(--color-primary-500)) 20%, transparent);
-    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--mc, var(--color-primary-500)) 22%, transparent);
+    border-radius: 14px;
     background: var(--ms, var(--color-surface-subtle));
-    padding: 12px 8px;
+    padding: 12px 8px 10px;
     cursor: pointer;
-    transition: border-color 120ms var(--motion-ease), transform 120ms var(--motion-ease);
+    transition:
+        border-color 120ms var(--motion-ease),
+        transform 120ms var(--motion-ease),
+        box-shadow 120ms var(--motion-ease);
 }
 
 .ac-metric:hover {
     border-color: var(--mc, var(--color-primary-300));
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--mc, var(--color-primary-500)) 14%, transparent);
 }
 
 .ac-metric:focus-visible {
@@ -384,18 +473,48 @@ const alertCount = computed(() => {
     outline-offset: 1px;
 }
 
+.ac-metric-icon {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+    place-items: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--mc, var(--color-primary-500)) 14%, transparent);
+    color: var(--mc, var(--color-primary-500));
+}
+
+.ac-metric-name {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .ac-metric-value {
     color: var(--mc, var(--color-text-primary));
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 900;
-    line-height: 1.2;
+    line-height: 1.25;
     letter-spacing: -0.01em;
+    white-space: nowrap;
 }
 
 .ac-metric-label {
-    color: var(--color-text-secondary);
-    font-size: 12px;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--mc, var(--color-primary-500)) 12%, transparent);
+    padding: 2px 8px;
+    color: var(--mc, var(--color-primary-500));
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
 }
 
 /* === 建议卡 === */

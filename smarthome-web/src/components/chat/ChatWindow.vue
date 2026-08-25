@@ -303,22 +303,28 @@ const starterPrompts = [
             </button>
         </Transition>
 
-        <div class="mode-toggle">
+        <div class="mode-toggle" role="tablist" aria-label="对话模式">
             <button
                 class="mode-btn"
                 :class="{ active: store.agentMode === 'agent' }"
                 type="button"
+                role="tab"
+                :aria-selected="store.agentMode === 'agent'"
                 @click="store.setAgentMode('agent')"
             >
-                Agent
+                <SvgIcon name="ai" size="sm" />
+                <span>Agent</span>
             </button>
             <button
                 class="mode-btn"
                 :class="{ active: store.agentMode === 'chat' }"
                 type="button"
+                role="tab"
+                :aria-selected="store.agentMode === 'chat'"
                 @click="store.setAgentMode('chat')"
             >
-                对话
+                <SvgIcon name="chat" size="sm" />
+                <span>对话</span>
             </button>
         </div>
 
@@ -654,36 +660,69 @@ const starterPrompts = [
     animation: none !important;
 }
 
-/* === 模式切换按钮 === */
+/* === 模式切换按钮（分段胶囊式） === */
 .mode-toggle {
-    display: flex;
-    gap: 4px;
-    padding: 4px 6px;
-    border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    background: var(--color-surface-subtle);
-    margin: 0 6px 6px;
+    display: inline-flex;
+    gap: 3px;
     align-self: flex-start;
+    margin: 0 6px 6px;
+    padding: 3px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        var(--color-surface-subtle),
+        var(--color-panel-background)
+    );
+    box-shadow:
+        inset 0 1px 2px rgb(15 23 42 / 0.05),
+        0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .mode-btn {
-    padding: 3px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
     border: none;
-    border-radius: 6px;
+    border-radius: 999px;
     background: transparent;
     color: var(--color-text-tertiary);
     font-size: 12px;
     font-weight: 700;
+    line-height: 1;
     cursor: pointer;
-    transition: background 150ms, color 150ms;
-}
-
-.mode-btn.active {
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
+    transition:
+        color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
 }
 
 .mode-btn:hover:not(.active) {
     color: var(--color-text-secondary);
+    background: var(--color-surface-hover);
+}
+
+.mode-btn:active {
+    transform: scale(0.96);
+}
+
+.mode-btn.active {
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-500),
+        var(--color-primary-600)
+    );
+    color: var(--color-text-on-primary);
+    box-shadow:
+        0 2px 6px color-mix(in srgb, var(--color-primary-600) 35%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+.mode-btn.active:hover {
+    box-shadow:
+        0 3px 8px color-mix(in srgb, var(--color-primary-600) 40%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 </style>

@@ -124,6 +124,9 @@ const resultText = computed(() => {
                                     />
                                 </span>
                                 <div class="step-content">
+                                    <span class="step-index">
+                                        {{ String(index + 1).padStart(2, "0") }}
+                                    </span>
                                     <strong>{{ step.name }}</strong>
                                     <p>
                                         {{ step.description }}
@@ -384,11 +387,12 @@ ol {
 
 li {
     position: relative;
-    min-width: 180px;
+    min-width: 190px;
     flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
+    padding: 0 8px 0 0;
     transition:
         opacity 200ms var(--motion-ease),
         transform 200ms var(--motion-ease);
@@ -397,26 +401,37 @@ li {
 .step-node {
     min-width: 0;
     flex: 1 1 0;
-    gap: 6px;
-    padding: 4px 6px;
-    border-radius: 6px;
+    gap: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: linear-gradient(
+        180deg,
+        var(--color-card-bg),
+        var(--color-surface-subtle)
+    );
+    padding: 10px 10px 9px;
     transition:
         background-color 180ms var(--motion-ease),
-        transform 180ms var(--motion-ease);
+        border-color 180ms var(--motion-ease),
+        transform 180ms var(--motion-ease),
+        box-shadow 180ms var(--motion-ease);
 }
 
 .step-indicator {
     display: grid;
-    width: 26px;
-    height: 26px;
-    flex: 0 0 26px;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     place-items: center;
+    align-self: flex-start;
     border-radius: 999px;
     background: var(--color-primary-50);
     color: var(--color-primary-400);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary-300) 35%, transparent);
     transition:
         background-color 200ms var(--motion-ease),
         color 200ms var(--motion-ease),
+        box-shadow 200ms var(--motion-ease),
         transform 200ms var(--motion-ease);
 }
 
@@ -425,12 +440,31 @@ li {
     flex: 1;
 }
 
+.step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 18px;
+    margin-bottom: 2px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    transition:
+        background-color 180ms var(--motion-ease),
+        color 180ms var(--motion-ease);
+}
+
 .step-content strong {
     display: block;
     overflow: hidden;
     color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 900;
+    line-height: 1.3;
     text-overflow: ellipsis;
     white-space: nowrap;
     transition: color 200ms var(--motion-ease);
@@ -438,36 +472,39 @@ li {
 
 .step-content p {
     overflow: hidden;
+    margin-top: 1px;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 11px;
 }
 
 /* === 连接线 === */
 .step-connector {
     position: absolute;
-    top: 50%;
-    right: -4px;
-    width: 16px;
-    height: 1px;
-    background: var(--color-primary-200);
+    top: 28px;
+    right: -16px;
+    width: 20px;
+    height: 2px;
+    background: var(--color-border-strong);
     transform: scaleX(0);
     transform-origin: left center;
     transition:
-        background-color 200ms var(--motion-ease),
+        background-color 240ms var(--motion-ease),
         transform 240ms var(--motion-ease);
 }
 
 .step-connector::after {
     position: absolute;
-    top: -3px;
-    right: 0;
-    width: 7px;
-    height: 7px;
-    border-top: 1px solid var(--color-primary-200);
-    border-right: 1px solid var(--color-primary-200);
+    top: -2px;
+    right: -1px;
+    width: 5px;
+    height: 5px;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
     content: "";
     transform: rotate(45deg);
-    transition: border-color 200ms var(--motion-ease);
+    opacity: 0;
+    transition: opacity 200ms var(--motion-ease);
 }
 
 /* === 状态样式 === */
@@ -476,21 +513,38 @@ li {
 .is-pending .step-indicator {
     background: var(--color-surface-subtle);
     color: var(--color-text-tertiary);
+    box-shadow: inset 0 0 0 1px var(--color-border-default);
+}
+
+.is-pending .step-node:hover {
+    border-color: var(--color-border-strong);
 }
 
 /* running — 高亮推进 */
 .is-running .step-node {
+    border-color: color-mix(in srgb, var(--color-info) 45%, var(--color-border));
+    background: linear-gradient(
+        180deg,
+        var(--color-info-soft),
+        var(--color-card-bg)
+    );
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-info) 12%, transparent);
     transform: translateY(-1px);
 }
 
 .is-running .step-indicator {
     color: var(--color-info);
     background: var(--color-info-soft);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info-soft) 60%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-info-soft) 70%, transparent);
 }
 
 .is-running .step-indicator svg {
     animation: spin 900ms linear infinite;
+}
+
+.is-running .step-index {
+    background: color-mix(in srgb, var(--color-info) 14%, transparent);
+    color: var(--color-info);
 }
 
 .is-running .step-content strong {
@@ -498,18 +552,34 @@ li {
 }
 
 .is-running .step-connector {
+    color: var(--color-info);
     background: var(--color-info);
     transform: scaleX(1);
 }
 
 .is-running .step-connector::after {
-    border-color: var(--color-info);
+    opacity: 1;
 }
 
 /* completed — 绿色完成 */
+.is-completed .step-node {
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+    background: linear-gradient(
+        180deg,
+        var(--color-success-soft),
+        var(--color-card-bg)
+    );
+}
+
 .is-completed .step-indicator {
     color: var(--color-success);
     background: var(--color-success-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.is-completed .step-index {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
 }
 
 .is-completed .step-content strong {
@@ -517,18 +587,34 @@ li {
 }
 
 .is-completed .step-connector {
+    color: var(--color-success);
     background: var(--color-success);
     transform: scaleX(1);
 }
 
 .is-completed .step-connector::after {
-    border-color: var(--color-success);
+    opacity: 1;
 }
 
 /* failed — 红色失败 */
+.is-failed .step-node {
+    border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+    background: linear-gradient(
+        180deg,
+        var(--color-danger-soft),
+        var(--color-card-bg)
+    );
+}
+
 .is-failed .step-indicator {
     color: var(--color-danger);
     background: var(--color-danger-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 30%, transparent);
+}
+
+.is-failed .step-index {
+    background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    color: var(--color-danger);
 }
 
 .is-failed .step-content strong {
@@ -539,7 +625,10 @@ li {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px 6px 46px;
+    margin-top: 4px;
+    border-radius: 8px;
+    background: var(--color-danger-soft);
+    padding: 7px 9px;
 }
 
 .step-error-msg {
@@ -662,7 +751,6 @@ li {
 .scene-crossfade-leave-to {
     opacity: 0;
     transform: translateY(8px);
-animation: spin 900ms linear infinite;
 }
 
 @keyframes result-glow {

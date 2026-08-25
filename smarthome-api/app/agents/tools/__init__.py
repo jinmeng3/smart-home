@@ -1,10 +1,18 @@
 from app.agents.context import AgentContext
 from app.agents.tools.base import build_query_tool
 from app.agents.tools.execute import automations as execute_automations
+from app.agents.tools.execute import devices as execute_devices
 from app.agents.tools.execute import scenes as execute_scenes
 from app.agents.tools.preview import automations as preview_automations
 from app.agents.tools.preview import scenes as preview_scenes
-from app.agents.tools.query import automations, devices, executions, rooms, scenes
+from app.agents.tools.query import (
+    automations,
+    devices,
+    executions,
+    inspection,
+    rooms,
+    scenes,
+)
 from sqlalchemy.orm import Session
 
 WRITE_TOOL_SCHEMAS = {
@@ -13,6 +21,9 @@ WRITE_TOOL_SCHEMAS = {
     "update_automation": execute_automations.UpdateAutomationInput,
     "set_automation_enabled": execute_automations.SetAutomationEnabledInput,
     "delete_automation": execute_automations.DeleteAutomationInput,
+    "set_device_power": execute_devices.SetDevicePowerInput,
+    "set_device_temperature": execute_devices.SetDeviceTemperatureInput,
+    "set_curtain_position": execute_devices.SetCurtainPositionInput,
 }
 WRITE_TOOL_NAMES = set(WRITE_TOOL_SCHEMAS)
 
@@ -107,7 +118,6 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             executions.list_automation_executions,
         ),
-                
         build_query_tool(
             "preview_scene",
             "预览指定场景的执行步骤、影响设备和风险等级，不会实际执行场景",
@@ -132,7 +142,6 @@ def get_household_tools(context: AgentContext, db: Session):
             db,
             preview_automations.detect_automation_conflicts,
         ),
-                                
         build_query_tool(
             "execute_scene",
             (
@@ -177,10 +186,7 @@ def get_household_tools(context: AgentContext, db: Session):
         ),
         build_query_tool(
             "set_automation_enabled",
-            (
-                "启用或停用当前家庭中的自动化规则。"
-                "该操作可能需要用户确认。"
-            ),
+            ("启用或停用当前家庭中的自动化规则。该操作可能需要用户确认。"),
             execute_automations.SetAutomationEnabledInput,
             context,
             db,
@@ -191,16 +197,60 @@ def get_household_tools(context: AgentContext, db: Session):
         ),
         build_query_tool(
             "delete_automation",
-            (
-                "删除当前家庭中的自动化规则。"
-                "该操作需要用户确认。"
-            ),
+            ("删除当前家庭中的自动化规则。该操作需要用户确认。"),
             execute_automations.DeleteAutomationInput,
             context,
             db,
             lambda **_: {
                 "ok": False,
                 "error": "delete_automation只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "inspect_household_health",
+            "全屋健康巡检：汇总设备、场景、自动化规则的状态，给出整体健康评级（good / warning / critical）",
+            inspection.InspectHouseholdHealthInput,
+            context,
+            db,
+            inspection.inspect_household_health,
+        ),
+        build_query_tool(
+            "set_device_power",
+            (
+                "请求开关设备电源（开/关）。支持设备类型：灯光、空调、插座、窗帘。"
+                "该操作可能需要用户确认。"
+            ),
+            execute_devices.SetDevicePowerInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "set_device_power只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "set_device_temperature",
+            (
+                "请求设置空调的目标温度、模式和风速。仅支持空调设备。"
+                "该操作可能需要用户确认。"
+            ),
+            execute_devices.SetDeviceTemperatureInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "set_device_temperature只能由受控写操作节点执行",
+            },
+        ),
+        build_query_tool(
+            "set_curtain_position",
+            ("请求设置窗帘开合比例（0-100）。仅支持窗帘设备。该操作可能需要用户确认。"),
+            execute_devices.SetCurtainPositionInput,
+            context,
+            db,
+            lambda **_: {
+                "ok": False,
+                "error": "set_curtain_position只能由受控写操作节点执行",
             },
         ),
     ]
@@ -213,6 +263,7 @@ DOMAIN_TOOL_NAMES: dict[str, set[str]] = {
         "list_devices",
         "get_device",
         "list_device_logs",
+        "inspect_household_health",
     },
     "scene": {
         "list_scenes",
@@ -228,7 +279,12 @@ DOMAIN_TOOL_NAMES: dict[str, set[str]] = {
     },
     "energy": {"list_devices", "get_device", "list_device_logs"},
     "comfort": {"list_rooms", "get_room", "list_devices", "get_device"},
-    "security": {"list_devices", "get_device", "list_device_logs"},
+    "security": {
+        "list_devices",
+        "get_device",
+        "list_device_logs",
+        "inspect_household_health",
+    },
 }
 
 
@@ -242,6 +298,11 @@ DOMAIN_WRITE_TOOL_NAMES: dict[str, set[str]] = {
         "delete_automation",
     },
     "scene": {"execute_scene"},
+    "device": {
+        "set_device_power",
+        "set_device_temperature",
+        "set_curtain_position",
+    },
 }
 
 

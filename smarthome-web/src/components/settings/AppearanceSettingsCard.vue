@@ -71,45 +71,11 @@ const fontOptions: Array<{ value: FontSize; label: string }> = [
 </template>
 
 <style scoped>
-/* 分段控件：轨道式背景 + 活动按钮隆起 */
+/* 分段控件：列布局由卡片控制，视觉样式复用全局 .segmented 胶囊样式 */
 .segmented {
-    --seg-track: var(--color-surface-hover);
-    display: grid;
     width: auto;
     min-width: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2px;
-    padding: 3px;
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 10px;
-    background: var(--seg-track);
-    overflow: hidden;
-}
-
-.segmented button {
-    height: 28px;
-    padding: 0 10px;
-    border: 0;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--color-text-tertiary);
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-    transition:
-        background-color 200ms var(--motion-ease),
-        color 200ms var(--motion-ease),
-        box-shadow 200ms var(--motion-ease);
-}
-
-.segmented button:hover {
-    color: var(--color-text-primary);
-}
-
-.segmented button.active {
-    background: var(--color-card-bg);
-    color: var(--color-primary-700);
-    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary-900) 14%, transparent);
 }
 
 @media (max-width: 767px) {

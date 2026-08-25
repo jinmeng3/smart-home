@@ -125,22 +125,28 @@ const switchView = async (next: "list" | "grid") => {
                     <option value="name">按名称</option>
                     <option value="status">按状态</option>
                 </select>
-                <button
-                    :class="{ 'is-active': viewMode === 'list' }"
-                    type="button"
-                    title="列表视图"
-                    @click="switchView('list')"
-                >
-                    <SvgIcon name="list" />
-                </button>
-                <button
-                    :class="{ 'is-active': viewMode === 'grid' }"
-                    type="button"
-                    title="网格视图"
-                    @click="switchView('grid')"
-                >
-                    <SvgIcon name="grid" />
-                </button>
+                <div class="view-segment" role="tablist" aria-label="视图切换">
+                    <button
+                        :class="{ 'is-active': viewMode === 'list' }"
+                        type="button"
+                        role="tab"
+                        :aria-selected="viewMode === 'list'"
+                        title="列表视图"
+                        @click="switchView('list')"
+                    >
+                        <SvgIcon name="list" />
+                    </button>
+                    <button
+                        :class="{ 'is-active': viewMode === 'grid' }"
+                        type="button"
+                        role="tab"
+                        :aria-selected="viewMode === 'grid'"
+                        title="网格视图"
+                        @click="switchView('grid')"
+                    >
+                        <SvgIcon name="grid" />
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -523,6 +529,59 @@ const switchView = async (next: "list" | "grid") => {
     color: var(--color-danger);
 }
 
+/* 视图切换分段胶囊（与全局分段控件风格统一） */
+.view-segment {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        var(--color-surface-subtle),
+        var(--color-panel-background)
+    );
+    box-shadow:
+        inset 0 1px 2px rgb(15 23 42 / 0.05),
+        0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.view-segment button {
+    min-width: 30px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    transition:
+        color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
+}
+
+.view-segment button:hover:not(.is-active) {
+    color: var(--color-text-secondary);
+    background: var(--color-surface-hover);
+}
+
+.view-segment button:active {
+    transform: scale(0.96);
+}
+
+.view-segment button.is-active {
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-500),
+        var(--color-primary-600)
+    );
+    color: var(--color-text-on-primary);
+    box-shadow:
+        0 2px 6px color-mix(in srgb, var(--color-primary-600) 35%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
 .device-table-wrap {
     position: relative;
     min-height: 0;
@@ -777,7 +836,11 @@ button:disabled {
 
 /* === 列表/网格切换由 GSAP Flip 接管（device-view-host 包裹两个视图） === */
 .device-view-host {
+    display: flex;
     min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
 }
 
 /* === 加载中保留旧数据降透明度 === */

@@ -241,11 +241,19 @@ input:focus-visible {
     display: grid;
     width: 312px;
     min-width: 312px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-flow: column;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 3px;
+    padding: 3px;
     border: 1px solid var(--color-border-default);
-    border-radius: 8px;
-    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        var(--color-surface-subtle),
+        var(--color-panel-background)
+    );
+    box-shadow:
+        inset 0 1px 2px rgb(15 23 42 / 0.05),
+        0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .settings-field > :last-child,
@@ -254,33 +262,52 @@ input:focus-visible {
 }
 
 .segmented button {
-    height: 36px;
-    padding: 0 18px;
-    border-right: 1px solid var(--color-border-default);
-    background: var(--color-panel-background);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
     color: var(--color-text-tertiary);
     font-weight: 700;
     font-size: 13px;
-    transition: background-color 160ms var(--motion-ease), color 160ms var(--motion-ease);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        color 160ms var(--motion-ease),
+        background-color 160ms var(--motion-ease),
+        box-shadow 160ms var(--motion-ease),
+        transform 160ms var(--motion-ease);
 }
 
-.segmented button:last-child {
-    border-right: 0;
-}
-
-.segmented button:hover {
+.segmented button:hover:not(.active) {
+    color: var(--color-text-secondary);
     background: var(--color-surface-hover);
-    color: var(--color-text-primary);
+}
+
+.segmented button:active {
+    transform: scale(0.96);
 }
 
 .segmented button.active {
-    background: var(--color-primary-50);
-    color: var(--color-primary-700);
-    box-shadow: inset 0 0 0 1px var(--color-primary-200);
+    background: linear-gradient(
+        135deg,
+        var(--color-primary-500),
+        var(--color-primary-600)
+    );
+    color: var(--color-text-on-primary);
+    box-shadow:
+        0 2px 6px color-mix(in srgb, var(--color-primary-600) 35%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.2);
 }
 
 .segmented button.active:hover {
-    background: color-mix(in srgb, var(--color-primary-50) 80%, var(--color-surface-hover));
+    box-shadow:
+        0 3px 8px color-mix(in srgb, var(--color-primary-600) 40%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.25);
 }
 
 /* Element Plus 消息提示（ElMessage）全局样式 — 匹配项目设计语言 */

@@ -25,6 +25,7 @@ export interface ApiDevice {
   connection: DevicePlatform;
   firmware: string;
   icon?: string | null;
+  color?: string | null;
   image_url?: string | null;
   last_online?: string | null;
   created_at?: string;
@@ -58,6 +59,7 @@ export const mapDevice = (device: ApiDevice): Device => ({
   connection: device.connection,
   firmware: device.firmware,
   icon: device.icon ?? undefined,
+  color: device.color ?? undefined,
   lastOnline: device.last_online ?? "",
   image: device.image_url ?? undefined,
 });
@@ -88,6 +90,7 @@ const mapCreatePayload = (payload: DeviceCreatePayload) => ({
   device_id: payload.deviceId,
   firmware: payload.firmware,
   icon: payload.icon,
+  color: payload.color,
   image_url: payload.imageUrl,
 });
 
@@ -100,6 +103,7 @@ const mapUpdatePayload = (payload: DeviceUpdatePayload) => ({
   connection: payload.connection,
   firmware: payload.firmware,
   icon: payload.icon,
+  color: payload.color,
   image_url: payload.imageUrl,
 });
 

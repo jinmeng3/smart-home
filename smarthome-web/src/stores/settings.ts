@@ -301,9 +301,11 @@ export const useSettingsStore = defineStore("settings", () => {
 
   const saveAIModel = async () => {
     const homeAssistant = settings.value.homeAssistant;
-    const [modelName, modelProvider] = settings.value.aiAssistant.model
-      .split(" · ")
-      .map((value) => value.trim());
+    // 从当前选中的模型对象取 name/provider，而不是从 ai.model 字符串里猜
+    // （ai.model 只保存模型名，旧逻辑按 " · " 拆分会把 provider 误判为 name）
+    const selectedModel = aiModels.value.find(
+      (model) => model.name === settings.value.aiAssistant.model,
+    );
     let parameters: Record<string, unknown> = {};
 
     try {
@@ -316,8 +318,8 @@ export const useSettingsStore = defineStore("settings", () => {
     }
 
     const payload: Record<string, unknown> = {
-      name: modelName || settings.value.aiAssistant.model,
-      provider: modelProvider || modelName || settings.value.aiAssistant.model,
+      name: selectedModel?.name || settings.value.aiAssistant.model,
+      provider: selectedModel?.provider || "openai",
       api_endpoint: homeAssistant.serviceUrl,
       api: homeAssistant.apiProtocol,
       ...(homeAssistant.accessToken

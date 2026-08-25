@@ -296,3 +296,92 @@ def classify_scene_execution(
             ],
         },
     )
+
+
+def classify_device_operation(
+    db: Session,
+    context: AgentContext,
+    operation: str,
+    device_id: int,
+    args: dict | None = None,
+) -> RiskDecision:
+    """分类设备控制操作的风险等级。
+
+    Args:
+        operation: 操作类型 (set_device_power / set_device_temperature / set_curtain_position)
+        device_id: 设备数据库 ID
+        args: 完整参数字典（用于构建丰富的预览信息）
+    """
+    device = db.scalar(
+        select(Device).where(
+            Device.id == device_id,
+            Device.household_id == context.household_id,
+        )
+    )
+    reasons: list[str] = []
+
+    if device is None:
+        return RiskDecision(
+            level=RiskLevel.UNKNOWN,
+            requires_approval=True,
+            reasons=["设备不存在或不属于当前家庭"],
+            resource_version="",
+            preview={
+                "kind": operation,
+                "operation": operation,
+                "device_id": device_id,
+                "risk_level": RiskLevel.UNKNOWN.value,
+                "summary": "操作目标设备不存在",
+            },
+        )
+
+    is_high_risk = _is_high_risk_device(device)
+
+    if is_high_risk:
+        level = RiskLevel.HIGH
+        reasons.append(f"设备「{device.name}」属于高风险设备类型")
+    else:
+        level = RiskLevel.LOW
+        reasons.append(f"设备「{device.name}」为普通家居设备")
+
+    requires_approval = (
+        level in {RiskLevel.HIGH, RiskLevel.UNKNOWN}
+        or not context.auto_execute_low_risk
+    )
+
+    preview: dict = {
+        "kind": operation,
+        "operation": operation,
+        "device_id": device_id,
+        "device_name": device.name,
+        "device_type": device.type,
+        "risk_level": level.value,
+    }
+
+    if operation == "set_device_power" and args:
+        power = args.get("power", "")
+        preview["power"] = power
+        preview["summary"] = f"{'打开' if power == 'on' else '关闭'}设备「{device.name}」"
+
+    elif operation == "set_device_temperature" and args:
+        temperature = args.get("temperature")
+        mode = args.get("mode")
+        preview["temperature"] = temperature
+        preview["mode"] = mode
+        preview["summary"] = f"设置空调「{device.name}」温度为 {temperature}°C"
+
+    elif operation == "set_curtain_position" and args:
+        position = args.get("position", 0)
+        preview["position"] = position
+        preview["summary"] = f"{'打开' if position > 0 else '关闭'}窗帘「{device.name}」至 {position}%"
+
+    else:
+        preview["summary"] = f"操作设备「{device.name}」"
+
+    return RiskDecision(
+        level=level,
+        requires_approval=requires_approval,
+        reasons=reasons,
+        resource_version="",
+        preview=preview,
+    )
