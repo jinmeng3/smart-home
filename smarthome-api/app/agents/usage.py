@@ -19,6 +19,7 @@ def store_usage(
     status: str,
     error_message: str | None = None,
     phase: str | None = None,
+    domain: str | None = None,
 ) -> None:
     """存储 agent 使用统计到数据库。"""
     usage = db.scalar(select(AgentUsage).where(AgentUsage.run_id == run_id))
@@ -30,6 +31,7 @@ def store_usage(
             session_id=context.session_id,
             run_id=run_id,
             model_name=model_name,
+            domain=domain,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             tool_call_count=tool_call_count,
@@ -43,6 +45,8 @@ def store_usage(
         usage.output_tokens += output_tokens
         usage.tool_call_count += tool_call_count
         usage.status = status
+        if domain is not None:
+            usage.domain = domain
         if phase is not None:
             usage.phase = phase
         usage.error_message = error_message
@@ -93,6 +97,7 @@ def start_run(
     context: AgentContext,
     run_id: str,
     model_name: str,
+    domain: str | None = None,
 ) -> None:
     """记录一次 run 的开始状态（running）。"""
     usage = db.scalar(select(AgentUsage).where(AgentUsage.run_id == run_id))
@@ -105,6 +110,7 @@ def start_run(
             session_id=context.session_id,
             run_id=run_id,
             model_name=model_name,
+            domain=domain,
             input_tokens=0,
             output_tokens=0,
             tool_call_count=0,

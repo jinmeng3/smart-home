@@ -204,3 +204,61 @@ def get_household_tools(context: AgentContext, db: Session):
             },
         ),
     ]
+
+
+DOMAIN_TOOL_NAMES: dict[str, set[str]] = {
+    "device": {
+        "list_rooms",
+        "get_room",
+        "list_devices",
+        "get_device",
+        "list_device_logs",
+    },
+    "scene": {
+        "list_scenes",
+        "get_scene",
+        "list_scene_executions",
+        "preview_scene",
+    },
+    "automation": {
+        "list_automations",
+        "get_automation",
+        "preview_automation_change",
+        "detect_automation_conflicts",
+    },
+    "energy": {"list_devices", "get_device", "list_device_logs"},
+    "comfort": {"list_rooms", "get_room", "list_devices", "get_device"},
+    "security": {"list_devices", "get_device", "list_device_logs"},
+}
+
+
+# 写能力域：子 Agent 的窄图在 include_write=True 时额外包含这些写工具。
+# 写工具经 build_graph 的 risk_check → approval 自动进入审批流程。
+DOMAIN_WRITE_TOOL_NAMES: dict[str, set[str]] = {
+    "automation": {
+        "create_automation",
+        "update_automation",
+        "set_automation_enabled",
+        "delete_automation",
+    },
+    "scene": {"execute_scene"},
+}
+
+
+def get_domain_tools(
+    domain: str,
+    context: AgentContext,
+    db: Session,
+    *,
+    include_write: bool = False,
+):
+    """按领域过滤 ``get_household_tools``。
+
+    默认仅返回只读 / 预览工具；``include_write=True`` 时额外返回该领域的写工具。
+    """
+    names: set[str] = set(DOMAIN_TOOL_NAMES.get(domain, ()))
+    if include_write:
+        names |= DOMAIN_WRITE_TOOL_NAMES.get(domain, set())
+    if not names:
+        return []
+    return [tool for tool in get_household_tools(context, db) if tool.name in names]

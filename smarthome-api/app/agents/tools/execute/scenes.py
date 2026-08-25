@@ -1,6 +1,7 @@
 from app.agents.risk import classify_scene_execution
 from app.models.device import Device
 from app.services.scene import run_scene_service
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,17 +13,33 @@ class ExecuteSceneInput(BaseModel):
     scene_id: str = Field(min_length=1, max_length=64)
 
 
+def _stale_result(error: str) -> dict:
+    return {
+        "ok": False,
+        "status": "failed",
+        "code": "AGENT_APPROVAL_STALE",
+        "error": error,
+    }
+
+
 def execute_scene_operation(db, context, args, pending) -> dict:
-    """执行场景操作，并在执行后验证设备状态变更。"""
+    """执行场景操作，并在执行后验证设备状态变更。
+
+    执行前重新读取场景做二次校验：场景被删除、停用或版本变化时，
+    统一返回 ``AGENT_APPROVAL_STALE``，避免把“审批失效”混同为泛化错误。
+    """
     scene_id = args.get("scene_id", "")
     idempotency_key = pending.get("approval_id")
 
-                    
-    current = classify_scene_execution(
-        db=db,
-        context=context,
-        scene_id=scene_id,
-    )
+    try:
+        current = classify_scene_execution(
+            db=db,
+            context=context,
+            scene_id=scene_id,
+        )
+    except HTTPException:
+        # 场景在审批期间被删除或不属于当前家庭
+        return _stale_result("场景已不存在，请重新预览并确认")
 
     target_device_ids = {
         step["device_id"]
@@ -34,23 +51,21 @@ def execute_scene_operation(db, context, args, pending) -> dict:
     )
 
     if current.resource_version != pending.get("resource_version"):
-        return {
-            "ok": False,
-            "status": "failed",
-            "code": "AGENT_APPROVAL_STALE",
-            "error": "场景在确认后已发生变化，请重新预览并确认",
-        }
+        return _stale_result("场景在确认后已发生变化，请重新预览并确认")
 
-    execution = run_scene_service(
-        db=db,
-        household_id=context.household_id,
-        scene_id=scene_id,
-        confirm_high_risk=True,
-        source="agent",
-        idempotency_key=idempotency_key,
-    )
+    try:
+        execution = run_scene_service(
+            db=db,
+            household_id=context.household_id,
+            scene_id=scene_id,
+            confirm_high_risk=True,
+            source="agent",
+            idempotency_key=idempotency_key,
+        )
+    except HTTPException:
+        # 场景在审批期间被停用（run_scene_service 抛 409）
+        return _stale_result("场景已不可执行，请重新预览并确认")
 
-                    
     readback = _verify_device_readback(db, context.household_id, before_devices)
 
     return {

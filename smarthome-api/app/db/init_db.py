@@ -44,3 +44,8 @@ def _ensure_columns() -> None:
                         "ALTER TABLE agent_usage ADD COLUMN phase VARCHAR(24) NOT NULL DEFAULT 'thinking'"
                     )
                 )
+        if "domain" not in columns:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE agent_usage ADD COLUMN domain VARCHAR(32)")
+                )

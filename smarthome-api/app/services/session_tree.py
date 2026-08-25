@@ -100,6 +100,36 @@ def mirror_assistant_message(
     return _append_message(chat_session_id, _assistant_message(text, usage))
 
 
+def mirror_subagent(
+    chat_session_id: int,
+    domain: str,
+    task: str,
+    summary: str,
+    *,
+    data: dict | None = None,
+    usage: dict | None = None,
+) -> str:
+    """把一次子 Agent 运行镜像为 custom 节点（供审计，不进对话历史）。
+
+    ``build_context_messages`` 会跳过 custom 节点，因此不会污染 Agent 上下文；
+    但该节点保留在树中，供审计与后续压缩钩子使用。
+    """
+    session = get_or_create_tree_session(chat_session_id)
+    try:
+        return session.append_custom_entry(
+            "subagent",
+            {
+                "domain": domain,
+                "task": task,
+                "summary": summary,
+                "data": data or {},
+                "usage": usage or {},
+            },
+        )
+    finally:
+        session.close()
+
+
 # === 上下文读取 ===
 
 

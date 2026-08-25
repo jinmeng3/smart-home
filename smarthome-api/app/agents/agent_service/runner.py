@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
@@ -14,7 +15,14 @@ from app.agents.graph import build_graph
 from app.agents.prompts import system_prompt
 from app.agents.rate_limiter import check_daily_budget, check_rate_limit
 from app.agents.redaction import redact_text
-from app.agents.tools import WRITE_TOOL_NAMES, get_household_tools
+from app.agents.subagents.domains import (
+    AUTOMATION_SYSTEM_PROMPT,
+    DEVICE_SYSTEM_PROMPT,
+    SCENE_SYSTEM_PROMPT,
+    SECURITY_SYSTEM_PROMPT,
+)
+from app.agents.subagents.router import is_write_domain, resolve_delegated_domain
+from app.agents.tools import WRITE_TOOL_NAMES, get_domain_tools, get_household_tools
 from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
 from app.compaction.summarize import langchain_summarizer
@@ -31,6 +39,7 @@ from app.services.session_tree import (
     build_context_messages,
     compact_if_needed,
     mirror_assistant_message,
+    mirror_subagent,
     mirror_user_message,
 )
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -39,12 +48,28 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+_DOMAIN_SYSTEM_PROMPTS: dict[str, str] = {
+    "device": DEVICE_SYSTEM_PROMPT,
+    "automation": AUTOMATION_SYSTEM_PROMPT,
+    "scene": SCENE_SYSTEM_PROMPT,
+    "security": SECURITY_SYSTEM_PROMPT,
+}
+
 
 async def _create_graph_runner(
-    context: AgentContext, db: Session, model_config: AIModel
+    context: AgentContext,
+    db: Session,
+    model_config: AIModel,
+    *,
+    domain: str | None = None,
+    include_write: bool = False,
 ) -> tuple[CompiledStateGraph, AuditRecorder]:
     model = get_model_cache().get(model_config)
-    tools = get_household_tools(context, db)
+    tools = (
+        get_domain_tools(domain, context, db, include_write=include_write)
+        if domain is not None
+        else get_household_tools(context, db)
+    )
     audit = get_audit_recorder()
     graph = build_graph(
         model=model,
@@ -65,8 +90,13 @@ def _init_state(
     db: Session,
     history_messages: list | None = None,
     model_name: str = "",
+    domain: str | None = None,
 ) -> dict[str, Any]:
-    sys_prompt = system_prompt(context, household_name, db, message)
+    domain_prompt = _DOMAIN_SYSTEM_PROMPTS.get(domain) if domain else None
+    if domain_prompt is not None:
+        sys_prompt = f"{domain_prompt}\n\n当前家庭：{household_name or '当前家庭'}"
+    else:
+        sys_prompt = system_prompt(context, household_name, db, message)
     messages: list = [SystemMessage(content=sys_prompt)]
     if history_messages:
         messages.extend(history_messages)
@@ -97,7 +127,9 @@ def _maybe_compact_tree(context: AgentContext, model_config: AIModel) -> None:
         settings = get_settings()
         if not settings.compaction_enabled:
             return
-        context_window = model_config.context_window or settings.session_tree_context_window
+        context_window = (
+            model_config.context_window or settings.session_tree_context_window
+        )
         model = get_model_cache().get(model_config)
         summarizer = langchain_summarizer(model)
         compact_if_needed(
@@ -136,11 +168,15 @@ async def run_agent(
     persist_user_message: bool = True,
 ) -> AsyncGenerator[str, None]:
     run_id = f"run-{uuid4().hex}"
+    domain = resolve_delegated_domain(message)
+    include_write = is_write_domain(domain)
 
     try:
         check_rate_limit(context.user_id)
         check_daily_budget(db, context.user_id)
-        graph, audit = await _create_graph_runner(context, db, model_config)
+        graph, audit = await _create_graph_runner(
+            context, db, model_config, domain=domain, include_write=include_write
+        )
     except AgentError as exc:
         yield encode_sse_event(
             Error(
@@ -173,15 +209,19 @@ async def run_agent(
         )
     )
 
-    thread_id = (
+    base_thread_id = (
         f"user:{context.user_id}:household:{context.household_id}:"
         f"session:{context.session_id}"
     )
 
-    # 正常 run（非 regenerate）：从会话树加载（压缩后）历史作为 Agent 上下文，
-    # 并清除 checkpointer 旧历史，避免与树历史重复累积。
-    if history_messages is None:
-        history_messages = await _load_tree_history(context.session_id, thread_id)
+    if domain is not None and not include_write:
+        # 只读子 Agent：单轮查询，不加载会话树历史，并使用独立 thread 隔离 checkpoint
+        thread_id = f"{base_thread_id}:subagent:{domain}"
+    else:
+        # 主图 或 写能力域子 Agent：共用 thread_id，保证审批状态可被 resume_agent 找到
+        thread_id = base_thread_id
+        if history_messages is None:
+            history_messages = await _load_tree_history(context.session_id, thread_id)
 
     if persist_user_message:
         db.add(ChatMessage(session_id=context.session_id, role="user", content=message))
@@ -191,7 +231,11 @@ async def run_agent(
         )
 
     audit.record_run_start(context, run_id)
-    start_run(db, context, run_id, model_config.name)
+    subagent_started_at: float | None = None
+    if domain is not None:
+        subagent_started_at = time.perf_counter()
+        audit.record_subagent_start(run_id=run_id, domain=domain, task=message)
+    start_run(db, context, run_id, model_config.name, domain=domain)
 
     initial = _init_state(
         context,
@@ -201,6 +245,7 @@ async def run_agent(
         db,
         history_messages,
         model_config.name,
+        domain,
     )
 
     tool_call_count = 0
@@ -322,6 +367,10 @@ async def run_agent(
             tool_call_count=tool_call_count,
             status="pending_confirmation",
         )
+        if domain is not None:
+            audit.record_subagent_end(
+                run_id=run_id, domain=domain, status="pending_confirmation"
+            )
         audit.record_run_end(
             run_id, status="pending_confirmation", message="等待用户确认"
         )
@@ -378,6 +427,20 @@ async def run_agent(
                 },
             ),
         )
+        if domain is not None:
+            _sync_session_tree(
+                context.session_id,
+                lambda: mirror_subagent(
+                    context.session_id,
+                    domain,
+                    message,
+                    collected.strip(),
+                    usage={
+                        "input": last_input_tokens,
+                        "output": last_output_tokens,
+                    },
+                ),
+            )
         await asyncio.to_thread(_maybe_compact_tree, context, model_config)
 
     store_usage(
@@ -390,6 +453,26 @@ async def run_agent(
         tool_call_count=tool_call_count,
         status="completed",
     )
+    if domain is not None:
+        duration_ms = (
+            int((time.perf_counter() - subagent_started_at) * 1000)
+            if subagent_started_at is not None
+            else None
+        )
+        audit.record_subagent_end(
+            run_id=run_id,
+            domain=domain,
+            status="completed",
+            summary=collected.strip(),
+            duration_ms=duration_ms,
+            usage={"input": input_tokens, "output": output_tokens},
+        )
+        logger.info(
+            "subagent_run_completed run_id=%s domain=%s duration_ms=%s",
+            run_id,
+            domain,
+            duration_ms,
+        )
     audit.record_run_end(run_id, status="completed")
     yield encode_sse_event(
         RunCompleted(

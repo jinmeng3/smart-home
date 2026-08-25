@@ -123,6 +123,40 @@ class AuditRecorder:
         }
         self._write(entry)
 
+    def record_subagent_start(self, *, run_id: str, domain: str, task: str) -> None:
+        """记录一次子 Agent 运行的开始边界。"""
+        entry = {
+            "event": "subagent_start",
+            "run_id": run_id,
+            "domain": domain,
+            "task": redact_text(task)[:500],
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write(entry)
+
+    def record_subagent_end(
+        self,
+        *,
+        run_id: str,
+        domain: str,
+        status: str,
+        summary: str = "",
+        duration_ms: int | None = None,
+        usage: dict | None = None,
+    ) -> None:
+        """记录一次子 Agent 运行的结束边界。"""
+        entry = {
+            "event": "subagent_end",
+            "run_id": run_id,
+            "domain": domain,
+            "status": status,
+            "summary": redact_text(summary)[:500],
+            "duration_ms": duration_ms,
+            "usage": usage or {},
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        self._write(entry)
+
     def record_run_replay(
         self,
         *,
@@ -174,6 +208,13 @@ class AuditRecorder:
             "ts": datetime.now(timezone.utc).isoformat(),
         }
         self._write(entry)
+
+    def close(self) -> None:
+        """关闭当前小时桶文件句柄（下一次写入会自动重开）。"""
+        if self._current_file is not None:
+            self._current_file.close()
+            self._current_file = None
+            self._current_bucket = None
 
 
 _audit: AuditRecorder | None = None

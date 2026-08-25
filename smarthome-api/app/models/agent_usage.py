@@ -40,6 +40,12 @@ class AgentUsage(Base):
     model_name: Mapped[str] = mapped_column(
         String(100), nullable=False, comment="模型名称"
     )
+    domain: Mapped[str | None] = mapped_column(
+        String(32),
+        nullable=True,
+        index=True,
+        comment="委托的子 Agent 领域（主 Agent 为 NULL）",
+    )
     input_tokens: Mapped[int] = mapped_column(
         Integer, default=0, comment="输入 token 数"
     )
