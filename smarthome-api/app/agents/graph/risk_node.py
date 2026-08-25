@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from app.agents.agent_service.pending import make_pending
 from app.agents.graph.state import AgentState
 from app.agents.risk import classify_automation_operation, classify_scene_execution
 from app.agents.tools import WRITE_TOOL_NAMES, WRITE_TOOL_SCHEMAS
@@ -45,7 +46,8 @@ def risk_check(state: AgentState, db: Session) -> dict:
     except HTTPException as exc:
         return _tool_error(state, [call], str(exc.detail))
 
-    pending = {
+
+    pending = make_pending({
         "approval_id": f"{state['run_id']}:{call_id}",
         "run_id": state["run_id"],
         "session_id": state["context"].session_id,
@@ -57,7 +59,8 @@ def risk_check(state: AgentState, db: Session) -> dict:
         "preview": decision.preview,
         "resource_version": decision.resource_version,
         "model_name": state.get("model_name", ""),
-    }
+        "model_id": state.get("model_id"),
+    })
 
     return {
         "pending_approval": pending,

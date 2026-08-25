@@ -1,4 +1,5 @@
 import json
+import threading
 import typing
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,8 @@ class AuditRecorder:
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self._current_bucket: str | None = None
         self._current_file: typing.IO | None = None
+        # 进程内同步：文件切换与写入共用一个锁，避免并发写交错（§6.3）
+        self._lock = threading.Lock()
 
     def _write(self, entry: dict) -> None:
         """
@@ -26,17 +29,18 @@ class AuditRecorder:
         """
         bucket = datetime.now(timezone.utc).strftime("%Y%m%d_%H")
         line = json.dumps(entry, ensure_ascii=False, default=str)
-        if bucket != self._current_bucket:
-            if self._current_file is not None:
-                self._current_file.close()
-            self._current_file = open(  # noqa: SIM115  # 故意长期持有句柄以复用小时桶文件，见方法 docstring
-                self.log_dir / f"audit_{bucket}.json", "a", encoding="utf-8"
-            )
-            self._current_bucket = bucket
-                                               
-        assert self._current_file is not None
-        self._current_file.write(line + "\n")
-        self._current_file.flush()
+        with self._lock:
+            if bucket != self._current_bucket:
+                if self._current_file is not None:
+                    self._current_file.close()
+                self._current_file = open(  # noqa: SIM115  # 故意长期持有句柄以复用小时桶文件，见方法 docstring
+                    self.log_dir / f"audit_{bucket}.json", "a", encoding="utf-8"
+                )
+                self._current_bucket = bucket
+
+            assert self._current_file is not None
+            self._current_file.write(line + "\n")
+            self._current_file.flush()
 
     def record_run_start(self, context: AgentContext, run_id: str) -> None:
         entry = {
@@ -72,7 +76,16 @@ class AuditRecorder:
         result,
         ok: bool = True,
         duration_ms: int | None = None,
+        approval_id: str | None = None,
+        approval_decision: str | None = None,
+        automatic: bool | None = None,
+        error_code: str | None = None,
     ) -> None:
+        """记录（含写工具的）一次工具调用结果。
+
+        写工具调用还携带：审批 ID、审批决定（approve/reject/auto）、
+        是否自动批准、错误码，用于按 ``run_id`` 串联完整审计链（§4.5）。
+        """
         entry = {
             "event": "tool_completed" if ok else "tool_failed",
             "run_id": run_id,
@@ -81,6 +94,10 @@ class AuditRecorder:
             "args": redact_fields(args),
             "result": redact_text(str(result))[:2000],
             "duration_ms": duration_ms,
+            "approval_id": approval_id,
+            "approval_decision": approval_decision,
+            "automatic": automatic,
+            "error_code": error_code,
             "ts": datetime.now(timezone.utc).isoformat(),
         }
         self._write(entry)
@@ -157,64 +174,16 @@ class AuditRecorder:
         }
         self._write(entry)
 
-    def record_run_replay(
-        self,
-        *,
-        run_id: str,
-        context: AgentContext,
-        messages: list[dict],
-        model_name: str,
-        tool_calls: list[dict],
-        approvals: list[dict],
-        status: str,
-        duration_ms: int,
-    ) -> None:
-        """记录完整的运行回放数据，用于事后审计和问题排查。"""
-        entry = {
-            "event": "run_replay",
-            "run_id": run_id,
-            "user_id": context.user_id,
-            "household_id": context.household_id,
-            "session_id": context.session_id,
-            "model_name": model_name,
-            "status": status,
-            "duration_ms": duration_ms,
-            "messages": [
-                {
-                    "role": m.get("role", "unknown"),
-                    "content": redact_text(str(m.get("content", "")))[:1000],
-                    "tool_calls": [
-                        {
-                            "name": tc.get("name", ""),
-                            "args": redact_fields(tc.get("args", {})),
-                        }
-                        for tc in (m.get("tool_calls") or [])
-                    ]
-                    if m.get("tool_calls")
-                    else None,
-                }
-                for m in messages
-            ],
-            "tool_calls": [
-                {
-                    "call_id": tc.get("call_id"),
-                    "tool": tc.get("tool"),
-                    "args": redact_fields(tc.get("args", {})),
-                    "ok": tc.get("ok"),
-                }
-                for tc in tool_calls
-            ],
-            "approvals": redact_fields({"items": approvals})["items"],
-            "ts": datetime.now(timezone.utc).isoformat(),
-        }
-        self._write(entry)
 
     def close(self) -> None:
         """关闭当前小时桶文件句柄（下一次写入会自动重开）。"""
-        if self._current_file is not None:
-            self._current_file.close()
-            self._current_file = None
-            self._current_bucket = None
+        with self._lock:
+            if self._current_file is not None:
+                try:
+                    self._current_file.close()
+                finally:
+                    self._current_file = None
+                    self._current_bucket = None
 
 
 _audit: AuditRecorder | None = None

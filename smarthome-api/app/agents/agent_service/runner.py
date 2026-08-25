@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
 
+from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
 from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
 from app.agents.checkpointer import get_checkpointer
 from app.agents.context import AgentContext
@@ -12,7 +13,7 @@ from app.agents.errors import AgentError
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
 from app.agents.graph import build_graph
-from app.agents.prompts import system_prompt
+from app.agents.prompts import PROMPT_VERSION, system_prompt
 from app.agents.rate_limiter import check_daily_budget, check_rate_limit
 from app.agents.redaction import redact_text
 from app.agents.subagents.domains import (
@@ -22,7 +23,7 @@ from app.agents.subagents.domains import (
     SECURITY_SYSTEM_PROMPT,
 )
 from app.agents.subagents.router import is_write_domain, resolve_delegated_domain
-from app.agents.tools import WRITE_TOOL_NAMES, get_domain_tools, get_household_tools
+from app.agents.tools import get_domain_tools, get_household_tools
 from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
 from app.compaction.summarize import langchain_summarizer
@@ -54,6 +55,17 @@ _DOMAIN_SYSTEM_PROMPTS: dict[str, str] = {
     "scene": SCENE_SYSTEM_PROMPT,
     "security": SECURITY_SYSTEM_PROMPT,
 }
+
+
+def _build_thread_id(context: AgentContext, domain: str | None) -> str:
+    """构造 run 使用的 checkpoint thread_id。"""
+    base = (
+        f"user:{context.user_id}:household:{context.household_id}:"
+        f"session:{context.session_id}"
+    )
+    if domain is not None and not is_write_domain(domain):
+        return f"{base}:subagent:{domain}"
+    return base
 
 
 async def _create_graph_runner(
@@ -90,6 +102,7 @@ def _init_state(
     db: Session,
     history_messages: list | None = None,
     model_name: str = "",
+    model_id: int | None = None,
     domain: str | None = None,
 ) -> dict[str, Any]:
     domain_prompt = _DOMAIN_SYSTEM_PROMPTS.get(domain) if domain else None
@@ -107,6 +120,8 @@ def _init_state(
         "run_id": run_id,
         "rounds": 0,
         "model_name": model_name,
+        "model_id": model_id,
+        "prompt_version": PROMPT_VERSION,
     }
 
 
@@ -158,6 +173,63 @@ async def _load_tree_history(session_id: int, thread_id: str) -> list | None:
 
 
 async def run_agent(
+    context: AgentContext,
+    household_name: str,
+    message: str,
+    model_config: AIModel,
+    db: Session,
+    *,
+    history_messages: list | None = None,
+    persist_user_message: bool = True,
+) -> AsyncGenerator[str, None]:
+    """创建一次 Agent 运行（带会话租约，防止同一会话并发运行，§4.4）。
+
+    在生成器真正开始流式前获取会话租约；运行结束、失败、取消、断连时
+    通过 ``finally`` 释放租约。租约获取失败时返回 ``AGENT_CONCURRENT_RUN``
+    错误事件，而不进入模型调用。
+    """
+    domain = resolve_delegated_domain(message)
+    thread_id = _build_thread_id(context, domain)
+    acquired = acquire_run_lease(
+        db,
+        user_id=context.user_id,
+        household_id=context.household_id,
+        session_id=context.session_id,
+        run_id=f"run-{uuid4().hex}",
+        thread_id=thread_id,
+    )
+    if not acquired:
+        yield encode_sse_event(
+            Error(
+                event_id=f"run-{uuid4().hex}-lease-error",
+                run_id="",
+                code="AGENT_CONCURRENT_RUN",
+                message="该会话正在运行中，请等待当前操作完成后再试",
+                retryable=False,
+            )
+        )
+        return
+    try:
+        async for event in _run_agent_body(
+            context,
+            household_name,
+            message,
+            model_config,
+            db,
+            history_messages=history_messages,
+            persist_user_message=persist_user_message,
+        ):
+            yield event
+    finally:
+        release_run_lease(
+            db,
+            user_id=context.user_id,
+            household_id=context.household_id,
+            session_id=context.session_id,
+        )
+
+
+async def _run_agent_body(
     context: AgentContext,
     household_name: str,
     message: str,
@@ -245,7 +317,8 @@ async def run_agent(
         db,
         history_messages,
         model_config.name,
-        domain,
+        model_id=model_config.id,
+        domain=domain,
     )
 
     tool_call_count = 0
@@ -274,35 +347,22 @@ async def run_agent(
                 last_input_tokens = int(usage.get("input_tokens", 0) or 0)
                 last_output_tokens = int(usage.get("output_tokens", 0) or 0)
 
-            for tool_call in getattr(msg, "tool_calls", None) or []:
-                sse = track.emit_tool_start(tool_call)
-                if sse:
-                    yield sse
-                    tool_call_count += 1
-                tc = (
-                    tool_call if isinstance(tool_call, dict) else tool_call.model_dump()
-                )
-                tc_name = str(tc.get("name", ""))
-                if tc_name in WRITE_TOOL_NAMES:
-                    update_run_phase(db, run_id, "submitted")
+            chunk_result = track.emit_stream_chunk(msg, node)
+            for ev in chunk_result.events:
+                yield ev
+            tool_call_count += chunk_result.tool_call_delta
+            # 写工具提交时更新阶段状态并发送 "submitted" 状态事件（runner 特有，§5.3）
+            if chunk_result.write_submit_names:
+                update_run_phase(db, run_id, "submitted")
+                for tc_name in chunk_result.write_submit_names:
                     yield track.emit_execution_status(
-                        call_id=str(tc.get("id", "")),
+                        call_id="",
                         operator=tc_name,
                         status="submitted",
                         message="写操作已提交，等待风险评估",
                     )
-                else:
-                    update_run_phase(db, run_id, "executing")
-
-            name = getattr(msg, "name", None)
-            content = getattr(msg, "content", None)
-            if node in {"read_tool", "write_tool"} and name and content:
-                call_id = str(getattr(msg, "tool_call_id", ""))
-                yield track.emit_tool_result(call_id, name, content)
-                if node == "write_tool":
-                    yield track.emit_execution_result(call_id, name, content)
-            elif content and node == "model":
-                yield track.emit_model_text(content)
+            elif chunk_result.tool_call_delta:
+                update_run_phase(db, run_id, "executing")
 
     except asyncio.CancelledError:
         store_usage(

@@ -1,15 +1,17 @@
 import asyncio
-import json
 from collections.abc import AsyncGenerator
 from typing import Any, cast
+from uuid import uuid4
 
+from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
+from app.agents.agent_service.pending import is_pending_expired
 from app.agents.agent_service.runner import (
     _create_graph_runner,
     _maybe_compact_tree,
     _sync_session_tree,
 )
 from app.agents.context import AgentContext
-from app.agents.errors import AgentError
+from app.agents.errors import AgentApprovalExpiredError, AgentError
 from app.agents.events.sse import encode_sse_event
 from app.agents.events.stream_tracker import StreamTracker
 from app.agents.redaction import redact_text
@@ -35,6 +37,47 @@ def agent_thread_id(context: AgentContext) -> str:
 
 
 async def resume_agent(
+    context: AgentContext,
+    decision: dict[str, Any],
+    model_config: AIModel,
+    db: Session,
+) -> AsyncGenerator[str, None]:
+    """提交审批决定并以原模型恢复执行（带会话租约，§4.4）。"""
+    thread_id = agent_thread_id(context)
+    acquired = acquire_run_lease(
+        db,
+        user_id=context.user_id,
+        household_id=context.household_id,
+        session_id=context.session_id,
+        run_id=f"run-{uuid4().hex}",
+        thread_id=thread_id,
+    )
+    if not acquired:
+        yield encode_sse_event(
+            Error(
+                event_id=f"decision-{context.session_id}-lease-error",
+                run_id="",
+                code="AGENT_CONCURRENT_RUN",
+                message="该会话正在运行中，请等待当前操作完成后再试",
+                retryable=False,
+            )
+        )
+        return
+    try:
+        async for event in _resume_agent_body(
+            context, decision, model_config, db
+        ):
+            yield event
+    finally:
+        release_run_lease(
+            db,
+            user_id=context.user_id,
+            household_id=context.household_id,
+            session_id=context.session_id,
+        )
+
+
+async def _resume_agent_body(
     context: AgentContext,
     decision: dict[str, Any],
     model_config: AIModel,
@@ -77,6 +120,18 @@ async def resume_agent(
                 run_id="",
                 code="AGENT_APPROVAL_NOT_FOUND",
                 message="当前会话没有待确认操作",
+                retryable=False,
+            )
+        )
+        return
+
+    if is_pending_expired(pending):
+        yield encode_sse_event(
+            Error(
+                event_id=f"{pending.get('run_id', '')}-approval-expired",
+                run_id=pending.get("run_id", ""),
+                code=AgentApprovalExpiredError.code,
+                message="待审批操作已过期，请重新发起操作并确认",
                 retryable=False,
             )
         )
@@ -127,7 +182,6 @@ async def resume_agent(
             message = cast(Any, chunk)
             meta = cast(dict[str, Any], metadata)
             node = str(meta.get("langgraph_node", ""))
-            content = getattr(message, "content", None)
             usage = getattr(message, "usage_metadata", None) or {}
             if isinstance(usage, dict):
                 input_tokens += int(usage.get("input_tokens", 0) or 0)
@@ -135,28 +189,14 @@ async def resume_agent(
                 last_input_tokens = int(usage.get("input_tokens", 0) or 0)
                 last_output_tokens = int(usage.get("output_tokens", 0) or 0)
 
-            for tool_call in getattr(message, "tool_calls", None) or []:
-                event = tracker.emit_tool_start(tool_call)
-                if event:
-                    yield event
-                    tool_call_count += 1
-
-            if node in {"read_tool", "write_tool"} and content:
-                call_id = str(getattr(message, "tool_call_id", ""))
-                name = str(getattr(message, "name", ""))
-                sse = tracker.emit_tool_result(call_id, name, content)
-                yield sse
-                if node == "write_tool":
-                    try:
-                        payload = json.loads(str(content))
-                    except (json.JSONDecodeError, TypeError):
-                        payload = {"ok": True}
-                    if payload.get("ok") is False or payload.get("status") == "failed":
-                        run_errored = True
-                    yield tracker.emit_execution_result(call_id, name, content)
-
-            elif node == "model" and content:
-                yield tracker.emit_model_text(content)
+            chunk_result = tracker.emit_stream_chunk(message, node)
+            for ev in chunk_result.events:
+                yield ev
+            tool_call_count += chunk_result.tool_call_delta
+            if chunk_result.write_result_failed:
+                run_errored = True
+            # 流式消息的 content 已通过 emit_stream_chunk 处理完毕，
+            # 不再需要单独处理 model content（collected 已由 emit_model_text 累加）
 
     except asyncio.CancelledError:
         audit.record_run_end(

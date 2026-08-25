@@ -1,7 +1,10 @@
 import json
+from dataclasses import dataclass, field
+from typing import Any
 
 from app.agents.events.sse import encode_sse_event
 from app.agents.redaction import redact_text
+from app.agents.tools import WRITE_TOOL_NAMES
 from app.schemas.sse import (
     ExecutionStatus,
     MessageDelta,
@@ -9,6 +12,22 @@ from app.schemas.sse import (
     ToolFailed,
     ToolStarted,
 )
+
+
+@dataclass
+class StreamChunkResult:
+    """``emit_stream_chunk`` 的返回结果（§5.3）。
+
+    - ``events``: 应发送的 SSE 事件列表
+    - ``tool_call_delta``: 本次新增的不同工具调用数（用于累计统计）
+    - ``write_submit_names``: 本次新增的写工具名称列表（用于更新阶段状态）
+    - ``write_result_failed``: 写工具节点返回的结果是否为失败
+    """
+
+    events: list[str] = field(default_factory=list)
+    tool_call_delta: int = 0
+    write_submit_names: list[str] = field(default_factory=list)
+    write_result_failed: bool = False
 
 
 class StreamTracker:
@@ -133,3 +152,50 @@ class StreamTracker:
                 else None
             ),
         )
+
+    def emit_stream_chunk(self, msg: Any, node: str) -> StreamChunkResult:
+        """统一把一次流式消息转换为 SSE 事件列表（§5.3）。
+
+        首次运行（runner）与审批恢复（resumer）复用同一事件转换器，
+        避免两条路径的工具开始/结束事件不一致。
+
+        副作用：
+        - 对模型文本调用 ``emit_model_text`` 累加 ``self.collected``；
+        - 对工具调用去重（``seen_calls``），返回本轮新增的调用数；
+        - 对写工具节点结果解析失败状态。
+        """
+        result = StreamChunkResult()
+
+        for tool_call in getattr(msg, "tool_calls", None) or []:
+            tc = tool_call if isinstance(tool_call, dict) else tool_call.model_dump()
+            tc_name = str(tc.get("name", ""))
+            sse = self.emit_tool_start(tool_call)
+            if sse:
+                result.events.append(sse)
+                result.tool_call_delta += 1
+                if tc_name in WRITE_TOOL_NAMES:
+                    result.write_submit_names.append(tc_name)
+
+        name = getattr(msg, "name", None)
+        content = getattr(msg, "content", None)
+        if node in {"read_tool", "write_tool"} and name and content:
+            call_id = str(getattr(msg, "tool_call_id", ""))
+            result.events.append(self.emit_tool_result(call_id, name, content))
+            if node == "write_tool":
+                result.write_result_failed = self._is_write_result_failed(content)
+                result.events.append(
+                    self.emit_execution_result(call_id, name, content)
+                )
+        elif content and node == "model":
+            result.events.append(self.emit_model_text(content))
+
+        return result
+
+    @staticmethod
+    def _is_write_result_failed(content) -> bool:
+        """判断写工具节点返回内容是否为失败结果。"""
+        try:
+            payload = json.loads(str(content))
+        except (json.JSONDecodeError, TypeError):
+            return False
+        return payload.get("ok") is False or payload.get("status") == "failed"

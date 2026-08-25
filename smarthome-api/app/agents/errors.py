@@ -75,6 +75,19 @@ class AgentBudgetExceededError(AgentError):
     http_status = 429
 
 
+class AgentApprovalExpiredError(AgentError):
+    code = "AGENT_APPROVAL_EXPIRED"
+    http_status = 409
+
+
+class AgentModelEmptyResponseError(AgentError):
+    """模型返回空流响应。"""
+
+    code = "AGENT_MODEL_EMPTY_RESPONSE"
+    http_status = 502
+    retryable = True
+
+
 class AgentDeviceReadbackError(AgentError):
     code = "AGENT_DEVICE_READBACK_FAILED"
     http_status = 500

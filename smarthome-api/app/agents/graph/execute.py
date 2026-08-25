@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 
+from app.agents.audit.recorder import AuditRecorder
 from app.agents.graph.state import AgentState
 from app.agents.tools import WRITE_TOOL_NAMES
 from app.agents.tools.execute.automations import (
@@ -27,7 +28,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
         args = call.get("args") or {}
         tool = tools_by_name.get(name)
         started = time.perf_counter()
-                        
+
         if name in WRITE_TOOL_NAMES:
             content = f"{error_prefix}工具 {name} 是写操作工具，需经过风险评估和用户确认后才能执行"
             ok = False
@@ -76,7 +77,9 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
     return {"messages": tool_messages, "rounds": state.get("rounds", 0) + 1}
 
 
-def execute_write_tool(state: AgentState, db: Session) -> dict:
+def execute_write_tool(
+    state: AgentState, db: Session, audit: AuditRecorder | None = None
+) -> dict:
     pending = state.get("pending_approval")
     decision = state.get("approval_decision")
 
@@ -89,8 +92,12 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
     context = state["context"]
     tool_name = pending["tool"]
     args = pending["args"]
+    started = time.perf_counter()
 
-                                     
+    automatic = bool(decision.get("automatic"))
+    # 自动批准不经过 approval_interrupt，approval_decision 里记录的是 automatic 标记
+    approval_decision = "auto" if automatic else str(decision.get("decision", ""))
+
     if tool_name in {
         "update_automation",
         "set_automation_enabled",
@@ -98,7 +105,9 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
     }:
         from app.services.automation import get_automation
 
-        automation = get_automation(db, int(args["automation_id"]), context.household_id)
+        automation = get_automation(
+            db, int(args["automation_id"]), context.household_id
+        )
         if str(automation.version) != str(pending.get("resource_version", "")):
             result = {
                 "ok": False,
@@ -110,6 +119,27 @@ def execute_write_tool(state: AgentState, db: Session) -> dict:
             result = _dispatch_operation(db, context, tool_name, args, pending)
     else:
         result = _dispatch_operation(db, context, tool_name, args, pending)
+
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    if audit is not None:
+        ok = bool(result.get("ok", True))
+        # 显式类型标注，满足 type checker 对 Any→str|None 的收缩
+        approval_id: str | None = pending.get("approval_id")
+        error_code_val = result.get("code")
+        error_code: str | None = str(error_code_val) if error_code_val is not None and not ok else None
+        audit.record_tool_call(
+            run_id=pending.get("run_id", ""),
+            tool=tool_name,
+            call_id=pending.get("call_id", ""),
+            args=args,
+            result=result,
+            ok=ok,
+            duration_ms=duration_ms,
+            approval_id=approval_id,
+            approval_decision=approval_decision,
+            automatic=automatic,
+            error_code=error_code,
+        )
 
     return {
         "messages": [

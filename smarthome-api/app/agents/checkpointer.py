@@ -1,4 +1,11 @@
+"""Agent 检查点（checkpointer）管理。
+
+当前仅支持 SQLite checkpointer（单实例开发环境）。
+生产多实例部署需根据实际数据库平台扩展。
+"""
+
 import asyncio
+import logging
 from pathlib import Path
 
 import aiosqlite
@@ -7,25 +14,15 @@ from app.core.config import Settings, get_settings
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+logger = logging.getLogger(__name__)
+
 _lock = asyncio.Lock()
 _saver: BaseCheckpointSaver | None = None
 _sqlite_connection: aiosqlite.Connection | None = None
 
 
-async def get_checkpointer() -> BaseCheckpointSaver:
-    global _saver
-    if _saver is not None:
-        return _saver
-
-    async with _lock:
-        if _saver is not None:
-            return _saver
-
-        _saver = await _create_sqlite_checkpointer(get_settings())
-        return _saver
-
-
-def _sqlite_path(database_url: str) -> str:
+def _resolve_db_path(database_url: str) -> str:
+    """从 SQLite 数据库 URL 提取文件路径。"""
     if database_url.startswith("sqlite+aiosqlite:///"):
         return database_url.removeprefix("sqlite+aiosqlite:///")
     if database_url.startswith("sqlite:///./"):
@@ -39,7 +36,7 @@ async def _create_sqlite_checkpointer(settings: Settings) -> AsyncSqliteSaver:
     """创建单实例开发环境使用的 SQLite checkpointer。"""
     global _sqlite_connection
 
-    db_path = _sqlite_path(settings.checkpointer_database_url or settings.database_url)
+    db_path = _resolve_db_path(settings.checkpointer_database_url or settings.database_url)
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn: aiosqlite.Connection | None = None
 
@@ -55,6 +52,19 @@ async def _create_sqlite_checkpointer(settings: Settings) -> AsyncSqliteSaver:
         raise AgentCheckpointerError(
             f"SQLite checkpointer 初始化失败: {exc.__class__.__name__}"
         ) from exc
+
+
+async def get_checkpointer() -> BaseCheckpointSaver:
+    global _saver
+    if _saver is not None:
+        return _saver
+
+    async with _lock:
+        if _saver is not None:
+            return _saver
+
+        _saver = await _create_sqlite_checkpointer(get_settings())
+        return _saver
 
 
 async def init_checkpointer() -> None:

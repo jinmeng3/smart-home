@@ -11,5 +11,7 @@ class AgentState(TypedDict, total=False):
     run_id: str
     rounds: int
     model_name: str
+    model_id: int | None
+    prompt_version: str
     pending_approval: dict[str, Any] | None
     approval_decision: dict[str, Any] | None

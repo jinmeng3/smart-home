@@ -1,3 +1,4 @@
+from app.models.agent_lease import AgentRunLease
 from app.models.agent_usage import AgentUsage, AgentUsageDaily
 from app.models.ai import AIModel
 from app.models.automation import (
@@ -37,6 +38,7 @@ from app.models.user_preferences import UserPreferences
 
 __all__ = [
     "AIModel",
+    "AgentRunLease",
     "AgentUsage",
     "AgentUsageDaily",
     "Automation",

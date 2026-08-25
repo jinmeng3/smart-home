@@ -147,7 +147,15 @@ def detect_automation_conflicts(
                     for action in current.actions
                 ]
         except HTTPException:
-            pass
+            # 指定资源不存在时返回明确错误，不继续生成可能误导的结果（§5.5）
+            return [
+                {
+                    "type": "resource_not_found",
+                    "severity": "error",
+                    "message": f"自动化规则 (id={automation_id}) 不存在或不属于当前家庭，无法进行冲突检测",
+                    "target_automation_id": automation_id,
+                }
+            ]
 
                          
     schedule_triggers = [

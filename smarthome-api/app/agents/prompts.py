@@ -1,3 +1,6 @@
+# 系统提示词版本号，随 run 记录用于排查和调试（§7.2）
+PROMPT_VERSION = "2026-08-25-v1"
+
 from app.agents.context import AgentContext
 from app.api.deps import DB_DEPENDENCY
 from app.models.device import Device
@@ -56,6 +59,7 @@ def system_prompt(
         )
     household = db.scalar(select(Household).where(Household.id == context.household_id))
     name = household.name if household else (household_name or "当前家庭")
+    timezone = household.timezone if household else "Asia/Shanghai"
     device_count = (
         db.query(Device).filter(Device.household_id == context.household_id).count()
     )
@@ -66,6 +70,10 @@ def system_prompt(
     )
 
     return f"""你是智能家居助手，工作在家庭“{name}”。
+
+【系统信息】
+- 提示词版本: {PROMPT_VERSION}
+- 时区: {timezone}
 
 【回复要求】
 - {language_instruction}
@@ -80,6 +88,10 @@ def system_prompt(
 【当前家庭概况】
 - 设备总数: {device_count}
 - 高风险场景数: {high_risk_scenes}
+
+【错误恢复】
+- 工具执行失败时告知用户失败原因，并建议重新尝试或改用其他方式；
+- 如果模型无法理解用户意图，应请求用户提供更多信息。
 
 【安全约束】
 - 不得跨家庭访问，不得伪造工具参数；

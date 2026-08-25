@@ -1,6 +1,5 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -70,12 +69,21 @@ class Settings(BaseSettings):
     agent_daily_budget_tokens: int = Field(
         default=500000, ge=0, description="每个用户每日最大 token 消耗"
     )
-    checkpointer_type: Literal["sqlite", "db", "postgres"] = Field(
-        default="sqlite",
-        description="checkpointer 类型: sqlite / postgres（db 为兼容别名）",
+    agent_lease_ttl_seconds: int = Field(
+        default=600,
+        ge=30,
+        le=3600,
+        description="会话运行租约 TTL；进程崩溃后超过该时长允许新运行接管。"
+        "注意：长时间运行的合法 Agent 调用不应超过此值，否则租约可能被窃取。",
+    )
+    approval_ttl_seconds: int = Field(
+        default=1800,
+        ge=60,
+        le=86400,
+        description="待审批操作有效期；过期后拒绝审批并要求重新预览与确认",
     )
     checkpointer_database_url: str | None = Field(
-        default=None, description="Agent checkpoint 独立数据库地址"
+        default=None, description="SQLite checkpoint 文件路径覆盖（默认从 DATABASE_URL 推导）"
     )
     api_key_encryption_secret: str | None = Field(
         default=None, description="API Key 独立加密密钥；生产环境必须配置"

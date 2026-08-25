@@ -3,6 +3,7 @@ from functools import partial
 from typing import Any, cast
 
 from app.agents.audit.recorder import AuditRecorder
+from app.agents.errors import ModelToolCallingUnsupported
 from app.agents.graph.approval import (
     approval_interrupt,
     reject_tool,
@@ -33,10 +34,14 @@ def build_graph(
     tools_enabled: bool = True,
 ):
 
-
     active_tools = tools if tools_enabled else []
     tools_by_name = {tool.name: tool for tool in active_tools}
-    bound_model = model.bind_tools(active_tools)
+    try:
+        bound_model = model.bind_tools(active_tools)
+    except Exception as exc:
+        raise ModelToolCallingUnsupported(
+            "当前模型不支持工具调用，无法作为 Agent 模型使用"
+        ) from exc
 
     graph = StateGraph(cast(Any, AgentState))
 
@@ -48,7 +53,7 @@ def build_graph(
     )
     graph.add_node("risk_check", partial(risk_check, db=db))
     graph.add_node("approval_interrupt", approval_interrupt)
-    graph.add_node("write_tool", partial(execute_write_tool, db=db))
+    graph.add_node("write_tool", partial(execute_write_tool, db=db, audit=audit))
     graph.add_node("reject_tool", reject_tool)
     graph.add_node("finalize", finalize)
 

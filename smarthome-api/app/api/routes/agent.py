@@ -4,6 +4,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agents.agent_service.lease import is_session_running
+from app.agents.agent_service.pending import (
+    cancel_pending_approval,
+    is_pending_expired,
+)
 from app.agents.agent_service.resumer import agent_thread_id, resume_agent
 from app.agents.agent_service.runner import run_agent
 from app.agents.checkpointer import get_checkpointer
@@ -29,9 +34,21 @@ def _get_agent_model(
     db: Session,
     user_id: int,
     model_name: str | None = None,
+    model_id: int | None = None,
 ) -> AIModel:
-    """按模型名或当前激活模型解析用户的 AI 模型配置。"""
-    if model_name:
+    """按模型 ID、模型名或当前激活模型解析用户的 AI 模型配置。
+
+    优先级：model_id > model_name > 当前激活模型。
+    使用模型 ID 定位可以避免可重名的模型名称带来的歧义（§4.3）。
+    """
+    if model_id is not None:
+        model = db.scalar(
+            select(AIModel).where(
+                AIModel.id == model_id,
+                AIModel.user_id == user_id,
+            )
+        )
+    elif model_name:
         model = db.scalar(
             select(AIModel).where(
                 AIModel.name == model_name,
@@ -86,6 +103,19 @@ async def agent_run(
         messages=[],
         household_id=payload.household_id,
     )
+
+    # 检查会话是否正在运行（§4.4）
+    if is_session_running(
+        db,
+        user_id=current_user.id,
+        household_id=payload.household_id,
+        session_id=payload.session_id,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该会话正在运行中，请等待当前操作完成后再试",
+        )
+
     saver = await get_checkpointer()
     checkpoint = await saver.aget_tuple(
         {"configurable": {"thread_id": agent_thread_id(ctx)}}
@@ -95,6 +125,9 @@ async def agent_run(
         if checkpoint is not None
         else None
     )
+    if pending and is_pending_expired(pending):
+        # 过期的 pending 视为已清理，不阻塞新请求（§5.2）
+        pending = None
     if pending:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -133,6 +166,18 @@ async def decide_agent_operation(
         current_user=current_user,
     )
 
+    # 检查会话是否正在运行（§4.4）
+    if is_session_running(
+        db,
+        user_id=current_user.id,
+        household_id=payload.household_id,
+        session_id=session_id,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该会话正在运行中，请等待当前操作完成后再试",
+        )
+
     saver = await get_checkpointer()
     checkpoint = await saver.aget_tuple(
         {"configurable": {"thread_id": agent_thread_id(ctx)}}
@@ -147,6 +192,11 @@ async def decide_agent_operation(
             status_code=status.HTTP_409_CONFLICT,
             detail="当前会话在该家庭下没有待确认操作",
         )
+    if is_pending_expired(pending):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="待审批操作已过期，请重新发起操作并确认",
+        )
     if pending["approval_id"] != payload.approval_id:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -154,8 +204,15 @@ async def decide_agent_operation(
         )
 
     # 待确认 run 必须继续使用发起时的原模型，而非用户切换后的当前激活模型
+    # 优先使用模型记录 ID（不可重名、不可变更），其次按模型名称定位（§4.3）
+    model_id = pending.get("model_id")
     model_name = pending.get("model_name") or None
-    model_config = _get_agent_model(db, current_user.id, model_name)
+    model_config = _get_agent_model(
+        db,
+        current_user.id,
+        model_name=model_name,
+        model_id=int(model_id) if isinstance(model_id, int) else None,
+    )
 
     return StreamingResponse(
         resume_agent(
@@ -201,8 +258,54 @@ async def get_pending_agent_operation(
     pending = checkpoint.checkpoint.get("channel_values", {}).get("pending_approval")
     if not pending:
         return None
+    if is_pending_expired(pending):
+        return None
 
     return PendingApprovalRead.model_validate(pending)
+
+
+@router.post("/sessions/{session_id}/cancel-pending")
+async def cancel_pending_agent_operation(
+    session_id: int,
+    household_id: int,
+    approval_id: str,
+    current_user: User = CURRENT_USER_DEPENDENCY,
+    db: Session = DB_DEPENDENCY,
+):
+    """取消当前会话的待审批操作（记录审计并清理 checkpoint 状态，§5.2）。"""
+    ctx = agent_context(
+        household_id=household_id,
+        session_id=session_id,
+        db=db,
+        current_user=current_user,
+    )
+
+    saver = await get_checkpointer()
+    thread_id = agent_thread_id(ctx)
+    checkpoint = await saver.aget_tuple({"configurable": {"thread_id": thread_id}})
+    pending = (
+        checkpoint.checkpoint.get("channel_values", {}).get("pending_approval")
+        if checkpoint is not None
+        else None
+    )
+    if not pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="当前会话在该家庭下没有待确认操作",
+        )
+    if pending["approval_id"] != approval_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="确认请求已失效或不属于当前操作",
+        )
+
+    await cancel_pending_approval(
+        saver,
+        thread_id,
+        context=ctx,
+        pending=pending,
+    )
+    return {"status": "cancelled"}
 
 
 @router.post("/sessions/{session_id}/regenerate")
@@ -236,6 +339,8 @@ async def regenerate_agent(
         if checkpoint is not None
         else None
     )
+    if pending and is_pending_expired(pending):
+        pending = None
     if pending:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -70,7 +70,9 @@ class AppearancePreferences(PreferencesSchema):
 class AIAssistantPreferences(PreferencesSchema):
     language: Literal["zh-CN", "en-US", "auto"] = "zh-CN"
     detail_level: int = Field(default=70, ge=0, le=100)
-    auto_execute_low_risk: bool = True
+    # 安全默认值：无偏好记录时 Agent 上下文默认为 False（§7.4），
+    # schema 默认值必须与之一致，避免前后端默认值不一致。
+    auto_execute_low_risk: bool = False
     confirm_high_risk: bool = True
 
 

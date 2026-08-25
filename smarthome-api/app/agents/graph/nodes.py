@@ -1,7 +1,7 @@
 from typing import Any
 
 from app.agents.context import AgentContext
-from app.agents.errors import AgentContextError
+from app.agents.errors import AgentContextError, AgentModelEmptyResponseError
 from app.agents.graph.state import AgentState
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import Runnable
@@ -19,6 +19,10 @@ async def model_node(
     chunks = []
     async for chunk in model.astream(state["messages"]):
         chunks.append(chunk)
+    if not chunks:
+        raise AgentModelEmptyResponseError(
+            "模型返回空流响应，请检查模型配置或 API 连接"
+        )
     response = chunks[0]
     for chunk in chunks[1:]:
         response += chunk
