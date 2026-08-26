@@ -188,8 +188,15 @@ export const useAutomationModeController = (store: AutomationsStore) => {
 
     const useTemplate = useAsyncAction(
         async (name: string) => {
-            const rule = await store.useTemplate(name);
-            ElMessage.success(`模板“${rule.name}”已使用`);
+            const result = await store.useTemplate(name);
+            const unresolved = (result as { unresolved?: number }).unresolved ?? 0;
+            if (unresolved > 0) {
+                ElMessage.warning(
+                    `模板“${result.name}”已创建，${unresolved} 个动作未匹配设备，请在编辑面板手动绑定`,
+                );
+            } else {
+                ElMessage.success(`模板“${result.name}”已使用`);
+            }
         },
         {
             onError: (error) =>

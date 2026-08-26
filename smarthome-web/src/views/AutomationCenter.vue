@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAutomationsStore, buildAutomationSteps } from "../stores/automations";
 import { useAutomationModeController } from "../composables/useAutomationModeController";
@@ -27,9 +27,11 @@ const {
 } = storeToRefs(store);
 const controller = useAutomationModeController(store);
 
-const flowSteps = computed(() =>
-    selected.value ? buildAutomationSteps(selected.value, selectedDetail.value) : [],
-);
+const flowSteps = computed(() => {
+    if (!selected.value) return [];
+    const aiPositions = store.aiTemplateBindings[selected.value.id] ?? [];
+    return buildAutomationSteps(selected.value, selectedDetail.value, aiPositions);
+});
 
 const records = computed(() =>
     executions.value.slice(0, 4).map((record) => ({
@@ -135,7 +137,15 @@ const { captureAndFlip: flipCards } = useGsapFlip({
     duration: 240,
 });
 
-onMounted(() => void playCardGrid());
+onMounted(() => {
+    void playCardGrid();
+    // 后台预取 AI 模板：8 秒延时避开主要规则加载，并保证设备列表已就绪
+    window.setTimeout(() => {
+        if (store.aiTemplates.length === 0 && !store.aiTemplatesLoading) {
+            void store.loadAiTemplates(6, false);
+        }
+    }, 1500);
+});
 watch(() => visibleCards.value.length, (n) => { if (n > 0) void playCardGrid(); });
 watch(cardsExpanded, () => { void nextTick(() => playCardGrid()); });
 
@@ -145,6 +155,9 @@ watch(
         void flipCards();
     },
 );
+onBeforeUnmount(() => {
+    store.cancelAiTemplates();
+});
 </script>
 
 <template>
@@ -356,6 +369,7 @@ watch(
                                     <i :class="`is-${step.tone}`">
                                         <SvgIcon :name="step.icon" />
                                         <span v-if="index === 0" class="step-trigger-badge">触发</span>
+                                        <span v-else-if="step.aiBound" class="step-ai-badge" title="由 AI 推荐模板自动绑定">AI</span>
                                     </i>
                                     <b>{{ step.name }}</b>
                                     <small>{{ step.description }}</small>
@@ -488,36 +502,51 @@ watch(
             <section class="panel templates">
                 <header>
                     <h2>▣ 推荐模板</h2>
-                    <a>更多 ›</a>
+                    <div class="templates-header-actions">
+                        <button
+                            v-if="!store.aiTemplates.length && !store.aiTemplatesLoading"
+                            type="button"
+                            class="ai-trigger"
+                            title="调用 AI 根据设备推荐模板"
+                            @click="store.loadAiTemplates(6, false)"
+                        >
+                            <SvgIcon name="sparkles" size="sm" />AI 推荐
+                        </button>
+                        <button
+                            v-else-if="store.aiTemplatesLoading"
+                            type="button"
+                            class="ai-trigger is-loading"
+                            disabled
+                        >
+                            <SvgIcon name="sparkles" size="sm" />生成中
+                        </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="ai-trigger"
+                            title="重新生成 AI 模板"
+                            @click="store.loadAiTemplates(6, true)"
+                        >
+                            <SvgIcon name="sparkles" size="sm" />刷新 AI
+                        </button>
+                        <a>更多 ›</a>
+                    </div>
                 </header>
                 <p
-                    v-for="item in [
-                        [
-                            'home',
-                            '节能回家',
-                            '节能模式 + 舒适回家流程',
-                            'green',
-                        ],
-                        [
-                            'security',
-                            '夜间安防',
-                            '夜间自动布防与照明联动',
-                            'purple',
-                        ],
-                        [
-                            'illumination',
-                            '晨间唤醒',
-                            '灯光、窗帘、空调联动唤醒',
-                            'orange',
-                        ],
-                    ]"
-                    :key="item[1]"
+                    v-if="store.aiTemplatesError"
+                    class="templates-error"
                 >
-                    <i :class="item[3]"><SvgIcon :name="item[0]" /></i
+                    AI 推荐失败：{{ store.aiTemplatesError }}
+                </p>
+                <p
+                    v-for="item in store.displayTemplates"
+                    :key="item.name"
+                >
+                    <i :class="item.tone"><SvgIcon :name="item.icon" /></i
                     ><span
-                        ><b>{{ item[1] }}</b
-                        ><small>{{ item[2] }}</small></span
-                    ><button type="button" @click="controller.useTemplate(item[1])">使用</button>
+                        ><b>{{ item.name }}</b
+                        ><small>{{ item.description }}</small></span
+                    ><button type="button" @click="controller.useTemplate(item.name)">使用</button>
                 </p>
                 <a class="browse">浏览更多模板 ›</a>
             </section>
@@ -1149,6 +1178,19 @@ watch(
     line-height: 1.4;
 }
 
+.step-ai-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-warning);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1.4;
+}
+
 .step-card b {
     font-size: 13px;
     font-weight: 800;
@@ -1513,6 +1555,42 @@ watch(
     display: block;
     margin-top: 12px;
     text-align: center;
+}
+
+.templates-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-primary-600);
+    background: var(--color-primary-50);
+    transition: background-color 150ms ease;
+    cursor: pointer;
+}
+
+.ai-trigger:hover {
+    background: var(--color-primary-100);
+}
+
+.ai-trigger.is-loading {
+    color: var(--color-text-tertiary);
+    background: var(--color-surface-subtle);
+    cursor: not-allowed;
+}
+
+.templates-error {
+    margin-top: 8px;
+    color: var(--color-danger);
+    font-size: 11px;
 }
 
 /* === 删除确认弹窗 === */

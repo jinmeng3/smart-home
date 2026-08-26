@@ -5,6 +5,7 @@ from app.api.routes import (
     agent,
     ai_model,
     auth,
+    automation_templates,
     automations,
     chat,
     device,
@@ -22,6 +23,7 @@ api_router = APIRouter(prefix="/api")
                                     
 api_router.include_router(account.router)
 api_router.include_router(automations.router)
+api_router.include_router(automation_templates.router)
 api_router.include_router(ai_model.router)
 api_router.include_router(chat.router)
 api_router.include_router(agent.router)
