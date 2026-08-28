@@ -36,6 +36,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.agents.audit.recorder import get_audit_recorder
 from app.agents.context import AgentContext
 from app.agents.errors import AgentError
@@ -72,8 +75,6 @@ from app.schemas.sse import (
     ToolCompleted,
     ToolStarted,
 )
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

@@ -2,6 +2,12 @@ from collections.abc import Sequence
 from functools import partial
 from typing import Any, cast
 
+from langchain_core.language_models import BaseChatModel
+from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.graph import END, START, StateGraph
+from sqlalchemy.orm import Session
+
 from app.agents.audit.recorder import AuditRecorder
 from app.agents.errors import ModelToolCallingUnsupported
 from app.agents.graph.approval import (
@@ -17,11 +23,6 @@ from app.agents.graph.tool_router import (
     route_after_risk,
     should_continue,
 )
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.graph import END, START, StateGraph
-from sqlalchemy.orm import Session
 
 
 def build_graph(

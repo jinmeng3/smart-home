@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import re
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -216,9 +216,24 @@ class AliasIndex:
       配合使用——关闭热加载时仍可工作，只是无法在线刷新。
     - 同一房间 / 设备的别名不会跨家庭污染（构造时绑定 ``household_id``）。
     - 冲突（同一别名映射到多个房间）时 ``resolve`` 返回空字符串，由上层追问。
+
+    热加载协议
+    ----------
+
+    ``version`` 字段在每次 ``set_*`` 调用后自增。
+    ``RuleEngine`` 接受可选的 ``alias_provider``（callable），每次 ``parse``
+    检查 provider 返回的 ``AliasIndex`` 的 ``version``；若与已持有的
+    ``version`` 不同，则换新该 index，从而实现「调用方修改别名后下次解析
+    即生效」的效果。
     """
 
-    __slots__ = ("_conflicts", "_device_aliases", "_household_id", "_room_aliases")
+    __slots__ = (
+        "_conflicts",
+        "_device_aliases",
+        "_household_id",
+        "_room_aliases",
+        "version",
+    )
 
     def __init__(self, household_id: int):
         self._household_id = household_id
@@ -228,12 +243,15 @@ class AliasIndex:
         self._device_aliases: dict[str, str] = {}
         # 同一 alias 多次 set 时记录，避免冲突被静默覆盖
         self._conflicts: set[str] = set()
+        # 热加载协议：``set_*`` 会自增；``RuleEngine`` 据此决定是否换新
+        self.version: int = 0
 
     @property
     def household_id(self) -> int:
         return self._household_id
 
     def set_room_aliases(self, canonical_to_aliases: dict[str, Iterable[str]]) -> None:
+        changed = False
         for canonical, aliases in canonical_to_aliases.items():
             for alias in aliases:
                 key = alias.strip().lower()
@@ -241,11 +259,16 @@ class AliasIndex:
                     continue
                 if key in self._room_aliases and self._room_aliases[key] != canonical:
                     self._conflicts.add(key)
+                if self._room_aliases.get(key) != canonical:
+                    changed = True
                 self._room_aliases[key] = canonical
+        if changed:
+            self.version += 1
 
     def set_device_aliases(
         self, canonical_to_aliases: dict[str, Iterable[str]]
     ) -> None:
+        changed = False
         for canonical, aliases in canonical_to_aliases.items():
             for alias in aliases:
                 key = alias.strip().lower()
@@ -256,7 +279,11 @@ class AliasIndex:
                     and self._device_aliases[key] != canonical
                 ):
                     self._conflicts.add(key)
+                if self._device_aliases.get(key) != canonical:
+                    changed = True
                 self._device_aliases[key] = canonical
+        if changed:
+            self.version += 1
 
     def resolve_room(self, alias: str) -> str:
         """按别名查找标准房间名；冲突或未命中时返回空字符串。"""
@@ -301,8 +328,43 @@ class RuleEngine:
     _CONF_MID = 0.85
     _CONF_LOW = 0.4
 
-    def __init__(self, *, alias_index: AliasIndex | None = None):
+    def __init__(
+        self,
+        *,
+        alias_index: AliasIndex | None = None,
+        alias_provider: Callable[[], AliasIndex | None] | None = None,
+    ):
+        # 静态别名索引：调用方在构造时绑定，后续不更新。
         self._alias_index = alias_index
+        # 动态别名供应者：每次 ``parse`` 检查 ``version``，变化时换新。
+        # 与 ``funnel_alias_hot_reload`` 配合使用——开启热加载时上层
+        # 传一个返回当前 ``AliasIndex`` 的 callable（通常从设备 / 房间表
+        # 重建），关闭时保持一次性绑定。
+        self._alias_provider = alias_provider
+        # 已持有的 provider 索引 ``version``，避免重复 setattr
+        self._provider_version: int | None = None
+
+    def _refresh_alias_index(self) -> None:
+        """调用 ``alias_provider`` 检查 ``version``；变化则换新 ``_alias_index``。
+
+        关闭热加载（``funnel_alias_hot_reload=False``）时直接返回，保持
+        一次性绑定的现有行为。
+        """
+        if self._alias_provider is None:
+            return
+        if not get_settings().funnel_alias_hot_reload:
+            return
+        current = self._alias_provider()
+        if current is None:
+            return
+        if self._provider_version is None:
+            # 首次调用：直接绑定并记录 version
+            self._alias_index = current
+            self._provider_version = current.version
+            return
+        if current.version != self._provider_version:
+            self._alias_index = current
+            self._provider_version = current.version
 
     # ------------------------------------------------------------------
     # 公开 API
@@ -318,6 +380,8 @@ class RuleEngine:
         settings = get_settings()
         self._started_at = time.perf_counter()
         budget_ms = settings.funnel_rule_max_duration_ms
+        # 入口先做别名热加载检查（与解析路径解耦）
+        self._refresh_alias_index()
         text = (message or "").strip()
         if not text:
             return RuleParseResult(matched=False, elapsed_ms=self._elapsed_ms())

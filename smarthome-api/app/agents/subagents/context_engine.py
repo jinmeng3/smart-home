@@ -45,12 +45,12 @@ import re
 from dataclasses import dataclass
 
 from app.agents.subagents.rule_engine import (
+    _QUERY_RE,
     _ROOM_DEVICE_HINTS,
     _SET_POS_RE,
     _SET_TEMP_RE,
     _TURN_OFF_RE,
     _TURN_ON_RE,
-    _QUERY_RE,
     RuleEngine,
     RuleParseResult,
     get_rule_engine,
