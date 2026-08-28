@@ -1,9 +1,11 @@
 [
   {
     "label": "Run FastAPI",
-    "command": "D:\\ProgramData\\envs\\api\\python.exe",
+    "command": "uv",
     "args": [
-      "-m",
+      "run",
+      "--project",
+      "$ZED_WORKTREE_ROOT/smarthome-api",
       "uvicorn",
       "app.main:app",
       "--host",

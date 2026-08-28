@@ -29,7 +29,16 @@ defineProps<{
     flex: 0 0 auto;
     border-radius: 999px;
     background: var(--color-border-default);
-    transition: background-color 160ms ease;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 160ms var(--motion-ease);
+}
+
+/* 键盘焦点可见性 */
+.base-switch:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
 }
 
 .base-switch span {
@@ -41,7 +50,7 @@ defineProps<{
     border-radius: 50%;
     background: var(--color-card-bg);
     box-shadow: var(--shadow-card);
-    transition: transform 160ms ease;
+    transition: transform 160ms var(--motion-ease);
 }
 
 .base-switch.active {
@@ -50,6 +59,11 @@ defineProps<{
 
 .base-switch.active span {
     transform: translateX(18px);
+}
+
+.base-switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .base-switch.small {

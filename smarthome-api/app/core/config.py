@@ -107,6 +107,32 @@ class Settings(BaseSettings):
 
     agent_tool_result_max_length: int = Field(default=100, ge=1)
 
+    # ── 漏斗式分层路由（funnel-routing-architecture）──
+    funnel_enabled: bool = Field(
+        default=True,
+        description="是否启用漏斗式分层路由（规则层前置拦截）",
+    )
+    funnel_rule_confidence_high: float = Field(
+        default=0.95, ge=0.0, le=1.0,
+        description="规则层置信度 >= 该值时直接本地执行，跳过 LLM",
+    )
+    funnel_rule_confidence_low: float = Field(
+        default=0.8, ge=0.0, le=1.0,
+        description="规则层置信度低于该值时丢弃，交给上层（上下文层 / 兜底层）",
+    )
+    funnel_rule_max_duration_ms: int = Field(
+        default=50, ge=1, le=1000,
+        description="规则层解析硬性预算（毫秒），超时的回退到上下文层",
+    )
+    funnel_alias_hot_reload: bool = Field(
+        default=True,
+        description="别名库变更时是否即时刷新（False 则需重启进程）",
+    )
+    funnel_context_enabled: bool = Field(
+        default=True,
+        description="是否启用漏斗第二层（上下文层）多轮 / 指代消解",
+    )
+
     # ── 上下文压缩 / 会话树 ──
     compaction_enabled: bool = True
     compaction_reserve_tokens: int = Field(default=16384, ge=1)

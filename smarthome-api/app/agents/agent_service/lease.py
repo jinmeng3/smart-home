@@ -10,13 +10,14 @@
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from app.core.config import get_settings
-from app.models.agent_lease import AgentRunLease
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
+from app.models.agent_lease import AgentRunLease
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +44,12 @@ def acquire_run_lease(
         )
     )
     ttl_seconds = get_settings().agent_lease_ttl_seconds
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if lease is not None:
         created = lease.created_at
         if created is not None:
             if created.tzinfo is None:
-                created = created.replace(tzinfo=timezone.utc)
+                created = created.replace(tzinfo=UTC)
             if now - created < timedelta(seconds=ttl_seconds):
                 return False
         # 租约超时：接管前先清理旧记录
@@ -118,6 +119,6 @@ def is_session_running(
     if created is None:
         return False
     if created.tzinfo is None:
-        created = created.replace(tzinfo=timezone.utc)
+        created = created.replace(tzinfo=UTC)
     ttl_seconds = get_settings().agent_lease_ttl_seconds
-    return datetime.now(timezone.utc) - created < timedelta(seconds=ttl_seconds)
+    return datetime.now(UTC) - created < timedelta(seconds=ttl_seconds)

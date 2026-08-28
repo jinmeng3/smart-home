@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import { useHomeStore } from "../../stores/home";
-import BaseSwitch from "../BaseSwitch.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { defineAsyncDialog, preloadDialog } from "../../utils/asyncDialog";
+import { getSchedule } from "../../api/overview";
 
 const loadScheduleDialog = () => import("../overview/dialogs/ScheduleDialog.vue");
 const ScheduleDialog = defineAsyncDialog(loadScheduleDialog);
 
 const store = useHomeStore();
 const dialogVisible = ref(false);
+const scheduleItems = ref<{ time: string; name: string; detail: string; color: string; enabled: boolean }[]>([]);
+const loading = ref(false);
 
 const todayLabel = computed(() => {
     const now = new Date();
@@ -17,15 +19,42 @@ const todayLabel = computed(() => {
     return `${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
 });
 
-const automationTone = (id: string): string => {
-    const map: Record<string, string> = {
-        "wake-up": "orange",
-        "arrive-home": "blue",
-        sleep: "purple",
-    };
+const todayKey = computed(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+});
 
-    return map[id] ?? "teal";
+const loadTodaySchedule = async () => {
+    loading.value = true;
+    try {
+        const result = await getSchedule(todayKey.value);
+        if (result && result.items) {
+            scheduleItems.value = result.items
+                .filter((item) => item.enabled)
+                .sort((a, b) => a.time.localeCompare(b.time));
+        } else {
+            scheduleItems.value = [];
+        }
+    } catch {
+        scheduleItems.value = [];
+    } finally {
+        loading.value = false;
+    }
 };
+
+onMounted(() => {
+    void loadTodaySchedule();
+});
+
+// 对话框关闭后重新加载（用户可能修改了计划）
+watch(dialogVisible, (visible) => {
+    if (!visible) {
+        void loadTodaySchedule();
+    }
+});
 </script>
 
 <template>
@@ -68,24 +97,25 @@ const automationTone = (id: string): string => {
         </div>
 
         <!-- 计划列表 / 空状态 -->
-        <div v-if="store.automations.length" class="schedule-list">
+        <div v-if="scheduleItems.length" class="schedule-list">
             <article
-                v-for="automation in store.automations"
-                :key="automation.id"
-                :class="`is-${automationTone(automation.id)}`"
+                v-for="(item, idx) in scheduleItems"
+                :key="`${item.time}-${item.name}-${idx}`"
+                :style="{ '--item-color': item.color || 'var(--tone-primary)' }"
             >
-                <time class="schedule-time">{{ automation.time }}</time>
+                <time class="schedule-time">{{ item.time }}</time>
                 <span class="timeline-node" aria-hidden="true"></span>
                 <div class="schedule-body">
-                    <strong>{{ automation.name }}</strong>
+                    <strong>{{ item.name }}</strong>
+                    <small v-if="item.detail">{{ item.detail }}</small>
                 </div>
-                <BaseSwitch v-model="automation.enabled" small />
             </article>
         </div>
         <p v-else class="schedule-empty">
-            今天暂无计划
+            <template v-if="loading">加载中…</template>
+            <template v-else>今天暂无计划</template>
             <span v-if="store.enabledAutomationCount" class="schedule-empty-meta"
-                >已开启 {{ store.enabledAutomationCount }} 个</span
+                >已开启 {{ store.enabledAutomationCount }} 个自动化</span
             >
         </p>
     </section>
@@ -212,7 +242,7 @@ const automationTone = (id: string): string => {
 
 .schedule-list article {
     display: grid;
-    grid-template-columns: 44px 16px minmax(0, 1fr) auto;
+    grid-template-columns: 44px 16px minmax(0, 1fr);
     align-items: center;
     gap: 6px;
     padding: 6px 0;
@@ -222,7 +252,7 @@ const automationTone = (id: string): string => {
     font-size: 12px;
     font-weight: 900;
     text-align: center;
-    color: var(--color-text-secondary);
+    color: var(--item-color, var(--color-text-secondary));
 }
 
 .timeline-node {
@@ -230,8 +260,8 @@ const automationTone = (id: string): string => {
     height: 8px;
     justify-self: center;
     border-radius: 50%;
-    background: var(--tone-primary);
-    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-primary-soft);
+    background: var(--item-color, var(--tone-primary));
+    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px color-mix(in srgb, var(--item-color, var(--tone-primary)) 20%, transparent);
 }
 
 .schedule-body {
@@ -248,33 +278,14 @@ const automationTone = (id: string): string => {
     white-space: nowrap;
 }
 
-.schedule-list article.is-orange .schedule-time {
-    color: var(--tone-orange);
-}
-.schedule-list article.is-orange .timeline-node {
-    background: var(--tone-orange);
-    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-orange-soft);
-}
-.schedule-list article.is-blue .schedule-time {
-    color: var(--tone-info);
-}
-.schedule-list article.is-blue .timeline-node {
-    background: var(--tone-info);
-    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-info-soft);
-}
-.schedule-list article.is-purple .schedule-time {
-    color: var(--tone-purple);
-}
-.schedule-list article.is-purple .timeline-node {
-    background: var(--tone-purple);
-    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-purple-soft);
-}
-.schedule-list article.is-teal .schedule-time {
-    color: var(--tone-teal);
-}
-.schedule-list article.is-teal .timeline-node {
-    background: var(--tone-teal);
-    box-shadow: 0 0 0 3px var(--color-card-bg), 0 0 0 5px var(--tone-teal-soft);
+.schedule-body small {
+    display: block;
+    overflow: hidden;
+    margin-top: 1px;
+    color: var(--color-text-tertiary);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 空状态 */

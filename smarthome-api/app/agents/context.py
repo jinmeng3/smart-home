@@ -1,14 +1,15 @@
 import json
 from dataclasses import dataclass
 
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.api.deps import CURRENT_USER_DEPENDENCY, DB_DEPENDENCY
 from app.models.chat import ChatSession
 from app.models.membership import HouseholdMembership
 from app.models.user import User
 from app.models.user_preferences import UserPreferences
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,9 +49,11 @@ def agent_context(
     )
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
-                              
+
     if session.household_id is not None and session.household_id != household_id:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="会话不属于该家庭")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="会话不属于该家庭"
+        )
     user_preferences = db.scalar(
         select(UserPreferences).where(UserPreferences.user_id == current_user.id)
     )
@@ -69,13 +72,15 @@ def agent_context(
             auto_value = ai.get(
                 "autoExecuteLowRisk", ai.get("auto_execute_low_risk", False)
             )
-            confirm_value = ai.get(
-                "confirmHighRisk", ai.get("confirm_high_risk", True)
-            )
+            confirm_value = ai.get("confirmHighRisk", ai.get("confirm_high_risk", True))
             language_value = ai.get("language", "zh-CN")
             detail_value = ai.get("detailLevel", ai.get("detail_level", 70))
-            auto_execute_low_risk = auto_value if isinstance(auto_value, bool) else False
-            confirm_high_risk = confirm_value if isinstance(confirm_value, bool) else True
+            auto_execute_low_risk = (
+                auto_value if isinstance(auto_value, bool) else False
+            )
+            confirm_high_risk = (
+                confirm_value if isinstance(confirm_value, bool) else True
+            )
             language = language_value if isinstance(language_value, str) else "zh-CN"
             detail_level = detail_value if isinstance(detail_value, int) else 70
         except (json.JSONDecodeError, AttributeError, TypeError):

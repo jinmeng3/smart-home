@@ -3,6 +3,10 @@ from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
 
+from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
+from sqlalchemy.orm import Session
+
 from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
 from app.agents.agent_service.pending import is_pending_expired
 from app.agents.agent_service.runner import (
@@ -24,9 +28,6 @@ from app.schemas.sse import (
     RunCompleted,
 )
 from app.services.session_tree import mirror_assistant_message
-from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command
-from sqlalchemy.orm import Session
 
 
 def agent_thread_id(context: AgentContext) -> str:
@@ -64,9 +65,7 @@ async def resume_agent(
         )
         return
     try:
-        async for event in _resume_agent_body(
-            context, decision, model_config, db
-        ):
+        async for event in _resume_agent_body(context, decision, model_config, db):
             yield event
     finally:
         release_run_lease(

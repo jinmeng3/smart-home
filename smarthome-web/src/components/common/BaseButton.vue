@@ -7,6 +7,8 @@ const props = withDefaults(
         variant?: "default" | "primary" | "danger" | "warning" | "text";
         size?: "sm" | "md";
         plain?: boolean;
+        /** 占满父容器宽度 */
+        block?: boolean;
         loading?: boolean;
         disabled?: boolean;
         nativeType?: "button" | "submit" | "reset";
@@ -17,6 +19,7 @@ const props = withDefaults(
         variant: "default",
         size: "md",
         plain: false,
+        block: false,
         loading: false,
         disabled: false,
         nativeType: "button",
@@ -37,9 +40,11 @@ const feedbackIcon = computed(() =>
             `is-${variant}`,
             `is-${size}`,
             { 'is-plain': plain },
-            { 'has-feedback': feedback },
+            { 'is-block': block },
+            { 'is-feedback': feedback },
         ]"
         :disabled="disabled || loading || !!feedback"
+        :aria-busy="loading || undefined"
         v-bind="$attrs"
     >
         <span
@@ -61,6 +66,7 @@ const feedbackIcon = computed(() =>
 
 <style scoped>
 .base-button {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -76,14 +82,23 @@ const feedbackIcon = computed(() =>
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
     transition:
         background-color 160ms var(--motion-ease),
         border-color 160ms var(--motion-ease),
         color 160ms var(--motion-ease),
         box-shadow 160ms var(--motion-ease),
         transform 160ms var(--motion-ease);
+}
+
+/* 键盘焦点（鼠标点击不显示，仅 Tab 聚焦时清晰可见） */
+.base-button:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--color-focus-ring);
 }
 
 .base-button:hover:not(:disabled) {
@@ -99,6 +114,14 @@ const feedbackIcon = computed(() =>
     opacity: 0.55;
 }
 
+/* 操作结果反馈仍锁定交互，但不把整颗按钮（含 check/warning 图标）变暗 */
+.base-button.is-feedback:disabled {
+    cursor: default;
+    opacity: 1;
+    pointer-events: none;
+}
+
+/* === 实心主色变体 === */
 .base-button.is-primary {
     border-color: var(--color-primary-600);
     background: var(--color-primary-600);
@@ -115,40 +138,6 @@ const feedbackIcon = computed(() =>
     box-shadow: 0 8px 18px var(--color-focus-ring);
 }
 
-.base-button.is-text {
-    border-color: transparent;
-    background: transparent;
-    color: var(--color-text-tertiary);
-    min-width: 0;
-}
-
-.base-button.is-sm {
-    height: 34px;
-    min-width: 72px;
-    padding: 0 12px;
-    font-size: 13px;
-    gap: 4px;
-}
-
-.base-button.is-plain {
-    background: transparent;
-    border-color: var(--color-primary-600);
-    color: var(--color-primary-600);
-}
-
-.base-button.is-plain.is-primary {
-    background: transparent;
-    border-color: var(--color-primary-600);
-    color: var(--color-primary-600);
-}
-
-.base-button.is-plain.is-primary:hover:not(:disabled) {
-    background: var(--color-primary-50);
-    border-color: var(--color-primary-700);
-    color: var(--color-primary-700);
-    box-shadow: none;
-}
-
 .base-button.is-danger {
     border-color: var(--color-danger);
     background: var(--color-danger);
@@ -156,10 +145,10 @@ const feedbackIcon = computed(() =>
 }
 
 .base-button.is-danger:hover:not(:disabled) {
-    border-color: #b91c1c;
+    border-color: color-mix(in srgb, var(--color-danger) 84%, black);
     background: linear-gradient(
         135deg,
-        #b91c1c,
+        color-mix(in srgb, var(--color-danger) 84%, black),
         var(--color-danger)
     );
     box-shadow: 0 8px 18px var(--color-danger-soft);
@@ -181,6 +170,82 @@ const feedbackIcon = computed(() =>
     box-shadow: 0 8px 18px color-mix(in srgb, var(--color-warning) 24%, transparent);
 }
 
+/* === 文字按钮 === */
+.base-button.is-text {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    min-width: 0;
+}
+
+.base-button.is-text:hover:not(:disabled) {
+    color: var(--color-text-secondary);
+}
+
+/* === 尺寸 === */
+.base-button.is-sm {
+    height: 34px;
+    min-width: 72px;
+    padding: 0 12px;
+    font-size: 13px;
+    gap: 4px;
+}
+
+/* === 占满父容器宽度 === */
+.base-button.is-block {
+    width: 100%;
+}
+
+/* === 描边（plain）按钮：透明底 + 按变体着色，hover 填充柔和底色 === */
+.base-button.is-plain {
+    background: transparent;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+}
+
+.base-button.is-plain.is-primary {
+    background: transparent;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+}
+
+.base-button.is-plain.is-danger {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.base-button.is-plain.is-warning {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.base-button.is-plain:hover:not(:disabled) {
+    background: var(--color-primary-50);
+    border-color: var(--color-primary-700);
+    color: var(--color-primary-700);
+    box-shadow: none;
+}
+
+.base-button.is-plain.is-primary:hover:not(:disabled) {
+    background: var(--color-primary-50);
+    border-color: var(--color-primary-700);
+    color: var(--color-primary-700);
+    box-shadow: none;
+}
+
+.base-button.is-plain.is-danger:hover:not(:disabled) {
+    background: var(--color-danger-soft);
+    border-color: color-mix(in srgb, var(--color-danger) 82%, black);
+    box-shadow: none;
+}
+
+.base-button.is-plain.is-warning:hover:not(:disabled) {
+    background: var(--color-warning-soft);
+    border-color: color-mix(in srgb, var(--color-warning) 82%, black);
+    box-shadow: none;
+}
+
+/* === Loading 旋转指示器 === */
 .base-button-spinner {
     width: 14px;
     height: 14px;
@@ -190,7 +255,7 @@ const feedbackIcon = computed(() =>
     animation: spin 600ms linear infinite;
 }
 
-/* 操作结果反馈：check/warning 一次性弹出 */
+/* === 操作结果反馈：check/warning 一次性弹出 === */
 .base-button-feedback {
     display: grid;
     place-items: center;
@@ -203,10 +268,6 @@ const feedbackIcon = computed(() =>
 
 .base-button-feedback.is-error {
     color: var(--color-danger);
-}
-
-.base-button.has-feedback {
-    pointer-events: none;
 }
 
 @keyframes button-feedback-in {

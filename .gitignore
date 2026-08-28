@@ -2,3 +2,5 @@ docs
 .zed
 .codegraph
 smarthome-api/agent_audit/
+.serena/
+smarthome-api/uv.lock

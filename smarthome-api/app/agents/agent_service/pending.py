@@ -8,7 +8,7 @@
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.agents.context import AgentContext
 from app.core.config import get_settings
@@ -21,7 +21,7 @@ def make_pending(state: dict) -> dict:
 
     约定：由 ``risk_node`` 在构建 pending dict 后调用此函数完成设置。
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     created_at = now.isoformat()
     ttl = get_settings().approval_ttl_seconds
     expires_at_timestamp = now.timestamp() + ttl
@@ -40,7 +40,7 @@ def is_pending_expired(pending: dict | None) -> bool:
     expires_at = pending.get("expires_at")
     if expires_at is None:
         return False  # 旧记录，向后兼容
-    now = datetime.now(timezone.utc).timestamp()
+    now = datetime.now(UTC).timestamp()
     return now > float(expires_at)
 
 
@@ -59,7 +59,7 @@ async def cancel_pending_approval(
     因此删除线程不会丢失数据。"""
     from app.agents.audit.recorder import get_audit_recorder
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     audit = get_audit_recorder()
     run_id = pending.get("run_id", "")
 

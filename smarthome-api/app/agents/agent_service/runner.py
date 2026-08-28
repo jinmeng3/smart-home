@@ -5,6 +5,10 @@ from collections.abc import AsyncGenerator
 from typing import Any, cast
 from uuid import uuid4
 
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph.state import CompiledStateGraph
+from sqlalchemy.orm import Session
+
 from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
 from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
 from app.agents.checkpointer import get_checkpointer
@@ -16,13 +20,25 @@ from app.agents.graph import build_graph
 from app.agents.prompts import PROMPT_VERSION, system_prompt
 from app.agents.rate_limiter import check_daily_budget, check_rate_limit
 from app.agents.redaction import redact_text
+from app.agents.subagents.context_engine import (
+    ContextResolution,
+    get_context_engine,
+)
 from app.agents.subagents.domains import (
     AUTOMATION_SYSTEM_PROMPT,
     DEVICE_SYSTEM_PROMPT,
     SCENE_SYSTEM_PROMPT,
     SECURITY_SYSTEM_PROMPT,
 )
+from app.agents.subagents.funnel_router import (
+    LAYER_CONTEXT,
+    LAYER_RULE,
+    RouteResult,
+    SessionState,
+    get_funnel_router,
+)
 from app.agents.subagents.router import is_write_domain, resolve_delegated_domain
+from app.agents.subagents.rule_layer import execute_rule_layer
 from app.agents.tools import get_domain_tools, get_household_tools
 from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
@@ -43,9 +59,6 @@ from app.services.session_tree import (
     mirror_subagent,
     mirror_user_message,
 )
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph.state import CompiledStateGraph
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +68,52 @@ _DOMAIN_SYSTEM_PROMPTS: dict[str, str] = {
     "scene": SCENE_SYSTEM_PROMPT,
     "security": SECURITY_SYSTEM_PROMPT,
 }
+
+
+def _route_funnel(context: AgentContext, message: str) -> RouteResult:
+    """调用漏斗路由器以决定进入哪一层（docs/funnel-routing-architecture §8）。
+
+    本期仅使用 ``context`` / ``message``；多轮 / 指代信号（P1 上下文层入口）
+    依赖 checkpointer / 会话树重建，本期不接入，仍回退到 LAYER_FALLBACK。
+    """
+    router = get_funnel_router()
+    state = SessionState(
+        session_id=context.session_id,
+        household_id=context.household_id,
+    )
+    return router.route(message, state)
+
+
+def _load_previous_user_message(session_id: int, current_message: str) -> str:
+    """从会话树历史中提取「当前消息之前」的最后一条用户消息。
+
+    上下文层（P1）指代消解的输入。任何失败（树未建 / 无历史 / 取不到）都返回
+    空串，让 ``ContextEngine`` 转入兜底层，不中断主流程。
+    """
+    try:
+        messages = build_context_messages(session_id)
+    except Exception:  # noqa: BLE001  # 树读取失败 → 无上一轮可继承，安全回退
+        return ""
+    current = (current_message or "").strip()
+    for msg in reversed(messages):
+        if getattr(msg, "type", "") != "human":
+            continue
+        content = str(getattr(msg, "content", "")).strip()
+        if content == current:
+            # 重试 / 已落库场景下当前消息可能已在树中，跳过它取再上一轮
+            continue
+        return content
+    return ""
+
+
+def _resolve_context_turn(context: AgentContext, message: str) -> ContextResolution:
+    """执行上下文层消解；未命中（绝大多数异常）一律返回 ``matched=False``。"""
+    previous = _load_previous_user_message(context.session_id, message)
+    if not previous:
+        return ContextResolution(
+            matched=False, needs_fallback=True, explanation="无上一轮可继承 → 兜底层"
+        )
+    return get_context_engine().resolve(message, previous_user_message=previous)
 
 
 def _build_thread_id(context: AgentContext, domain: str | None) -> str:
@@ -240,6 +299,40 @@ async def _run_agent_body(
     persist_user_message: bool = True,
 ) -> AsyncGenerator[str, None]:
     run_id = f"run-{uuid4().hex}"
+
+    # 漏斗路由前置拦截：高频指令在进 LLM 图之前由规则层直出（§5.3 P0）。
+    funnel_decision = _route_funnel(context, message)
+    if funnel_decision.layer == LAYER_RULE and funnel_decision.rule_result is not None:
+        async for event in execute_rule_layer(
+            context=context,
+            household_name=household_name,
+            message=message,
+            model_name=model_config.name,
+            model_id=model_config.id,
+            db=db,
+            rule_result=funnel_decision.rule_result,
+        ):
+            yield event
+        return
+
+    # LAYER_CONTEXT（P1 上下文层）：多轮 / 指代消解先于 LLM（§6）；
+    # 未命中或功能关闭时再归还兜底层（LLM 主图）。
+    if funnel_decision.layer == LAYER_CONTEXT and get_settings().funnel_context_enabled:
+        context_resolution = _resolve_context_turn(context, message)
+        if context_resolution.matched and context_resolution.rule_result is not None:
+            async for event in execute_rule_layer(
+                context=context,
+                household_name=household_name,
+                message=message,
+                model_name=model_config.name,
+                model_id=model_config.id,
+                db=db,
+                rule_result=context_resolution.rule_result,
+            ):
+                yield event
+            return
+
+    # LAYER_FALLBACK / 未消解的 LAYER_CONTEXT 都走原图（兜底层）。
     domain = resolve_delegated_domain(message)
     include_write = is_write_domain(domain)
 

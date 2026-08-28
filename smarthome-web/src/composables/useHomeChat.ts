@@ -32,6 +32,7 @@ import type {
   HouseholdInfo,
   PendingApproval,
 } from "../types/chat";
+import { friendlyToolLabel } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
 /** 根据 pending approval 的 tool 和 preview.kind 生成友好的待确认状态文案 */
@@ -312,17 +313,26 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           stepIdCounter++;
           const stepId = ev.call_id || `tool-${stepIdCounter}`;
           activeToolCallId = stepId;
-          updateStep(stepId, ev.summary || `正在调用 ${ev.tool}`, "executing");
+          updateStep(stepId, `正在调用 ${friendlyToolLabel(ev.tool)}`, "executing");
           break;
         }
         case "tool_completed": {
           const ev = event as ToolCompletedEvent;
-          updateStep(ev.call_id || activeToolCallId, `已完成 ${ev.tool}`, "completed");
+          updateStep(
+            ev.call_id || activeToolCallId,
+            `已完成 ${friendlyToolLabel(ev.tool)}`,
+            "completed",
+          );
           break;
         }
         case "tool_failed": {
           const ev = event as ToolFailedEvent;
-          updateStep(ev.call_id || activeToolCallId, `${ev.tool} 执行失败`, "failed", ev.error);
+          updateStep(
+            ev.call_id || activeToolCallId,
+            `${friendlyToolLabel(ev.tool)} 执行失败`,
+            "failed",
+            ev.error,
+          );
           break;
         }
         case "approval_required": {
@@ -350,13 +360,13 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           pendingStatus.value = ev.message || `执行状态：${ev.status}`;
           if (ev.call_id) {
             if (ev.status === "failed") {
-              updateStep(ev.call_id, ev.operator, "failed", ev.message);
+              updateStep(ev.call_id, friendlyToolLabel(ev.operator), "failed", ev.message);
             } else if (
               ev.status === "verified" ||
               ev.status === "submitted" ||
               ev.status === "running"
             ) {
-              updateStep(ev.call_id, ev.operator, "completed");
+              updateStep(ev.call_id, friendlyToolLabel(ev.operator), "completed");
             }
           }
           break;

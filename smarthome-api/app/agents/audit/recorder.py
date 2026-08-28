@@ -1,7 +1,7 @@
 import json
 import threading
 import typing
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.agents.context import AgentContext
@@ -27,7 +27,7 @@ class AuditRecorder:
         同一个桶内复用文件句柄，不重复 open/close。
         文件名示例：audit_20260418_14.json
         """
-        bucket = datetime.now(timezone.utc).strftime("%Y%m%d_%H")
+        bucket = datetime.now(UTC).strftime("%Y%m%d_%H")
         line = json.dumps(entry, ensure_ascii=False, default=str)
         with self._lock:
             if bucket != self._current_bucket:
@@ -50,7 +50,7 @@ class AuditRecorder:
             "household_id": context.household_id,
             "session_id": context.session_id,
             "auto_execute_low_risk": context.auto_execute_low_risk,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -62,7 +62,7 @@ class AuditRecorder:
             "run_id": run_id,
             "status": status,
             "message": redact_text(message)[:200],
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -98,7 +98,7 @@ class AuditRecorder:
             "approval_decision": approval_decision,
             "automatic": automatic,
             "error_code": error_code,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -118,7 +118,7 @@ class AuditRecorder:
             "tool": tool,
             "risk_level": risk_level,
             "reasons": reasons,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -136,7 +136,7 @@ class AuditRecorder:
             "approval_id": approval_id,
             "decision": decision,
             "automatic": automatic,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -147,7 +147,7 @@ class AuditRecorder:
             "run_id": run_id,
             "domain": domain,
             "task": redact_text(task)[:500],
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 
@@ -170,7 +170,7 @@ class AuditRecorder:
             "summary": redact_text(summary)[:500],
             "duration_ms": duration_ms,
             "usage": usage or {},
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         }
         self._write(entry)
 

@@ -30,6 +30,40 @@ export interface AgentExecutionStep {
   message?: string;
 }
 
+// === Agent 工具名 → 友好中文标签 ===
+// 流式步骤列表 / 状态面板展示工具调用时，用中文代替原始 snake_case 名，
+// 避免“正在调用 detect_automation_conflicts”这类长英文名过长且不友好。
+export const TOOL_LABELS: Record<string, string> = {
+  list_rooms: "列出房间",
+  get_room: "查询房间",
+  list_devices: "列出设备",
+  get_device: "查询设备",
+  list_scenes: "列出场景",
+  get_scene: "查询场景",
+  list_automations: "列出自动化",
+  get_automation: "查询自动化",
+  list_device_logs: "查询设备日志",
+  list_scene_executions: "查询场景执行记录",
+  list_automation_executions: "查询自动化执行记录",
+  preview_scene: "预览场景",
+  preview_automation_change: "预览自动化变更",
+  detect_automation_conflicts: "检测自动化冲突",
+  inspect_household_health: "全屋健康巡检",
+  execute_scene: "执行场景",
+  create_automation: "创建自动化",
+  update_automation: "更新自动化",
+  set_automation_enabled: "启停自动化",
+  delete_automation: "删除自动化",
+  set_device_power: "开关设备电源",
+  set_device_temperature: "设置空调温度",
+  set_curtain_position: "设置窗帘开合",
+};
+
+/** 把后端下发的 snake_case 工具名转换为友好中文标签；未收录时回退为原名。 */
+export function friendlyToolLabel(tool: string): string {
+  return TOOL_LABELS[tool] || tool;
+}
+
 // === Agent SSE 事件类型 ===
 
 export interface AgentEventBase {
