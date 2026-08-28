@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from app.utils.time import now_utc
+from app.utils.db import get_or_404, paginate
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -55,15 +57,17 @@ def accessible_devices(user: User) -> Select[tuple[Device]]:
 
 def get_device_or_404(db: Session, user: User, device_id: int) -> Device:
     """按主键获取设备，并统一处理不存在的情况。"""
-    device = db.scalar(accessible_devices(user).where(Device.id == device_id))
-    if not device:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在")
-    return device
+    return get_or_404(
+        db,
+        accessible_devices(user).where(Device.id == device_id),
+        detail="设备不存在",
+    )
 
 
 def get_room_or_422(db: Session, user: User, room_name: str) -> Room:
     """获取当前用户家庭内的指定房间，避免按名称跨家庭绑定设备。"""
-    room = db.scalar(
+    return get_or_404(
+        db,
         select(Room)
         .join(
             HouseholdMembership,
@@ -73,14 +77,10 @@ def get_room_or_422(db: Session, user: User, room_name: str) -> Room:
             HouseholdMembership.user_id == user.id,
             Room.name == room_name,
         )
-        .order_by(Room.id)
+        .order_by(Room.id),
+        detail="指定房间不存在或不属于当前用户",
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="指定房间不存在或不属于当前用户",
-        )
-    return room
 
 
 # === 设备 CRUD ===
@@ -105,12 +105,12 @@ def list_devices_service(
         filters.append(Device.room == params.room.strip())
 
     query = accessible_devices(user).where(*filters)
-    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    devices = db.scalars(
-        query.order_by(Device.updated_at.desc())
-        .offset((params.page - 1) * params.page_size)
-        .limit(params.page_size)
-    ).all()
+    devices, total = paginate(
+        db,
+        query.order_by(Device.updated_at.desc()),
+        page=params.page,
+        page_size=params.page_size,
+    )
     return DeviceListRead(
         total=total,
         page=params.page,
@@ -250,7 +250,7 @@ def update_device_service(
     for field, value in changes.items():
         setattr(device, field, value)
 
-    now = datetime.now(timezone.utc)
+    now = now_utc()
     if changes.get("status") in {"online", "running"}:
         device.last_online = now
     device.updated_at = now
@@ -277,7 +277,7 @@ def sync_devices_service(
     devices = list(
         db.scalars(accessible_devices(user).where(Device.connection == platform)).all()
     )
-    now = datetime.now(timezone.utc)
+    now = now_utc()
     for device in devices:
         device.last_online = now
         device.updated_at = now
@@ -301,14 +301,12 @@ def list_device_logs_service(
     """按创建时间倒序返回指定设备的分页日志。"""
     get_device_or_404(db, user, device_id)
     condition = DeviceLog.device_id == device_id
-    total = db.scalar(select(func.count()).select_from(DeviceLog).where(condition)) or 0
-    logs = db.scalars(
-        select(DeviceLog)
-        .where(condition)
-        .order_by(DeviceLog.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    ).all()
+    logs, total = paginate(
+        db,
+        select(DeviceLog).where(condition).order_by(DeviceLog.created_at.desc()),
+        page=page,
+        page_size=page_size,
+    )
     return DeviceLogListRead(
         total=total, page=page, page_size=page_size, items=list(logs)
     )
@@ -408,7 +406,7 @@ def batch_group_devices_service(
     if devices:
         for device in devices:
             device.group_id = group.id
-            device.updated_at = datetime.now(timezone.utc)
+            device.updated_at = now_utc()
             db.add(
                 DeviceLog(
                     device_id=device.id,
@@ -435,7 +433,7 @@ def get_today_energy_service(
         household_id = get_default_household_id(db, user)
 
     today_start = datetime.combine(
-        datetime.now(timezone.utc).date(), datetime.min.time()
+        now_utc().date(), datetime.min.time()
     )
     query = (
         select(

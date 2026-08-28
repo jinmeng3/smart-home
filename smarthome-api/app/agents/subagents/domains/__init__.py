@@ -1,5 +1,3 @@
-"""领域子 Agent 定义。"""
-
 from app.agents.subagents.domains.automation import AUTOMATION_SYSTEM_PROMPT
 from app.agents.subagents.domains.automation_templates import (
     AUTOMATION_TEMPLATES_SYSTEM_PROMPT,

@@ -1,5 +1,3 @@
-"""子 Agent 的输入 / 输出契约。"""
-
 from pydantic import BaseModel, Field
 
 

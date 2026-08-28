@@ -32,7 +32,6 @@ import type {
   HouseholdInfo,
   PendingApproval,
 } from "../types/chat";
-import { friendlyToolLabel } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
 /** 根据 pending approval 的 tool 和 preview.kind 生成友好的待确认状态文案 */
@@ -158,7 +157,10 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         return;
       }
 
-      const chunkSize = Math.min(18, Math.max(4, Math.ceil(pendingContent.length / 24)));
+      const chunkSize = Math.min(
+        18,
+        Math.max(4, Math.ceil(pendingContent.length / 24)),
+      );
       const visibleChunk = pendingContent.slice(0, chunkSize);
       pendingContent = pendingContent.slice(chunkSize);
       messages.value[assistantMessageIndex] = {
@@ -313,14 +315,14 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           stepIdCounter++;
           const stepId = ev.call_id || `tool-${stepIdCounter}`;
           activeToolCallId = stepId;
-          updateStep(stepId, `正在调用 ${friendlyToolLabel(ev.tool)}`, "executing");
+          updateStep(stepId, `正在调用 ${ev.tool}`, "executing");
           break;
         }
         case "tool_completed": {
           const ev = event as ToolCompletedEvent;
           updateStep(
             ev.call_id || activeToolCallId,
-            `已完成 ${friendlyToolLabel(ev.tool)}`,
+            `已完成 ${ev.tool}`,
             "completed",
           );
           break;
@@ -329,7 +331,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           const ev = event as ToolFailedEvent;
           updateStep(
             ev.call_id || activeToolCallId,
-            `${friendlyToolLabel(ev.tool)} 执行失败`,
+            `${ev.tool} 执行失败`,
             "failed",
             ev.error,
           );
@@ -360,13 +362,22 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           pendingStatus.value = ev.message || `执行状态：${ev.status}`;
           if (ev.call_id) {
             if (ev.status === "failed") {
-              updateStep(ev.call_id, friendlyToolLabel(ev.operator), "failed", ev.message);
+              updateStep(
+                ev.call_id,
+                friendlyToolLabel(ev.operator),
+                "failed",
+                ev.message,
+              );
             } else if (
               ev.status === "verified" ||
               ev.status === "submitted" ||
               ev.status === "running"
             ) {
-              updateStep(ev.call_id, friendlyToolLabel(ev.operator), "completed");
+              updateStep(
+                ev.call_id,
+                friendlyToolLabel(ev.operator),
+                "completed",
+              );
             }
           }
           break;
@@ -551,10 +562,11 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           if (pending) {
             pendingApproval.value = pending as PendingApproval;
             agentStatus.value = "awaiting_approval";
-            pendingStatus.value = pendingApprovalLabel(pending as PendingApproval);
+            pendingStatus.value = pendingApprovalLabel(
+              pending as PendingApproval,
+            );
           }
-        } catch {
-        }
+        } catch {}
 
         try {
           const runStatus = await getAgentRunStatus(Number(sessionId));
@@ -563,8 +575,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           } else if (runStatus.status === "cancelled") {
             pendingStatus.value = "上一次运行已取消";
           }
-        } catch {
-        }
+        } catch {}
       }
     } catch {
       messages.value = [];
@@ -589,10 +600,11 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       loadedMessagePage.value = nextPage;
       hasMoreMessages.value = msgs.length >= pageSize;
       if (messages.value.length > maxMessages) {
-        messages.value = messages.value.slice(messages.value.length - maxMessages);
+        messages.value = messages.value.slice(
+          messages.value.length - maxMessages,
+        );
       }
-    } catch {
-    }
+    } catch {}
   };
 
   /** 从后端重新加载当前会话消息，用于在生成完成后同步真实消息 ID。 */
@@ -606,8 +618,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       messages.value = msgs;
       loadedMessagePage.value = 1;
       hasMoreMessages.value = msgs.length >= pageSize;
-    } catch {
-    }
+    } catch {}
   };
 
   const deleteConversation = async (sessionId: string) => {
@@ -623,10 +634,22 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   };
 
   const handleDecision = async (decision: "approve" | "reject") => {
-    if (decisionSubmitting.value || !pendingApproval.value || !activeSessionId.value) return;
+    if (
+      decisionSubmitting.value ||
+      !pendingApproval.value ||
+      !activeSessionId.value
+    )
+      return;
     const hh = household.value;
     const sid = Number(activeSessionId.value);
-    if (!hh || !Number.isFinite(sid) || sid <= 0 || !Number.isFinite(hh.id) || hh.id <= 0 || !pendingApproval.value.approval_id) {
+    if (
+      !hh ||
+      !Number.isFinite(sid) ||
+      sid <= 0 ||
+      !Number.isFinite(hh.id) ||
+      hh.id <= 0 ||
+      !pendingApproval.value.approval_id
+    ) {
       pendingStatus.value = "提交失败：家庭或会话信息不完整，请刷新后重试";
       return;
     }
@@ -652,7 +675,9 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       decision === "approve" ? "正在执行操作" : "正在处理拒绝";
     resetExecutionSteps();
 
-    const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
+    const { queueContent, waitForContentDrain } = createContentStreamer(
+      assistantMessageIndex,
+    );
 
     let ended = false;
     const handleEvent = createEventProcessor({
@@ -691,18 +716,14 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         finishAiReply();
       } else if (!ended) {
         try {
-          const pending = await apiGetPendingAgentOperation(
-            sid,
-            hh!.id,
-          );
+          const pending = await apiGetPendingAgentOperation(sid, hh!.id);
           if (pending) {
             pendingApproval.value = pending as PendingApproval;
             agentStatus.value = "awaiting_approval";
             pendingStatus.value = "已恢复，等待确认操作";
             return;
           }
-        } catch {
-        }
+        } catch {}
         finishAiReply();
       }
 
@@ -718,9 +739,15 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       const errMsg = error instanceof Error ? error.message : "决策提交失败";
       if (error instanceof Error) {
         if (errMsg.includes("expired") || errMsg.includes("过期")) {
-          pendingStatus.value = getFriendlyError("approval_expired", "确认请求已过期");
+          pendingStatus.value = getFriendlyError(
+            "approval_expired",
+            "确认请求已过期",
+          );
         } else if (errMsg.includes("consumed") || errMsg.includes("已处理")) {
-          pendingStatus.value = getFriendlyError("approval_consumed", "该确认请求已被处理");
+          pendingStatus.value = getFriendlyError(
+            "approval_consumed",
+            "该确认请求已被处理",
+          );
           pendingApproval.value = null;
         } else if (errMsg.includes("没有待确认操作")) {
           pendingStatus.value = "确认请求已失效，请重新发起";
@@ -745,8 +772,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
             agentStatus.value = "success";
             pendingStatus.value = "操作已执行完成";
           }
-        } catch {
-        }
+        } catch {}
       }
     } finally {
       decisionSubmitting.value = false;
@@ -767,7 +793,9 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
       if (lastMsg && lastMsg.role === "user") {
         messages.value[messages.value.length - 1] = {
           ...lastMsg,
-          content: lastMsg.content + "\n\n（错误：未配置 AI 模型，请先在设置中添加模型）",
+          content:
+            lastMsg.content +
+            "\n\n（错误：未配置 AI 模型，请先在设置中添加模型）",
         };
       }
       return;
@@ -786,7 +814,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         if (lastMsg && lastMsg.role === "user") {
           messages.value[messages.value.length - 1] = {
             ...lastMsg,
-            content: lastMsg.content + "\n\n（错误：未找到家庭信息，请先创建家庭）",
+            content:
+              lastMsg.content + "\n\n（错误：未找到家庭信息，请先创建家庭）",
           };
         }
         return;
@@ -811,7 +840,9 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     chatController = controller;
     let runCompleted = false;
 
-    const { queueContent, waitForContentDrain } = createContentStreamer(assistantMessageIndex);
+    const { queueContent, waitForContentDrain } = createContentStreamer(
+      assistantMessageIndex,
+    );
 
     if (isChatMode) {
       try {
@@ -831,7 +862,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
           activeModel.value,
           queueContent,
           controller.signal,
-          (messageId) => applyAssistantMessageId(assistantMessageIndex, messageId),
+          (messageId) =>
+            applyAssistantMessageId(assistantMessageIndex, messageId),
         );
 
         await waitForContentDrain();
@@ -850,7 +882,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        const errMsg = error instanceof Error ? error.message : "请求大模型失败";
+        const errMsg =
+          error instanceof Error ? error.message : "请求大模型失败";
         const currentMessage = messages.value[assistantMessageIndex];
         if (currentMessage) {
           messages.value[assistantMessageIndex] = {
@@ -951,8 +984,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
             agentStatus.value = "awaiting_approval";
             pendingStatus.value = `连接已恢复，${pendingApprovalLabel(pending as PendingApproval)}`;
           }
-        } catch {
-        }
+        } catch {}
       }
     } finally {
       if (chatController === controller) {
@@ -1005,12 +1037,19 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   };
 
   const regenerateMessage = async (assistantMessageId: string) => {
-    if (agentStatus.value === "executing" || agentStatus.value === "awaiting_approval") return;
+    if (
+      agentStatus.value === "executing" ||
+      agentStatus.value === "awaiting_approval"
+    )
+      return;
 
     const assistantIndex = messages.value.findIndex(
       (message) => message.id === assistantMessageId,
     );
-    if (assistantIndex < 0 || messages.value[assistantIndex]?.role !== "assistant") {
+    if (
+      assistantIndex < 0 ||
+      messages.value[assistantIndex]?.role !== "assistant"
+    ) {
       return;
     }
 
@@ -1053,7 +1092,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
 
     const controller = new AbortController();
     chatController = controller;
-    const { queueContent, waitForContentDrain } = createContentStreamer(assistantIndex);
+    const { queueContent, waitForContentDrain } =
+      createContentStreamer(assistantIndex);
 
     if (agentMode.value === "chat") {
       try {

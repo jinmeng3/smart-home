@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from app.utils.time import now_utc
 
 from fastapi import HTTPException, status
 from sqlalchemy import desc, select
@@ -102,7 +103,7 @@ def register_current_device(
     location: str,
 ) -> SecurityDevice:
     """登录成功后注册或更新当前设备记录。"""
-    now = datetime.now(timezone.utc)
+    now = now_utc()
 
     # 清空当前用户的旧 is_current 标记
     current_devices = db.scalars(

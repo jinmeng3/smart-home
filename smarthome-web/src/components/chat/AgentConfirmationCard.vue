@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import SvgIcon from "../common/SvgIcon.vue";
 import type { PendingApproval } from "../../types/chat";
 
 const props = defineProps<{
@@ -19,6 +20,7 @@ const isAutomationCreate = computed(() => kind.value === "create_automation");
 const isAutomationUpdate = computed(() => kind.value === "update_automation");
 const isAutomationToggle = computed(() => kind.value === "set_automation_enabled");
 const isAutomationDelete = computed(() => kind.value === "delete_automation");
+const isDeviceCommand = computed(() => kind.value === "device_command");
 
 const title = computed(() => {
   if (isSceneExecution.value) return "需要确认场景执行";
@@ -26,6 +28,7 @@ const title = computed(() => {
   if (isAutomationUpdate.value) return "需要确认修改自动化";
   if (isAutomationToggle.value) return "需要确认启停自动化";
   if (isAutomationDelete.value) return "需要确认删除自动化";
+  if (isDeviceCommand.value) return "需要确认设备操作";
   return "需要确认操作";
 });
 
@@ -54,6 +57,56 @@ const targetEnabled = computed(() => Boolean(preview.value.target_enabled));
 
 const sceneSteps = computed(() => (preview.value.steps as any[]) || []);
 const sceneName = computed(() => String(preview.value.scene_name || ""));
+
+// === 设备命令预览（对应 kind === "device_command"） ===
+
+/** 设备名 + 品牌拼接：Yeelight 灯 → "客厅吊灯（Yeelight）"。 */
+const deviceLabel = computed(() => {
+  if (!isDeviceCommand.value) return "";
+  const name = String(preview.value.device_name || "未知设备");
+  const brand = String(preview.value.device_brand || "").trim();
+  return brand ? `${name}（${brand}）` : name;
+});
+
+/** 操作名 + 参数。 */
+const operationLabel = computed(() => {
+  if (!isDeviceCommand.value) return "";
+  const op = String(preview.value.operation || "");
+  const args = preview.value as Record<string, unknown>;
+  if (op === "set_device_power") {
+    const power = String(args.power || "");
+    return power === "on" ? "开启电源" : "关闭电源";
+  }
+  if (op === "set_device_temperature") {
+    const temp = args.temperature;
+    return `设置温度（${temp}℃）`;
+  }
+  if (op === "set_curtain_position") {
+    const pos = args.position;
+    return `设置开合度（${pos}%）`;
+  }
+  return op || "设备操作";
+});
+
+/** 通用影响描述。 */
+const impact = computed(() => {
+  if (!isDeviceCommand.value) return "";
+  return String(preview.value.impact || "设备状态将变更");
+});
+
+/** 设备类型 → 设备图标。 */
+const deviceTypeIcon = computed(() => {
+  if (!isDeviceCommand.value) return "device-management";
+  const t = String(preview.value.device_type || "");
+  if (t === "light") return "light";
+  if (t === "air_conditioner") return "air-conditioner";
+  if (t === "curtain") return "curtain";
+  if (t === "socket") return "plug";
+  if (t === "lock") return "lock";
+  if (t === "camera") return "camera";
+  if (t === "sensor") return "sensor";
+  return "device-management";
+});
 </script>
 
 <template>
@@ -139,6 +192,31 @@ const sceneName = computed(() => String(preview.value.scene_name || ""));
       <div class="detail-row">
         <span class="detail-label">目标状态</span>
         <span class="detail-value">{{ targetEnabled ? "启用" : "停用" }}</span>
+      </div>
+    </div>
+
+    <!-- 设备命令预览（单设备操作）：📍 设备 / ⚡ 操作 / 影响 -->
+    <div v-if="isDeviceCommand" class="device-command-detail">
+      <div class="device-command-row">
+        <span class="device-command-icon" aria-hidden="true">
+          <SvgIcon :name="deviceTypeIcon" size="sm" />
+        </span>
+        <span class="device-command-label">设备</span>
+        <span class="device-command-value">{{ deviceLabel }}</span>
+      </div>
+      <div class="device-command-row">
+        <span class="device-command-icon" aria-hidden="true">
+          <SvgIcon name="bolt" size="sm" />
+        </span>
+        <span class="device-command-label">操作</span>
+        <span class="device-command-value">{{ operationLabel }}</span>
+      </div>
+      <div class="device-command-row">
+        <span class="device-command-icon" aria-hidden="true">
+          <SvgIcon name="info" size="sm" />
+        </span>
+        <span class="device-command-label">影响</span>
+        <span class="device-command-value">{{ impact }}</span>
       </div>
     </div>
 
@@ -386,5 +464,46 @@ const sceneName = computed(() => String(preview.value.scene_name || ""));
   margin: 0 16px 16px;
   font-size: 12px;
   color: var(--color-danger);
+}
+
+/* === 设备命令预览（单设备） === */
+.device-command-detail {
+  margin: 12px 16px 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+}
+
+.device-command-row {
+  display: grid;
+  grid-template-columns: 18px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.device-command-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.device-command-label {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.device-command-value {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  min-width: 0;
+  word-break: break-word;
 }
 </style>

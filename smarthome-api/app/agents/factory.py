@@ -2,6 +2,8 @@ import logging
 from collections import OrderedDict
 from threading import RLock
 
+from langchain_core.language_models import BaseChatModel
+
 from app.agents.crypto import decrypt_api_key
 from app.agents.errors import (
     ModelCredentialsMissing,
@@ -11,7 +13,6 @@ from app.agents.errors import (
 from app.agents.providers import OpenAICompatibleProvider, Provider
 from app.core.config import Settings, get_settings
 from app.models.ai import AIModel
-from langchain_core.language_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,6 @@ class ModelCache:
                 self._items.move_to_end(key)
                 return cached
 
-                                        
             stale_keys = [
                 item_key for item_key in self._items if item_key[0] == config.id
             ]

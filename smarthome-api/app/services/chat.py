@@ -1,6 +1,7 @@
 import re
 from collections.abc import Generator
 from datetime import datetime, timezone
+from app.utils.time import now_utc
 
 from fastapi import HTTPException, status
 from langchain.agents import create_agent
@@ -169,7 +170,7 @@ def create_chat_service(
     content = result["messages"][-1].content
 
     db.add(ChatMessage(session_id=session.id, content=content, role="assistant"))
-    session.updated_at = datetime.now(timezone.utc)
+    session.updated_at = now_utc()
     db.commit()
     return content
 
@@ -195,7 +196,7 @@ def create_chat_service_stream(
                 role=payload.messages[-1].role,
             )
         )
-        session.updated_at = datetime.now(timezone.utc)
+        session.updated_at = now_utc()
         db.commit()
 
     model_cache = get_model_cache()
@@ -225,7 +226,7 @@ def create_chat_service_stream(
             session_id=session.id, content=content, role="assistant"
         )
         db.add(assistant_message)
-        session.updated_at = datetime.now(timezone.utc)
+        session.updated_at = now_utc()
         db.commit()
         yield format_stream_message_id(assistant_message.id)
 

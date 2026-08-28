@@ -1,5 +1,3 @@
-"""device 领域子 Agent：设备 / 房间查询与诊断（只读）。"""
-
 from app.agents.context import AgentContext
 from app.agents.subagents.factory import build_subagent
 from langchain_core.language_models import BaseChatModel

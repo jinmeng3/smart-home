@@ -1,5 +1,7 @@
 import json
 from datetime import date, datetime, timezone
+from app.utils.json import dump_json
+from app.utils.time import now_utc
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
@@ -99,7 +101,7 @@ def get_overview_service(db: Session, household_id: int) -> OverviewRead:
         for item in devices[:10]
     ]
     today_start = datetime.combine(
-        datetime.now(timezone.utc).date(), datetime.min.time()
+        now_utc().date(), datetime.min.time()
     )
     activity_items: list[tuple[datetime, dict]] = []
 
@@ -229,7 +231,7 @@ def sync_household_devices_service(
     db: Session, household_id: int, user: User
 ) -> SyncJobRead:
     """按幂等键创建当天的设备同步任务。"""
-    key = f"household-{household_id}-{datetime.now(timezone.utc).date().isoformat()}"
+    key = f"household-{household_id}-{now_utc().date().isoformat()}"
     job = db.scalar(
         select(DeviceSyncJob).where(
             DeviceSyncJob.household_id == household_id,
@@ -402,7 +404,7 @@ def save_schedule_service(
     schedule.enabled = payload.enabled
     schedule.repeat_days_json = json.dumps(payload.repeat_days)
     schedule.targets_json = json.dumps(payload.targets)
-    schedule.items_json = json.dumps(payload.items, ensure_ascii=False)
+    schedule.items_json = dump_json(payload.items)
     db.commit()
     db.refresh(schedule)
     return _schedule_to_read(schedule)

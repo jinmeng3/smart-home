@@ -1,5 +1,3 @@
-"""settings_suggestions 领域：设置中心 AI 建议生成（结构化 JSON 输出）。"""
-
 SUGGESTIONS_SYSTEM_PROMPT = """你是智能家居设置中心助手。根据用户当前的设置快照，生成最多 5 条**尚未完成**的设置建议。
 
 要求：

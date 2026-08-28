@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import json
 import logging
-import re
-import time
 from threading import RLock
 from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.utils.time import now_timestamp
+from app.utils.json import dump_json, extract_json
 from app.agents.factory import ModelCache
 from app.agents.subagents.domains import AUTOMATION_TEMPLATES_SYSTEM_PROMPT
 from app.models.ai import AIModel
@@ -58,28 +58,6 @@ def _hash_summary(summary: DeviceSummary) -> str:
     )
 
 
-def _extract_json(content: str) -> dict | None:
-    if not content:
-        return None
-    text = content.strip()
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fence:
-        text = fence.group(1)
-    start = text.find("{")
-    if start == -1:
-        return None
-    depth = 0
-    for i in range(start, len(text)):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                try:
-                    return json.loads(text[start : i + 1])
-                except json.JSONDecodeError:
-                    return None
-    return None
 
 
 def _sanitize_trigger(raw: dict) -> TemplateTrigger | None:
@@ -203,7 +181,7 @@ def generate_ai_templates(
     """
     summary_hash = _hash_summary(device_summary)
     cache_key = (current_user.id, summary_hash, count)
-    now = time.time()
+    now = now_timestamp()
 
     if not force:
         with _cache_lock:
@@ -223,7 +201,7 @@ def generate_ai_templates(
 
     user_prompt = (
         f"请生成 {count} 条自动化模板。\n\n"
-        f"用户家庭设备摘要：\n{json.dumps(device_summary.model_dump(), ensure_ascii=False, indent=2)}\n\n"
+        f"用户家庭设备摘要：\n{dump_json(device_summary.model_dump(), indent=2)}\n\n"
         "按系统提示的 JSON 结构输出。"
     )
 
@@ -248,7 +226,7 @@ def generate_ai_templates(
             for block in raw_content
         )
 
-    parsed = _extract_json(str(raw_content))
+    parsed = extract_json(str(raw_content))
     if not parsed:
         logger.warning("AI 模板返回非 JSON: %r", raw_content[:200])
         return AiTemplatesRead(templates=[], cached=False)

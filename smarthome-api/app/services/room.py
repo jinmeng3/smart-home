@@ -1,6 +1,9 @@
 import json
 import uuid
 from datetime import date, datetime, time, timezone
+from app.utils.json import dump_json
+from app.utils.time import now_utc
+from app.utils.db import get_or_404
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, insert, or_, select
@@ -54,10 +57,11 @@ def accessible_rooms(db: Session, user: User):
 
 def get_room_or_404(db: Session, user: User, room_id: int) -> Room:
     """按ID获取用户可访问的房间，不存在时抛出404。"""
-    room = db.scalar(accessible_rooms(db, user).where(Room.id == room_id))
-    if not room:
-        raise HTTPException(status_code=404, detail="房间不存在")
-    return room
+    return get_or_404(
+        db,
+        accessible_rooms(db, user).where(Room.id == room_id),
+        detail="房间不存在",
+    )
 
 
 def _load_room_devices(db: Session, room_read: RoomRead, room_id: int) -> RoomRead:
@@ -355,7 +359,7 @@ def get_room_detail_service(db: Session, user: User, room_id: int) -> RoomDetail
     recent_activity_time = None
     if recent_log:
         recent_activity = recent_log.event
-        now = datetime.now(timezone.utc)
+        now = now_utc()
         occurred_at = recent_log.occurred_at
         if occurred_at.tzinfo is None:
             occurred_at = occurred_at.replace(tzinfo=timezone.utc)
@@ -402,7 +406,7 @@ def write_activity(
             device_id=device_id,
             source=source,
             event=event,
-            tags_json=json.dumps([room.name], ensure_ascii=False),
+            tags_json=dump_json([room.name]),
         )
     )
 
@@ -597,7 +601,7 @@ def update_device_service(
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在")
     device.status = DeviceStatus(payload.status)
-    device.updated_at = datetime.now(timezone.utc)
+    device.updated_at = now_utc()
     write_activity(db, room, f"{device.name} 状态更新为 {payload.status.value}")
     db.commit()
     db.refresh(room)
@@ -637,7 +641,14 @@ def execute_room_scene_service(
 ) -> SceneExecutionRead:
     """执行房间场景并记录活动日志。"""
     room = get_room_or_404(db, user, room_id)
-    result = run_scene_service(db, room.household_id, scene_id, False, "room")
+    result = run_scene_service(
+        db,
+        room.household_id,
+        scene_id,
+        False,
+        "room",
+        executed_by=user.id,
+    )
     write_activity(db, room, f"执行场景：{scene_id}", "scene")
     db.commit()
     return result
@@ -653,7 +664,7 @@ def get_room_environment_latest_service(
     get_room_or_404(db, user, room_id)
                          
     return RoomEnvironmentLatestRead(
-        sampled_at=datetime.now(timezone.utc),
+        sampled_at=now_utc(),
         values={
             "temperature": 24.5,
             "humidity": 55.0,
@@ -669,7 +680,7 @@ def get_room_environment_trends_service(
     """获取房间环境趋势数据。"""
     get_room_or_404(db, user, room_id)
     metric_list = [m.strip() for m in metrics.split(",") if m.strip()]
-    now = datetime.now(timezone.utc)
+    now = now_utc()
     items = [
         RoomEnvironmentPoint(
             sampled_at=now.replace(minute=0, second=0, microsecond=0),

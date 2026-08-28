@@ -8,13 +8,19 @@ import { fetchRooms } from "../../api/room";
 import { getDeviceTypeIcon } from "../device/deviceMeta";
 import type { Device } from "../../types/device";
 import type { Room } from "../../types/room";
-import type { Scene, SceneInput, SceneTriggerType } from "../../types/scene";
+import type { Scene, SceneInput, SceneStepInput, SceneTriggerType, StepAction } from "../../types/scene";
 
 interface ActionItem {
     id: string;
     icon: string;
     name: string;
     target: string;
+    /** 设备类型，用于决定动作选项集合。 */
+    deviceType: string;
+    /** 动作指令：未填时后端按设备历史取反（A3）。 */
+    action: StepAction | null;
+    /** 调温 / 开合度的参数值。 */
+    actionValue: number | null;
 }
 
 const props = defineProps<{
@@ -118,6 +124,10 @@ const toggleDevice = (device: Device) => {
             icon: device.icon || getDeviceTypeIcon(device.type),
             name: device.name,
             target: `${device.room} · 执行设备动作`,
+            deviceType: device.type,
+            // 默认动作：未填（null）让后端按设备历史取反
+            action: null,
+            actionValue: null,
         },
     ];
 };
@@ -166,6 +176,70 @@ const deriveActionIcon = (name: string): string => {
     return matched ? matched[1] : "device-management";
 };
 
+interface ActionOption {
+    value: StepAction;
+    label: string;
+    /** 是否需要 actionValue 参数。 */
+    needsValue: boolean;
+    /** value 范围提示（如 "16-30℃"），无则不显示。 */
+    valueHint?: string;
+}
+
+/** 按设备类型返回可选动作。空表示该设备类型不支持场景写操作。 */
+const getActionOptions = (deviceType: string): ActionOption[] => {
+    const on: ActionOption = { value: "on", label: "开启", needsValue: false };
+    const off: ActionOption = { value: "off", label: "关闭", needsValue: false };
+    const setTemperature: ActionOption = {
+        value: "set_temperature",
+        label: "设温度",
+        needsValue: true,
+        valueHint: "16-30℃",
+    };
+    const setPosition: ActionOption = {
+        value: "set_position",
+        label: "开合度",
+        needsValue: true,
+        valueHint: "0-100",
+    };
+    if (deviceType === "air_conditioner") {
+        return [on, off, setTemperature];
+    }
+    if (deviceType === "curtain") {
+        return [on, off, setPosition];
+    }
+    if (deviceType === "light" || deviceType === "socket") {
+        return [on, off];
+    }
+    // 未知类型：只暴露开关
+    return [on, off];
+};
+
+/** 当前选中的 action option（用于展示参数输入框与提示）。 */
+const getCurrentOption = (action: ActionItem): ActionOption | null => {
+    if (action.action === null) return null;
+    const options = getActionOptions(action.deviceType);
+    return options.find((option) => option.value === action.action) ?? null;
+};
+
+const updateAction = (actionId: string, value: StepAction | null) => {
+    actions.value = actions.value.map((item) =>
+        item.id === actionId
+            ? {
+                ...item,
+                action: value,
+                // 切到不需要 value 的 action 时清空，避免脏数据
+                actionValue: value === null || !getActionOptions(item.deviceType).find((o) => o.value === value)?.needsValue ? null : item.actionValue,
+            }
+            : item,
+    );
+};
+
+const updateActionValue = (actionId: string, value: number | null) => {
+    actions.value = actions.value.map((item) =>
+        item.id === actionId ? { ...item, actionValue: value } : item,
+    );
+};
+
 const resetForm = () => {
     Object.assign(form, defaultForm);
     actions.value = defaultActions.map((action) => ({ ...action }));
@@ -183,12 +257,22 @@ const populateScene = (scene: Scene) => {
             : "";
     form.rooms = [...(scene.roomLabels ?? [])];
     form.enabled = scene.enabled;
-    actions.value = scene.steps.map((step) => ({
-        id: step.deviceId,
-        icon: deriveActionIcon(step.name),
-        name: step.name,
-        target: step.description,
-    }));
+    actions.value = scene.steps.map((step) => {
+        // 反查设备类型：scene.steps 只存 deviceId（业务 ID），UI 需要 deviceType
+        // 来决定动作选项。查 availableDevices，找不到就降级为 "device"。
+        const matched = availableDevices.value.find(
+            (device) => (device.deviceId ?? String(device.id)) === step.deviceId,
+        );
+        return {
+            id: step.deviceId,
+            icon: deriveActionIcon(step.name),
+            name: step.name,
+            target: step.description,
+            deviceType: matched?.type ?? "device",
+            action: step.action ?? null,
+            actionValue: step.actionValue ?? null,
+        };
+    });
 };
 
 watch(
@@ -230,12 +314,23 @@ const payload = computed<SceneInput>(() => ({
     roomLabels: [...form.rooms],
     deviceIds: actions.value.map((action) => action.id),
     enabled: form.enabled,
-    steps: actions.value.map((action, index) => ({
-        name: action.name,
-        description: action.target,
-        deviceId: action.id,
-        order: index + 1,
-    })),
+    steps: actions.value.map<SceneStepInput>((action, index) => {
+        const step: SceneStepInput = {
+            name: action.name,
+            description: action.target,
+            deviceId: action.id,
+            order: index + 1,
+        };
+        // 仅在用户显式设置时才传 action / actionValue。
+        // 不传 → 后端按设备历史取反（A3 语义）。
+        if (action.action !== null) {
+            step.action = action.action;
+        }
+        if (action.actionValue !== null && action.action !== null) {
+            step.actionValue = action.actionValue;
+        }
+        return step;
+    }),
 }));
 
 const createScene = () => {
@@ -490,7 +585,7 @@ const dialogFooterHint = computed(() =>
                         <span class="form-block-badge">共 {{ actions.length }} 步</span>
                     </div>
                     <ol class="action-list">
-                        <li v-for="(action, index) in actions" :key="action.id">
+                        <li v-for="(action, index) in actions" :key="action.id" class="action-item">
                             <span class="action-order">{{ index + 1 }}</span>
                             <span class="action-icon">
                                 <SvgIcon :name="action.icon" />
@@ -498,6 +593,31 @@ const dialogFooterHint = computed(() =>
                             <div class="action-info">
                                 <strong>{{ action.name }}</strong>
                                 <small>{{ action.target }}</small>
+                            </div>
+                            <div class="action-controls">
+                                <select
+                                    class="action-select"
+                                    :value="action.action ?? ''"
+                                    @change="updateAction(action.id, ($event.target as HTMLSelectElement).value === '' ? null : (($event.target as HTMLSelectElement).value as StepAction))"
+                                >
+                                    <option value="">自动（按设备历史）</option>
+                                    <option
+                                        v-for="option in getActionOptions(action.deviceType)"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >{{ option.label }}</option>
+                                </select>
+                                <input
+                                    v-if="getCurrentOption(action)?.needsValue"
+                                    class="action-value-input"
+                                    type="number"
+                                    :min="getCurrentOption(action)?.valueHint?.includes('0-100') ? 0 : 16"
+                                    :max="getCurrentOption(action)?.valueHint?.includes('0-100') ? 100 : 30"
+                                    :step="getCurrentOption(action)?.valueHint?.includes('0-100') ? 1 : 0.5"
+                                    :placeholder="getCurrentOption(action)?.valueHint ?? ''"
+                                    :value="action.actionValue ?? ''"
+                                    @input="updateActionValue(action.id, ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value))"
+                                />
                             </div>
                             <button type="button" class="action-more" title="移除动作" @click="actions = actions.filter((item: ActionItem) => item.id !== action.id)">
                                 ×
@@ -559,7 +679,18 @@ const dialogFooterHint = computed(() =>
                             <SvgIcon :name="action.icon" size="sm" />
                             <div class="step-info">
                                 <strong>{{ action.name }}</strong>
-                                <small>{{ action.target }}</small>
+                                <small>
+                                    {{ action.target }}
+                                    <template v-if="action.action">·
+                                        <span class="preview-action-tag">
+                                            {{ getActionOptions(action.deviceType).find((o) => o.value === action.action)?.label ?? action.action
+                                            }}<template v-if="action.actionValue !== null && getCurrentOption(action)?.needsValue">
+                                                {{ action.actionValue }}{{ getCurrentOption(action)?.valueHint?.includes('0-100') ? '%' : '℃' }}
+                                            </template>
+                                        </span>
+                                    </template>
+                                    <template v-else>·<span class="preview-action-tag muted">自动</span></template>
+                                </small>
                             </div>
                         </li>
                     </ol>
@@ -1169,6 +1300,56 @@ textarea {
     margin-top: 1px;
 }
 
+.action-item {
+    flex-wrap: wrap;
+}
+
+.action-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.action-select {
+    min-width: 96px;
+    max-width: 140px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 6px;
+    cursor: pointer;
+}
+
+.action-select:focus {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+    border-color: var(--color-primary-500);
+}
+
+.action-value-input {
+    width: 64px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 6px;
+    text-align: center;
+}
+
+.action-value-input:focus {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+    border-color: var(--color-primary-500);
+}
+
 .action-more {
     display: grid;
     width: 28px;
@@ -1368,7 +1549,19 @@ textarea {
     min-width: 0;
     flex: 1;
 }
-
+.preview-action-tag {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+    color: var(--color-primary-700);
+    font-weight: 800;
+}
+.preview-action-tag.muted {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-tertiary);
+}
 .step-info strong {
     display: block;
     overflow: hidden;

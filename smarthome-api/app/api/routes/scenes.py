@@ -230,11 +230,17 @@ def run_scene(
     payload: SceneExecuteWrite,
     db: Session = DB_DEPENDENCY,
     household_id: int = DEFAULT_HOUSEHOLD_DEPENDENCY,
+    current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[SceneExecutionRead]:
     """校验风险并记录完整执行结果。"""
     return ApiResponse(
         data=run_scene_service(
-            db, household_id, scene_id, payload.confirm_high_risk, payload.source
+            db,
+            household_id,
+            scene_id,
+            payload.confirm_high_risk,
+            payload.source,
+            executed_by=current_user.id,
         )
     )
 

@@ -1,15 +1,15 @@
-"""Agent 请求限流与每日 token 预算检查。"""
-
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime
 from threading import Lock
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from app.agents.errors import AgentBudgetExceededError, AgentRateLimitError
 from app.core.config import get_settings
 from app.models.agent_usage import AgentUsageDaily
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from app.utils.time import today_utc
 
 _rate_limit_buckets: dict[int, deque[float]] = defaultdict(deque)
 _rate_limit_lock = Lock()
@@ -43,7 +43,7 @@ def check_daily_budget(db: Session, user_id: int) -> None:
     if settings.agent_daily_budget_tokens <= 0:
         return
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = today_utc().strftime("%Y-%m-%d")
     result = db.scalar(
         select(
             func.coalesce(

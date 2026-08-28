@@ -1,44 +1,3 @@
-"""上下文层（Context Layer）多轮 / 指代消解引擎。
-
-对应 ``docs/funnel-routing-architecture.md`` 第 6 节「第二层：上下文层（专科医生）」
-与第 11 节「P1：上下文层多轮与指代」。
-
-职责
-----
-
-当漏斗路由器把请求判为 ``LAYER_CONTEXT``（规则层模糊命中、含指代词 / 相对控制、
-存在活动对话）时，本引擎在**不调用任何 LLM** 的前提下做确定性多轮 / 指代消解，
-让「话只说一半」的请求在进入大模型前被接住：
-
-- **意图继承 + 实体替换（Anaphora）**：如上一轮问「客厅温度多少」，本轮说
-  「那卧室呢？」→ 继承 ``query_temp`` 意图，把实体替换为 ``bedroom``。
-- **实体复用（Ellipsis）**：如上一轮「打开客厅灯」，本轮「厨房灯」→ 继承
-  ``control`` 意图与动作，把目标实体替换为 ``kitchen_light``。
-- **无法确定（Relative / Compound / Unclear）**：仍归还给上层（兜底层），由
-  LLM 处理。典型如「声音大一点」（需要设备实时状态）、「那它呢」（无实体）。
-
-设计说明
---------
-
-- **确定性优先**：本层是规则层的延伸，只处理「能根据上一轮明确推导」的场景；
-  一旦无法唯一确定，立即 ``needs_fallback=True``，绝不让多轮对话失控。
-- **0 Token**：本层不调用模型，只读会话树历史做轻量解析。
-- **与写路径一致**：推导出的可执行结果仍以 ``RuleParseResult`` 暴露，交由
-  ``execute_rule_layer`` 执行，写操作继续走 ``risk_check → approval`` 单写路径，
-  不因「更省」而绕过风险控制。
-
-不覆盖的场景
-------------
-
-- 需要设备实时状态的相对控制（音量 / 色温 ±step）→ 由兜底层结合状态工具处理。
-- 复杂多轮槽位填充（「帮我定个闹钟」「明早七点」）→ 由兜底层 / 后续小模型处理。
-- 跨域复合意图 → 由兜底层处理。
-
-该实现遵循文档第 10 节「渐进式演进：初期可把上下文层硬编码为规则；数据积累后再
-训练小模型」。Slot 状态机与家庭图谱 System Prompt 注入属后续演进，本期通过
-``SessionState`` / ``previous_user_message`` 传递必要的多轮信号。
-"""
-
 from __future__ import annotations
 
 import re
@@ -300,7 +259,7 @@ class ContextEngine:
                 kind = kind_candidate
                 break
 
-        room = self._rule_engine._extract_room(text)  # noqa: SLF001 复用规则层房间抽取
+        room = self._rule_engine._extract_room(text)
         if matched_kw:
             return f"{room}{matched_kw}" if room else matched_kw, kind
         if room:

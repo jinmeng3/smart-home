@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from hashlib import sha256
 from typing import cast
 from uuid import uuid4
@@ -11,7 +10,13 @@ from fastapi import HTTPException, status
 from sqlalchemy import case, delete, func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
-from app.models.device import Device
+from app.agents.context import AgentContext
+from app.agents.tools.execute.devices import (
+    set_curtain_position,
+    set_device_power,
+    set_device_temperature,
+)
+from app.models.device import Device, DeviceLog
 from app.models.room import Room
 from app.models.scene import (
     Scene,
@@ -49,6 +54,9 @@ from app.schemas.scene import (
     SceneWrite,
     TriggerType,
 )
+from app.utils.db import count_query, get_or_404
+from app.utils.json import dump_json, parse_json_list
+from app.utils.time import now_utc
 
 HIGH_RISK_KEYWORDS = ("lock", "camera", "门锁", "摄像头", "安防")
 
@@ -56,38 +64,27 @@ HIGH_RISK_KEYWORDS = ("lock", "camera", "门锁", "摄像头", "安防")
 # === 场景管理 ===
 
 
-def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
-
-
 def get_scene_or_404(db: Session, household_id: int, scene_id: str) -> Scene:
-    scene = db.scalar(
+    return get_or_404(
+        db,
         select(Scene)
         .options(selectinload(Scene.steps))
-        .where(Scene.household_id == household_id, Scene.id == scene_id)
+        .where(Scene.household_id == household_id, Scene.id == scene_id),
+        detail="场景不存在",
     )
-    if not scene:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="场景不存在")
-    return scene
 
 
 def get_template_or_404(db: Session, template_id: str) -> SceneTemplate:
-    template = db.get(SceneTemplate, template_id)
-    if not template or not template.enabled:
+    template = get_or_404(
+        db,
+        select(SceneTemplate).where(SceneTemplate.id == template_id),
+        detail="场景模板不存在",
+    )
+    if not template.enabled:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="场景模板不存在"
         )
     return template
-
-
-def parse_json_list(value: str | None) -> list:
-    if not value:
-        return []
-    try:
-        result = json.loads(value)
-        return result if isinstance(result, list) else []
-    except json.JSONDecodeError:
-        return []
 
 
 def serialize_scene(scene: Scene) -> SceneRead:
@@ -115,6 +112,8 @@ def serialize_scene(scene: Scene) -> SceneRead:
                 "description": step.description,
                 "device_id": step.device_id,
                 "order": step.step_order,
+                "action": step.action,
+                "action_value": step.action_value,
             }
             for step in sorted(scene.steps, key=lambda item: item.step_order)
         ],
@@ -128,7 +127,7 @@ def apply_scene_payload(scene: Scene, payload: SceneWrite) -> None:
     scene.color = payload.color
     scene.trigger_type = payload.trigger_type
     scene.trigger_label = payload.trigger_label
-    scene.room_names = json.dumps(payload.room_labels, ensure_ascii=False)
+    scene.room_names = dump_json(payload.room_labels)
     device_ids = set(payload.device_ids) | {step.device_id for step in payload.steps}
     scene.device_count = len(device_ids)
     scene.enabled = payload.enabled
@@ -155,6 +154,8 @@ def replace_steps(scene: Scene, payload: SceneWrite) -> None:
             description=step.description,
             device_id=step.device_id,
             step_order=step.order,
+            action=step.action,
+            action_value=step.action_value,
         )
         for step in sorted(payload.steps, key=lambda item: item.order)
     )
@@ -291,6 +292,9 @@ def run_scene_service(
     scene_id: str,
     confirm_high_risk: bool,
     source: str,
+    executed_by: int,
+    session_id: int = 0,
+    auto_execute_low_risk: bool = True,
     idempotency_key: str | None = None,
 ) -> SceneExecutionRead:
     """执行场景，支持幂等键以避免重复执行。
@@ -301,6 +305,11 @@ def run_scene_service(
         scene_id: 场景 ID。
         confirm_high_risk: 是否确认高风险操作。
         source: 触发来源（manual / agent / room）。
+        executed_by: 执行人 user_id。用于构造 AgentContext 调 set_device_*
+            （DeviceLog 会记录该用户）。
+        session_id: 会话 ID。Agent 路径填真实会话，其他填 0。
+        auto_execute_low_risk: 是否允许跳过高风险审批（场景已在调用前完成高风险确认，
+            这里主要用于控制 log 的 status 字段）。
         idempotency_key: 幂等键。agent 场景执行时传入 approval_id 以实现幂等。
 
     Returns:
@@ -331,27 +340,74 @@ def run_scene_service(
 
     is_agent_execution = source == "agent"
 
+    # 调设备需要 AgentContext，household_id + user_id 必要。
+    exec_context = AgentContext(
+        user_id=executed_by,
+        household_id=household_id,
+        session_id=session_id,
+        auto_execute_low_risk=auto_execute_low_risk,
+        confirm_high_risk=confirm_high_risk,
+    )
+
+    # 逐个 step 执行写操作。失败时记录到 log，但不回滚已成功的 step
+    # （set_* 函数内部已 commit，无法回滚；这是与 Agent 路径同源的语义）。
+    sorted_steps = sorted(scene.steps, key=lambda item: item.step_order)
+    step_results: list[tuple[SceneStep, str, str]] = []
+    for step in sorted_steps:
+        if step.action == "noop":
+            step_results.append((step, "completed", "noop"))
+            continue
+        # NULL action：查 DeviceLog 最近一条以推断取反动作，
+        # 遵循用户选择的 A3 语义（按设备历史动作取反）。
+        # 历史数据 NULL = fallback "on"（开）。
+        inferred_value: float | None = None
+        if step.action is None:
+            inferred = _infer_action_from_log(db, step.device_id)
+            if inferred is None:
+                # 无 DeviceLog 或最近动作为 set_temperature（不可取反）
+                step_results.append(
+                    (step, "skipped", "无历史动作可推断且未配置 action")
+                )
+                continue
+            action, inferred_value = inferred
+        else:
+            action = step.action
+        ok, msg = _dispatch_step(db, exec_context, step, action, inferred_value)
+        step_results.append((step, "completed" if ok else "failed", msg))
+
+    has_failure = any(
+        status_ in ("failed", "skipped") for _, status_, _ in step_results
+    )
+    final_status = (
+        "submitted"
+        if is_agent_execution
+        else ("failed" if has_failure else "completed")
+    )
+    final_message = (
+        "已提交到业务执行层，等待设备状态回读"
+        if is_agent_execution
+        else ("部分步骤失败" if has_failure else "执行成功")
+    )
+
     log = SceneExecutionLog(
         id=execution_id,
         scene_id=scene.id,
-        status="submitted" if is_agent_execution else "enabled",
+        status=final_status,
         source=source,
         started_at=started_at,
         finished_at=None if is_agent_execution else started_at,
-        message=(
-            "已提交到业务执行层，等待设备状态回读" if is_agent_execution else "执行成功"
-        ),
+        message=final_message,
     )
     log.steps = [
         SceneExecutionStep(
             id=f"{execution_id}-{index}",
             step_id=step.id,
-            status="pending" if is_agent_execution else "completed",
+            status=status_,
             started_at=started_at,
             finished_at=None if is_agent_execution else started_at,
-            message=("等待设备状态回读" if is_agent_execution else f"{step.name}成功"),
+            message=msg,
         )
-        for index, step in enumerate(scene.steps, 1)
+        for index, (step, status_, msg) in enumerate(step_results, 1)
     ]
     scene.monthly_execute_count += 1
     scene.last_executed_at = started_at
@@ -359,6 +415,103 @@ def run_scene_service(
     db.add(log)
     db.commit()
     return serialize_execution(log)
+
+
+def _infer_action_from_log(
+    db: Session, device_id_str: str
+) -> tuple[str, float | None] | None:
+    """根据设备最近一次 DeviceLog 推断“取反”动作（A3 语义）。
+
+    Returns:
+        - ``(action, value)``：推断出的 step action（已取反）；set_position 类
+          同时返回 position value。
+        - ``None``：无 DeviceLog 或最近动作为 set_temperature（不可取反）。
+
+    映射：
+        power_on  -> ("off", None)       关
+        power_off -> ("on",  None)       开
+        curtain_open  -> ("set_position", 0)    全关
+        curtain_close -> ("set_position", 100)  全开
+        set_temperature -> None（不取反）
+    """
+    last = db.scalar(
+        select(DeviceLog)
+        .where(DeviceLog.device_id == device_id_str)
+        .order_by(DeviceLog.created_at.desc())
+        .limit(1)
+    )
+    if last is None:
+        return None
+    if last.action == "power_on":
+        return ("off", None)
+    if last.action == "power_off":
+        return ("on", None)
+    if last.action == "curtain_open":
+        return ("set_position", 0)
+    if last.action == "curtain_close":
+        return ("set_position", 100)
+    # set_temperature / 其他未知动作：不可取反
+    return None
+
+
+def _dispatch_step(
+    db: Session,
+    context: AgentContext,
+    step: SceneStep,
+    action: str,
+    action_value: float | None = None,
+) -> tuple[bool, str]:
+    """按 step.action 调对应的 set_device_* 函数。
+
+    返回 ``(ok, message)``。失败时 message 包含原因。函数不抛异常
+    （底层 set_* 已自行 rollback）。
+    """
+    device = db.scalar(
+        select(Device).where(
+            Device.device_id == step.device_id,
+            Device.household_id == context.household_id,
+        )
+    )
+    if device is None:
+        return False, f"设备不存在：{step.device_id}"
+
+    if action in ("on", "off"):
+        result = set_device_power(
+            db,
+            context,
+            device_id=device.id,
+            power=action,
+        )
+    elif action == "set_temperature":
+        # 优先用 caller 传入的 value（用于 A3 推断），回退到 step 持久化的值
+        value = action_value if action_value is not None else step.action_value
+        if value is None:
+            return False, "set_temperature 缺少 action_value"
+        result = set_device_temperature(
+            db,
+            context,
+            device_id=device.id,
+            temperature=float(value),
+        )
+    elif action == "set_position":
+        # 同上
+        value = action_value if action_value is not None else step.action_value
+        if value is None:
+            return False, "set_position 缺少 action_value"
+        result = set_curtain_position(
+            db,
+            context,
+            device_id=device.id,
+            position=int(value),
+        )
+    else:
+        return False, f"未知 action：{action}"
+
+    if not result.get("ok", False):
+        return False, str(
+            result.get("message") or result.get("error") or "设备操作失败"
+        )
+    return True, str(result.get("message", f"{step.name} 执行成功"))
 
 
 def serialize_execution(log: SceneExecutionLog) -> SceneExecutionRead:
@@ -632,9 +785,7 @@ def get_template_preview_service(
     steps_data = parse_json_list(template.steps_json)
 
     template_device_ids = {
-        s.get("device_id", "")
-        for s in steps_data
-        if s.get("device_id")
+        s.get("device_id", "") for s in steps_data if s.get("device_id")
     }
 
     household_device_ids = (
@@ -721,9 +872,7 @@ def batch_change_enabled_service(
     filters = [Scene.household_id == household_id]
     if payload.scene_ids:
         filters.append(Scene.id.in_(payload.scene_ids))
-    count = db.scalar(
-        select(func.count(Scene.id)).where(*filters)
-    ) or 0
+    count = count_query(db, select(Scene).where(*filters))
     db.execute(
         update(Scene)
         .where(*filters)
@@ -740,9 +889,7 @@ def batch_set_schedule_service(
     filters = [Scene.household_id == household_id]
     if payload.scene_ids:
         filters.append(Scene.id.in_(payload.scene_ids))
-    count = db.scalar(
-        select(func.count(Scene.id)).where(*filters)
-    ) or 0
+    count = count_query(db, select(Scene).where(*filters))
     db.execute(
         update(Scene)
         .where(*filters)

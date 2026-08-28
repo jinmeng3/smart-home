@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
 from typing import Literal
 
-from app.agents.context import AgentContext
-from app.models.device import Device, DeviceLog, DeviceStatus
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.agents.context import AgentContext
+from app.models.device import Device, DeviceLog, DeviceStatus
+from app.utils.time import now_utc
 
 
 class SetDevicePowerInput(BaseModel):
@@ -49,7 +50,7 @@ def set_device_power(
                 "message": f"设备类型「{device.type}」不支持电源控制",
             }
 
-        now = datetime.now(timezone.utc)
+        now = now_utc()
         if power == "on":
             device.status = DeviceStatus.RUNNING
             action = "power_on"
@@ -137,17 +138,27 @@ def set_device_temperature(
                 "message": f"设备类型「{device.type}」不支持温度设置",
             }
 
-        now = datetime.now(timezone.utc)
+        now = now_utc()
         device.status = DeviceStatus.RUNNING
         device.last_online = now
         device.updated_at = now
 
         parts = [f"空调「{device.name}」温度设置为 {temperature:.1f}℃"]
         if mode is not None:
-            mode_labels = {"cool": "制冷", "heat": "制热", "fan": "送风", "auto": "自动"}
+            mode_labels = {
+                "cool": "制冷",
+                "heat": "制热",
+                "fan": "送风",
+                "auto": "自动",
+            }
             parts.append(f"模式：{mode_labels.get(mode, mode)}")
         if fan_speed is not None:
-            speed_labels = {"low": "低风", "medium": "中风", "high": "高风", "auto": "自动"}
+            speed_labels = {
+                "low": "低风",
+                "medium": "中风",
+                "high": "高风",
+                "auto": "自动",
+            }
             parts.append(f"风速：{speed_labels.get(fan_speed, fan_speed)}")
         message = "，".join(parts)
 
@@ -217,7 +228,7 @@ def set_curtain_position(
                 "message": f"设备类型「{device.type}」不支持窗帘控制",
             }
 
-        now = datetime.now(timezone.utc)
+        now = now_utc()
         if position > 0:
             device.status = DeviceStatus.RUNNING
             action = "curtain_open"

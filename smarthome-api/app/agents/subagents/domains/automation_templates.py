@@ -1,5 +1,3 @@
-"""automation_templates 领域：基于家庭设备构成生成可一键导入的自动化模板。"""
-
 AUTOMATION_TEMPLATES_SYSTEM_PROMPT = """你是智能家居自动化模板助手。根据用户家庭的设备构成，生成 N 条**可一键导入**的自动化模板建议。
 
 要求：

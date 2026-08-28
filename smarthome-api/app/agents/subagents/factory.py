@@ -1,17 +1,16 @@
-"""子 Agent 构建工厂：复用主图 ``build_graph`` 构建领域窄图。"""
-
 import asyncio
 from uuid import uuid4
 
-from app.agents.context import AgentContext
-from app.agents.graph import build_graph
-from app.agents.subagents.contracts import SubAgentOutput
-from app.agents.tools import get_domain_tools
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.orm import Session
+
+from app.agents.context import AgentContext
+from app.agents.graph import build_graph
+from app.agents.subagents.contracts import SubAgentOutput
+from app.agents.tools import get_domain_tools
 
 
 def build_subagent(
@@ -72,7 +71,7 @@ async def run_subagent(
             graph.ainvoke(initial, config=config),
             timeout=timeout_seconds,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return SubAgentOutput(
             domain=domain, response_text="", fallback_needed=True, error="timeout"
         )

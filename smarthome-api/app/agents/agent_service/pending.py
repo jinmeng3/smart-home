@@ -1,14 +1,6 @@
-"""待审批操作（pending approval）过期、取消与清理管理。
-
-§5.2：增加待审批过期、取消和清理机制。
-
-- ``make_pending`` 创建 pending 时写入 created_at / expires_at。
-- ``is_pending_expired`` 判断 pending 是否已过期。
-- ``cancel_pending_approval`` 取消待审批操作（记录审计 + 清理 checkpoint 线程）。
-"""
-
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
+from app.utils.time import now_utc
 
 from app.agents.context import AgentContext
 from app.core.config import get_settings
@@ -21,7 +13,7 @@ def make_pending(state: dict) -> dict:
 
     约定：由 ``risk_node`` 在构建 pending dict 后调用此函数完成设置。
     """
-    now = datetime.now(UTC)
+    now = now_utc()
     created_at = now.isoformat()
     ttl = get_settings().approval_ttl_seconds
     expires_at_timestamp = now.timestamp() + ttl
@@ -40,7 +32,7 @@ def is_pending_expired(pending: dict | None) -> bool:
     expires_at = pending.get("expires_at")
     if expires_at is None:
         return False  # 旧记录，向后兼容
-    now = datetime.now(UTC).timestamp()
+    now = now_utc().timestamp()
     return now > float(expires_at)
 
 
@@ -59,7 +51,7 @@ async def cancel_pending_approval(
     因此删除线程不会丢失数据。"""
     from app.agents.audit.recorder import get_audit_recorder
 
-    now = datetime.now(UTC)
+    now = now_utc()
     audit = get_audit_recorder()
     run_id = pending.get("run_id", "")
 

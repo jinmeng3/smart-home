@@ -8,6 +8,8 @@ export interface SceneStep {
   description: string;
   deviceId: string;
   order: number;
+  action?: StepAction | null;
+  actionValue?: number | null;
 }
 
 export interface Scene {
@@ -36,13 +38,24 @@ export interface SceneFilters {
   enabled: "all" | "enabled" | "disabled";
 }
 
-export type SceneStepStatus = "pending" | "running" | "completed" | "failed";
+export type SceneStepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
+
+/** 场景步骤动作枚举：场景执行时真正下发给设备的写操作。 */
+export type StepAction = "on" | "off" | "set_temperature" | "set_position" | "noop";
 
 export interface SceneStepInput {
   name: string;
   description: string;
   deviceId: string;
   order: number;
+  /**
+   * 动作指令：场景执行时真正下发给设备的写操作。
+   * 未填时（undefined）后端会按设备历史动作取反（A3 语义），
+   * 详见后端 docs/funnel-routing-architecture.md。
+   */
+  action?: StepAction | null;
+  /** 动作参数：调温 → 目标温度；开合度 → 0-100；开关类 → 不填。 */
+  actionValue?: number | null;
 }
 
 export interface SceneInput {

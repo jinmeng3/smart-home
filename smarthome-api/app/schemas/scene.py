@@ -5,6 +5,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 TriggerType = Literal["manual", "schedule", "location", "device"]
 
+# 场景步骤动作枚举：场景执行时真正下发给设备的写操作。
+# "noop" 用于“仅展示不操作”场景（如：调试 / 临时停用某个步骤）。
+StepAction = Literal["on", "off", "set_temperature", "set_position", "noop"]
+
 
 class SceneSchema(BaseModel):
     model_config = ConfigDict(
@@ -26,6 +30,14 @@ class SceneStepWrite(SceneSchema):
     description: str = Field(default="", max_length=500)
     device_id: str = Field(min_length=1, max_length=120)
     order: int = Field(ge=1)
+    # 动作指令：场景执行时真正下发给设备的写操作。
+    # 未填时执行器默认为 "on"（向后兼容历史数据）。
+    action: StepAction | None = Field(
+        default=None, description="动作指令（on / off / set_temperature / set_position / noop）"
+    )
+    action_value: float | None = Field(
+        default=None, ge=0, le=100, description="动作参数（温度 / 开合度 0-100）"
+    )
 
 
 class SceneStepRead(SceneStepWrite):

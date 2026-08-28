@@ -1,0 +1,25 @@
+# ============================================================
+# .gitattributes  — 统一换行符规范
+#
+# 仓库统一使用 LF 换行符，避免 Windows (core.autocrlf=true) 与
+# Unix/macOS 之间因换行符差异产生的 "LF will be replaced by CRLF"
+# 警告，以及跨平台协作时的无意义 diff。
+# ============================================================
+
+# 文本文件：提交时归一化为 LF，检出时也保持 LF
+* text=auto eol=lf
+
+# 常见二进制文件：不做换行符处理（text=auto 已能自动识别，此处显式兜底）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.pyc binary

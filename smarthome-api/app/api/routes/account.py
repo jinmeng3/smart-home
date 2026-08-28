@@ -17,6 +17,7 @@ from app.schemas.account import (
 )
 from app.schemas.common import ApiResponse
 from app.services.avatar import delete_avatar_file, save_avatar_file
+from app.utils.json import dump_json
 
 router = APIRouter(prefix="/account", tags=["account"])
 SETTINGS_DEPENDENCY = Depends(get_settings)
@@ -92,7 +93,7 @@ def update_preferences(
     current_user: User = CURRENT_USER_DEPENDENCY,
 ) -> ApiResponse[UserPreferencesWrite]:
     preferences = db.get(UserPreferences, current_user.id)
-    serialized = json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)
+    serialized = dump_json(payload.model_dump(mode="json"))
     if preferences:
         preferences.preferences_json = serialized
     else:

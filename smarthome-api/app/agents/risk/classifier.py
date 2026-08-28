@@ -1,10 +1,11 @@
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.agents.context import AgentContext
 from app.agents.risk.policy import RiskDecision, RiskLevel
 from app.models.device import Device
 from app.services.automation import get_automation as get_automation_svc
 from app.services.scene import get_scene_or_404
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 HIGH_RISK_DEVICE_TYPES = {
     "lock",
@@ -327,11 +328,12 @@ def classify_device_operation(
             reasons=["设备不存在或不属于当前家庭"],
             resource_version="",
             preview={
-                "kind": operation,
+                "kind": "device_command",
                 "operation": operation,
                 "device_id": device_id,
                 "risk_level": RiskLevel.UNKNOWN.value,
                 "summary": "操作目标设备不存在",
+                "impact": "无法预估影响",
             },
         )
 
@@ -350,18 +352,22 @@ def classify_device_operation(
     )
 
     preview: dict = {
-        "kind": operation,
-        "operation": operation,
+        "kind": "device_command",  # 前端 AgentConfirmationCard 据此路由
+        "operation": operation,     # 具体工具名（set_device_power 等）
         "device_id": device_id,
         "device_name": device.name,
+        "device_brand": device.brand,
         "device_type": device.type,
         "risk_level": level.value,
+        "impact": "设备状态将变更",  # 通用影响描述（不固定设备/操作）
     }
 
     if operation == "set_device_power" and args:
         power = args.get("power", "")
         preview["power"] = power
-        preview["summary"] = f"{'打开' if power == 'on' else '关闭'}设备「{device.name}」"
+        preview["summary"] = (
+            f"{'打开' if power == 'on' else '关闭'}设备「{device.name}」"
+        )
 
     elif operation == "set_device_temperature" and args:
         temperature = args.get("temperature")
@@ -373,7 +379,9 @@ def classify_device_operation(
     elif operation == "set_curtain_position" and args:
         position = args.get("position", 0)
         preview["position"] = position
-        preview["summary"] = f"{'打开' if position > 0 else '关闭'}窗帘「{device.name}」至 {position}%"
+        preview["summary"] = (
+            f"{'打开' if position > 0 else '关闭'}窗帘「{device.name}」至 {position}%"
+        )
 
     else:
         preview["summary"] = f"操作设备「{device.name}」"

@@ -1,12 +1,12 @@
-import json
 import threading
 import typing
-from datetime import UTC, datetime
 from pathlib import Path
 
 from app.agents.context import AgentContext
 from app.agents.redaction import redact_fields, redact_text
 from app.core.config import get_settings
+from app.utils.json import dump_json
+from app.utils.time import now_utc
 
 DEFAULT_AUDIT_DIR = get_settings().audit_path
 
@@ -27,8 +27,8 @@ class AuditRecorder:
         同一个桶内复用文件句柄，不重复 open/close。
         文件名示例：audit_20260418_14.json
         """
-        bucket = datetime.now(UTC).strftime("%Y%m%d_%H")
-        line = json.dumps(entry, ensure_ascii=False, default=str)
+        bucket = now_utc().strftime("%Y%m%d_%H")
+        line = dump_json(entry, default=str)
         with self._lock:
             if bucket != self._current_bucket:
                 if self._current_file is not None:
@@ -50,7 +50,7 @@ class AuditRecorder:
             "household_id": context.household_id,
             "session_id": context.session_id,
             "auto_execute_low_risk": context.auto_execute_low_risk,
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -62,7 +62,7 @@ class AuditRecorder:
             "run_id": run_id,
             "status": status,
             "message": redact_text(message)[:200],
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -98,7 +98,7 @@ class AuditRecorder:
             "approval_decision": approval_decision,
             "automatic": automatic,
             "error_code": error_code,
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -118,7 +118,7 @@ class AuditRecorder:
             "tool": tool,
             "risk_level": risk_level,
             "reasons": reasons,
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -136,7 +136,7 @@ class AuditRecorder:
             "approval_id": approval_id,
             "decision": decision,
             "automatic": automatic,
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -147,7 +147,7 @@ class AuditRecorder:
             "run_id": run_id,
             "domain": domain,
             "task": redact_text(task)[:500],
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
 
@@ -170,10 +170,9 @@ class AuditRecorder:
             "summary": redact_text(summary)[:500],
             "duration_ms": duration_ms,
             "usage": usage or {},
-            "ts": datetime.now(UTC).isoformat(),
+            "ts": now_utc().isoformat(),
         }
         self._write(entry)
-
 
     def close(self) -> None:
         """关闭当前小时桶文件句柄（下一次写入会自动重开）。"""

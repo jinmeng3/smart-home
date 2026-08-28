@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
@@ -30,6 +29,9 @@ from app.schemas.automation import (
     ExecutionRead,
     FlowItem,
 )
+from app.utils.db import count_query, paginate
+from app.utils.time import start_of_today_utc, today_utc
+from app.utils.json import dump_json
 
 # === 自动化规则 ===
 
@@ -119,7 +121,7 @@ def replace_flow(
     if payload.triggers is not None:
         automation.triggers = [
             AutomationTrigger(
-                type=item.type, config_json=json.dumps(item.config, ensure_ascii=False)
+                type=item.type, config_json=dump_json(item.config)
             )
             for item in payload.triggers
         ]
@@ -130,7 +132,7 @@ def replace_flow(
         automation.conditions = [
             AutomationCondition(
                 type=item.type,
-                config_json=json.dumps(item.config, ensure_ascii=False),
+                config_json=dump_json(item.config),
                 position=item.position if item.position is not None else index,
             )
             for index, item in enumerate(payload.conditions)
@@ -141,7 +143,7 @@ def replace_flow(
                 type=item.type,
                 device_id=item.device_id,
                 scene_id=item.scene_id,
-                config_json=json.dumps(item.config, ensure_ascii=False),
+                config_json=dump_json(item.config),
                 position=item.position,
             )
             for item in payload.actions
@@ -235,7 +237,7 @@ def list_automations_service(
         filters.append(Automation.trigger_type == trigger_type)
     if enabled is not None:
         filters.append(Automation.enabled.is_(enabled))
-    total = db.scalar(select(func.count()).select_from(Automation).where(*filters)) or 0
+    total = count_query(db, select(Automation).where(*filters))
     action_device_count = (
         select(func.count(func.distinct(AutomationAction.device_id)))
         .where(
@@ -252,9 +254,7 @@ def list_automations_service(
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()
-    today = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    today = start_of_today_utc()
     household_total, enabled_count = db.execute(
         select(
             func.count(Automation.id),
@@ -263,9 +263,7 @@ def list_automations_service(
     ).one()
     running, executions_today, abnormal = db.execute(
         select(
-            func.count().filter(
-                AutomationExecution.status.in_(["queued", "running"])
-            ),
+            func.count().filter(AutomationExecution.status.in_(["queued", "running"])),
             func.count().filter(AutomationExecution.started_at >= today),
             func.count().filter(
                 AutomationExecution.status == "failed",
@@ -339,17 +337,14 @@ def list_executions_service(
     filters = [AutomationExecution.automation_id == automation.id]
     if execution_status:
         filters.append(AutomationExecution.status == execution_status)
-    total = (
-        db.scalar(select(func.count()).select_from(AutomationExecution).where(*filters))
-        or 0
-    )
-    rows = db.scalars(
+    rows, total = paginate(
+        db,
         select(AutomationExecution)
         .where(*filters)
-        .order_by(AutomationExecution.started_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    ).all()
+        .order_by(AutomationExecution.started_at.desc()),
+        page=page,
+        page_size=page_size,
+    )
     return ExecutionListRead(
         total=total,
         items=[

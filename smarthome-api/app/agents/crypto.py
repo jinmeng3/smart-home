@@ -2,8 +2,9 @@ import base64
 import hashlib
 from functools import lru_cache
 
-from app.core.config import get_settings
 from cryptography.fernet import Fernet, InvalidToken
+
+from app.core.config import get_settings
 
 _ENVELOPE_PREFIX = "enc:v1:"
 _FERNET_PREFIX = "gAAAA"
@@ -67,10 +68,9 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
         raise ApiKeyCryptoError("API Key 内容过长")
 
     if value.startswith(_ENVELOPE_PREFIX):
-        decrypt_api_key(value)                    
+        decrypt_api_key(value)
         return value
     if is_encrypted(value):
-                                          
         value = decrypt_api_key(value) or ""
         if not value:
             return None

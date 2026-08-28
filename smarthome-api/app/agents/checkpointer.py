@@ -1,18 +1,13 @@
-"""Agent 检查点（checkpointer）管理。
-
-当前仅支持 SQLite checkpointer（单实例开发环境）。
-生产多实例部署需根据实际数据库平台扩展。
-"""
-
 import asyncio
 import logging
 from pathlib import Path
 
 import aiosqlite
-from app.agents.errors import AgentCheckpointerError
-from app.core.config import Settings, get_settings
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+from app.agents.errors import AgentCheckpointerError
+from app.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +31,9 @@ async def _create_sqlite_checkpointer(settings: Settings) -> AsyncSqliteSaver:
     """创建单实例开发环境使用的 SQLite checkpointer。"""
     global _sqlite_connection
 
-    db_path = _resolve_db_path(settings.checkpointer_database_url or settings.database_url)
+    db_path = _resolve_db_path(
+        settings.checkpointer_database_url or settings.database_url
+    )
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn: aiosqlite.Connection | None = None
 

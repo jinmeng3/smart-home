@@ -1,5 +1,4 @@
 import asyncio
-import json
 import time
 
 from app.agents.audit.recorder import AuditRecorder
@@ -20,6 +19,7 @@ from app.agents.tools.execute.scenes import execute_scene_operation
 from app.core.config import get_settings
 from langchain_core.messages import ToolMessage
 from sqlalchemy.orm import Session
+from app.utils.json import dump_json
 
 
 async def execute_tools(state, tools_by_name, audit=None) -> dict:
@@ -60,7 +60,7 @@ async def execute_tools(state, tools_by_name, audit=None) -> dict:
             if ok
             else {"ok": False, "error": str(content).removeprefix(error_prefix)}
         )
-        serialized = json.dumps(payload, ensure_ascii=False, default=str)
+        serialized = dump_json(payload, default=str)
         tool_messages.append(
             ToolMessage(
                 content=serialized[: settings.tool_result_max_length],
@@ -151,7 +151,7 @@ def execute_write_tool(
     return {
         "messages": [
             ToolMessage(
-                content=json.dumps(result, ensure_ascii=False),
+                content=dump_json(result),
                 tool_call_id=pending["call_id"],
                 name=pending["tool"],
             )

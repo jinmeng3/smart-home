@@ -1,35 +1,3 @@
-"""规则层（Rule Layer）意图解析引擎。
-
-对应 `docs/funnel-routing-architecture.md` 第 5 节「第一层：规则层（普通门诊）」。
-
-职责：
-
-- 把用户输入解析为「动作 + 实体 + 参数」的可执行意图，而不是只输出领域标签；
-- 为每次匹配打分（置信度），使路由器可以按阈值决定放行 / 追问 / 丢弃；
-- 内置别名倒排索引（热加载）以毫秒级解析「宝宝房 / 主卧」等自定义房间名；
-- 严格控制解析耗时 < ``funnel_rule_max_duration_ms``，超预算直接返回无匹配。
-
-设计要点
---------
-
-- **确定性优先**：本层只处理单轮、意图明确、表达高度固定的请求。任何带指代词
-  / 多轮依赖 / 复合意图的输入都会让 ``RuleParseResult`` 落空，由上层（上下文层 /
-  兜底层）接管。
-- **可执行**：解析结果直接映射到现有 ``WRITE_TOOL_NAMES`` 中的写工具参数
-  （``set_device_power`` / ``set_device_temperature`` / ``set_curtain_position`` /
-  ``execute_scene``），并通过 ``WriteProposal`` 暴露，与现有 ``risk_check`` 审批
-  链路完全兼容——即本层直出 ``write_proposals`` 仍会走 ``risk_check → approval``。
-- **性能预算**：正则按场景预先编译（``_COMPILED``），匹配使用 ``re.search`` 而
-  非 ``re.findall``，避免回溯拖垮快路径。
-
-不覆盖的场景
-------------
-
-- 指代消解（「那卧室呢？」）→ 由上下文层（第二层）处理。
-- 多轮槽位填充（「帮我定个闹钟」「明早七点」）→ 由上下文层处理。
-- 复合 / 模糊 / 跨域指令（「家里有点闷，而且感觉不太安全」）→ 由兜底层处理。
-"""
-
 from __future__ import annotations
 
 import re
@@ -216,15 +184,6 @@ class AliasIndex:
       配合使用——关闭热加载时仍可工作，只是无法在线刷新。
     - 同一房间 / 设备的别名不会跨家庭污染（构造时绑定 ``household_id``）。
     - 冲突（同一别名映射到多个房间）时 ``resolve`` 返回空字符串，由上层追问。
-
-    热加载协议
-    ----------
-
-    ``version`` 字段在每次 ``set_*`` 调用后自增。
-    ``RuleEngine`` 接受可选的 ``alias_provider``（callable），每次 ``parse``
-    检查 provider 返回的 ``AliasIndex`` 的 ``version``；若与已持有的
-    ``version`` 不同，则换新该 index，从而实现「调用方修改别名后下次解析
-    即生效」的效果。
     """
 
     __slots__ = (

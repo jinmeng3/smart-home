@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+
 from app.agents.context import AgentContext
 from app.agents.tools.base import build_query_tool
 from app.agents.tools.execute import automations as execute_automations
@@ -13,7 +15,6 @@ from app.agents.tools.query import (
     rooms,
     scenes,
 )
-from sqlalchemy.orm import Session
 
 WRITE_TOOL_SCHEMAS = {
     "execute_scene": execute_scenes.ExecuteSceneInput,

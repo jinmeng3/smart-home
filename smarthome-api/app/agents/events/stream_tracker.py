@@ -5,6 +5,7 @@ from typing import Any
 from app.agents.events.sse import encode_sse_event
 from app.agents.redaction import redact_text
 from app.agents.tools import WRITE_TOOL_NAMES
+from app.utils.json import dump_json
 from app.schemas.sse import (
     ExecutionStatus,
     MessageDelta,
@@ -78,7 +79,7 @@ class StreamTracker:
                 call_id=call_id,
                 tool=str(name),
                 result=redact_text(
-                    json.dumps(payload.get("data"), ensure_ascii=False, default=str)
+                    dump_json(payload.get("data"), default=str)
                 )[:500],
             )
         return encode_sse_event(event)

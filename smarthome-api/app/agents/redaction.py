@@ -1,5 +1,3 @@
-"""日志与事件脱敏：屏蔽 API Key、JWT、密钥，避免敏感信息泄漏到事件/日志/堆栈。"""
-
 import logging
 import re
 

@@ -1,10 +1,11 @@
-from app.agents.risk import classify_scene_execution
-from app.models.device import Device
-from app.services.scene import run_scene_service
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.agents.risk import classify_scene_execution
+from app.models.device import Device
+from app.services.scene import run_scene_service
 
 
 class ExecuteSceneInput(BaseModel):
@@ -60,6 +61,9 @@ def execute_scene_operation(db, context, args, pending) -> dict:
             scene_id=scene_id,
             confirm_high_risk=True,
             source="agent",
+            executed_by=context.user_id,
+            session_id=context.session_id,
+            auto_execute_low_risk=context.auto_execute_low_risk,
             idempotency_key=idempotency_key,
         )
     except HTTPException:
@@ -115,7 +119,6 @@ def _verify_device_readback(
                     "status_after": status_after,
                 }
             )
-                
 
     return {
         "changed": len(changed_devices) > 0,

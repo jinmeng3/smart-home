@@ -1,11 +1,9 @@
-"""Agent 使用统计与 run 状态记录。"""
-
-from datetime import datetime, timezone
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from app.agents.context import AgentContext
 from app.models.agent_usage import AgentUsage, AgentUsageDaily
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from app.utils.time import today_utc
 
 
 def store_usage(
@@ -51,7 +49,7 @@ def store_usage(
             usage.phase = phase
         usage.error_message = error_message
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = today_utc().strftime("%Y-%m-%d")
     dialect = db.get_bind().dialect.name
     values = {
         "user_id": context.user_id,

@@ -1,16 +1,6 @@
-"""同一会话并发运行租约管理。
-
-解决 ``POST /agent/runs`` 检查与占用会话非原子的竞态（§4.4）：
-
-- ``acquire_run_lease`` 以唯一约束保证 ``user_id + household_id + session_id``
-  只有一个活动运行；并发请求第二次插入会触发唯一约束冲突而失败。
-- ``release_run_lease`` 在运行结束、失败、取消、断连时释放。
-- 存量租约若超过 ``agent_lease_ttl_seconds`` 视为失效（进程崩溃/未清理），
-  允许新运行接管。
-"""
-
 import logging
 from datetime import UTC, datetime, timedelta
+from app.utils.time import now_utc
 
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
@@ -44,7 +34,7 @@ def acquire_run_lease(
         )
     )
     ttl_seconds = get_settings().agent_lease_ttl_seconds
-    now = datetime.now(UTC)
+    now = now_utc()
     if lease is not None:
         created = lease.created_at
         if created is not None:
@@ -121,4 +111,4 @@ def is_session_running(
     if created.tzinfo is None:
         created = created.replace(tzinfo=UTC)
     ttl_seconds = get_settings().agent_lease_ttl_seconds
-    return datetime.now(UTC) - created < timedelta(seconds=ttl_seconds)
+    return now_utc() - created < timedelta(seconds=ttl_seconds)

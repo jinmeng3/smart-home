@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 from app.agents.agent_service.pending import make_pending
@@ -13,6 +12,7 @@ from fastapi import HTTPException
 from langchain_core.messages import AIMessage, ToolMessage
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
+from app.utils.json import dump_json
 
 
 def risk_check(state: AgentState, db: Session) -> dict:
@@ -80,7 +80,7 @@ def _tool_error(state: AgentState, calls: list[Any], message: str) -> dict:
     return {
         "messages": [
             ToolMessage(
-                content=json.dumps({"ok": False, "error": message}, ensure_ascii=False),
+                content=dump_json({"ok": False, "error": message}),
                 tool_call_id=str(call.get("id", "")),
                 name=str(call.get("name", "")),
             )

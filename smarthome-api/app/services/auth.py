@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from app.utils.time import now_utc
 
 import bcrypt
 import jwt
@@ -37,7 +38,7 @@ def generate_token(
     expires_in: int = 3600,
 ) -> str:
     """生成带用户标识和过期时间的访问令牌。"""
-    now = datetime.now(timezone.utc)
+    now = now_utc()
     exp_time = now + timedelta(seconds=expires_in)
     payload = {
         "sub": str(user_id),
@@ -85,7 +86,7 @@ def login_service(
     password_matches = bcrypt.checkpw(
         password.encode("utf-8"), password_hash.encode("utf-8")
     )
-    now = datetime.now(timezone.utc)
+    now = now_utc()
 
     if user and user.status != "active":
         raise HTTPException(

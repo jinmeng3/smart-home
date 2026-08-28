@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
 import logging
-import re
-import time
 from threading import RLock
 from typing import Any
 
@@ -11,6 +8,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.agents.factory import ModelCache
+from app.utils.time import now_timestamp
+from app.utils.json import dump_json, extract_json
 from app.agents.subagents.domains import SUGGESTIONS_SYSTEM_PROMPT
 from app.models.ai import AIModel
 from app.models.user import User
@@ -34,35 +33,9 @@ _CACHE_TTL_SECONDS = 300  # 5 分钟
 
 def _hash_settings(snapshot: dict[str, Any]) -> str:
     """稳定哈希：按 key 排序后 JSON 序列化，避免 dict 顺序差异。"""
-    return json.dumps(snapshot, sort_keys=True, ensure_ascii=False, default=str)
+    return dump_json(snapshot, sort_keys=True, default=str)
 
 
-def _extract_json(content: str) -> dict[str, Any] | None:
-    """从模型输出中抠出 JSON。模型偶尔会包 Markdown 块或附加说明。"""
-    if not content:
-        return None
-    text = content.strip()
-    # 去掉 ```json ... ``` 包裹
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fence:
-        text = fence.group(1)
-    # 取第一个完整 JSON 对象
-    start = text.find("{")
-    if start == -1:
-        return None
-    depth = 0
-    for i in range(start, len(text)):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                candidate = text[start : i + 1]
-                try:
-                    return json.loads(candidate)
-                except json.JSONDecodeError:
-                    return None
-    return None
 
 
 def _sanitize(raw: dict[str, Any]) -> list[AiSuggestionItem]:
@@ -116,7 +89,7 @@ def generate_ai_suggestions(
     """
     settings_hash = _hash_settings(settings_snapshot)
     cache_key = (current_user.id, settings_hash)
-    now = time.time()
+    now = now_timestamp()
 
     if not force:
         with _cache_lock:
@@ -138,7 +111,7 @@ def generate_ai_suggestions(
 
     user_prompt = (
         "以下是当前用户的设置快照（JSON）：\n"
-        f"{json.dumps(settings_snapshot, ensure_ascii=False, indent=2)}\n\n"
+        f"{dump_json(settings_snapshot, indent=2)}\n\n"
         "请按系统提示的 JSON 结构输出建议。"
     )
 
@@ -165,7 +138,7 @@ def generate_ai_suggestions(
             for block in raw_content
         )
 
-    parsed = _extract_json(str(raw_content))
+    parsed = extract_json(str(raw_content))
     if not parsed:
         logger.warning("AI 建议返回非 JSON: %r", raw_content[:200])
         return AiSuggestionsRead(suggestions=[], cached=False)

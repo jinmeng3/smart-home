@@ -75,6 +75,17 @@ class SceneStep(Base):
     description: Mapped[str] = mapped_column(String(500), default="", comment="步骤描述")
     device_id: Mapped[str] = mapped_column(String(120), comment="目标设备ID")
     step_order: Mapped[int] = mapped_column(Integer, comment="执行顺序")
+    # === 动作指令：场景执行时真正下发给设备的写操作 ===
+    # 取值见 app.schemas.scene.StepAction 枚举：
+    #   "on" / "off" / "set_temperature" / "set_position" / "noop"
+    # 历史数据可能为 NULL：run_scene_service 视为 "on"（向后兼容）。
+    action: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="动作指令（on / off / set_temperature / set_position / noop）"
+    )
+    # 动作参数：调温 → 目标温度；开合度 → 0-100；开关类 → NULL。
+    action_value: Mapped[float | None] = mapped_column(
+        nullable=True, comment="动作参数（温度 / 开合度）"
+    )
 
     scene: Mapped[Scene] = relationship(back_populates="steps")
 

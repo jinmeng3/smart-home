@@ -1,5 +1,3 @@
-"""security 领域子 Agent：安防设备查询（只读）。"""
-
 SECURITY_SYSTEM_PROMPT = """你是智能家居安防值守员，负责查询当前家庭的安防设备状态。
 
 约束：

@@ -7,10 +7,10 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from app.session_tree.session.types import Message
+from app.utils.json import dump_json
 
 TOOL_RESULT_MAX_CHARS = 2000
 _TRUNCATION_SUFFIX = "... [{} more characters truncated]"
@@ -51,7 +51,7 @@ def _format_tool_call(name: Any, arguments: Any) -> str:
     name = str(name or "unknown")
     if isinstance(arguments, dict):
         args = ", ".join(
-            f"{key}={json.dumps(value, ensure_ascii=False)}"
+            f"{key}={dump_json(value)}"
             for key, value in arguments.items()
         )
         return f"{name}({args})"

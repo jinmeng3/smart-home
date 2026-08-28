@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, ref, watch } from "vue";
 import { useHomeStore } from "../../stores/home";
-import { statusColorMap } from "../../constants/status-colors";
-import type { DashboardDevice } from "../../types/device";
-import type { SemanticStatus } from "../../constants/status-colors";
-import { getDeviceRuntimeStatus } from "../../utils/device";
-import { deviceTypeIconMap, deviceTypeLabelMap, getDeviceStatusLabel, getDeviceTypeIcon, getDeviceTypeLabel } from "../device/deviceMeta";
+import type { DashboardDevice, DeviceStatus } from "../../types/device";
+import {
+    deviceStatusLabelMap,
+    getStatusClasses,
+    getDeviceTypeIcon,
+    getDeviceTypeLabel,
+} from "../device/deviceMeta";
+import { formatDeviceTimestamp } from "../../utils/device";
 import AnimatedList from "../animation/AnimatedList.vue";
-import AnimatedStatus from "../animation/AnimatedStatus.vue";
 import BaseSmartModal from "../common/BaseSmartModal.vue";
 import SvgIcon from "../common/SvgIcon.vue";
 import { useGsapFlip } from "../../composables/useGsapFlip";
@@ -23,6 +25,17 @@ const props = withDefaults(
 
 const store = useHomeStore();
 const lastFocusedElement = shallowRef<HTMLElement | null>(null);
+
+/**
+ * 状态显示与设备管理页 (DeviceRow) 一致：
+ *   - 文案：deviceStatusLabelMap[device.status]（后端 status 原文映射）
+ *   - 颜色类：getStatusClasses(device.status)（与 DeviceRow 的 device-status-badge 同源）
+ *   - 圆点：is-${device.status}（与 DeviceRow 的 status-dot 同源）
+ *
+ * 不再使用 getDeviceRuntimeStatus 派生（会覆盖告警状态、且与设备管理不一致）。
+ * 数据仍来自 store.devices（与 DeviceCard / TaskContextCard 共用同一数据源），
+ * 但本组件按“后端 status 原文”渲染，与设备管理页对齐。
+ */
 
 /** AI 引用设备时短暂高亮（边框 + 背景，约 1.2 秒） */
 const highlightedIds = shallowRef<Set<string>>(new Set());
@@ -48,7 +61,7 @@ watch(
 
 const isHighlighted = (id: string) => highlightedIds.value.has(id);
 const MAX_DISPLAY_DEVICES = 4;
-const displayDevices = computed(() => store.devices.slice(0, MAX_DISPLAY_DEVICES));
+const displayDevices = computed<DashboardDevice[]>(() => store.devices.slice(0, MAX_DISPLAY_DEVICES));
 
 /* === GSAP Flip 设备列表重排 === */
 const deviceListRef = ref<InstanceType<typeof AnimatedList> | null>(null);
@@ -75,76 +88,28 @@ const platformToneMap: Record<string, string> = {
     MQTT: "purple",
 };
 
-/** 语义状态 → 中文文案 */
-const semanticLabelMap: Record<string, string> = {
-    online: "在线",
-    offline: "离线",
-    running: "运行中",
-    warning: "告警",
-    error: "异常",
-    success: "正常",
+/** 状态文案：与 DeviceRow.deviceStatusLabelMap[device.status] 一致。 */
+const statusLabelOf = (status: DeviceStatus): string =>
+    deviceStatusLabelMap[status] ?? String(status);
+
+/** 状态文字色 + 背景色 + 边框色（从 getStatusClasses 拿，与 DeviceRow 同源）。 */
+const statusBadgeClassOf = (status: DeviceStatus): string[] => {
+    const c = getStatusClasses(status);
+    return ["device-status-badge", ...c];
 };
 
-/** 运行时状态（中文文案） */
-const runtimeStatusLabel = (device: DashboardDevice) => {
-    const status = getDeviceRuntimeStatus(device);
-    return semanticLabelMap[status] ?? getDeviceStatusLabel(device.status);
-};
+/** 圆点 class：与 DeviceRow.status-dot is-${device.status} 一致。 */
+const statusDotClassOf = (status: DeviceStatus): string =>
+    `status-dot is-${status}`;
 
-/** 状态文字颜色类 */
-const statusTextClass = (device: DashboardDevice) => {
-    const status = getDeviceRuntimeStatus(device) as SemanticStatus;
-    return statusColorMap[status]?.textClass ?? "text-[var(--color-text-tertiary)]";
-};
+/** 状态文字色（列表行内纯文字 + 圆点）。 */
+const statusTextClassOf = (status: DeviceStatus): string =>
+    (getStatusClasses(status)[0] as string) ?? "";
 
-/** 状态圆点颜色类（直接用 statusColorMap 的 dotClass） */
-const statusDotClass = (device: DashboardDevice) => {
-    const status = getDeviceRuntimeStatus(device) as SemanticStatus;
-    return statusColorMap[status]?.dotClass ?? "bg-[var(--color-text-muted)]";
-};
-
-/** 状态徽章类（详情弹窗内使用） */
-const statusClass = (device: DashboardDevice) => {
-    const status = getDeviceRuntimeStatus(device) as SemanticStatus;
-    const colors = statusColorMap[status];
-    return [
-        "device-status-label",
-        `status-${status}`,
-        colors.textClass,
-        colors.backgroundClass,
-        colors.borderClass,
-    ];
-};
-
-const formattedUpdatedAt = computed(() => {
-    const value = store.selectedDevice?.updatedAt;
-    if (!value) return "暂无";
-    const time = new Date(value);
-    if (Number.isNaN(time.getTime())) return value;
-    const now = new Date();
-    const diffMin = Math.floor((now.getTime() - time.getTime()) / 60000);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    if (diffMin < 1) return "刚刚";
-    if (diffMin < 60) return `${diffMin} 分钟前`;
-    const clock = `${pad(time.getHours())}:${pad(time.getMinutes())}`;
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (time.toDateString() === now.toDateString()) return `今天 ${clock}`;
-    if (time.toDateString() === yesterday.toDateString()) return `昨天 ${clock}`;
-    if (time.getFullYear() === now.getFullYear()) {
-        return `${pad(time.getMonth() + 1)}-${pad(time.getDate())} ${clock}`;
-    }
-    return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())} ${clock}`;
+const formattedLastOnline = computed(() => {
+    const value: string = store.selectedDevice?.updatedAt ?? "";
+    return formatDeviceTimestamp(value, "从未在线");
 });
-
-const detailText = computed(() => {
-    const device = store.selectedDevice;
-    if (!device) return "";
-    return `${device.room} · ${runtimeStatusLabel(device) ?? device.status}${device.value ? ` · ${device.value}` : ""} · ${formattedUpdatedAt.value}`;
-});
-
-const statusLabel = (device: DashboardDevice) =>
-    getDeviceStatusLabel(device.status);
 
 const openDevice = async (device: DashboardDevice, event: MouseEvent) => {
     lastFocusedElement.value = event.currentTarget as HTMLElement;
@@ -220,13 +185,13 @@ onBeforeUnmount(() => {
                 <strong class="truncate text-[13px] font-bold text-[var(--color-text-secondary)]">{{
                     device.name
                 }}</strong>
-                <!-- 状态：圆点 + 中文文字 -->
+                <!-- 状态：圆点 + 中文文字（与设备管理页 DeviceRow 同源） -->
                 <span
                     class="inline-flex items-center gap-1.5 text-xs font-bold"
-                    :class="statusTextClass(device)"
+                    :class="statusTextClassOf(device.status as DeviceStatus)"
                 >
-                    <i class="status-dot" :class="statusDotClass(device)"></i>
-                    {{ runtimeStatusLabel(device) }}
+                    <i class="status-dot" :class="statusDotClassOf(device.status as DeviceStatus)"></i>
+                    {{ statusLabelOf(device.status as DeviceStatus) }}
                 </span>
             </button>
         </AnimatedList>
@@ -278,12 +243,9 @@ onBeforeUnmount(() => {
                         }}</span>
                         <span
                             class="device-status-badge"
-                            :class="statusClass(store.selectedDevice)"
+                            :class="statusBadgeClassOf(store.selectedDevice.status as DeviceStatus)"
                         >
-                            <AnimatedStatus
-                                :status="getDeviceRuntimeStatus(store.selectedDevice)"
-                                :label="store.selectedDevice.value ?? statusLabel(store.selectedDevice)"
-                            />
+                            <span>{{ statusLabelOf(store.selectedDevice.status as DeviceStatus) }}</span>
                         </span>
                     </div>
                 </div>
@@ -316,7 +278,11 @@ onBeforeUnmount(() => {
                     </div>
                     <div>
                         <dt><SvgIcon name="clock" size="sm" />最后同步</dt>
-                        <dd class="is-sync">{{ formattedUpdatedAt }}</dd>
+                        <dd class="is-sync">{{ formattedLastOnline }}</dd>
+                    </div>
+                    <div v-if="store.selectedDevice.value">
+                        <dt><SvgIcon name="info" size="sm" />读数</dt>
+                        <dd>{{ store.selectedDevice.value }}</dd>
                     </div>
                 </dl>
             </section>

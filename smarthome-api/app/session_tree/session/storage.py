@@ -9,12 +9,12 @@
 from __future__ import annotations
 
 import copy
-import time
 from collections.abc import Callable
 from typing import Any, Protocol
 from uuid import uuid4
 
 from app.session_tree.errors import SessionError
+from app.utils.time import now_utc_ms
 from app.session_tree.session.state import SessionState
 from app.session_tree.session.types import (
     Entry,
@@ -30,7 +30,7 @@ from app.session_tree.session.types import (
 
 
 def now_ms() -> int:
-    return int(time.time() * 1000)
+    return now_utc_ms()
 
 
 class SessionStorage(Protocol):

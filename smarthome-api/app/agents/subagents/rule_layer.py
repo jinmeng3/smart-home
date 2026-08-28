@@ -1,39 +1,9 @@
-"""规则层直接执行器（Rule Layer Direct Executor）。
-
-对应 ``docs/funnel-routing-architecture.md`` 第 5、7 节「关键不变式」与
-「写操作沙箱」：
-
-> 无论哪一层产出的**写操作**，都必须回流到 ``risk_check → approval`` 单写路径，
-> 越底层执行越可控、越上层越智能但越需监管。
-
-本模块负责把 ``RuleParseResult`` 中的写提案：
-
-1. 在家庭设备表中反查 ``entity_ref`` → ``device_id``（多设备 / 模糊匹配时
-   保守降级到兜底层，避免误触执行）。
-2. 调用现有 ``risk.classify_*`` 分类器计算风险等级，**不重写**风险语义。
-3. 低风险 + ``auto_execute_low_risk`` 时直接执行；高风险或未开启自动批准
-   时通过 SSE 返回 ``ApprovalRequired``，由前端 UI 走原有的「会话 → 决定」
-   链路（``POST /agent/sessions/{id}/decisions``）。
-4. 全程走 ``AuditRecorder`` 记录 ``run_start / tool_completed /
-   approval_required / run_end``，与 LLM 主图产生的审计格式一致。
-5. 简单查询（无写提案）直接在规则层返回缓存 / 现查的快照，0 Token。
-
-约束
-----
-
-- 所有 SSE 事件复用 ``app.schemas.sse`` 的现有模型，与 LLM 路径同构；
-- 任何异常（设备找不到 / 风险分类抛错 / DB 失败）一律不抛给上游，而是
-  返回 ``error`` 事件并以 ``failed`` 状态结束。
-"""
-
 from __future__ import annotations
 
-import json
 import logging
 import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -75,6 +45,8 @@ from app.schemas.sse import (
     ToolCompleted,
     ToolStarted,
 )
+from app.utils.json import dump_json
+from app.utils.time import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +189,7 @@ def _build_pending(
     session_id: int,
 ) -> dict:
     """构造与主图 ``risk_check`` 同构的 pending_approval dict。"""
-    now = datetime.now(timezone.utc)
+    now = now_utc()
     ttl = get_settings().approval_ttl_seconds
     return {
         "approval_id": f"{run_id}:{call_id}",
@@ -670,7 +642,7 @@ def outcome_events(run_id: str, session_id: int, outcome: ProposalOutcome) -> li
                     run_id=run_id,
                     call_id=call_id,
                     tool=outcome.tool,
-                    result=json.dumps(payload, ensure_ascii=False, default=str)[:2000],
+                    result=dump_json(payload, default=str)[:2000],
                 )
             )
         )
@@ -730,7 +702,7 @@ def outcome_events(run_id: str, session_id: int, outcome: ProposalOutcome) -> li
                 run_id=run_id,
                 call_id=call_id,
                 tool=outcome.tool,
-                result=json.dumps(payload, ensure_ascii=False, default=str)[:2000],
+                result=dump_json(payload, default=str)[:2000],
             )
         )
     )

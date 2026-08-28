@@ -1,15 +1,11 @@
-"""智能家居主 Agent 的运行时 system prompt 装配器。
-
-静态提示词请在 `app.agents.subagents.domains` 中按领域维护。
-"""
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.agents.context import AgentContext
 from app.api.deps import DB_DEPENDENCY
 from app.models.device import Device
 from app.models.household import Household
 from app.models.scene import Scene
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 # 系统提示词版本号，随 run 记录用于排查和调试（§7.2）
 PROMPT_VERSION = "2026-08-25-v1"
@@ -44,9 +40,7 @@ def system_prompt(
     message: str | None = None,
 ):
     language = _resolve_language(context, message)
-    language_instruction = (
-        "请使用英文回答" if language == "en-US" else "请使用中文回答"
-    )
+    language_instruction = "请使用英文回答" if language == "en-US" else "请使用中文回答"
     detail_instruction = _detail_instruction(context.detail_level)
 
     if not context.tools_enabled:
