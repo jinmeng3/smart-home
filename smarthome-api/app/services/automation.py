@@ -30,8 +30,8 @@ from app.schemas.automation import (
     FlowItem,
 )
 from app.utils.db import count_query, paginate
-from app.utils.time import start_of_today_utc, today_utc
 from app.utils.json import dump_json
+from app.utils.time import start_of_today_utc
 
 # === 自动化规则 ===
 
@@ -120,9 +120,7 @@ def replace_flow(
 ) -> None:
     if payload.triggers is not None:
         automation.triggers = [
-            AutomationTrigger(
-                type=item.type, config_json=dump_json(item.config)
-            )
+            AutomationTrigger(type=item.type, config_json=dump_json(item.config))
             for item in payload.triggers
         ]
         automation.trigger_type = (

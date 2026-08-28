@@ -9,18 +9,12 @@ from typing import Any
 from app.agents.subagents.router import DOMAIN_KEYWORDS
 from app.core.config import get_settings
 
-# ---------------------------------------------------------------------------
-# 数据契约
-# ---------------------------------------------------------------------------
+# === 数据契约 ===
 
 
 @dataclass(frozen=True, slots=True)
 class WriteProposal:
-    """规则层直接产出的可执行写提案。
-
-    结构与 ``WRITE_TOOL_NAMES`` 中写工具的参数一致，可直接交给
-    ``risk_check`` → ``approval`` 链路。
-    """
+    """规则层直接产出的可执行写提案"""
 
     tool: str
     args: dict[str, Any]
@@ -69,9 +63,7 @@ class RuleParseResult:
     elapsed_ms: int = 0
 
 
-# ---------------------------------------------------------------------------
-# 词典
-# ---------------------------------------------------------------------------
+# === 词典 ===
 
 
 # 中文停用词：出现在实体前的修饰词，匹配时需要忽略。
@@ -154,9 +146,7 @@ _SCENE_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# 预编译正则
-# ---------------------------------------------------------------------------
+# === 预编译正则 ===
 
 
 _NUMBER_RE = re.compile(r"(-?\d+(?:\.\d+)?)")
@@ -170,9 +160,7 @@ _QUERY_RE = re.compile("|".join(_QUERY_STATE_PATTERNS))
 _ROOM_NOISE_RE = re.compile("(" + "|".join(re.escape(w) for w in _ROOM_NOISE) + ")")
 
 
-# ---------------------------------------------------------------------------
-# 别名倒排索引
-# ---------------------------------------------------------------------------
+# === 别名倒排索引 ===
 
 
 class AliasIndex:
@@ -262,24 +250,11 @@ class AliasIndex:
         return alias.strip().lower() in self._conflicts
 
 
-# ---------------------------------------------------------------------------
-# 规则引擎
-# ---------------------------------------------------------------------------
+# === 规则引擎 ===
 
 
 class RuleEngine:
     """规则层意图解析器。
-
-    使用方式：
-
-    .. code-block:: python
-
-        engine = RuleEngine(alias_index=AliasIndex(household_id=1))
-        result = engine.parse("打开客厅灯")
-        if result.matched and result.confidence >= 0.95:
-            for proposal in result.write_proposals:
-                # 交给 risk_check → approval
-                ...
     """
 
     # 置信度档位：精确匹配 / 模糊匹配 / 拒识。
@@ -325,9 +300,7 @@ class RuleEngine:
             self._alias_index = current
             self._provider_version = current.version
 
-    # ------------------------------------------------------------------
-    # 公开 API
-    # ------------------------------------------------------------------
+    # === 公开 API ===
 
     def parse(self, message: str) -> RuleParseResult:
         """同步解析；任何异常被吞掉并返回 ``matched=False``。
@@ -402,9 +375,7 @@ class RuleEngine:
                 return True
         return False
 
-    # ------------------------------------------------------------------
-    # 子解析器
-    # ------------------------------------------------------------------
+    # === 子解析器 ===
 
     def _try_query(self, text: str) -> RuleParseResult | None:
         if not _QUERY_RE.search(text):
@@ -598,9 +569,7 @@ class RuleEngine:
             elapsed_ms=self._elapsed_ms(),
         )
 
-    # ------------------------------------------------------------------
-    # 辅助
-    # ------------------------------------------------------------------
+    # === 辅助 ===
 
     def _detect_action(self, text: str) -> str | None:
         # 顺序：先识别「调温 / 调位置」这类带数值的设置动作，避免被
@@ -753,9 +722,7 @@ class RuleEngine:
     _started_at: float = 0.0
 
 
-# ---------------------------------------------------------------------------
-# 便捷入口
-# ---------------------------------------------------------------------------
+# === 便捷入口 ===
 
 
 _CHINESE_DIGITS: dict[str, int] = {

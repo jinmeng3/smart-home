@@ -93,9 +93,7 @@ class ContextEngine:
     def __init__(self, *, rule_engine: RuleEngine | None = None):
         self._rule_engine = rule_engine or get_rule_engine()
 
-    # ------------------------------------------------------------------
-    # 公开 API
-    # ------------------------------------------------------------------
+    # === 公开 API ===
 
     def resolve(
         self,
@@ -113,9 +111,7 @@ class ContextEngine:
                 explanation="上下文层消解异常 → 兜底层",
             )
 
-    # ------------------------------------------------------------------
-    # 内部实现
-    # ------------------------------------------------------------------
+    # === 内部实现 ===
 
     def _resolve_inner(
         self, message: str, previous_user_message: str
@@ -168,9 +164,7 @@ class ContextEngine:
             explanation="上下文层无法确定 → 兜底层",
         )
 
-    # ------------------------------------------------------------------
-    # 判定
-    # ------------------------------------------------------------------
+    # === 判定 ===
 
     @staticmethod
     def _is_relative_control(text: str) -> bool:
@@ -192,9 +186,7 @@ class ContextEngine:
             return True
         return any(kw in text for kw in _ROOM_DEVICE_HINTS)
 
-    # ------------------------------------------------------------------
-    # 继承推导
-    # ------------------------------------------------------------------
+    # === 继承推导 ===
 
     def _inherit_from_previous(
         self, prev: RuleParseResult, text: str
@@ -267,9 +259,7 @@ class ContextEngine:
         return "", ""
 
 
-# ---------------------------------------------------------------------------
-# 进程级单例
-# ---------------------------------------------------------------------------
+# === 进程级单例 ===
 
 
 _default_context_engine: ContextEngine | None = None

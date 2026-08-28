@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from sqlalchemy.orm import Session
 
-from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
+from app.agents.agent_service.lease import get_run_lease, release_run_lease
 from app.agents.agent_service.pending import is_pending_expired
 from app.agents.agent_service.runner import (
     _create_graph_runner,
@@ -45,7 +45,7 @@ async def resume_agent(
 ) -> AsyncGenerator[str, None]:
     """提交审批决定并以原模型恢复执行（带会话租约，§4.4）。"""
     thread_id = agent_thread_id(context)
-    acquired = acquire_run_lease(
+    acquired = get_run_lease(
         db,
         user_id=context.user_id,
         household_id=context.household_id,

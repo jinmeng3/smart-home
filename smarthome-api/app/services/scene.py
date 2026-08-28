@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from hashlib import sha256
 from typing import cast
 from uuid import uuid4

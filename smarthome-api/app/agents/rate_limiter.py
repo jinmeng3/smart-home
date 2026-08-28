@@ -1,6 +1,5 @@
 import time
 from collections import defaultdict, deque
-from datetime import datetime
 from threading import Lock
 
 from sqlalchemy import func, select

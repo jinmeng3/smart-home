@@ -4,7 +4,19 @@ DOMAIN_KEYWORDS: dict[str, set[str]] = {
     "automation": {"自动化", "定时", "每天", "每周", "如果", "当", "触发", "规则"},
     "energy": {"能耗", "用电", "费电", "电量", "节能", "电费", "功率", "账单"},
     "comfort": {"舒适", "舒适度", "湿度", "通风", "太热", "太冷", "太干"},
-    "security": {"门锁", "摄像头", "安防", "警报", "监控", "布防", "撤防", "入侵", "锁", "门铃", "报警"},
+    "security": {
+        "门锁",
+        "摄像头",
+        "安防",
+        "警报",
+        "监控",
+        "布防",
+        "撤防",
+        "入侵",
+        "锁",
+        "门铃",
+        "报警",
+    },
 }
 
 # 声明顺序即路由优先级；多命中时按此顺序返回。
@@ -40,11 +52,7 @@ def route_intent(message: str) -> list[str]:
 
 
 def resolve_delegated_domain(message: str) -> str | None:
-    """决定是否把请求委托给领域子 Agent。
-
-    仅当路由结果恰好命中单个可委托领域时才委托；
-    复合意图、general 一律返回 ``None`` 走主图。
-    """
+    """决定是否把请求委托给领域子 Agent。"""
     tags = route_intent(message)
     if len(tags) == 1 and tags[0] in DELEGATABLE_DOMAINS:
         return tags[0]

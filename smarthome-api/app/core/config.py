@@ -88,6 +88,16 @@ class Settings(BaseSettings):
     api_key_encryption_secret: str | None = Field(
         default=None, description="API Key 独立加密密钥；生产环境必须配置"
     )
+    api_key_max_plaintext_length: int = Field(
+        default=4096,
+        ge=1,
+        description="API Key 明文最大长度；超出视为异常输入直接拒绝",
+    )
+    api_key_max_ciphertext_length: int = Field(
+        default=16384,
+        ge=1,
+        description="API Key 密文最大长度；超出视为异常输入直接拒绝",
+    )
     production_mode: bool = Field(
         default=False, description="生产模式，启用加密、限流等"
     )

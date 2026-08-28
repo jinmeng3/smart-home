@@ -6,10 +6,8 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.config import get_settings
 
-_ENVELOPE_PREFIX = "enc:v1:"
-_FERNET_PREFIX = "gAAAA"
-_MAX_PLAINTEXT_LENGTH = 4096
-_MAX_CIPHERTEXT_LENGTH = 16384
+_ENVELOPE_PREFIX = "enc:v1:"  # 信封协议：版本号嵌在格式中，禁止外配
+_FERNET_PREFIX = "gAAAA"  # cryptography.fernet 固定的 token 签名，不是配置
 
 
 class ApiKeyCryptoError(ValueError):
@@ -64,7 +62,7 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
     value = plaintext.strip()
     if not value:
         return None
-    if len(value) > _MAX_CIPHERTEXT_LENGTH:
+    if len(value) > get_settings().api_key_max_ciphertext_length:
         raise ApiKeyCryptoError("API Key 内容过长")
 
     if value.startswith(_ENVELOPE_PREFIX):
@@ -74,7 +72,7 @@ def encrypt_api_key(plaintext: str | None) -> str | None:
         value = decrypt_api_key(value) or ""
         if not value:
             return None
-    if len(value) > _MAX_PLAINTEXT_LENGTH:
+    if len(value) > get_settings().api_key_max_plaintext_length:
         raise ApiKeyCryptoError("API Key 内容过长")
 
     token = _fernet().encrypt(value.encode("utf-8")).decode("ascii")
@@ -93,7 +91,7 @@ def decrypt_api_key(ciphertext: str | None) -> str | None:
     value = ciphertext.strip()
     if not value:
         return None
-    if len(value) > _MAX_CIPHERTEXT_LENGTH:
+    if len(value) > get_settings().api_key_max_ciphertext_length:
         raise ApiKeyCryptoError("API Key 密文过长")
 
     if value.startswith(_ENVELOPE_PREFIX):

@@ -65,7 +65,6 @@ def agent_context(
     else:
         try:
             data = json.loads(user_preferences.preferences_json)
-            # 偏好实际以 camelCase 存储（PreferencesSchema 使用 alias 序列化），兼容历史 snake_case
             ai = data.get("aiAssistant", data.get("ai", {}))
             if not isinstance(ai, dict):
                 raise TypeError("ai 偏好必须是对象")

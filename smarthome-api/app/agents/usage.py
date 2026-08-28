@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.context import AgentContext
@@ -50,7 +50,6 @@ def store_usage(
         usage.error_message = error_message
 
     today = today_utc().strftime("%Y-%m-%d")
-    dialect = db.get_bind().dialect.name
     values = {
         "user_id": context.user_id,
         "date": today,
@@ -58,34 +57,19 @@ def store_usage(
         "total_output_tokens": output_tokens,
         "run_count": 1 if is_new_run else 0,
     }
-    if dialect == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert
 
-        statement = insert(AgentUsageDaily).values(**values)
-        statement = statement.on_conflict_do_update(
-            constraint="uq_agent_usage_daily_user_date",
-            set_={
-                "total_input_tokens": AgentUsageDaily.total_input_tokens + input_tokens,
-                "total_output_tokens": AgentUsageDaily.total_output_tokens
-                + output_tokens,
-                "run_count": AgentUsageDaily.run_count + (1 if is_new_run else 0),
-                "updated_at": func.now(),
-            },
+    daily = db.scalar(
+        select(AgentUsageDaily).where(
+            AgentUsageDaily.user_id == context.user_id,
+            AgentUsageDaily.date == today,
         )
-        db.execute(statement)
+    )
+    if daily is None:
+        db.add(AgentUsageDaily(**values))
     else:
-        daily = db.scalar(
-            select(AgentUsageDaily).where(
-                AgentUsageDaily.user_id == context.user_id,
-                AgentUsageDaily.date == today,
-            )
-        )
-        if daily is None:
-            db.add(AgentUsageDaily(**values))
-        else:
-            daily.total_input_tokens += input_tokens
-            daily.total_output_tokens += output_tokens
-            daily.run_count += 1 if is_new_run else 0
+        daily.total_input_tokens += input_tokens
+        daily.total_output_tokens += output_tokens
+        daily.run_count += 1 if is_new_run else 0
 
     db.commit()
 

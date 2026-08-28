@@ -63,9 +63,7 @@ class ProposalOutcome:
     resolved_args: dict | None = None
 
 
-# ---------------------------------------------------------------------------
-# 设备反查与参数校验
-# ---------------------------------------------------------------------------
+# === 设备反查与参数校验 ===
 
 
 def _split_room_from_entity_ref(entity_ref: str, room_hint: str) -> str:
@@ -131,9 +129,7 @@ def _make_args(tool: str, base_args: dict, *, device_id: int) -> dict:
     return merged
 
 
-# ---------------------------------------------------------------------------
-# 风险分类与 pending 构造
-# ---------------------------------------------------------------------------
+# === 风险分类与 pending 构造 ===
 
 
 def _classify_for_proposal(
@@ -209,9 +205,7 @@ def _build_pending(
     }
 
 
-# ---------------------------------------------------------------------------
-# 真实写执行（复用 agents/tools/execute）
-# ---------------------------------------------------------------------------
+# === 真实写执行（复用 agents/tools/execute） ===
 
 
 async def _execute_proposal(
@@ -286,9 +280,7 @@ async def _answer_simple_query(
     return f"「{device.name}」当前状态：{status_value}。"
 
 
-# ---------------------------------------------------------------------------
-# 公开入口：execute_rule_layer
-# ---------------------------------------------------------------------------
+# === 公开入口：execute_rule_layer ===
 
 
 async def execute_rule_layer(
@@ -447,9 +439,7 @@ async def execute_rule_layer(
         audit.record_run_end(run_id, status="failed", message=str(exc))
 
 
-# ---------------------------------------------------------------------------
-# 内部：单提案执行
-# ---------------------------------------------------------------------------
+# === 内部：单提案执行 ===
 
 
 async def _execute_one_proposal(

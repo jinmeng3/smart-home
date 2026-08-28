@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy.orm import Session
 
-from app.agents.agent_service.lease import acquire_run_lease, release_run_lease
+from app.agents.agent_service.lease import get_run_lease, release_run_lease
 from app.agents.audit.recorder import AuditRecorder, get_audit_recorder
 from app.agents.checkpointer import get_checkpointer
 from app.agents.context import AgentContext
@@ -71,11 +71,7 @@ _DOMAIN_SYSTEM_PROMPTS: dict[str, str] = {
 
 
 def _route_funnel(context: AgentContext, message: str) -> RouteResult:
-    """调用漏斗路由器以决定进入哪一层（docs/funnel-routing-architecture §8）。
-
-    本期仅使用 ``context`` / ``message``；多轮 / 指代信号（P1 上下文层入口）
-    依赖 checkpointer / 会话树重建，本期不接入，仍回退到 LAYER_FALLBACK。
-    """
+    """调用漏斗路由器以决定进入哪一层（规则层 / 上下文层 / 兜底层）。"""
     router = get_funnel_router()
     state = SessionState(
         session_id=context.session_id,
@@ -241,15 +237,9 @@ async def run_agent(
     history_messages: list | None = None,
     persist_user_message: bool = True,
 ) -> AsyncGenerator[str, None]:
-    """创建一次 Agent 运行（带会话租约，防止同一会话并发运行，§4.4）。
-
-    在生成器真正开始流式前获取会话租约；运行结束、失败、取消、断连时
-    通过 ``finally`` 释放租约。租约获取失败时返回 ``AGENT_CONCURRENT_RUN``
-    错误事件，而不进入模型调用。
-    """
     domain = resolve_delegated_domain(message)
     thread_id = _build_thread_id(context, domain)
-    acquired = acquire_run_lease(
+    acquired = get_run_lease(
         db,
         user_id=context.user_id,
         household_id=context.household_id,
@@ -299,8 +289,6 @@ async def _run_agent_body(
     persist_user_message: bool = True,
 ) -> AsyncGenerator[str, None]:
     run_id = f"run-{uuid4().hex}"
-
-    # 漏斗路由前置拦截：高频指令在进 LLM 图之前由规则层直出（§5.3 P0）。
     funnel_decision = _route_funnel(context, message)
     if funnel_decision.layer == LAYER_RULE and funnel_decision.rule_result is not None:
         async for event in execute_rule_layer(
