@@ -22,6 +22,7 @@ dependencies = [
     "pydantic-settings>=2.15",
     "PyJWT>=2.9",
     "python-multipart>=0.0.32",
+    "sentence-transformers>=3.0",
     "sqlalchemy>=2.0",
     "uvicorn>=0.52",
 ]

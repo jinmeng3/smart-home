@@ -1,12 +1,12 @@
 from enum import IntEnum
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
 T = TypeVar("T")
 
 
-class ApiResponse(BaseModel, Generic[T]):
+class ApiResponse[T](BaseModel):
     code: int = 0
     message: str = "ok"
     data: T | None = None

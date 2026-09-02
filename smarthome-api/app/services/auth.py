@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta, timezone
-from app.utils.time import now_utc
+from datetime import UTC, timedelta
 
 import bcrypt
 import jwt
@@ -13,6 +12,7 @@ from app.models.user import User
 from app.schemas.account import AccountRead
 from app.schemas.auth import AuthResponse
 from app.services.security import register_current_device
+from app.utils.time import now_utc
 
 DUMMY_PASSWORD_HASH = bcrypt.hashpw(b"invalid-password", bcrypt.gensalt()).decode(
     "utf-8"
@@ -28,6 +28,7 @@ def _device_info_from_ua(user_agent: str | None) -> tuple[str, str]:
     if any(keyword in ua for keyword in ("mobile", "android", "iphone", "ipad")):
         return "当前设备", "移动设备"
     return "当前设备", "桌面浏览器"
+
 
 # === Token 工具 ===
 
@@ -96,7 +97,7 @@ def login_service(
 
     locked_until = user.locked_until if user else None
     if locked_until and locked_until.tzinfo is None:
-        locked_until = locked_until.replace(tzinfo=timezone.utc)
+        locked_until = locked_until.replace(tzinfo=UTC)
     if user and locked_until and locked_until > now:
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,

@@ -31,16 +31,8 @@ interface StreamPayload {
 }
 
 export interface ChatCompletionMessage {
-  role: "user" | "assistant" | "system";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
-}
-
-interface OpenAICompletionsPayload {
-  model?: string | null;
-  messages: ChatCompletionMessage[];
-  sessionId?: number | null;
-  stream?: boolean;
-  [key: string]: unknown;
 }
 
 // === 映射函数 ===
@@ -246,34 +238,6 @@ export const regenerateChatCompletion = (
     signal,
   );
 
-// === OpenAI 兼容接口 ===
-
-const openAICompletions = (payload: OpenAICompletionsPayload) =>
-  apiRequest<unknown>("/api/v1/chat/completions", {
-    method: "POST",
-    body: JSON.stringify({
-      model: (payload.model as string | null) ?? null,
-      messages: payload.messages as ChatCompletionMessage[],
-      session_id: (payload.sessionId as number | null) ?? null,
-      stream: (payload.stream as boolean) ?? false,
-    }),
-  });
-
-/** 流式 OpenAI 兼容聊天（/api/v1/chat/completions）。 */
-export const streamOpenAICompletions = (
-  payload: Omit<OpenAICompletionsPayload, "stream">,
-  onDelta: (content: string) => void,
-  signal: AbortSignal,
-) =>
-  streamCompletions(
-    "/api/v1/chat/completions",
-    payload.messages as ChatCompletionMessage[],
-    (payload.sessionId as string | null) ?? null,
-    (payload.model as string | null) ?? null,
-    onDelta,
-    signal,
-  );
-
 // === Agent SSE 运行 ===
 function parseSseLine(line: string): { event: string; data: string } | null {
   if (line.startsWith("event: ")) {
@@ -338,6 +302,25 @@ export const getPendingAgentOperation = (
 ): Promise<PendingApproval | null> =>
   apiRequest<PendingApproval | null>(
     `/api/agent/sessions/${sessionId}/pending?household_id=${householdId}`,
+  );
+
+/**
+ * 取消当前会话的待审批操作（删除 checkpoint 中的 pending_approval）。
+ *
+ * 后端语义：
+ *  - 仅在存在 pending 时成功，否则 409
+ *  - 取消后服务器会记录审计，后端将 checkpoint 清理
+ *  - 与 `decideAgentOperation({ decision: "reject" })` 不同：reject 走完整 Agent
+ *    流程记录拒绝事件，cancel 仅清理状态
+ */
+export const cancelPendingAgentOperation = (
+  sessionId: number,
+  householdId: number,
+  approvalId: string,
+): Promise<{ status: "cancelled" }> =>
+  apiRequest<{ status: "cancelled" }>(
+    `/api/agent/sessions/${sessionId}/cancel-pending?household_id=${householdId}&approval_id=${encodeURIComponent(approvalId)}`,
+    { method: "POST" },
   );
 
 /** 会话最近一次 run 的状态与阶段。 */

@@ -13,6 +13,8 @@ from typing import Any
 
 from app.session_tree.compaction import CompactionPreparation
 
+# === 压缩事件 ===
+
 
 @dataclass
 class BeforeCompactEvent:
@@ -43,6 +45,9 @@ class AfterCompactEvent:
     aborted: bool = False
 
 
+# === 分支摘要事件 ===
+
+
 @dataclass
 class BeforeBranchSummaryEvent:
     old_leaf_id: str | None
@@ -66,9 +71,14 @@ class AfterBranchSummaryEvent:
     entry_id: str | None
 
 
+# === 钩子类型 ===
+
+
 BeforeCompactHook = Callable[[BeforeCompactEvent], BeforeCompactResult | None]
 AfterCompactHook = Callable[[AfterCompactEvent], None]
-BeforeBranchSummaryHook = Callable[[BeforeBranchSummaryEvent], BeforeBranchSummaryResult | None]
+BeforeBranchSummaryHook = Callable[
+    [BeforeBranchSummaryEvent], BeforeBranchSummaryResult | None
+]
 AfterBranchSummaryHook = Callable[[AfterBranchSummaryEvent], None]
 
 

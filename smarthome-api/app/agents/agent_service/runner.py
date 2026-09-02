@@ -24,6 +24,7 @@ from app.agents.subagents.context_engine import (
     ContextResolution,
     get_context_engine,
 )
+from app.agents.subagents.domain_router import is_write_domain, resolve_delegated_domain
 from app.agents.subagents.domains import (
     AUTOMATION_SYSTEM_PROMPT,
     DEVICE_SYSTEM_PROMPT,
@@ -37,12 +38,11 @@ from app.agents.subagents.funnel_router import (
     SessionState,
     get_funnel_router,
 )
-from app.agents.subagents.router import is_write_domain, resolve_delegated_domain
 from app.agents.subagents.rule_layer import execute_rule_layer
 from app.agents.tools import get_domain_tools, get_household_tools
 from app.agents.usage import start_run, store_usage, update_run_phase
 from app.api.deps import get_model_cache
-from app.compaction.summarize import langchain_summarizer
+from app.compaction.summarize import create_langchain_summarizer
 from app.core.config import get_settings
 from app.models.ai import AIModel
 from app.models.chat import ChatMessage
@@ -201,7 +201,7 @@ def _maybe_compact_tree(context: AgentContext, model_config: AIModel) -> None:
             model_config.context_window or settings.session_tree_context_window
         )
         model = get_model_cache().get(model_config)
-        summarizer = langchain_summarizer(model)
+        summarizer = create_langchain_summarizer(model)
         compact_if_needed(
             context.session_id,
             summarizer=summarizer,

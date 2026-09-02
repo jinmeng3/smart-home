@@ -7,6 +7,7 @@ import {
   runAgent as apiRunAgent,
   decideAgentOperation as apiDecideAgentOperation,
   getPendingAgentOperation as apiGetPendingAgentOperation,
+  cancelPendingAgentOperation as apiCancelPendingAgentOperation,
   getAgentRunStatus,
   regenerateAgentMessage,
   regenerateChatCompletion,
@@ -96,6 +97,7 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
   const household = ref<HouseholdInfo | null>(null);
   const pendingApproval = ref<PendingApproval | null>(null);
   const decisionSubmitting = ref(false);
+  const cancelSubmitting = ref(false);
   const agentMode = ref<"agent" | "chat">("agent");
   const hasMoreMessages = ref(false);
   const loadedMessagePage = ref(1);
@@ -631,6 +633,55 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     recentConversations.value = recentConversations.value.filter(
       (item) => item.id !== sessionId,
     );
+  };
+
+  /**
+   * 取消当前待审批操作（不调用 Agent，不生成「拒绝」执行结果）。
+   *
+   * 与 `handleDecision("reject")` 的区别：reject 走完整的 Agent 流程，
+   * 后端会记录拒绝事件、可能仍返回工具调用结果；cancel 只在后端清除
+   * checkpoint 中的 pending_approval，不产生任何后续工具调用。
+   */
+  const cancelPending = async (): Promise<boolean> => {
+    if (
+      cancelSubmitting.value ||
+      decisionSubmitting.value ||
+      !pendingApproval.value ||
+      !activeSessionId.value
+    ) {
+      return false;
+    }
+    const hh = household.value;
+    const sid = Number(activeSessionId.value);
+    const aid = pendingApproval.value.approval_id;
+    if (
+      !hh ||
+      !Number.isFinite(sid) ||
+      sid <= 0 ||
+      !Number.isFinite(hh.id) ||
+      hh.id <= 0 ||
+      !aid
+    ) {
+      return false;
+    }
+    cancelSubmitting.value = true;
+    try {
+      await apiCancelPendingAgentOperation(sid, hh.id, aid);
+      pendingApproval.value = null;
+      agentStatus.value = "idle";
+      pendingStatus.value = "已取消待确认操作";
+      resetExecutionSteps();
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "取消失败，请重试或刷新页面";
+      pendingStatus.value = message;
+      return false;
+    } finally {
+      cancelSubmitting.value = false;
+    }
   };
 
   const handleDecision = async (decision: "approve" | "reject") => {
@@ -1236,6 +1287,8 @@ export const useHomeChat = (initialMessages: ChatMessage[]) => {
     activeModel,
     agentStatus,
     availableModels,
+    cancelPending,
+    cancelSubmitting,
     decisionSubmitting,
     ensureSession,
     eventReceived,

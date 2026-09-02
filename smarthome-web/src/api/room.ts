@@ -23,19 +23,19 @@ interface ApiRoom {
   id: number;
   name: string;
   floor: string;
-  roomType: string;
-  imageUrl?: string | null;
+  room_type: string;
+  image_url?: string | null;
   icon?: string;
-  themeColor?: string;
+  theme_color?: string;
   device?: Room["device"];
-  deviceCount?: number;
-  onlineCount?: number;
+  device_count?: number;
+  online_count?: number;
   area: number;
   comfort: number;
   status: string;
   version?: number | null;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ApiRoomListResponse {
@@ -45,49 +45,49 @@ interface ApiRoomListResponse {
 
 interface ApiRoomDetailResponse {
   room: ApiRoom;
-  currentScene?: string | null;
-  recentActivity?: string | null;
-  recentActivityTime?: string | null;
+  current_scene?: string | null;
+  recent_activity?: string | null;
+  recent_activity_time?: string | null;
 }
 
 interface ApiRoomStats {
-  roomCount: number;
-  roomCountChange?: number;
-  onlineRate?: number;
-  alertCount?: number;
-  pendingAlertCount?: number;
+  room_count: number;
+  room_count_change?: number;
+  online_rate?: number;
+  alert_count?: number;
+  pending_alert_count?: number;
 }
 
 const mapRoom = (data: ApiRoom): Room => ({
   id: data.id,
   name: data.name,
   floor: data.floor,
-  roomType: data.roomType,
-  imageUrl: data.imageUrl ?? null,
+  roomType: data.room_type,
+  imageUrl: data.image_url ?? null,
   icon: data.icon ?? "room",
-  themeColor: data.themeColor ?? "",
+  themeColor: data.theme_color ?? "",
   version: data.version ?? 0,
   area: data.area,
   comfort: data.comfort,
-  deviceCount: data.deviceCount ?? 0,
-  onlineCount: data.onlineCount ?? 0,
-  updatedAt: data.updatedAt,
+  deviceCount: data.device_count ?? 0,
+  onlineCount: data.online_count ?? 0,
+  updatedAt: data.updated_at,
   device: data.device ?? [],
 });
 
 const mapRoomDetail = (data: ApiRoomDetailResponse): RoomDetail => ({
   room: mapRoom(data.room),
-  currentScene: data.currentScene ?? null,
-  recentActivity: data.recentActivity ?? null,
-  recentActivityTime: data.recentActivityTime ?? null,
+  currentScene: data.current_scene ?? null,
+  recentActivity: data.recent_activity ?? null,
+  recentActivityTime: data.recent_activity_time ?? null,
 });
 
 const mapRoomStats = (data: ApiRoomStats): RoomStats => ({
-  roomCount: data.roomCount,
-  roomCountChange: data.roomCountChange ?? 0,
-  onlineRate: data.onlineRate ?? 0,
-  alertCount: data.alertCount ?? 0,
-  pendingAlertCount: data.pendingAlertCount ?? 0,
+  roomCount: data.room_count,
+  roomCountChange: data.room_count_change ?? 0,
+  onlineRate: data.online_rate ?? 0,
+  alertCount: data.alert_count ?? 0,
+  pendingAlertCount: data.pending_alert_count ?? 0,
 });
 
 // === API 导出函数 ===

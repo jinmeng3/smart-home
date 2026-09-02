@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+# === 压缩主流程 ===
+
 # 摘要请求的 system prompt：明确要求"只输出摘要、不要继续对话"。
 SUMMARIZATION_SYSTEM_PROMPT = """You are an expert session summarizer. You distill an agent/coding session into a compact, structured summary that preserves all information required to continue the session without loss.
 
@@ -58,7 +60,8 @@ BRANCH_SUMMARY_STRUCTURE = """## Goal
 - [exact file paths, function/class names, identifiers, commands, and error messages needed to continue]"""
 
 # 初次压缩：从零生成结构化摘要。
-SUMMARIZATION_PROMPT = """Summarize the conversation below into the following structured Markdown format.
+SUMMARIZATION_PROMPT = (
+    """Summarize the conversation below into the following structured Markdown format.
 
 Requirements:
 - Preserve exact file paths, function/class names, identifiers, commands, and error messages verbatim.
@@ -66,10 +69,13 @@ Requirements:
 - Be concise but lossless: someone reading only this summary must be able to continue the work.
 
 Format:
-""" + SUMMARY_STRUCTURE
+"""
+    + SUMMARY_STRUCTURE
+)
 
 # 更新式压缩：把新消息并入旧摘要，而不是从零总结。
-UPDATE_SUMMARIZATION_PROMPT = """You are updating an existing session summary by merging newer conversation turns into it.
+UPDATE_SUMMARIZATION_PROMPT = (
+    """You are updating an existing session summary by merging newer conversation turns into it.
 
 Requirements:
 - Preserve ALL information already in the previous summary unless it has been superseded or is obsolete.
@@ -80,7 +86,9 @@ Requirements:
 - Output ONLY the merged structured summary, nothing else.
 
 Format:
-""" + SUMMARY_STRUCTURE
+"""
+    + SUMMARY_STRUCTURE
+)
 
 # split turn 时的轮次前缀摘要：聚焦原始请求与早期进展。
 TURN_PREFIX_SUMMARIZATION_PROMPT = """Summarize the beginning of a single oversized turn (the part before the conversation was cut) focusing on:
@@ -92,7 +100,8 @@ TURN_PREFIX_SUMMARIZATION_PROMPT = """Summarize the beginning of a single oversi
 Output ONLY the summary, nothing else."""
 
 # 分支摘要：结构化格式（无 Next Steps 一节）。
-BRANCH_SUMMARY_PROMPT = """Summarize the following conversation branch into the structured Markdown format below (omit the "Next Steps" section).
+BRANCH_SUMMARY_PROMPT = (
+    """Summarize the following conversation branch into the structured Markdown format below (omit the "Next Steps" section).
 
 Requirements:
 - Preserve exact file paths, function/class names, identifiers, commands, and error messages verbatim.
@@ -100,7 +109,11 @@ Requirements:
 - Be concise but lossless.
 
 Format:
-""" + BRANCH_SUMMARY_STRUCTURE
+"""
+    + BRANCH_SUMMARY_STRUCTURE
+)
+
+# === 分支摘要 ===
 
 # 分支摘要前注入的前言：告诉模型这是"别的分支"的上下文。
 BRANCH_SUMMARY_PREAMBLE = "The user explored a different conversation branch before returning here. Summary of that exploration:"

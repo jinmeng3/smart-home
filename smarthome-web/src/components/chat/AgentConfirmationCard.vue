@@ -6,11 +6,13 @@ import type { PendingApproval } from "../../types/chat";
 const props = defineProps<{
   approval: PendingApproval;
   submitting?: boolean;
+  canceling?: boolean;
 }>();
 
 defineEmits<{
   approve: [];
   reject: [];
+  cancel: [];
 }>();
 
 const preview = computed(() => props.approval.preview);
@@ -234,8 +236,17 @@ const deviceTypeIcon = computed(() => {
     <footer class="approval-actions">
       <button
         type="button"
+        class="cancel-button"
+        :disabled="submitting || canceling"
+        @click="$emit('cancel')"
+      >
+        {{ canceling ? "取消中…" : "撤回请求" }}
+      </button>
+
+      <button
+        type="button"
         class="reject-button"
-        :disabled="submitting"
+        :disabled="submitting || canceling"
         @click="$emit('reject')"
       >
         {{ submitting ? "处理中…" : "拒绝" }}
@@ -244,7 +255,7 @@ const deviceTypeIcon = computed(() => {
       <button
         type="button"
         class="approve-button"
-        :disabled="submitting || !canApprove"
+        :disabled="submitting || canceling || !canApprove"
         @click="$emit('approve')"
       >
         {{ submitting ? "处理中…" : "确认执行" }}
@@ -453,6 +464,12 @@ const deviceTypeIcon = computed(() => {
   background: var(--color-surface);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
+}
+
+.cancel-button {
+  background: transparent;
+  color: var(--color-text-tertiary);
+  border: 1px dashed var(--color-border);
 }
 
 .approve-button {

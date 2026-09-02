@@ -35,6 +35,27 @@ LLM 驱动的智能体系统在自然语言理解、工具调用、任务规划�
 5. **模型/思考等级切换**——没有任何"状态变更"的概念，只能在系统里另存一份，**与消息流脱钩**。
 6. **多任务隔离**——审批中断时用户又发新消息，所有内容混在同一条时间线，**无法区分"前台会话"和"挂起任务"**。
 
+下图给出六类失效模式与本文创新点的全局映射，后续章节按对应编号展开。
+
+```mermaid
+flowchart LR
+    L["线性消息列表<br/>(list / JSONL / messages 表)"] --> P1["问题1<br/>压缩脱节"]
+    L --> P2["问题2<br/>回退破坏"]
+    L --> P3["问题3<br/>分叉昂贵"]
+    L --> P4["问题4<br/>崩溃无检查点"]
+    L --> P5["问题5<br/>状态变更无载体"]
+    L --> P6["问题6<br/>多任务混详"]
+
+    P1 --> S1["§3.1<br/>compaction 节点"]
+    P2 --> S2["§3.2<br/>move_lane 指针"]
+    P3 --> S3["§3.3<br/>Lane + Fork"]
+    P4 --> S4["§3.4<br/>mutation 日志 + Record"]
+    P5 --> S5["§3.5<br/>Entry 统一抽象"]
+    P6 --> S6["§3.6<br/>Lane + Record 双层"]
+
+    S1 & S2 & S3 & S4 & S5 & S6 --> T["有向树<br/>(session_tree)"]
+```
+
 ### 1.3 本文的工作
 
 本文以"问题—方案对照"为基本叙事结构：每节先呈现某类具体失效模式，再给出有向树方案在该问题上的针对性解法。
@@ -101,6 +122,17 @@ Git 在代码领域证明了**有向无环图（DAG）+ 指针移动**相比线�
 
 **跨压缩的信息保留**：为避免多次压缩丢失关键事实，`prepare_compaction` 在做本次切割点计算时，**把上一次 `compaction` 节点的 `retained_tail` 映射为虚拟条目纳入计算**——`retained_tail` 在下一次压缩中"仍然在场"，与新消息一起被评估是否需纳入摘要。文件操作清单（`readFiles` / `modifiedFiles`）也通过 `details` 字段跨压缩累积。
 
+下图展示在会话树上多轮压缩与原文共存的结构。`compaction` 节点与 `message` 节点是同类（都是 `Entry`），区别仅在于它的 `kind == "compaction"` 且携带 `summary` / `retained_tail`。
+
+```mermaid
+graph TD
+    M1["m1<br/>message"] --> M2["m2<br/>message"] --> M3["m3<br/>message"] --> M4["m4<br/>message"] --> M5["m5<br/>message"] --> C1["c1 compaction<br/>summary=s1<br/>tail=m4,m5"]
+    C1 --> M6["m6<br/>message"] --> M7["m7<br/>message"] --> M8["m8<br/>message"] --> C2["c2 compaction<br/>summary=s2<br/>tail=m7,m8"]
+    C2 --> M9["m9<br/>message"] --> M10["m10<br/>message"]
+```
+
+> **读图说明**：c1、c2 是 compaction 节点，与 m1–m10 同为 `Entry`；m1–m10 原文未删除，作为 c1/c2 的祖先仍可被检索/回滚。投影层从 c2 之后投影（m9、m10 + c2 的 summary 与 retained_tail）送入 LLM，c1 及其之上的原文仅供审计/回滚，不进上下文。
+
 #### 3.1.3 为什么这样设计
 
 这一设计带来三个关键收益：
@@ -136,6 +168,21 @@ Git 在代码领域证明了**有向无环图（DAG）+ 指针移动**相比线�
 
 `operation_started` / `operation_finished` 记录挂在车道上，**车道 + 记录共同表达"前台任务 / 后台任务"**。
 
+下图表达“回退 = 移动车道指针”与“中断场景下双车道”的结构。main 与 interrupt 两条车道共享同一棵节点树，但 leaf 指针独立推进——不会互相覆盖。
+
+```mermaid
+graph TD
+    E1["e1"] --> E2["e2"] --> E3["e3"] --> E4["e4"] --> E5["e5 (approval pending)"]
+    E5 --> E6["e6<br/>用户在另一窗口发了新消息"]
+    E6 --> E7["e7<br/>interrupt 推进"]
+    E8["审批恢复 · main.move_lane→e5"]
+
+    E1 -.->|"main.leaf=e5"| E5
+    E5 -.->|"interrupt.leaf=e7"| E7
+```
+
+> **读图说明**：实箭头是树上的父→子依赖，虚线表示车道 leaf 指针。“回退到 e5”在代码上就是 `move_lane("main", e5.id)`——不删除 e6/e7，仅修改 main 指针指向 e5。interrupt 车道的内容仍完整保留。
+
 #### 3.2.3 为什么这样设计
 
 指针移动而非删除的历史观，在 Git 中已被证明有效（`git checkout` 不删除任何 commit）。在会话场景中，指针移动的成本是 O(1)（一次 mutation 写入），而删除 + 重建的方案是 O(n)。更重要的是，**指针移动保留了完整因果链**——任何"分支尝试"都可追溯、可回放、可对比。
@@ -165,6 +212,24 @@ Git 在代码领域证明了**有向无环图（DAG）+ 指针移动**相比线�
 - **跨会话 Fork**：`repo.fork(source, ForkOptions(scope="branch", entry_id=at))` 在新会话中只复制从 target 开始的分支路径，**labels 随内容复制、records 不复制**（操作日志不应污染新会话）。Fork 在单一 SQLite 事务中完成，崩溃只留"空会话"，不出现半成品分叉。
 
 **零冗余的分支合并**：当用户想"合并实验结果"时，方案 A 与方案 B 的共同祖先是 entry_5，**两份历史只差 entry_5 之后的节点**——把 B 的新节点引用进来即可，无需复制 entry_5 之前的内容。
+
+下图区分**会话内 Lane 分叉**与**跨会话 Fork**。二者均采用“上游以引用而非拷贝”的语义，但生命周期不同：Lane 随原会话存活，Fork 独立为另一个会话（独立 labels、不拷贝 records）。
+
+```mermaid
+graph LR
+    subgraph 会话内["会话内：Lane 分叉"]
+        E1["e1"] --> E2["e2"] --> E3["e3"] --> E4["e4"] --> E5["e5"]
+        E5 --> EA["A 车道：e6a, e7a"]
+        E5 --> EB["B 车道：e6b, e7b"]
+    end
+
+    subgraph 跨会话["跨会话：Fork"]
+        E1b["e1"] --> E2b["e2"] --> E3b["e3"] --> E4b["e4"] --> E5b["e5"]
+        E5b --> EBb["新会话：e6b, e7b, ...<br/>独立 labels · records 不复制"]
+    end
+```
+
+> **读图说明**：左侧 e1–e5 在两条车道间以引用共享（不拷贝），右侧 Fork 在新会话中仅复制从 e5 开始的分支路径。选哪个取决于“实验”是否需要独立持久化、会话上下文是否复用。
 
 #### 3.3.3 为什么这样设计
 
@@ -203,12 +268,41 @@ Agent 跑到一半崩溃（OOM、用户关闭浏览器、服务器重启）后�
 
 关键不变量是**"内存状态永远不超前于磁盘"**——这一保证使崩溃后重放可得到与崩溃前完全一致的状态。
 
-**操作日志**：每一次 `Record` 都是一颗时间胶囊，9 种类型覆盖完整生命周期：
+**操作日志**：每一次 `Record` 都是一颗时间胶囊，9 种类型覆盖完整生命周期。下面两张图分别给出 Record 生命周期状态机与 append-only mutation 的崩溃一致性时序。
 
+```mermaid
+stateDiagram-v2
+    [*] --> operation_started
+    operation_started --> step_attempt
+    step_attempt --> tool_started
+    tool_started --> operation_finished
+    step_attempt --> operation_finished
+    operation_started --> abort_requested
+    abort_requested --> operation_finished_aborted
+    operation_finished --> [*]
+    operation_finished_aborted --> [*]
 ```
-operation_started → step_attempt → tool_started → ... → operation_finished
-                                       ↓ (异常分支)
-                              abort_requested → operation_finished (outcome=aborted)
+
+```mermaid
+sequenceDiagram
+    participant C as Caller
+    participant P as _append_mutation
+    participant D as SQLite (WAL)
+    participant M as SessionState
+
+    C->>P: append_entry / append_record / create_lane / move_lane
+    P->>D: 1. INSERT row (不 commit)
+    P->>D: 2. db.commit()
+    alt 提交成功
+        P->>M: 3. apply_mutation(mutation)
+        M-->>C: ok
+    else 提交失败
+        D-->>P: rollback
+        P-->>C: raise SessionError
+    end
+
+    Note over M,D: 不变量：内存状态永远不超前于磁盘
+    Note over M: 崩溃后重放 = 依次 apply 所有 mutation 行 = 崩溃前状态
 ```
 
 `find_open_operations(lane)` 是恢复语义的入口：
@@ -264,6 +358,22 @@ operation_started → step_attempt → tool_started → ... → operation_finish
 
 **回放能力**：调试 agent 时可"重放到切模型前的状态"——`move_lane` 到 `model_change` 之前的节点即可，**所有状态变更在 LLM 看来"不存在"**。
 
+下图展示“状态变更与消息同为 Entry 节点”的因果链。`model_change` / `thinking_level_change` / `active_tools_change` 三类节点拥有与 message 节点同等的树上位置，但不进入 LLM 上下文——投影层取路径上“最后一个状态变更”作为派生状态。
+
+```mermaid
+graph TD
+    M1["m1<br/>user: 开始任务"] --> MC1["mc1 model_change<br/>gpt-4 → deepseek"]
+    MC1 --> M2["m2<br/>assistant: ..."] --> M3["m3<br/>tool result"] --> TLC1["tlc1 thinking_level_change<br/>high"]
+    TLC1 --> M4["m4<br/>assistant: ..."] --> M5["m5<br/>user: 继续"] --> ATC1["atc1 active_tools_change<br/>+web_search"]
+    ATC1 --> M6["m6<br/>assistant: ..."]
+
+    M1 -.->|"投影层取最后一个状态变更"| MC1
+    MC1 -.->|"thinking_level = high"| TLC1
+    TLC1 -.->|"active_tools 包含 web_search"| ATC1
+```
+
+> **读图说明**：状态变更节点不进入 LLM 上下文，但参与派生计算——LLM 看到的只是“本次会话在 deepseek + high thinking + 启用 web_search 下做出的反应”，而不看到“中途切过模型”。
+
 #### 3.5.3 为什么这样设计
 
 **统一抽象的力量**：消息、压缩、状态变更、分支摘要都是 `Entry` 节点的实例——**所有"会话内容"共享同一种抽象**。这意味着：
@@ -302,6 +412,29 @@ Agent 审批中断（高风险操作需用户确认）时，用户又发新消�
 
 **同车道并发强制不允许**：`append_record` 在写入 `operation_started` 前先检查同 lane 已有开放操作——**并发请求被存储层拒掉**，免去外部加锁。这使"前台任务 / 后台任务"在数据层就有清晰边界。
 
+下图表达双层隔离：Lane 决定“哪些节点属于同一任务”（粗粒度），Record 决定“同一任务执行到哪一步”（细粒度）。两者结合，“审批中断 + 用户并发消息”场景在数据层就能区分。
+
+```mermaid
+graph TD
+    subgraph main["main 车道 · 任务A"]
+        MA["eA1"] --> MBA["eA2 (approval)"] -.->|"leaf"| MBA
+    end
+    subgraph interrupt["interrupt 车道 · 任务B"]
+        MB["eB1<br/>user 新消息"] --> MBB["eB2"] -.->|"leaf"| MBB
+    end
+
+    MBA -.->|"find_open_operations=1 (挂起)"| RR["同 lane 开放操作检查"]
+    RR -->|"恢复时：main.move_lane→eA2"| MBA
+
+    MBB -.->|"main.move_lane→eB2 (任务B 提升为主线)"| MBB
+
+    subgraph rec["Record 层（细粒度）"]
+        OS["operation_started"] --> SA["step_attempt"] --> TS["tool_started"] --> OF["operation_finished"]
+    end
+```
+
+> **读图说明**：上下的虚线箭头表示车道 leaf 指针；右侧 Record 状态机独立于 Lane。Lane 解决“任务边界”，Record 解决“执行状态”，二者互补不重叠。
+
 #### 3.6.3 为什么这样设计
 
 **Lane 与 Record 的职责分离**：
@@ -316,6 +449,55 @@ Agent 审批中断（高风险操作需用户确认）时，用户又发新消�
 ## 4 实现细节：以算法落地问题
 
 本节对 §3 的设计给出具体实现细节。每节先指明要解决的实现层面问题，再给出对应的算法与工程取舍。
+
+下图是本文方案的“整体架构鸟瞰”：中心是会话树，右侧是 Record 操作链、左侧是 Lane 指针表、底部是 append-only mutation 日志与 6 条不变式。投影层在所有这些结构之上，负责把树状态压缩为 LLM 可消费的上下文。
+
+```mermaid
+graph TD
+    subgraph tree["会话树（Entry 节点）"]
+        EM["message<br/>user / assistant / tool"]
+        EC["compaction<br/>summary + retained_tail"]
+        ES["state_change<br/>model / thinking / tools"]
+        EF["branch_summary<br/>fork 合并用"]
+    end
+
+    subgraph lane["Lane 表（粗粒度任务）"]
+        LM["main.leaf = e12"]
+        LI["interrupt.leaf = e14"]
+        LE["experiment.leaf = e11"]
+    end
+
+    subgraph record["Record 链（细粒度执行）"]
+        ROS["operation_started"]
+        RSA["step_attempt"]
+        RTS["tool_started"]
+        ROF["operation_finished"]
+    end
+
+    subgraph persist["持久化层"]
+        ML["mutation 日志<br/>append-only INSERT"]
+        SI["SQLite (WAL)"]
+    end
+
+    subgraph proj["投影层"]
+        PC["build_session_context<br/>三步投影"]
+    end
+
+    tree --> LM & LI & LE
+    lane --> ROS
+    ROS --> RSA --> RTS --> ROF
+    tree --> ML
+    record --> ML
+    ML --> SI
+    SI -.->|"崩溃后重放"| ML
+    tree --> PC
+    record --> PC
+    PC --> LLM["LLM 上下文"]
+```
+
+> **读图说明**：中心会话树是“事实源”，所有高级抽象（Lane / Record / compaction / state_change）都以它为依托。崩溃后重放路径（虚线）保证了“磁盘状态 = 重放后内存状态 = 崩溃前内存状态”。
+
+### 4.1 内存状态机：6 条不变式保证树的合法性
 
 ### 4.1 内存状态机：6 条不变式保证树的合法性
 
@@ -561,6 +743,18 @@ Agent 状态机的 checkpoint（LangGraph checkpointer）与会话树（对话�
 ---
 
 ## 6 结论（Conclusion）
+
+下图将全文的“问题—方案—创新点—验证方法”以一条主轴串联，作为读者复习与检索的地图。
+
+```mermaid
+flowchart LR
+    P1["问题1<br/>压缩脱节"] --> S1["方案：compaction 节点"] --> I1["创新点：压缩是树上节点，原文不丢"] --> V1["验证：c 节点保留原历史 · 投影取 c 之后"]
+    P2["问题2<br/>回退破坏"] --> S2["方案：move_lane"] --> I2["创新点：指针移动而非删除"] --> V2["验证：git-style checkout 不丢 commit"]
+    P3["问题3<br/>分叉昂贵"] --> S3["方案：Lane + Fork"] --> I3["创新点：上游以引用共享"] --> V3["验证：零冗余合并，labels 独立"]
+    P4["问题4<br/>崩溃无检查点"] --> S4["方案：mutation 日志 + Record"] --> I4["创新点：先持久化后应用内存"] --> V4["验证：崩溃后重放 == 崩溃前状态"]
+    P5["问题5<br/>状态变更无载体"] --> S5["方案：Entry 统一抽象"] --> I5["创新点：状态变更也是树节点"] --> V5["验证：6 条不变式 1 套实现"]
+    P6["问题6<br/>多任务混详"] --> S6["方案：Lane + Record 双层"] --> I6["创新点：数据层隔离替代外部加锁"] --> V6["验证：同 lane 并发被拒掉"]
+```
 
 本文以"问题—方案对照"为基本叙事结构，针对线性会话日志在六类典型场景下的失效模式，给出有向树方案的针对性解法：
 

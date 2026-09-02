@@ -1,9 +1,6 @@
 import json
 import uuid
-from datetime import date, datetime, time, timezone
-from app.utils.json import dump_json
-from app.utils.time import now_utc
-from app.utils.db import get_or_404
+from datetime import UTC, date, datetime, time
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, insert, or_, select
@@ -45,6 +42,9 @@ from app.services.scene import (
     get_scenes_service,
     run_scene_service,
 )
+from app.utils.db import get_or_404
+from app.utils.json import dump_json
+from app.utils.time import now_utc
 
 
 def accessible_rooms(db: Session, user: User):
@@ -272,7 +272,7 @@ def add_room_service(db: Session, user: User, payload: RoomInput) -> RoomRead:
     household_id = get_default_household_id(db, user)
     room = Room(
         household_id=household_id,
-        **payload.model_dump(exclude={"device_ids", "version"}),
+        **payload.model_dump(exclude={"device_ids", "version"}, by_alias=False),
     )
     db.add(room)
     try:
@@ -362,7 +362,7 @@ def get_room_detail_service(db: Session, user: User, room_id: int) -> RoomDetail
         now = now_utc()
         occurred_at = recent_log.occurred_at
         if occurred_at.tzinfo is None:
-            occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+            occurred_at = occurred_at.replace(tzinfo=UTC)
         diff = now - occurred_at
         minutes = int(diff.total_seconds() / 60)
         if minutes < 1:
@@ -429,12 +429,12 @@ def get_room_logs_service(
     if date_from:
         filters.append(
             RoomActivityLog.occurred_at
-            >= datetime.combine(date_from, time.min, tzinfo=timezone.utc)
+            >= datetime.combine(date_from, time.min, tzinfo=UTC)
         )
     if date_to:
         filters.append(
             RoomActivityLog.occurred_at
-            <= datetime.combine(date_to, time.max, tzinfo=timezone.utc)
+            <= datetime.combine(date_to, time.max, tzinfo=UTC)
         )
     total = (
         db.scalar(select(func.count()).select_from(RoomActivityLog).where(*filters))
@@ -662,7 +662,7 @@ def get_room_environment_latest_service(
 ) -> RoomEnvironmentLatestRead:
     """获取房间最新环境数据。"""
     get_room_or_404(db, user, room_id)
-                         
+
     return RoomEnvironmentLatestRead(
         sampled_at=now_utc(),
         values={

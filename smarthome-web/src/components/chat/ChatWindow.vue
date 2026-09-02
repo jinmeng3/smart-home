@@ -100,6 +100,10 @@ const handleReject = () => {
     store.handleDecision("reject");
 };
 
+const handleCancel = () => {
+    void store.cancelPending();
+};
+
 const fillPrompt = (prompt: string) => {
     pendingPrompt.value = prompt;
 };
@@ -282,8 +286,10 @@ const starterPrompts = [
                     "
                     :approval="store.pendingApproval"
                     :submitting="store.decisionSubmitting"
+                    :canceling="store.cancelSubmitting"
                     @approve="handleApprove"
                     @reject="handleReject"
+                    @cancel="handleCancel"
                 />
             </template>
                 </div>

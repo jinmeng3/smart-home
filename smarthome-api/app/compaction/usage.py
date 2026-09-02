@@ -7,6 +7,9 @@ from typing import Any
 _USAGE_KEYS = ("input", "output", "cacheRead", "cacheWrite", "totalTokens")
 
 
+# === 合并 ===
+
+
 def combine_usage(*usages: dict[str, Any] | None) -> dict[str, Any] | None:
     """把多个摘要请求的 usage 逐项相加（split turn 时合并两次请求的用量）。"""
     non_empty = [usage for usage in usages if isinstance(usage, dict)]
@@ -26,6 +29,9 @@ def combine_usage(*usages: dict[str, Any] | None) -> dict[str, Any] | None:
         combined["cost"] = {"total": cost_total}
 
     return combined or None
+
+
+# === 标准化 ===
 
 
 def usage_from_metadata(meta: Any) -> dict[str, Any] | None:

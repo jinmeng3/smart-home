@@ -12,6 +12,7 @@
     "api:export:backend": "cd ../smarthome-api && python -c \"import json, sys; sys.path.insert(0, '.'); from app.main import app; json.dump(app.openapi(), open('openapi.json', 'w', encoding='utf-8'), indent=2, ensure_ascii=False)\"",
     "api:generate": "npm run api:export:backend && node scripts/generate-openapi-types.mjs",
     "api:check": "node scripts/check-openapi-consistency.mjs",
+    "test:unit": "node tests/test-api-client.mjs",
     "type-check": "vue-tsc --build"
   },
   "dependencies": {

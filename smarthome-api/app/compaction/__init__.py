@@ -43,7 +43,7 @@ from app.compaction.summarize import (
     SummarizationAborted,
     Summarizer,
     complete_summarization,
-    langchain_summarizer,
+    create_langchain_summarizer,
 )
 from app.compaction.usage import combine_usage, usage_from_metadata
 
@@ -70,7 +70,7 @@ __all__ = [
     "Summarizer",
     "combine_usage",
     "complete_summarization",
-    "langchain_summarizer",
+    "create_langchain_summarizer",
     "serialize_conversation",
     "truncate_tool_result",
     "usage_from_metadata",

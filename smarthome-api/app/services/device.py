@@ -1,6 +1,4 @@
-from datetime import datetime, timezone
-from app.utils.time import now_utc
-from app.utils.db import get_or_404, paginate
+from datetime import datetime
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -35,6 +33,8 @@ from app.schemas.device import (
     DeviceUpdate,
 )
 from app.services.household import get_default_household_id
+from app.utils.db import get_or_404, paginate
+from app.utils.time import now_utc
 
 IMAGE_EXTENSION_BY_TYPE = {
     "image/jpeg": ".jpg",
@@ -432,9 +432,7 @@ def get_today_energy_service(
     if household_id is None:
         household_id = get_default_household_id(db, user)
 
-    today_start = datetime.combine(
-        now_utc().date(), datetime.min.time()
-    )
+    today_start = datetime.combine(now_utc().date(), datetime.min.time())
     query = (
         select(
             func.coalesce(func.sum(DeviceEnergyRecord.energy_kwh), 0.0),

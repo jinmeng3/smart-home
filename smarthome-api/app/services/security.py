@@ -1,6 +1,3 @@
-from datetime import datetime, timezone
-from app.utils.time import now_utc
-
 from fastapi import HTTPException, status
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -13,6 +10,7 @@ from app.schemas.security import (
     SecurityLogRead,
     SecurityMetaRead,
 )
+from app.utils.time import now_utc
 
 
 def get_security_meta(db: Session, user: User) -> SecurityMetaRead:

@@ -2,7 +2,7 @@
 
 关键目的：让模型把这段内容当作"待总结的素材"而不是"要接下去的对话"。
 工具结果（尤其是 read / bash 输出）通常是上下文的最大占用者，超长内容会被
-截断到 ``TOOL_RESULT_MAX_CHARS``，保证摘要请求本身不爆 token。
+截断到 ``settings.compaction_tool_result_max_chars``，保证摘要请求本身不爆 token。
 """
 
 from __future__ import annotations
@@ -12,8 +12,26 @@ from typing import Any
 from app.session_tree.session.types import Message
 from app.utils.json import dump_json
 
+# 文档常量：保留以向后兼容 ``from app.compaction import TOOL_RESULT_MAX_CHARS``。
+# 实际生效值由 ``get_settings().compaction_tool_result_max_chars`` 提供，**会随
+# .env 改动**。这里写死仅作为导入时的字面量快照与默认值的兜底。
 TOOL_RESULT_MAX_CHARS = 2000
 _TRUNCATION_SUFFIX = "... [{} more characters truncated]"
+
+
+def _resolve_tool_result_max_chars(value: int | None) -> int:
+    """解析工具结果截断长度：显式传参 > config > 模块字面量兜底。"""
+    if value is not None:
+        return value
+    try:
+        from app.core.config import get_settings
+
+        return get_settings().compaction_tool_result_max_chars
+    except Exception:  # noqa: BLE001  # 配置层失败时退回到字面量，避免序列化整个崩溃
+        return TOOL_RESULT_MAX_CHARS
+
+
+# === 内部工具 ===
 
 
 def _content_text(content: Any) -> str:
@@ -40,11 +58,15 @@ def _content_blocks(content: Any) -> list[dict[str, Any]]:
     return []
 
 
-def truncate_tool_result(text: str, max_chars: int = TOOL_RESULT_MAX_CHARS) -> str:
-    """超长工具结果保留开头 ``max_chars`` 字符并追加截断标记。"""
-    if not text or len(text) <= max_chars:
+def truncate_tool_result(text: str, max_chars: int | None = None) -> str:
+    """超长工具结果保留开头 ``max_chars`` 字符并追加截断标记。
+
+    ``max_chars`` 为 None 时读取 ``settings.compaction_tool_result_max_chars``。
+    """
+    limit = _resolve_tool_result_max_chars(max_chars)
+    if not text or len(text) <= limit:
         return text
-    return text[:max_chars] + _TRUNCATION_SUFFIX.format(len(text) - max_chars)
+    return text[:limit] + _TRUNCATION_SUFFIX.format(len(text) - limit)
 
 
 def _format_tool_call(name: Any, arguments: Any) -> str:
@@ -96,17 +118,22 @@ def _serialize_message(message: Message, tool_result_max_chars: int) -> list[str
     return lines
 
 
+# === 公开 API ===
+
+
 def serialize_conversation(
     messages: list[Message],
     *,
-    tool_result_max_chars: int = TOOL_RESULT_MAX_CHARS,
+    tool_result_max_chars: int | None = None,
 ) -> str:
     """把消息列表序列化为纯文本（``[Role]: ...`` 形式）。
 
+    ``tool_result_max_chars`` 为 None 时读取 ``settings.compaction_tool_result_max_chars``。
     等价于文档 §8.2 中 ``serializeConversation(convertToLlm(messages))`` 的两步：
     先把内部角色投影成可读文本，再拼成一段"素材"。
     """
+    limit = _resolve_tool_result_max_chars(tool_result_max_chars)
     lines: list[str] = []
     for message in messages:
-        lines.extend(_serialize_message(message, tool_result_max_chars))
+        lines.extend(_serialize_message(message, limit))
     return "\n".join(lines)

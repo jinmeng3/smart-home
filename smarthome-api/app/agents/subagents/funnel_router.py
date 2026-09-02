@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.agents.subagents.router import (
+from app.agents.subagents.domain_router import (
     resolve_delegated_domain,
     route_intent,
 )

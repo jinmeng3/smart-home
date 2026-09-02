@@ -3,8 +3,8 @@
 - ``complete_summarization``：统一的路由隔离 + 重试封装。每个摘要请求使用全新
   的 isolation id（等价于文档中的新 ``sessionId`` + 不写缓存），避免一次性提示词
   污染会话路由；瞬时错误按重试次数重试，取消 / 确定性错误立即抛出。
-- ``langchain_summarizer``：把 langchain 模型适配为 ``Summarizer`` 协议，并标准
-  化 ``usage_metadata``。
+- ``create_langchain_summarizer``：把 langchain 模型适配为 ``Summarizer`` 协议，并
+  标准化 ``usage_metadata``。
 
 核心与具体模型供应商解耦：``Summarizer`` 是一个普通可调用对象，测试时可传入
 假的摘要函数，无需真实的 LLM。
@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 from uuid import uuid4
+
+# === 协议与异常 ===
 
 
 class SummarizationAborted(Exception):
@@ -35,6 +37,9 @@ class Summarizer(Protocol):
         max_tokens: int | None = None,
         isolation_id: str | None = None,
     ) -> tuple[str, dict[str, Any] | None]: ...
+
+
+# === 调度 ===
 
 
 def complete_summarization(
@@ -70,7 +75,10 @@ def complete_summarization(
             attempts += 1
 
 
-def langchain_summarizer(model) -> Summarizer:
+# === LangChain 适配 ===
+
+
+def create_langchain_summarizer(model) -> Summarizer:
     """把 langchain ``BaseChatModel`` 适配为 :class:`Summarizer`。"""
 
     def _summarize(

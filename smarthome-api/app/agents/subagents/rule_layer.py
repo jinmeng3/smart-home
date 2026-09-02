@@ -20,8 +20,8 @@ from app.agents.risk import (
     classify_scene_execution,
 )
 from app.agents.risk.policy import RiskLevel
+from app.agents.subagents.lexicon import get_lexicon
 from app.agents.subagents.rule_engine import (
-    _ROOM_DEVICE_HINTS,
     RuleParseResult,
     WriteProposal,
 )
@@ -35,6 +35,7 @@ from app.agents.tools.execute.scenes import execute_scene_operation
 from app.agents.usage import store_usage
 from app.core.config import get_settings
 from app.models.device import Device, DeviceStatus
+from app.models.scene import Scene
 from app.schemas.sse import (
     ApprovalRequired,
     Error,
@@ -72,7 +73,7 @@ def _split_room_from_entity_ref(entity_ref: str, room_hint: str) -> str:
         return room_hint
     if not entity_ref:
         return ""
-    for keyword in sorted(_ROOM_DEVICE_HINTS, key=len, reverse=True):
+    for keyword in sorted(get_lexicon().device_hints, key=len, reverse=True):
         if entity_ref.endswith(keyword):
             return entity_ref[: -len(keyword)]
     return ""
@@ -124,6 +125,81 @@ def _make_args(tool: str, base_args: dict, *, device_id: int) -> dict:
     merged = dict(base_args)
     merged["device_id"] = device_id
     schema = WRITE_TOOL_SCHEMAS.get(tool)
+    if schema is not None:
+        return schema.model_validate(merged).model_dump(exclude_none=True)
+    return merged
+
+
+# === 场景反查 ===
+
+
+def _resolve_scene(
+    db: Session,
+    context: AgentContext,
+    scene_key: str,
+) -> tuple[str, str]:
+    """把场景意图标识（``home`` / ``leave`` ...）反查为本家庭的 ``Scene.id``。
+
+    为什么需要这一步：``Scene.id`` 是全局唯一的 String(64) 主键，同一个
+    「回家」场景在不同家庭里 id 各不相同，因此词表里只能存"意图标识"。
+
+    匹配策略（按优先级，均限定当前家庭 + ``enabled=True``）：
+
+    1. ``Scene.id == scene_key`` —— 兼容"场景被手动 seed 成该 id"的存量数据；
+    2. ``Scene.name`` 精确等于某个候选名（``lexicon.scene_name_hints``）；
+    3. ``Scene.name`` 包含某个候选名。
+
+    Returns:
+        ``(scene_id, error)``。成功时 ``error`` 为空串；失败 / 歧义时
+        ``scene_id`` 为空串且 ``error`` 是面向用户的提示。**歧义时不猜**，
+        交由上层追问，与 ``AliasIndex`` 冲突时返回空串是同一套约定。
+    """
+    key = (scene_key or "").strip()
+    if not key:
+        return "", "未识别出要执行的场景"
+
+    base = select(Scene).where(
+        Scene.household_id == context.household_id,
+        Scene.enabled.is_(True),
+    )
+
+    # 1. 兼容：场景主键恰好就是意图标识
+    exact_id = db.scalar(base.where(Scene.id == key))
+    if exact_id is not None:
+        return exact_id.id, ""
+
+    hints = get_lexicon().scene_name_hints.get(key, ())
+    if not hints:
+        return "", f"本家庭没有配置「{key}」对应的场景，请先创建或改用完整场景名"
+
+    candidates = list(db.scalars(base).all())
+    if not candidates:
+        return "", "本家庭还没有启用的场景，请先创建"
+
+    # 2. 名称精确等于候选名
+    exact_matches = [s for s in candidates if s.name.strip() in hints]
+    if len(exact_matches) == 1:
+        return exact_matches[0].id, ""
+    if len(exact_matches) > 1:
+        names = "、".join(s.name for s in exact_matches)
+        return "", f"匹配到多个场景（{names}），请指明要执行哪一个"
+
+    # 3. 名称包含候选名
+    fuzzy = [s for s in candidates if any(hint in s.name for hint in hints)]
+    if len(fuzzy) == 1:
+        return fuzzy[0].id, ""
+    if len(fuzzy) > 1:
+        names = "、".join(s.name for s in fuzzy)
+        return "", f"匹配到多个场景（{names}），请指明要执行哪一个"
+
+    return "", f"未找到与「{key}」匹配的场景，请确认场景名称"
+
+
+def _make_scene_args(base_args: dict, *, scene_id: str) -> dict:
+    """把反查到的 ``scene_id`` 注入场景提案并经 Pydantic 校验。"""
+    merged = dict(base_args)
+    merged["scene_id"] = scene_id
+    schema = WRITE_TOOL_SCHEMAS.get("execute_scene")
     if schema is not None:
         return schema.model_validate(merged).model_dump(exclude_none=True)
     return merged
@@ -514,6 +590,48 @@ async def _execute_one_proposal(
             )
     else:
         resolved_args = dict(proposal.args)
+
+    # 1b. 场景反查：规则层只给出意图标识，真实 Scene.id 必须按家庭查
+    if proposal.tool == "execute_scene":
+        scene_key = str(rule_result.params.get("scene_key") or rule_result.entity_ref)
+        scene_id, scene_error = _resolve_scene(db, context, scene_key)
+        if not scene_id:
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            audit.record_tool_call(
+                run_id=run_id,
+                call_id=call_id,
+                tool=proposal.tool,
+                args=proposal.args,
+                result={"ok": False, "error": scene_error},
+                ok=False,
+                duration_ms=duration_ms,
+            )
+            return ProposalOutcome(
+                tool=proposal.tool,
+                status="failed",
+                message=scene_error,
+                result_payload={"ok": False, "error": scene_error},
+            )
+        try:
+            resolved_args = _make_scene_args(proposal.args, scene_id=scene_id)
+        except Exception as exc:  # noqa: BLE001
+            error = f"规则层场景参数校验失败：{exc}"
+            duration_ms = int((time.perf_counter() - started) * 1000)
+            audit.record_tool_call(
+                run_id=run_id,
+                call_id=call_id,
+                tool=proposal.tool,
+                args=proposal.args,
+                result={"ok": False, "error": error},
+                ok=False,
+                duration_ms=duration_ms,
+            )
+            return ProposalOutcome(
+                tool=proposal.tool,
+                status="failed",
+                message=error,
+                result_payload={"ok": False, "error": error},
+            )
 
     # 2. 风险分类
     try:

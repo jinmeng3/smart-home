@@ -142,6 +142,76 @@ class Settings(BaseSettings):
         default=True,
         description="是否启用漏斗第二层（上下文层）多轮 / 指代消解",
     )
+    funnel_semantic_enabled: bool = Field(
+        default=False,
+        description=(
+            "是否启用语义向量召回（基于 sentence-transformers）。默认关闭："
+            "开启后会按需懒加载模型，首次推理会引入 GB 级依赖与冷启动延迟。"
+        ),
+    )
+    funnel_semantic_model_path: str = Field(
+        default="./bge-small-zh-v1.5",
+        description=(
+            "语义模型本地路径或 HuggingFace 仓库名（默认指向 BAAI/bge-small-zh-v1.5）。"
+            "相对路径以进程 cwd 为基准。"
+        ),
+    )
+    funnel_semantic_threshold: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "语义相似度阈值。BGE 系列对真正同义改写的分数通常落在 [0.7, 0.95]，"
+            "低于该值视为不可信、不做召回。"
+        ),
+    )
+    funnel_semantic_max_seq_length: int = Field(
+        default=64,
+        ge=8,
+        le=512,
+        description="编码器最大序列长度；家庭场景短文本居多，64 已足够。",
+    )
+
+    # ── 规则层词表增量扩充（与内置默认值**合并**，不是替换）──
+    # 默认词表在 ``app/agents/subagents/lexicon.py``；这里只负责"追加"。
+    # 不支持删除默认词条——需要删除时请直接改 lexicon.py，
+    # 避免"配置里悄悄关掉一个业务能力"这种难以排查的状态。
+    rule_lexicon_extra_device_hints: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            '设备关键词 → 设备类型的追加映射，如 '
+            '{"地灯": "light", "新风": "air_conditioner"}。'
+            "同 key 时覆盖默认值；新 key 追加到词表末尾（优先级最低）。"
+        ),
+    )
+    rule_lexicon_extra_turn_on: list[str] | None = Field(
+        default=None,
+        description='"打开"类动作的追加触发词，如 ["给我开", "开下"]。',
+    )
+    rule_lexicon_extra_turn_off: list[str] | None = Field(
+        default=None,
+        description='"关闭"类动作的追加触发词，如 ["给我关", "停了"]。',
+    )
+    rule_lexicon_extra_query_state: list[str] | None = Field(
+        default=None,
+        description='查询类动作的追加触发词，如 ["多少度", "开着吗"]。',
+    )
+    rule_lexicon_extra_scene_keywords: dict[str, list[str]] | None = Field(
+        default=None,
+        description=(
+            '场景意图 key → 追加触发短语，如 {"home": ["我到了"], "party": ["开派对"]}。'
+            "同 key 的短语追加去重；新 key 直接加入。"
+            "注意 key 是意图标识，不是数据库里的 Scene.id。"
+        ),
+    )
+    rule_lexicon_extra_scene_name_hints: dict[str, list[str]] | None = Field(
+        default=None,
+        description=(
+            '场景意图 key → 追加的"候选场景名关键词"，用于在家庭场景表里'
+            '反查真实 Scene.id，如 {"party": ["聚会", "派对"]}。'
+            "新增场景意图时需同时配置本项，否则只能靠精确名称命中。"
+        ),
+    )
 
     # ── 上下文压缩 / 会话树 ──
     compaction_enabled: bool = True

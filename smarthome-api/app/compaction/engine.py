@@ -171,7 +171,7 @@ class CompactionEngine:
 
         return get_settings().compaction_settings()
 
-    # ---- 触发判定 ----
+    # === 触发判定 ===
 
     def evaluate(
         self,
@@ -218,7 +218,7 @@ class CompactionEngine:
             return decision("threshold", tokens)
         return decision("ok", tokens)
 
-    # ---- 压缩 ----
+    # === 压缩 ===
 
     def compact(
         self,
@@ -329,7 +329,7 @@ class CompactionEngine:
             will_retry=will_retry,
         )
 
-    # ---- 分支摘要 ----
+    # === 分支摘要 ===
 
     def generate_branch_summary(
         self,
@@ -471,7 +471,7 @@ class CompactionEngine:
             modified_files=modified_files,
         )
 
-    # ---- 内部：摘要生成 ----
+    # === 内部：摘要生成 ===
 
     def _generate_summary(
         self,
@@ -570,7 +570,7 @@ class CompactionEngine:
             return min(budget, self._max_tokens)
         return budget
 
-    # ---- 内部：路径 / 钩子 / 结果 ----
+    # === 内部：路径 / 钩子 / 结果 ===
 
     def _path_entries(self, session: Session, lane: str) -> list[Entry]:
         view = session.view(lane)
