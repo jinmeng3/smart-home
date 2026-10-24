@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Orion Smart Home 项目演示视频封面">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="55%" stop-color="#111c2e"/>
+      <stop offset="100%" stop-color="#0a1a18"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0%" stop-color="#42b883" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#42b883" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <g fill="#2a3a52">
+    <circle cx="90" cy="72" r="4"/>
+    <circle cx="112" cy="72" r="4"/>
+    <circle cx="134" cy="72" r="4"/>
+  </g>
+  <text x="1110" y="78" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" fill="#7d8fa8" text-anchor="end">5:29 · 1920×1030</text>
+
+  <text x="600" y="250" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#f2f6fb" text-anchor="middle">Orion Smart Home</text>
+  <text x="600" y="302" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="24" fill="#93a7bf" text-anchor="middle">漏斗式分层路由 · 可重放会话树 · 上下文压缩</text>
+
+  <circle cx="600" cy="400" r="48" fill="#42b883" fill-opacity="0.16"/>
+  <circle cx="600" cy="400" r="34" fill="#42b883"/>
+  <path d="M590 384 L616 400 L590 416 Z" fill="#0b1220"/>
+
+  <text x="600" y="492" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#cbd8e6" text-anchor="middle">项目演示视频 · 点击封面观看</text>
+</svg>

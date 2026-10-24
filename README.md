@@ -21,7 +21,7 @@
 
 [![Orion Smart Home 项目演示（5 分 29 秒）](assets/demo-poster.svg)](assets/orion-smart-home-demo.mp4)
 
-> 点击封面观看完整演示。视频通过 **Git LFS** 存储，克隆前请先执行 `git lfs install`。
+> 演示视频约 131 MiB，因托管平台限制暂未随仓库分发；将视频放入 `assets/orion-smart-home-demo.mp4` 后点击封面即可观看。
 
 ---
 
@@ -278,7 +278,6 @@ smart-home/
 ### 1. 克隆项目
 
 ```bash
-git lfs install                          # 演示视频由 Git LFS 存储，首次使用需初始化
 git clone https://github.com/<your-name>/smart-home.git
 cd smart-home
 ```
