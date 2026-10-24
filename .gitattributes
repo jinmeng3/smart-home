@@ -9,6 +9,15 @@
 # 文本文件：提交时归一化为 LF，检出时也保持 LF
 * text=auto eol=lf
 
+# ============================================================
+# Git LFS —— 大体积媒体文件
+# 演示视频 131 MiB，超过 GitHub 单文件 100 MiB 上限，必须走 LFS，
+# 否则推送会被拒绝。克隆前请先安装 git-lfs 并执行 git lfs install。
+# ============================================================
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
 # 常见二进制文件：不做换行符处理（text=auto 已能自动识别，此处显式兜底）
 *.png binary
 *.jpg binary

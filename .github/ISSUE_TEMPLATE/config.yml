@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用与设计说明
+    url: https://github.com/<your-name>/smart-home#readme
+    about: 提交 Issue 前，建议先阅读 README 中的核心亮点、Agent 工作流与配置说明。
+  - name: 安全漏洞（私下反馈）
+    url: https://github.com/<your-name>/smart-home/security/policy
+    about: 请勿公开提交安全相关问题，按 SECURITY.md 的方式私下联系维护者。

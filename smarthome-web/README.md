@@ -1,42 +1,51 @@
 # smarthome-web
 
-This template should help get you started developing with Vue 3 in Vite.
+Orion Smart Home 的前端单页应用，基于 **Vue 3 + Vite + TypeScript**，通过 SSE 与后端 Agent 实时通信。
 
-## Recommended IDE Setup
+## 技术栈
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Vue 3（Composition API + `<script setup>`）、Vue Router、Pinia
+- Vite、TypeScript、vue-tsc
+- Element Plus、Tailwind CSS、GSAP
+- markdown-it（消息渲染）
 
-## Recommended Browser Setup
+## 常用命令
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+```bash
+npm install          # 安装依赖
+npm run dev          # 开发服务器（默认 5173，代理 /api 与 /uploads 到后端 8000）
+npm run type-check   # vue-tsc 类型检查
+npm run test:unit    # 单元测试（零依赖自研 runner）
+npm run build        # 类型检查 + 生产构建 + chunk 体积预算检查
+npm run preview      # 预览生产构建
+npm run api:generate # 从后端 OpenAPI 生成前端类型
+npm run api:check    # 校验前端类型与后端 OpenAPI 是否一致
 ```
 
-### Compile and Hot-Reload for Development
+## 目录结构
 
-```sh
-npm run dev
+```
+src/
+├── api/          # API 调用层（含 SSE 流式解析、生成的 OpenAPI 类型）
+├── components/   # 通用组件（chat / device / automation / scenes / account）
+├── composables/  # 组合式函数
+├── stores/       # Pinia 状态管理
+├── types/        # TypeScript 类型定义
+├── views/        # 页面视图
+├── router/       # 路由配置
+└── styles/       # 全局样式
 ```
 
-### Type-Check, Compile and Minify for Production
+## 与后端联调
 
-```sh
-npm run build
+开发环境下 Vite 已将 `/api`、`/uploads` 代理到 `http://127.0.0.1:8000`，请先启动 `smarthome-api`。
+
+若后端 OpenAPI schema 发生变化，重新生成类型后再提交：
+
+```bash
+npm run api:generate
 ```
+
+## 环境要求
+
+Node.js `^22.18.0 || >=24.12.0`。

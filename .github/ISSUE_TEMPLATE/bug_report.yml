@@ -1,0 +1,71 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！提交前请先搜索是否已有相同 Issue。
+        安全漏洞请勿公开提交，请按 SECURITY.md 私下反馈。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？期望的行为是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 启动后端与前端
+        2. 进入「智能对话」
+        3. 输入「...」
+        4. 观察到 ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响模块
+      multiple: true
+      options:
+        - Agent 对话 / 工具调用
+        - 漏斗路由
+        - 会话树 / 上下文压缩
+        - 审批与风险控制
+        - 设备 / 房间
+        - 场景 / 自动化
+        - 家庭与成员
+        - 模型配置
+        - 前端界面
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志 / 截图
+      description: 后端 traceback、SSE 事件、浏览器 Console 或界面截图。
+      render: text
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 提交哈希
+      placeholder: 例如 development@7bd32ce
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      placeholder: |
+        OS: Windows 11 / macOS 15 / Ubuntu 24.04
+        Python: 3.12.x
+        Node: 22.x
+        浏览器: Chrome 130
+    validations:
+      required: true
