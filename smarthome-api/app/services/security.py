@@ -87,7 +87,7 @@ def revoke_device(db: Session, user: User, device_id: int) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="设备不存在")
     if device.is_current:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="不能移除当前设备",
         )
     db.delete(device)

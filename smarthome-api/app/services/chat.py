@@ -263,7 +263,7 @@ def prepare_regenerate(
     )
     if user_message is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="找不到对应的用户消息，无法重新生成",
         )
 

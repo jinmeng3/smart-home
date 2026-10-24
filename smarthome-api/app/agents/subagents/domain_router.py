@@ -33,7 +33,7 @@ DELEGATABLE_DOMAINS: frozenset[str] = (
     DELEGATABLE_READ_ONLY_DOMAINS | DELEGATABLE_WRITE_DOMAINS
 )
 
-
+# 可以改进
 def route_intent(message: str) -> list[str]:
     """规则层路由，返回命中的领域标签列表（支持复合意图）。
 

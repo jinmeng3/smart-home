@@ -748,16 +748,28 @@ def get_templates_service(
     items = []
     for t in templates:
         steps_data = parse_json_list(t.steps_json)
-        steps = [
-            SceneStepRead(
-                id=f"{t.id}-{i}",
-                name=s.get("name", ""),
-                description=s.get("description", ""),
-                device_id=s.get("device_id", ""),
-                order=s.get("order", i + 1),
+        steps: list[SceneStepRead] = []
+        for i, s in enumerate(steps_data):
+            # 模板里 step 字段可能缺失（生产历史数据），降级到合法值避免整个
+            # ``/api/scenes/templates`` 返 500。Pydantic SceneStepRead 要求
+            # name/device_id 非空、order ≥ 1。
+            step_name = (s.get("name") or "").strip() or f"步骤 {i + 1}"
+            step_device_id = (s.get("device_id") or "").strip() or f"unknown-{i}"
+            try:
+                step_order = int(s.get("order", i + 1))
+            except (TypeError, ValueError):
+                step_order = i + 1
+            if step_order < 1:
+                step_order = i + 1
+            steps.append(
+                SceneStepRead(
+                    id=f"{t.id}-{i}",
+                    name=step_name[:120],
+                    description=(s.get("description") or "")[:500],
+                    device_id=step_device_id[:120],
+                    order=step_order,
+                )
             )
-            for i, s in enumerate(steps_data)
-        ]
         items.append(
             SceneTemplateRead(
                 id=t.id,

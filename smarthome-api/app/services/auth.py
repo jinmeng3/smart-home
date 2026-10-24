@@ -99,9 +99,16 @@ def login_service(
     if locked_until and locked_until.tzinfo is None:
         locked_until = locked_until.replace(tzinfo=UTC)
     if user and locked_until and locked_until > now:
+        # 返回锁定剩余秒数与 ISO 格式时间，前端能展示“X 分钟后重试”。
+        # data 是 dict 而非 string，以走 `error_response` 的 detail 分支。
+        remaining_seconds = max(0, int((locked_until - now).total_seconds()))
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
-            detail="Too many failed login attempts. Try again later",
+            detail={
+                "message": "Too many failed login attempts. Try again later",
+                "locked_until": locked_until.isoformat(),
+                "remaining_seconds": remaining_seconds,
+            },
         )
 
     if not user or not password_matches:

@@ -40,8 +40,10 @@ TEMP_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(?:度|℃|°C|°|C)(?!\w)", re.IGNOR
 PERCENT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(?:%|百分之|成)(?!\w)")
 
 # 房间名抽取：「X房」/「X厅」/ 固定房间词。属于中文构词规则，非业务词汇。
-ROOM_SUFFIX_FANG_RE = re.compile(r"([\u4e00-\u9fa5A-Za-z0-9]{1,8})房")
-ROOM_SUFFIX_TING_RE = re.compile(r"([\u4e00-\u9fa5A-Za-z0-9]{1,8})厅")
+#
+# 房间前缀最低 2 个汉字，避免「客」单独被「厅」字捕获（贪婪退化为1字）。
+ROOM_SUFFIX_FANG_RE = re.compile(r"([一-龥A-Za-z0-9]{2,8})房")
+ROOM_SUFFIX_TING_RE = re.compile(r"([一-龥A-Za-z0-9]{2,8})厅")
 ROOM_LITERAL_RE = re.compile(
     r"(客厅|卧室|主卧|次卧|厨房|餐厅|书房|卫浴|浴室|玄关|阳台|储物间|衣帽间|室内)"
 )
@@ -201,9 +203,9 @@ DEFAULT_DECISION_SIGNALS: tuple[str, ...] = (
 )
 
 # ``_find_mention`` 向左扩张时的边界字符（动作词尾字，遇到即停）。
-DEFAULT_MENTION_STOP_CHARS = "打开了关关闭调到开启动开启亮起来帮"
+DEFAULT_MENTION_STOP_CHARS = "打开了关关闭调到开启动开启亮起来帮我把请将"
 # ``_find_mention`` 结果中要剔除的噪音字。
-DEFAULT_MENTION_NOISE_CHARS = "的里面中内上"
+DEFAULT_MENTION_NOISE_CHARS = "的里面中内上把请将"
 
 
 # === Lexicon 数据对象 ===

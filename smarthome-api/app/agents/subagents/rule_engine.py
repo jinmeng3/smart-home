@@ -1,25 +1,3 @@
-"""规则层引擎：调度各个子解析器，负责预算、别名热加载与拒识兜底。
-
-职责边界
---------
-本模块**只做调度**，不含任何业务词汇或抽取算法：
-
-- 业务词表 → :mod:`app.agents.subagents.lexicon`
-- 抽取算法 → :mod:`app.agents.subagents.parsers.extract`
-- 各类意图 → :mod:`app.agents.subagents.parsers` 下的 ``*Parser``
-- 别名反查 → :class:`app.agents.subagents.alias_index.AliasIndex`
-
-扩展方式
---------
-新增一类意图**不需要改本文件**：实现 ``RuleParser`` 协议后，
-在 ``parsers.default_parsers()`` 里注册，或构造时传入 ``parsers=[...]``。
-
-向后兼容
---------
-``WriteProposal`` / ``RuleParseResult`` / ``AliasIndex`` 从本模块重新导出，
-历史写法 ``from app.agents.subagents.rule_engine import RuleParseResult`` 仍可用。
-"""
-
 from __future__ import annotations
 
 import logging
@@ -71,7 +49,6 @@ class RuleEngine:
     （FastAPI 默认）下安全；多线程场景请每线程各持一个实例。
     """
 
-    # 置信度档位：精确匹配 / 模糊匹配 / 拒识。
     _CONF_HIGH = 0.97
     _CONF_MID = 0.85
     _CONF_LOW = 0.4
@@ -84,23 +61,14 @@ class RuleEngine:
         parsers: list[RuleParser] | None = None,
         lexicon: RuleLexicon | None = None,
     ):
-        # 静态别名索引：调用方在构造时绑定，后续不更新。
         self._alias_index = alias_index
-        # 动态别名供应者：每次 ``parse`` 检查 ``version``，变化时换新。
-        # 与 ``funnel_alias_hot_reload`` 配合使用——开启热加载时上层
-        # 传一个返回当前 ``AliasIndex`` 的 callable（通常从设备 / 房间表
-        # 重建），关闭时保持一次性绑定。
         self._alias_provider = alias_provider
-        # 已持有的 provider 索引 ``version``，避免重复 setattr
         self._provider_version: int | None = None
-        # 解析器列表，按 priority 升序执行；None 时用内置默认集合
         self._parsers = sorted(
             parsers if parsers is not None else default_parsers(),
             key=lambda parser: parser.priority,
         )
-        # 词表：None 表示每次 parse 时取进程级缓存（支持 .env 扩充后重置生效）
         self._lexicon = lexicon
-        # parse() 入口会重置该值，所有 _elapsed_ms 调用都相对此值
         self._started_at: float = 0.0
 
     # === 公开 API ===
@@ -115,21 +83,18 @@ class RuleEngine:
         settings = get_settings()
         self._started_at = time.perf_counter()
         budget_ms = settings.funnel_rule_max_duration_ms
-        # 入口先做别名热加载检查（与解析路径解耦）
         self._refresh_alias_index()
 
         text = (message or "").strip()
         if not text:
             return self._unmatched()
 
-        lexicon = self._lexicon or get_lexicon()
+        lexicon = self._lexicon or get_lexicon() # 获取词表
 
-        # 复合意图检测：含连接词 / 决策词时规则层不能拍板，一律交兜底层。
-        # 避免「我睡觉了，顺便看看明天天气决定要不要开加湿器」被误识别为
-        # 「睡觉了」场景而直接执行。
-        if self._is_composite_intent(text, lexicon):
+        if self._is_composite_intent(text, lexicon): # 检测: 这句话是否复合/决策意图
             return self._unmatched(intent="composite")
 
+        # 解析上下文数据包
         ctx = RuleContext(
             text=text,
             lexicon=lexicon,
@@ -142,7 +107,6 @@ class RuleEngine:
 
         for parser in self._parsers:
             if self._over_budget(budget_ms):
-                # 预算耗尽：已跑过的 parser 都没命中，剩下的更贵，直接放弃
                 logger.debug(
                     "规则层预算耗尽，放弃剩余解析器：next=%s elapsed_ms=%s budget_ms=%s",
                     parser.name,
@@ -154,7 +118,6 @@ class RuleEngine:
             if result is not None:
                 return result
 
-        # 全部 parser 都未命中 → 拒识
         return self._unmatched()
 
     # === 内部：调度 ===
@@ -165,7 +128,7 @@ class RuleEngine:
         """执行单个 parser；异常不外泄，仅记录日志并视为未命中。"""
         try:
             return parser.try_parse(ctx)
-        except Exception:  # 单个解析器故障不应让整层拒绍服务
+        except Exception:
             logger.warning(
                 "规则层解析器异常，已跳过：parser=%s", parser.name, exc_info=True
             )
@@ -208,7 +171,6 @@ class RuleEngine:
         if current is None:
             return
         if self._provider_version is None:
-            # 首次调用：直接绑定并记录 version
             self._alias_index = current
             self._provider_version = current.version
             return

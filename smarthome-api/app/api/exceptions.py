@@ -46,6 +46,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         if isinstance(exc.detail, str):
             return error_response(exc.status_code, exc.detail)
+        # detail 是 dict 时（如锁定返回 remaining_seconds），保留其所有信息：
+        # 优先用 detail.message 作为业务 message，detail 本身作为 data 透传。
+        if isinstance(exc.detail, dict):
+            detail_dict = exc.detail
+            message = detail_dict.get("message") or "请求处理失败"
+            return error_response(exc.status_code, message, detail_dict)
         return error_response(exc.status_code, "请求处理失败", exc.detail)
 
     @app.exception_handler(AgentError)

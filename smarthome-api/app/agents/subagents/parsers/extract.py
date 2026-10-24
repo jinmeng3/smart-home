@@ -51,14 +51,25 @@ def extract_room(text: str) -> str:
 
     仅做轻量启发式（中文构词规则），不查家庭房间表——真实房间名由
     :class:`AliasIndex` 反查。
+
+    顺序：
+      1. 固定词表优先（客厅/卧室/...）—— 避免「客厅温度」被「厅」字 regex 贪婪匹配为「客」。
+      2. 「X房」/「X厅」启发式补充。
+      3. 「X房」中限定「没有/不要/不需要」等否定前缀不算房间。
     """
+    # 1. 固定词表优先
+    match = ROOM_LITERAL_RE.search(text)
+    if match:
+        return match.group(1)
+    # 2. 「X房」启发式（要求「没有」等否定词后的「房」不算）
     match = ROOM_SUFFIX_FANG_RE.search(text)
     if match:
-        return match.group(1)
+        prefix = match.group(1)
+        # 「没有房」/「不要房」/「不需要房」类伪匹配 → 跳过
+        if not prefix.endswith(("没有", "不要", "不需要", "不要", "不会")):
+            return prefix
+    # 3. 「X厅」启发式
     match = ROOM_SUFFIX_TING_RE.search(text)
-    if match:
-        return match.group(1)
-    match = ROOM_LITERAL_RE.search(text)
     if match:
         return match.group(1)
     return ""
