@@ -35,6 +35,40 @@ import type {
 } from "../types/chat";
 import type { ChatMessage, RecentConversation } from "../types/chat";
 
+/** 后端 agent 工具名（operator）→ 前端友好中文标签。 */
+const TOOL_LABEL: Record<string, string> = {
+  list_rooms: "查询房间列表",
+  get_room: "查询房间详情",
+  list_devices: "查询设备列表",
+  get_device: "查询设备详情",
+  list_scenes: "查询场景列表",
+  get_scene: "查询场景详情",
+  list_automations: "查询自动化列表",
+  get_automation: "查询自动化详情",
+  list_device_logs: "查询设备日志",
+  list_scene_executions: "查询场景执行记录",
+  list_automation_executions: "查询自动化执行记录",
+  preview_scene: "预览场景效果",
+  preview_automation_change: "预览自动化变更",
+  detect_automation_conflicts: "检测自动化冲突",
+  execute_scene: "执行场景",
+  create_automation: "创建自动化",
+  update_automation: "修改自动化",
+  set_automation_enabled: "启停自动化",
+  delete_automation: "删除自动化",
+  inspect_household_health: "巡检家庭状态",
+  set_device_power: "开关设备",
+  set_device_temperature: "设置设备温度",
+  set_curtain_position: "设置窗帘位置",
+};
+
+/** 把后端返回的工具名（operator）转为友好中文标签。未知名回退为原名。 */
+const friendlyToolLabel = (operator: string | null | undefined): string => {
+  const key = String(operator || "").trim();
+  if (!key) return "智能体操作";
+  return TOOL_LABEL[key] || key;
+};
+
 /** 根据 pending approval 的 tool 和 preview.kind 生成友好的待确认状态文案 */
 const pendingApprovalLabel = (approval: PendingApproval): string => {
   const kind = String(approval.preview?.kind || "");

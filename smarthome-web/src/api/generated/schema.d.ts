@@ -1,67 +1,143 @@
+// 自动生成，请勿手动修改。
+// 生成时间: 2026-09-02T13:26:17.162Z
+// 来源: local file E:\File\practice\smart-home\smarthome-api\openapi.json
 
-// === 通用响应包装 ===
-export type ApiResponse<T = unknown> = { code: number; message: string; data: T | null };
-export type Paginated<T> = { items: T[]; total: number; page: number; page_size: number };
+export interface AIAssistantPreferences {
+  language?: "zh-CN" | "en-US" | "auto";
+  detailLevel?: number;
+  autoExecuteLowRisk?: boolean;
+  confirmHighRisk?: boolean;
+}
 
-// === 组件 Schema ===
 export interface AIModelCreate {
   name: string;
   provider: string;
+  api?: "openai-completions" | "openai-responses" | "azure-openai-responses" | "openai-codex-responses" | "anthropic-messages" | "bedrock-converse-stream";
   api_endpoint: string;
-  api_key?: string | unknown;
+  api_key?: unknown | unknown;
   parameters?: Record<string, unknown>;
-  temperature?: number;
+  reasoning?: boolean;
+  thinking_level_map?: unknown | unknown;
+  context_window?: unknown | unknown;
   max_tokens?: number;
+  cost?: unknown | unknown;
+  headers?: unknown | unknown;
+  compat?: unknown | unknown;
   is_active?: boolean;
-  description?: string | unknown;
+  description?: unknown | unknown;
+}
+
+export interface AIModelProviderRead {
+  id: string;
 }
 
 export interface AIModelRead {
   id: number;
   name: string;
   provider: string;
+  api?: string;
   api_endpoint: string;
   parameters: Record<string, unknown>;
+  compat?: unknown | unknown;
   temperature: number;
   max_tokens: number;
   is_active: boolean;
-  description: string | unknown;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */ | unknown;
+  has_api_key: boolean;
+  description: unknown | unknown;
+  created_at: string;
+  updated_at: unknown | unknown;
+}
+
+export interface AIModelTestRequest {
+  name: string;
+  provider: string;
+  api?: string;
+  api_endpoint: string;
+  api_key?: unknown | unknown;
+  parameters?: Record<string, unknown>;
+  compat?: unknown | unknown;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export interface AIModelTestResult {
+  ok: boolean;
+  latency_ms?: unknown | unknown;
+  message: string;
 }
 
 export interface AIModelUpdate {
-  name?: string | unknown;
-  provider?: string | unknown;
-  api_endpoint?: string | unknown;
-  api_key?: string | unknown;
-  parameters?: Record<string, unknown> | unknown;
-  temperature?: number | unknown;
-  max_tokens?: number | unknown;
-  is_active?: boolean | unknown;
-  description?: string | unknown;
+  name?: unknown | unknown;
+  provider?: unknown | unknown;
+  api?: unknown | unknown;
+  api_endpoint?: unknown | unknown;
+  api_key?: unknown | unknown;
+  parameters?: unknown | unknown;
+  compat?: unknown | unknown;
+  temperature?: unknown | unknown;
+  max_tokens?: unknown | unknown;
+  is_active?: unknown | unknown;
+  description?: unknown | unknown;
 }
 
 export interface AccountRead {
   id: number;
   name: string;
   email: string;
-  avatar_url: string | unknown;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */;
+  avatar_url: unknown | unknown;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AccountUpdate {
-  name?: string | unknown;
-  email?: string | unknown;
+  name?: unknown | unknown;
+  email?: unknown | unknown;
 }
 
 export interface ActionWrite {
   type: string;
   config?: Record<string, unknown>;
   position: number;
-  deviceId?: number | unknown;
-  sceneId?: string | unknown;
+  deviceId?: unknown | unknown;
+  sceneId?: unknown | unknown;
+}
+
+export interface AgentDecisionRequest {
+  household_id: number;
+  approval_id: string;
+  decision: "approve" | "reject";
+}
+
+export interface AgentRunRequest {
+  session_id: number;
+  household_id: number;
+  household_name?: unknown | unknown;
+  model?: unknown | unknown;
+  message: string;
+  tools_enabled?: boolean;
+}
+
+export interface AiSuggestionItem {
+  id: string;
+  target: "account" | "appearance" | "ai" | "homeAssistant" | "notifications" | "security" | "backup";
+  title: string;
+  description: string;
+}
+
+export interface AiSuggestionsRead {
+  suggestions?: AiSuggestionItem[];
+  cached?: boolean;
+}
+
+export interface AiTemplatesRead {
+  templates?: AutomationTemplateItem[];
+  cached?: boolean;
+}
+
+export interface AiTemplatesRequest {
+  device_summary?: DeviceSummary;
+  count?: number;
+  force?: boolean;
 }
 
 export interface ApiResponse_AIModelRead_ {
@@ -70,10 +146,28 @@ export interface ApiResponse_AIModelRead_ {
   data?: AIModelRead | unknown;
 }
 
+export interface ApiResponse_AIModelTestResult_ {
+  code?: number;
+  message?: string;
+  data?: AIModelTestResult | unknown;
+}
+
 export interface ApiResponse_AccountRead_ {
   code?: number;
   message?: string;
   data?: AccountRead | unknown;
+}
+
+export interface ApiResponse_AiSuggestionsRead_ {
+  code?: number;
+  message?: string;
+  data?: AiSuggestionsRead | unknown;
+}
+
+export interface ApiResponse_AiTemplatesRead_ {
+  code?: number;
+  message?: string;
+  data?: AiTemplatesRead | unknown;
 }
 
 export interface ApiResponse_AuthResponse_ {
@@ -193,7 +287,7 @@ export interface ApiResponse_MemberRead_ {
 export interface ApiResponse_NoneType_ {
   code?: number;
   message?: string;
-  data?: unknown;
+  data?: null;
 }
 
 export interface ApiResponse_OverviewRead_ {
@@ -212,6 +306,24 @@ export interface ApiResponse_RoomDeviceListRead_ {
   code?: number;
   message?: string;
   data?: RoomDeviceListRead | unknown;
+}
+
+export interface ApiResponse_RoomEnvironmentLatestRead_ {
+  code?: number;
+  message?: string;
+  data?: RoomEnvironmentLatestRead | unknown;
+}
+
+export interface ApiResponse_RoomEnvironmentReportRead_ {
+  code?: number;
+  message?: string;
+  data?: RoomEnvironmentReportRead | unknown;
+}
+
+export interface ApiResponse_RoomEnvironmentTrendRead_ {
+  code?: number;
+  message?: string;
+  data?: RoomEnvironmentTrendRead | unknown;
 }
 
 export interface ApiResponse_RoomListRead_ {
@@ -322,6 +434,24 @@ export interface ApiResponse_ScheduleRead_ {
   data?: ScheduleRead | unknown;
 }
 
+export interface ApiResponse_SecurityDeviceRead_ {
+  code?: number;
+  message?: string;
+  data?: SecurityDeviceRead | unknown;
+}
+
+export interface ApiResponse_SecurityLogRead_ {
+  code?: number;
+  message?: string;
+  data?: SecurityLogRead | unknown;
+}
+
+export interface ApiResponse_SecurityMetaRead_ {
+  code?: number;
+  message?: string;
+  data?: SecurityMetaRead | unknown;
+}
+
 export interface ApiResponse_SyncJobRead_ {
   code?: number;
   message?: string;
@@ -334,34 +464,60 @@ export interface ApiResponse_TaskRead_ {
   data?: TaskRead | unknown;
 }
 
+export interface ApiResponse_TodayEnergyRead_ {
+  code?: number;
+  message?: string;
+  data?: TodayEnergyRead | unknown;
+}
+
 export interface ApiResponse_Union_ScheduleRead__NoneType__ {
   code?: number;
   message?: string;
   data?: ScheduleRead | unknown;
 }
 
+export interface ApiResponse_UserPreferencesWrite_ {
+  code?: number;
+  message?: string;
+  data?: UserPreferencesWrite | unknown;
+}
+
+export interface ApiResponse_list_AIModelProviderRead__ {
+  code?: number;
+  message?: string;
+  data?: unknown | unknown;
+}
+
 export interface ApiResponse_list_AIModelRead__ {
   code?: number;
   message?: string;
-  data?: AIModelRead[] | unknown;
+  data?: unknown | unknown;
 }
 
 export interface ApiResponse_list_ChatMessageRead__ {
   code?: number;
   message?: string;
-  data?: ChatMessageRead[] | unknown;
+  data?: unknown | unknown;
 }
 
 export interface ApiResponse_list_ChatSessionRead__ {
   code?: number;
   message?: string;
-  data?: ChatSessionRead[] | unknown;
+  data?: unknown | unknown;
 }
 
 export interface ApiResponse_list_HouseholdListItem__ {
   code?: number;
   message?: string;
-  data?: HouseholdListItem[] | unknown;
+  data?: unknown | unknown;
+}
+
+export interface AppearancePreferences {
+  themeMode?: "light" | "dark" | "system";
+  fontSize?: "small" | "medium" | "large";
+  animationsEnabled?: boolean;
+  sidebarCollapsed?: boolean;
+  performanceMode?: boolean;
 }
 
 export interface AuthResponse {
@@ -391,7 +547,7 @@ export interface AutomationListItem {
   triggerType: string;
   enabled: boolean;
   deviceCount: number;
-  updatedAt: string /* date-time */;
+  updatedAt: string;
 }
 
 export interface AutomationListRead {
@@ -416,8 +572,8 @@ export interface AutomationRead {
   triggers: FlowItem[];
   conditions: ConditionWrite[];
   actions: ActionWrite[];
-  createdAt: string /* date-time */;
-  updatedAt: string /* date-time */;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AutomationSummary {
@@ -428,28 +584,43 @@ export interface AutomationSummary {
   abnormal: number;
 }
 
+export interface AutomationTemplateItem {
+  name: string;
+  description: string;
+  trigger_type: "schedule" | "location" | "device" | "manual";
+  icon?: string;
+  tone?: "purple" | "orange" | "green" | "blue" | "teal" | "red" | "amber";
+  device_count?: number;
+  triggers?: TemplateTrigger[];
+  actions?: TemplateAction[];
+}
+
 export interface AutomationUpdate {
-  name?: string | unknown;
-  description?: string | unknown;
-  enabled?: boolean | unknown;
-  triggers?: FlowItem[] | unknown;
-  conditions?: ConditionWrite[] | unknown;
-  actions?: ActionWrite[] | unknown;
-  priority?: number | unknown;
-  cooldownSeconds?: number | unknown;
-  delaySeconds?: number | unknown;
-  note?: string | unknown;
-  version?: number | unknown;
+  name?: unknown | unknown;
+  description?: unknown | unknown;
+  enabled?: unknown | unknown;
+  triggers?: unknown | unknown;
+  conditions?: unknown | unknown;
+  actions?: unknown | unknown;
+  priority?: unknown | unknown;
+  cooldownSeconds?: unknown | unknown;
+  delaySeconds?: unknown | unknown;
+  note?: unknown | unknown;
+  version?: unknown | unknown;
 }
 
 export interface AvatarResponse {
-  avatar_url: string | unknown;
+  avatar_url: unknown | unknown;
+}
+
+export interface BackupPreferences {
+  autoBackup?: boolean;
 }
 
 export interface BatchEnableRead {
   updatedCount: number;
   unchangedCount: number;
-  executionBatchId?: string | unknown;
+  executionBatchId?: unknown | unknown;
 }
 
 export interface BatchEnableWrite {
@@ -481,36 +652,39 @@ export interface ChatCompletionMessage {
 }
 
 export interface ChatCompletionRequest {
-  model?: string | unknown;
+  model?: unknown | unknown;
   messages: ChatCompletionMessage[];
-  session_id?: number | unknown;
+  session_id?: unknown | unknown;
   stream?: boolean;
 }
 
 export interface ChatMessageRead {
   id: number;
-  sessionId: number;
+  session_id: number;
   role: string;
   content: string;
-  createdAt: string /* date-time */;
+  created_at: string;
 }
 
 export interface ChatSessionRead {
   id: number;
   title: string;
-  createdAt: string /* date-time */;
-  updatedAt: string /* date-time */;
+  household_id?: unknown | unknown;
+  mode?: string;
+  model_name?: unknown | unknown;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ConditionWrite {
   type: string;
   config?: Record<string, unknown>;
-  position?: number | unknown;
+  position?: unknown | unknown;
 }
 
 export interface DeviceBatchGroup {
-  group: string;
-  device_ids?: number[];
+  group: string; /* 分组名称 */
+  device_ids?: number[]; /* 分配到该组的设备，为空则创建分组但不分配 */
 }
 
 export interface DeviceBatchGroupResult {
@@ -525,15 +699,16 @@ export interface DeviceCreate {
   type: string;
   brand: string;
   connection: "Home Assistant" | "Matter" | "Zigbee" | "MQTT";
-  device_id?: string | unknown;
+  device_id?: unknown | unknown;
   firmware?: string;
   icon?: string;
   color?: string;
-  image_url?: string | unknown;
+  image_url?: unknown | unknown;
 }
 
 export interface DeviceDetailRead {
   id: number;
+  device_id: string;
   name: string;
   room: string;
   type: string;
@@ -543,15 +718,15 @@ export interface DeviceDetailRead {
   firmware: string;
   icon?: string;
   color?: string;
-  image_url: string | unknown;
-  last_online: string /* date-time */ | unknown;
-  device_id: string;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */;
+  image_url: unknown | unknown;
+  last_online: unknown | unknown;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DeviceDetailWithLogs {
   id: number;
+  device_id: string;
   name: string;
   room: string;
   type: string;
@@ -561,11 +736,10 @@ export interface DeviceDetailWithLogs {
   firmware: string;
   icon?: string;
   color?: string;
-  image_url: string | unknown;
-  last_online: string /* date-time */ | unknown;
-  device_id: string;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */;
+  image_url: unknown | unknown;
+  last_online: unknown | unknown;
+  created_at: string;
+  updated_at: string;
   logs: DeviceLogRead[];
 }
 
@@ -595,7 +769,7 @@ export interface DeviceLogRead {
   device_id: number;
   action: string;
   message: string;
-  created_at: string /* date-time */;
+  created_at: string;
 }
 
 export interface DeviceRead {
@@ -610,11 +784,19 @@ export interface DeviceRead {
   firmware: string;
   icon?: string;
   color?: string;
-  image_url: string | unknown;
-  last_online: string /* date-time */ | unknown;
+  image_url: unknown | unknown;
+  last_online: unknown | unknown;
 }
 
-export type DeviceStatus = "online" | "offline" | "warning" | "running";
+export interface DeviceStatus {
+}
+
+export interface DeviceSummary {
+  online?: number;
+  offline?: number;
+  by_type?: Record<string, unknown>;
+}
+
 export interface DeviceSync {
   platform: "Home Assistant" | "Matter" | "Zigbee" | "MQTT";
 }
@@ -625,16 +807,16 @@ export interface DeviceSyncRead {
 }
 
 export interface DeviceUpdate {
-  name?: string | unknown;
-  room?: string | unknown;
-  type?: string | unknown;
-  brand?: string | unknown;
+  name?: unknown | unknown;
+  room?: unknown | unknown;
+  type?: unknown | unknown;
+  brand?: unknown | unknown;
   status?: "online" | "offline" | "warning" | "running" | unknown;
   connection?: "Home Assistant" | "Matter" | "Zigbee" | "MQTT" | unknown;
-  firmware?: string | unknown;
-  icon?: string | unknown;
-  color?: string | unknown;
-  image_url?: string | unknown;
+  firmware?: unknown | unknown;
+  icon?: unknown | unknown;
+  color?: unknown | unknown;
+  image_url?: unknown | unknown;
 }
 
 export interface EnabledRead {
@@ -665,10 +847,10 @@ export interface ExecutionRead {
   status: string;
   source: string;
   triggerSnapshot: Record<string, unknown>;
-  durationMs: number | unknown;
-  errorMessage: string | unknown;
-  startedAt: string /* date-time */;
-  finishedAt: string /* date-time */ | unknown;
+  durationMs: unknown | unknown;
+  errorMessage: unknown | unknown;
+  startedAt: string;
+  finishedAt: unknown | unknown;
 }
 
 export interface FlowItem {
@@ -693,18 +875,18 @@ export interface HomeStatus {
 
 export interface HouseholdCreate {
   name: string;
-  address?: string | unknown;
+  address?: unknown | unknown;
   timezone?: string;
 }
 
 export interface HouseholdListItem {
   id: number;
   name: string;
-  address: string | unknown;
+  address: unknown | unknown;
   timezone: string;
   created_by: number;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */;
+  created_at: string;
+  updated_at: string;
   role: string;
   member_count: number;
 }
@@ -712,18 +894,20 @@ export interface HouseholdListItem {
 export interface HouseholdRead {
   id: number;
   name: string;
-  address: string | unknown;
+  address: unknown | unknown;
   timezone: string;
   created_by: number;
-  created_at: string /* date-time */;
-  updated_at: string /* date-time */;
+  created_at: string;
+  updated_at: string;
 }
 
-export type HouseholdRole = "admin" | "member";
+export interface HouseholdRole {
+}
+
 export interface HouseholdUpdate {
-  name?: string | unknown;
-  address?: string | unknown;
-  timezone?: string | unknown;
+  name?: unknown | unknown;
+  address?: unknown | unknown;
+  timezone?: unknown | unknown;
 }
 
 export interface InspectionWrite {
@@ -753,9 +937,9 @@ export interface MemberRead {
   user_id: number;
   name: string;
   email: string;
-  avatar_url: string | unknown;
+  avatar_url: unknown | unknown;
   role: HouseholdRole;
-  joined_at: string /* date-time */;
+  joined_at: string;
 }
 
 export interface MemberRoleUpdate {
@@ -767,6 +951,14 @@ export interface ModeExecuteWrite {
   roomIds?: number[];
   runAutomations?: boolean;
   idempotencyKey: string;
+}
+
+export interface NotificationPreferences {
+  deviceOffline?: boolean;
+  securityAlerts?: boolean;
+  automationResults?: boolean;
+  quietStart?: string;
+  quietEnd?: string;
 }
 
 export interface OverviewRead {
@@ -798,6 +990,25 @@ export interface OverviewSummary {
   energy_saving_rate?: number;
 }
 
+export interface PendingApprovalRead {
+  approval_id: string;
+  run_id: string;
+  session_id: number;
+  call_id: string;
+  tool: string;
+  args: Record<string, unknown>;
+  risk_level: string;
+  reasons: string[];
+  preview: Record<string, unknown>;
+  resource_version: string;
+}
+
+export interface RegenerateRequest {
+  target_message_id: number;
+  model?: unknown | unknown;
+  household_id?: unknown | unknown;
+}
+
 export interface RegisterRequest {
   username: string;
   email: string;
@@ -806,9 +1017,9 @@ export interface RegisterRequest {
 
 export interface RoomDetailRead {
   room: RoomRead;
-  currentScene?: string | unknown;
-  recentActivity?: string | unknown;
-  recentActivityTime?: string | unknown;
+  currentScene?: unknown | unknown;
+  recentActivity?: unknown | unknown;
+  recentActivityTime?: unknown | unknown;
 }
 
 export interface RoomDeviceBinding {
@@ -829,7 +1040,7 @@ export interface RoomDeviceListItem {
   group: string;
   favorite: boolean;
   sortOrder: number;
-  updatedAt: string /* date-time */;
+  updatedAt: string;
 }
 
 export interface RoomDeviceListRead {
@@ -838,9 +1049,9 @@ export interface RoomDeviceListRead {
 }
 
 export interface RoomDeviceMetaWrite {
-  group?: string | unknown;
-  favorite?: boolean | unknown;
-  sortOrder?: number | unknown;
+  group?: unknown | unknown;
+  favorite?: unknown | unknown;
+  sortOrder?: unknown | unknown;
 }
 
 export interface RoomDeviceWrite {
@@ -852,16 +1063,37 @@ export interface RoomDevicesWrite {
   devices: RoomDeviceBinding[];
 }
 
+export interface RoomEnvironmentLatestRead {
+  sampledAt: string;
+  values?: Record<string, unknown>;
+}
+
+export interface RoomEnvironmentPoint {
+  sampledAt: string;
+  values?: Record<string, unknown>;
+}
+
+export interface RoomEnvironmentReportRead {
+  taskId: string;
+  status: string;
+  downloadUrl?: unknown | unknown;
+}
+
+export interface RoomEnvironmentTrendRead {
+  metrics?: string[];
+  items?: RoomEnvironmentPoint[];
+}
+
 export interface RoomInput {
   name: string;
   floor?: string;
   roomType?: string;
   icon?: string;
   themeColor?: string;
-  imageUrl?: string | unknown;
+  imageUrl?: unknown | unknown;
   area?: number;
   comfort?: number;
-  version?: number | unknown;
+  version?: unknown | unknown;
   deviceIds?: number[];
 }
 
@@ -879,13 +1111,13 @@ export interface RoomLogListRead {
 
 export interface RoomLogRead {
   id: number;
-  occurredAt: string /* date-time */;
+  occurredAt: string;
   source: string;
   event: string;
   result: string;
-  durationMs: number | unknown;
-  deviceId: number | unknown;
-  deviceName: string | unknown;
+  durationMs: unknown | unknown;
+  deviceId: unknown | unknown;
+  deviceName: unknown | unknown;
   tags: string[];
   detail: Record<string, unknown>;
 }
@@ -899,7 +1131,7 @@ export interface RoomRead {
   name: string;
   floor: string;
   roomType: string;
-  imageUrl: string | unknown;
+  imageUrl: unknown | unknown;
   icon?: string;
   themeColor?: string;
   version?: number;
@@ -908,8 +1140,8 @@ export interface RoomRead {
   device?: RoomDeviceListItem[];
   deviceCount?: number;
   onlineCount?: number;
-  createdAt: string /* date-time */;
-  updatedAt: string /* date-time */;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RoomSceneExecuteWrite {
@@ -930,7 +1162,7 @@ export interface SceneBatchEnabledResult {
 }
 
 export interface SceneBatchEnabledWrite {
-  sceneIds?: string[];
+  sceneIds?: string[]; /* 目标场景 ID 列表，为空则操作全部场景 */
   enabled: boolean;
 }
 
@@ -939,9 +1171,9 @@ export interface SceneBatchScheduleResult {
 }
 
 export interface SceneBatchScheduleWrite {
-  sceneIds?: string[];
+  sceneIds?: string[]; /* 目标场景 ID 列表，为空则操作全部场景 */
   triggerType?: "manual" | "schedule" | "location" | "device";
-  triggerLabel: string;
+  triggerLabel: string; /* 定时触发描述 */
 }
 
 export interface SceneCopyWrite {
@@ -950,7 +1182,7 @@ export interface SceneCopyWrite {
 
 export interface SceneDraftRead {
   draftId: string;
-  updatedAt: string /* date-time */;
+  updatedAt: string;
 }
 
 export interface SceneDraftWrite {
@@ -964,14 +1196,14 @@ export interface SceneDraftWrite {
   deviceIds?: string[];
   enabled?: boolean;
   recommended?: boolean;
-  highRisk?: boolean | unknown;
+  highRisk?: unknown | unknown;
   steps?: SceneStepWrite[];
 }
 
 export interface SceneEnabledRead {
   id: string;
   enabled: boolean;
-  updatedAt: string /* date-time */;
+  updatedAt: string;
 }
 
 export interface SceneEnabledWrite {
@@ -987,15 +1219,15 @@ export interface SceneExecutionRead {
   executionId: string;
   sceneId: string;
   status: string;
-  startedAt: string /* date-time */;
-  finishedAt: string /* date-time */ | unknown;
+  startedAt: string;
+  finishedAt: unknown | unknown;
   steps: SceneExecutionStepRead[];
 }
 
 export interface SceneExecutionStepRead {
   stepId: string;
   status: string;
-  message: string | unknown;
+  message: unknown | unknown;
 }
 
 export interface SceneListRead {
@@ -1011,9 +1243,10 @@ export interface SceneLogRead {
   id: string;
   sceneId: string;
   status: string;
-  startedAt: string /* date-time */;
-  finishedAt: string /* date-time */ | unknown;
-  message: string | unknown;
+  source: string;
+  startedAt: string;
+  finishedAt: unknown | unknown;
+  message: unknown | unknown;
 }
 
 export interface SceneOrderItem {
@@ -1062,9 +1295,9 @@ export interface SceneRead {
   recommended: boolean;
   highRisk: boolean;
   sortOrder: number;
-  sourceTemplateId: string | unknown;
-  createdAt: string /* date-time */;
-  updatedAt: string /* date-time */;
+  sourceTemplateId: unknown | unknown;
+  createdAt: string;
+  updatedAt: string;
   steps: SceneStepRead[];
 }
 
@@ -1073,6 +1306,8 @@ export interface SceneStepRead {
   description?: string;
   deviceId: string;
   order: number;
+  action?: "on" | "off" | "set_temperature" | "set_position" | "noop" | unknown; /* 动作指令（on / off / set_temperature / set_position / noop） */
+  actionValue?: unknown | unknown; /* 动作参数（温度 / 开合度 0-100） */
   id: string;
 }
 
@@ -1081,6 +1316,8 @@ export interface SceneStepWrite {
   description?: string;
   deviceId: string;
   order: number;
+  action?: "on" | "off" | "set_temperature" | "set_position" | "noop" | unknown; /* 动作指令（on / off / set_temperature / set_position / noop） */
+  actionValue?: unknown | unknown; /* 动作参数（温度 / 开合度 0-100） */
 }
 
 export interface SceneSummaryRead {
@@ -1128,7 +1365,7 @@ export interface SceneTemplateRead {
 }
 
 export interface SceneTemplateUseWrite {
-  name?: string | unknown;
+  name?: unknown | unknown;
   enabled?: boolean;
   deviceMapping?: Record<string, unknown>;
 }
@@ -1144,7 +1381,7 @@ export interface SceneWrite {
   deviceIds?: string[];
   enabled?: boolean;
   recommended?: boolean;
-  highRisk?: boolean | unknown;
+  highRisk?: unknown | unknown;
   steps?: SceneStepWrite[];
 }
 
@@ -1155,8 +1392,8 @@ export interface ScheduleRead {
   items?: Record<string, unknown>[];
   version: number;
   id: number;
-  scheduleDate: string /* date */;
-  updatedAt: string /* date-time */;
+  scheduleDate: string;
+  updatedAt: string;
 }
 
 export interface ScheduleWrite {
@@ -1164,7 +1401,50 @@ export interface ScheduleWrite {
   repeatDays?: number[];
   targets?: Record<string, unknown>;
   items?: Record<string, unknown>[];
-  version?: number | unknown;
+  version?: unknown | unknown;
+}
+
+export interface SecurityDeviceRead {
+  id: number;
+  device_name: string;
+  location: string;
+  last_active_at: string;
+  trusted: boolean;
+  is_current: boolean;
+}
+
+export interface SecurityDeviceTrustUpdate {
+  trusted: boolean;
+}
+
+export interface SecurityLogCreate {
+  title: string;
+  detail: string;
+}
+
+export interface SecurityLogRead {
+  id: number;
+  title: string;
+  detail: string;
+  created_at: string;
+}
+
+export interface SecurityMetaRead {
+  password_updated_at?: unknown | unknown;
+  devices?: SecurityDeviceRead[];
+  logs?: SecurityLogRead[];
+}
+
+export interface SecurityPreferences {
+  twoFactorEnabled?: boolean;
+}
+
+export interface SessionModeUpdate {
+  mode: "agent" | "chat";
+}
+
+export interface SessionModelUpdate {
+  model_name: string;
 }
 
 export interface SyncJobRead {
@@ -1183,105 +1463,46 @@ export interface SyncJobWrite {
 export interface TaskRead {
   id: number;
   status: string;
-  affectedDeviceCount?: number | unknown;
-  checkedCount?: number | unknown;
-  deviceCount?: number | unknown;
-  estimatedSeconds?: number | unknown;
+  affectedDeviceCount?: unknown | unknown;
+  checkedCount?: unknown | unknown;
+  deviceCount?: unknown | unknown;
+  estimatedSeconds?: unknown | unknown;
+}
+
+export interface TemplateAction {
+  type?: string;
+  position?: number;
+  deviceId?: unknown | unknown;
+  config?: Record<string, unknown>;
+  device_type?: unknown | unknown;
+  room?: unknown | unknown;
+}
+
+export interface TemplateTrigger {
+  type: "schedule" | "location" | "device" | "manual";
+  config?: Record<string, unknown>;
+  description?: unknown | unknown;
+}
+
+export interface TodayEnergyRead {
+  energy_kwh?: number; /* 今日总能耗（千瓦时） */
+  device_count?: number; /* 有能耗记录的设备数 */
+  recorded_at?: string; /* 最近记录时间 */
+}
+
+export interface UserPreferencesWrite {
+  appearance?: AppearancePreferences;
+  aiAssistant?: AIAssistantPreferences;
+  notifications?: NotificationPreferences;
+  security?: SecurityPreferences;
+  backup?: BackupPreferences;
 }
 
 export interface ValidationError {
-  loc: string | number[];
+  loc: unknown | unknown[];
   msg: string;
   type: string;
   input?: unknown;
   ctx?: Record<string, unknown>;
 }
 
-// === 操作路径与方法 ===
-export type read_me_api_account_me_get = { path: "/api/account/me"; method: "GET" };
-export type update_me_api_account_me_patch = { path: "/api/account/me"; method: "PATCH" };
-export type upload_avatar_api_account_me_avatar_post = { path: "/api/account/me/avatar"; method: "POST" };
-export type delete_avatar_api_account_me_avatar_delete = { path: "/api/account/me/avatar"; method: "DELETE" };
-export type get_automations_api_households__household_id__automations_get = { path: "/api/households/{household_id}/automations"; method: "GET" };
-export type add_automation_api_households__household_id__automations_post = { path: "/api/households/{household_id}/automations"; method: "POST" };
-export type read_automation_api_automations__automation_id__get = { path: "/api/automations/{automation_id}"; method: "GET" };
-export type edit_automation_api_automations__automation_id__patch = { path: "/api/automations/{automation_id}"; method: "PATCH" };
-export type change_automation_enabled_api_automations__automation_id__enabled_patch = { path: "/api/automations/{automation_id}/enabled"; method: "PATCH" };
-export type run_automation_api_automations__automation_id__execute_post = { path: "/api/automations/{automation_id}/execute"; method: "POST" };
-export type get_automation_executions_api_automations__automation_id__executions_get = { path: "/api/automations/{automation_id}/executions"; method: "GET" };
-export type batch_enable_automations_api_automations_batch_enable_post = { path: "/api/automations/batch-enable"; method: "POST" };
-export type batch_set_schedule_api_automations_schedules_batch_put = { path: "/api/automations/schedules/batch"; method: "PUT" };
-export type get_ai_models_api_ai_model_models_get = { path: "/api/ai_model/models"; method: "GET" };
-export type read_ai_model_api_ai_model_model_get = { path: "/api/ai_model/model"; method: "GET" };
-export type add_ai_model_api_ai_model_model_post = { path: "/api/ai_model/model"; method: "POST" };
-export type delete_ai_model_api_ai_model_model_delete = { path: "/api/ai_model/model"; method: "DELETE" };
-export type update_ai_model_api_ai_model_model_patch = { path: "/api/ai_model/model"; method: "PATCH" };
-export type activate_model_api_ai_model_models__model_id__activate_post = { path: "/api/ai_model/models/{model_id}/activate"; method: "POST" };
-export type list_chat_sessions_api_chat_sessions_get = { path: "/api/chat/sessions"; method: "GET" };
-export type create_session_api_chat_sessions_post = { path: "/api/chat/sessions"; method: "POST" };
-export type list_chat_messages_api_chat_sessions__session_id__messages_get = { path: "/api/chat/sessions/{session_id}/messages"; method: "GET" };
-export type create_chat_api_chat_completions_post = { path: "/api/chat/completions"; method: "POST" };
-export type create_chat_api_v1_chat_completions_post = { path: "/api/v1/chat/completions"; method: "POST" };
-export type list_devices_api_devices_get = { path: "/api/devices"; method: "GET" };
-export type add_device_api_devices_post = { path: "/api/devices"; method: "POST" };
-export type get_device_api_devices__device_id__get = { path: "/api/devices/{device_id}"; method: "GET" };
-export type update_device_api_devices__device_id__patch = { path: "/api/devices/{device_id}"; method: "PATCH" };
-export type remove_device_api_devices__device_id__delete = { path: "/api/devices/{device_id}"; method: "DELETE" };
-export type sync_devices_api_devices_sync_post = { path: "/api/devices/sync"; method: "POST" };
-export type list_device_logs_api_devices__device_id__logs_get = { path: "/api/devices/{device_id}/logs"; method: "GET" };
-export type upload_image_api_devices_images_post = { path: "/api/devices/images"; method: "POST" };
-export type batch_assign_group_api_devices_groups_assign_post = { path: "/api/devices/groups/assign"; method: "POST" };
-export type list_households_api_households_get = { path: "/api/households"; method: "GET" };
-export type create_household_api_households_post = { path: "/api/households"; method: "POST" };
-export type read_household_api_households__household_id__get = { path: "/api/households/{household_id}"; method: "GET" };
-export type update_household_api_households__household_id__patch = { path: "/api/households/{household_id}"; method: "PATCH" };
-export type list_members_api_households__household_id__members_get = { path: "/api/households/{household_id}/members"; method: "GET" };
-export type add_member_api_households__household_id__members_post = { path: "/api/households/{household_id}/members"; method: "POST" };
-export type update_member_role_api_households__household_id__members__membership_id__patch = { path: "/api/households/{household_id}/members/{membership_id}"; method: "PATCH" };
-export type delete_member_api_households__household_id__members__membership_id__delete = { path: "/api/households/{household_id}/members/{membership_id}"; method: "DELETE" };
-export type get_overview_api_households__household_id__overview_get = { path: "/api/households/{household_id}/overview"; method: "GET" };
-export type get_household_devices_api_households__household_id__devices_get = { path: "/api/households/{household_id}/devices"; method: "GET" };
-export type sync_household_devices_api_households__household_id__devices_sync_post = { path: "/api/households/{household_id}/devices/sync"; method: "POST" };
-export type execute_mode_api_overview_modes_execute_post = { path: "/api/overview/modes/execute"; method: "POST" };
-export type create_inspection_api_inspections_post = { path: "/api/inspections"; method: "POST" };
-export type get_inspection_api_inspections__inspection_id__get = { path: "/api/inspections/{inspection_id}"; method: "GET" };
-export type save_schedule_api_schedules__schedule_date__put = { path: "/api/schedules/{schedule_date}"; method: "PUT" };
-export type read_schedule_api_schedules__schedule_date__get = { path: "/api/schedules/{schedule_date}"; method: "GET" };
-export type create_sync_job_api_device_sync_jobs_post = { path: "/api/device-sync-jobs"; method: "POST" };
-export type get_sync_job_api_device_sync_jobs__job_id__get = { path: "/api/device-sync-jobs/{job_id}"; method: "GET" };
-export type list_rooms_api_rooms_get = { path: "/api/rooms"; method: "GET" };
-export type add_room_api_rooms_post = { path: "/api/rooms"; method: "POST" };
-export type list_room_stats_api_rooms_stats_get = { path: "/api/rooms/stats"; method: "GET" };
-export type get_room_detail_api_rooms__room_id__get = { path: "/api/rooms/{room_id}"; method: "GET" };
-export type edit_room_api_rooms__room_id__patch = { path: "/api/rooms/{room_id}"; method: "PATCH" };
-export type delete_room_api_rooms__room_id__delete = { path: "/api/rooms/{room_id}"; method: "DELETE" };
-export type get_room_logs_api_rooms__room_id__logs_get = { path: "/api/rooms/{room_id}/logs"; method: "GET" };
-export type get_room_devices_api_rooms__room_id__devices_get = { path: "/api/rooms/{room_id}/devices"; method: "GET" };
-export type set_room_devices_api_rooms__room_id__devices_put = { path: "/api/rooms/{room_id}/devices"; method: "PUT" };
-export type edit_room_device_api_rooms__room_id__devices__device_id__patch = { path: "/api/rooms/{room_id}/devices/{device_id}"; method: "PATCH" };
-export type update_device_api_rooms__room_id__device_patch = { path: "/api/rooms/{room_id}/device"; method: "PATCH" };
-export type quick_action_api_rooms__room_id__quick_action_post = { path: "/api/rooms/{room_id}/quick-action"; method: "POST" };
-export type get_room_scenes_api_rooms__room_id__scenes_get = { path: "/api/rooms/{room_id}/scenes"; method: "GET" };
-export type preview_room_scene_api_rooms__room_id__scenes__scene_id__preview_post = { path: "/api/rooms/{room_id}/scenes/{scene_id}/preview"; method: "POST" };
-export type execute_room_scene_api_rooms__room_id__scenes__scene_id__execute_post = { path: "/api/rooms/{room_id}/scenes/{scene_id}/execute"; method: "POST" };
-export type get_scenes_api_scenes_get = { path: "/api/scenes"; method: "GET" };
-export type add_scene_api_scenes_post = { path: "/api/scenes"; method: "POST" };
-export type get_summary_api_scenes_summary_get = { path: "/api/scenes/summary"; method: "GET" };
-export type reorder_scenes_api_scenes_order_patch = { path: "/api/scenes/order"; method: "PATCH" };
-export type add_draft_api_scenes_drafts_post = { path: "/api/scenes/drafts"; method: "POST" };
-export type get_templates_api_scenes_templates_get = { path: "/api/scenes/templates"; method: "GET" };
-export type get_template_preview_api_scenes_templates__template_id__preview_get = { path: "/api/scenes/templates/{template_id}/preview"; method: "GET" };
-export type import_template_api_scenes_templates__template_id__use_post = { path: "/api/scenes/templates/{template_id}/use"; method: "POST" };
-export type get_execution_api_scenes_executions__execution_id__get = { path: "/api/scenes/executions/{execution_id}"; method: "GET" };
-export type edit_scene_api_scenes__scene_id__put = { path: "/api/scenes/{scene_id}"; method: "PUT" };
-export type remove_scene_api_scenes__scene_id__delete = { path: "/api/scenes/{scene_id}"; method: "DELETE" };
-export type change_enabled_api_scenes__scene_id__enabled_patch = { path: "/api/scenes/{scene_id}/enabled"; method: "PATCH" };
-export type run_scene_api_scenes__scene_id__execute_post = { path: "/api/scenes/{scene_id}/execute"; method: "POST" };
-export type duplicate_scene_api_scenes__scene_id__copy_post = { path: "/api/scenes/{scene_id}/copy"; method: "POST" };
-export type get_logs_api_scenes__scene_id__logs_get = { path: "/api/scenes/{scene_id}/logs"; method: "GET" };
-export type get_scene_preview_api_scenes__scene_id__preview_post = { path: "/api/scenes/{scene_id}/preview"; method: "POST" };
-export type batch_change_enabled_api_scenes_batch_enabled_post = { path: "/api/scenes/batch/enabled"; method: "POST" };
-export type batch_set_schedule_api_scenes_batch_schedule_post = { path: "/api/scenes/batch/schedule"; method: "POST" };
-export type login_api_auth_login_post = { path: "/api/auth/login"; method: "POST" };
-export type register_api_auth_register_post = { path: "/api/auth/register"; method: "POST" };
-export type logout_api_auth_logout_post = { path: "/api/auth/logout"; method: "POST" };

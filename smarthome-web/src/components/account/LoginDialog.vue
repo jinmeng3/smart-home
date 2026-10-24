@@ -91,6 +91,20 @@ const selectMode = (nextMode: AuthMode) => {
     }
 };
 
+/** 从 423 响应的 details 中提取锁定剩余秒数，格式化为中文提示文案。 */
+const formatLockHint = (details: unknown): string | null => {
+    if (!details || typeof details !== "object") return null;
+    const data = (details as { data?: unknown }).data;
+    if (!data || typeof data !== "object") return null;
+    const remaining = (data as { remaining_seconds?: unknown }).remaining_seconds;
+    if (typeof remaining !== "number" || remaining <= 0) return null;
+    if (remaining < 60) {
+        return `登录尝试验试太多，请 ${remaining} 秒后重试`;
+    }
+    const minutes = Math.ceil(remaining / 60);
+    return `登录尝试验试太多，请 ${minutes} 分钟后重试`;
+};
+
 const validateRegisterForm = (): string | null => {
     if (!registerForm.username.trim()) return "请输入用户名";
     if (!emailPattern.test(registerForm.email.trim()))
@@ -162,9 +176,13 @@ const submit = async () => {
             error instanceof ApiError ? error : null;
         fieldErrors.value = apiError?.fieldErrors ?? {};
         const firstFieldMessage = Object.values(fieldErrors.value)[0];
+        // 账号锁定（HTTP 423）：后端返回 remaining_seconds，转为「X 分钟后重试」文案
+        const lockedHint =
+            apiError?.status === 423 ? formatLockHint(apiError.details) : null;
         showFeedback(
             "error",
-            firstFieldMessage ??
+            lockedHint ??
+                firstFieldMessage ??
                 (error instanceof Error
                     ? error.message
                     : mode.value === "login"

@@ -339,6 +339,8 @@ export const useHomeStore = defineStore("home", () => {
     availableModels: chat.availableModels,
     automations,
     automationsLoading,
+    cancelPending: chat.cancelPending,
+    cancelSubmitting: chat.cancelSubmitting,
     chatPhase,
     closeDeviceDrawer,
     deviceDrawerOpen,
